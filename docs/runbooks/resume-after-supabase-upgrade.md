@@ -39,6 +39,7 @@ cd /Users/julianocalil/oraculo
 ORDER_ITEMS_START_DATE=2026-04-01 ORDER_ITEMS_END_DATE=2026-06-17 node scripts/sync-olist-order-items.js
 DIMENSIONS_START_DATE=2026-04-01 DIMENSIONS_END_DATE=2026-06-17 node scripts/sync-olist-dimensions.js
 node scripts/snapshot-olist-stock.js
+SALES_CACHE_START_DATE=2026-04-01 SALES_CACHE_END_DATE=2026-06-19 node scripts/refresh-oraculo-sales-caches.js
 ```
 
 4. Criar views/facts para o dashboard.
@@ -56,6 +57,25 @@ select * from public.oraculo_daily_sales order by order_date desc limit 10;
 select * from public.oraculo_sku_current order by revenue_30d desc limit 10;
 select * from public.oraculo_stock_watchlist order by days_until_stockout nulls last limit 20;
 ```
+
+## Observacao sobre performance
+
+As views de vendas diarias e por canal leem caches:
+
+- `public.oraculo_daily_sales_cache`
+- `public.oraculo_channel_sales_cache`
+
+Sempre que uma carga grande de pedidos for feita, rode:
+
+```bash
+SALES_CACHE_START_DATE=2026-04-01 SALES_CACHE_END_DATE=2026-06-19 node scripts/refresh-oraculo-sales-caches.js
+```
+
+Isso evita timeout do PostgREST ao agregar centenas de milhares de pedidos em tempo real.
+
+## Observacao sobre historico
+
+Em 2026-06-18, os pedidos anteriores a 2026-06-16 tinham contagem, mas muitos nao traziam campos detalhados de total e itens no payload. Por isso, os caches podem mostrar receita zerada nesses dias ate que os pedidos antigos sejam hidratados com detalhe da Olist.
 
 ## Arquivos importantes
 

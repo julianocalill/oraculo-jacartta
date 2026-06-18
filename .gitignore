@@ -9,3 +9,4 @@ coverage
 *.tsbuildinfo
 logs/*.log
 supabase/.temp/
+supabase/supabase/
