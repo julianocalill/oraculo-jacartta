@@ -133,6 +133,16 @@ function coverageLabel(value: number | null | undefined) {
   return `${formatDecimal(value, 0)}d`;
 }
 
+function formatDateShort(value: string | null | undefined) {
+  if (!value) return "-";
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "America/Sao_Paulo"
+  }).format(new Date(value));
+}
+
 async function loadDashboard(filters: DashboardFilters) {
   const supabase = createSupabaseAdminClient();
   let dailyQuery = supabase
@@ -201,11 +211,13 @@ async function loadDashboard(filters: DashboardFilters) {
     monthOrders,
     monthCanceled,
     monthUnits,
-    monthTicket: monthOrders - monthCanceled > 0 ? monthEffective / (monthOrders - monthCanceled) : null,
+    monthTicket: monthOrders > 0 ? monthGross / monthOrders : null,
     channels: (channelsResponse.data ?? []) as ChannelSale[],
     skus: (skusResponse.data ?? []) as SkuCurrent[],
     stockWatchlist: (stockWatchlistResponse.data ?? []) as StockSignal[],
     actionableWatchlist,
+    filteredOrderCount: monthOrders,
+    availableThrough: latestDay?.order_date ?? null,
     orderCount: orderCount.count ?? 0,
     itemCount: itemCount.count ?? 0,
     productCount: productCount.count ?? 0
@@ -261,7 +273,10 @@ export default async function HomePage({
         <header className="topbar">
           <div>
             <h1>Analytics</h1>
-            <p>{formatCount(data.orderCount)} pedidos · {formatCount(data.productCount)} produtos</p>
+            <p>
+              {formatCount(data.filteredOrderCount)} pedidos no período · {formatCount(data.productCount)} produtos
+              {data.availableThrough ? ` · dados até ${formatDateShort(data.availableThrough)}` : ""}
+            </p>
           </div>
           <form className="filter-row filter-form" method="get">
             <label>
@@ -300,7 +315,7 @@ export default async function HomePage({
           <Link className="metric metric-link accent-blue" href={`/pedidos${filterQuery}`}>
             <span className="label">Ticket Médio</span>
             <strong>{data.monthTicket == null ? "-" : formatCurrency(data.monthTicket)}</strong>
-            <small>Receita confirmada / pedidos validos</small>
+            <small>Receita bruta / pedidos do período</small>
           </Link>
           <Link className="metric metric-link accent-red" href={`/pedidos${filterQuery}`}>
             <span className="label">Cancelados</span>

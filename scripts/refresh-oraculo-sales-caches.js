@@ -62,6 +62,18 @@ function getIsCanceled(order) {
   return String(order.situacao) === "8";
 }
 
+function getOrderGross(order) {
+  return parseMoney(
+    order?.payload?.valor ??
+    order?.payload?.valorTotalPedido ??
+    order?.payload?.total ??
+    order?.payload?.valorTotal ??
+    order?.payload?.valor_total ??
+    order?.payload?.totalPedido ??
+    order?.payload?.totais?.total
+  );
+}
+
 async function listOrderItemsForDay(env, limit, offset, dateKey) {
   const filters = [
     "select=order_id,quantidade,valor_unitario,valor_total,order_data_criacao",
@@ -193,6 +205,8 @@ async function main() {
         if (!orderDate) continue;
 
         const isCanceled = getIsCanceled(order);
+        const gross = getOrderGross(order);
+        const effective = isCanceled ? 0 : gross;
         const channelName = getChannelName(order.payload);
         orderMeta.set(order.id, {
           orderDate,
@@ -212,6 +226,8 @@ async function main() {
         }
 
         const dailyRow = daily.get(orderDate);
+        dailyRow.gross_revenue += gross;
+        dailyRow.effective_revenue += effective;
         dailyRow.orders_count += 1;
         dailyRow.canceled_orders += isCanceled ? 1 : 0;
 
@@ -232,6 +248,8 @@ async function main() {
         }
 
         const channelRow = channels.get(channelKey);
+        channelRow.gross_revenue += gross;
+        channelRow.effective_revenue += effective;
         channelRow.orders_count += 1;
         channelRow.canceled_orders += isCanceled ? 1 : 0;
       }
@@ -257,12 +275,6 @@ async function main() {
         const quantity = Number(item.quantidade ?? 0);
         const unitValue = parseMoney(item.valor_unitario);
         const totalValue = parseMoney(item.valor_total);
-        const gross = Number.isFinite(totalValue) && totalValue > 0
-          ? totalValue
-          : Number.isFinite(quantity) && Number.isFinite(unitValue)
-            ? quantity * unitValue
-            : 0;
-        const effective = meta?.isCanceled ? 0 : gross;
         const channelName = meta?.channelName ?? "Sem canal";
         const weekStart = toWeekStart(orderDate);
 
@@ -278,9 +290,9 @@ async function main() {
         }
 
         const dailyRow = daily.get(orderDate);
-        dailyRow.gross_revenue += gross;
-        dailyRow.effective_revenue += effective;
-        dailyRow.units += quantity;
+        if (Number.isFinite(quantity) && quantity > 0) {
+          dailyRow.units += quantity;
+        }
 
         const channelKey = `${weekStart}:${channelName}`;
         if (!channels.has(channelKey)) {
@@ -297,9 +309,9 @@ async function main() {
         }
 
         const channelRow = channels.get(channelKey);
-        channelRow.gross_revenue += gross;
-        channelRow.effective_revenue += effective;
-        channelRow.units += quantity;
+        if (Number.isFinite(quantity) && quantity > 0) {
+          channelRow.units += quantity;
+        }
         itemsProcessed += 1;
       }
 
