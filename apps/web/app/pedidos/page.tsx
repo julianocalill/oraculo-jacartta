@@ -21,6 +21,27 @@ type ChannelSale = {
   average_ticket: number | null;
 };
 
+type PedidosSearchParams = {
+  start?: string;
+  end?: string;
+};
+
+type PedidosFilters = {
+  start: string;
+  end: string;
+};
+
+function isIsoDate(value: string | undefined) {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+}
+
+function getFilters(params: PedidosSearchParams | undefined): PedidosFilters {
+  return {
+    start: isIsoDate(params?.start) ? params!.start! : "2026-06-01",
+    end: isIsoDate(params?.end) ? params!.end! : "2026-06-30"
+  };
+}
+
 function n(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
@@ -45,21 +66,26 @@ function shortDate(value: string) {
   }).format(new Date(value));
 }
 
-async function loadPedidos() {
+async function loadPedidos(filters: PedidosFilters) {
   const supabase = createSupabaseAdminClient();
+  let dailyQuery = supabase
+    .from("oraculo_daily_sales")
+    .select("*")
+    .order("order_date", { ascending: false })
+    .limit(120);
+  let channelsQuery = supabase
+    .from("oraculo_channel_sales")
+    .select("*")
+    .order("week_start", { ascending: false })
+    .order("orders_count", { ascending: false })
+    .limit(36);
+
+  dailyQuery = dailyQuery.gte("order_date", filters.start).lte("order_date", filters.end);
+  channelsQuery = channelsQuery.gte("week_start", filters.start).lte("week_start", filters.end);
 
   const [dailyResponse, channelsResponse, orderCount] = await Promise.all([
-    supabase
-      .from("oraculo_daily_sales")
-      .select("*")
-      .order("order_date", { ascending: false })
-      .limit(40),
-    supabase
-      .from("oraculo_channel_sales")
-      .select("*")
-      .order("week_start", { ascending: false })
-      .order("orders_count", { ascending: false })
-      .limit(18),
+    dailyQuery,
+    channelsQuery,
     supabase.from("olist_orders").select("id", { count: "exact", head: true })
   ]);
 
@@ -79,8 +105,13 @@ async function loadPedidos() {
   };
 }
 
-export default async function PedidosPage() {
-  const data = await loadPedidos();
+export default async function PedidosPage({
+  searchParams
+}: {
+  searchParams?: Promise<PedidosSearchParams>;
+}) {
+  const filters = getFilters(await searchParams);
+  const data = await loadPedidos(filters);
   const chart = data.daily.slice(0, 20).reverse();
   const max = Math.max(...chart.map((row) => n(row.orders_count)), 1);
 
@@ -92,11 +123,17 @@ export default async function PedidosPage() {
           <h1>Pedidos</h1>
           <p>{count(data.totalOrders)} pedidos na base Olist</p>
         </div>
-        <div className="filter-row">
-          <strong>Volume</strong>
-          <span>Cancelados</span>
-          <span>Canais</span>
-        </div>
+        <form className="filter-row filter-form" method="get">
+          <label>
+            <span>Início</span>
+            <input type="date" name="start" defaultValue={filters.start} />
+          </label>
+          <label>
+            <span>Fim</span>
+            <input type="date" name="end" defaultValue={filters.end} />
+          </label>
+          <button type="submit">Aplicar</button>
+        </form>
       </header>
 
       <section className="metric-grid metric-grid-eight">

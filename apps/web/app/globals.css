@@ -209,6 +209,47 @@ p {
   justify-content: flex-end;
 }
 
+.filter-form label {
+  display: grid;
+  gap: 5px;
+}
+
+.filter-form label span {
+  min-height: auto;
+  border: 0;
+  background: transparent;
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 750;
+  padding: 0;
+  text-transform: uppercase;
+}
+
+.filter-form input {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(10, 18, 18, 0.76);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  padding: 0 10px;
+}
+
+.filter-form button {
+  align-self: end;
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--amber);
+  color: #121000;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 0 14px;
+}
+
 .filter-row span,
 .filter-row strong,
 .pill {
@@ -269,6 +310,22 @@ p {
   gap: 8px;
   position: relative;
   overflow: hidden;
+}
+
+.metric-link,
+.panel-link {
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
+}
+
+.metric-link:hover,
+.panel-link:hover,
+.rank-list a:hover,
+.watchlist a:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
 }
 
 .metric::before {
@@ -556,15 +613,17 @@ h2 {
   margin-top: 16px;
 }
 
-.rank-list div,
-.watchlist article {
+.rank-list a,
+.watchlist a {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel-soft);
+  color: inherit;
+  text-decoration: none;
   padding: 12px;
 }
 
-.rank-list div {
+.rank-list a {
   display: flex;
   justify-content: space-between;
   gap: 16px;
@@ -582,7 +641,7 @@ h2 {
   white-space: nowrap;
 }
 
-.watchlist article {
+.watchlist a {
   display: grid;
   gap: 10px;
 }

@@ -51,6 +51,27 @@ type SyncRun = {
   records_upserted: number | null;
 };
 
+type DashboardSearchParams = {
+  start?: string;
+  end?: string;
+};
+
+type DashboardFilters = {
+  start: string;
+  end: string;
+};
+
+function isIsoDate(value: string | undefined) {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+}
+
+function getDashboardFilters(params: DashboardSearchParams | undefined): DashboardFilters {
+  return {
+    start: isIsoDate(params?.start) ? params!.start! : "2026-06-01",
+    end: isIsoDate(params?.end) ? params!.end! : "2026-06-30"
+  };
+}
+
 function asNumber(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
@@ -115,8 +136,22 @@ function signalLabel(value: string | null | undefined) {
   return labels[value ?? ""] ?? "Atenção";
 }
 
-async function loadDashboard() {
+async function loadDashboard(filters: DashboardFilters) {
   const supabase = createSupabaseAdminClient();
+  let dailyQuery = supabase
+    .from("oraculo_daily_sales")
+    .select("*")
+    .order("order_date", { ascending: false })
+    .limit(120);
+  let channelsQuery = supabase
+    .from("oraculo_channel_sales")
+    .select("*")
+    .order("week_start", { ascending: false })
+    .order("effective_revenue", { ascending: false })
+    .limit(24);
+
+  dailyQuery = dailyQuery.gte("order_date", filters.start).lte("order_date", filters.end);
+  channelsQuery = channelsQuery.gte("week_start", filters.start).lte("week_start", filters.end);
 
   const [
     dailyResponse,
@@ -129,17 +164,8 @@ async function loadDashboard() {
     latestOrderRunResponse,
     latestStockRunResponse
   ] = await Promise.all([
-    supabase
-      .from("oraculo_daily_sales")
-      .select("*")
-      .order("order_date", { ascending: false })
-      .limit(45),
-    supabase
-      .from("oraculo_channel_sales")
-      .select("*")
-      .order("week_start", { ascending: false })
-      .order("effective_revenue", { ascending: false })
-      .limit(12),
+    dailyQuery,
+    channelsQuery,
     supabase
       .from("oraculo_sku_current")
       .select("sku, product_name, category_name, revenue_30d, units_30d, revenue_change_pct, available_stock, days_until_stockout, last_sale_at")
@@ -168,11 +194,10 @@ async function loadDashboard() {
   ]);
 
   const daily = (dailyResponse.data ?? []) as DailySale[];
-  const currentMonth = daily.filter((row) => row.order_date?.startsWith("2026-06"));
-  const monthGross = currentMonth.reduce((sum, row) => sum + asNumber(row.gross_revenue), 0);
-  const monthEffective = currentMonth.reduce((sum, row) => sum + asNumber(row.effective_revenue), 0);
-  const monthOrders = currentMonth.reduce((sum, row) => sum + asNumber(row.orders_count), 0);
-  const monthCanceled = currentMonth.reduce((sum, row) => sum + asNumber(row.canceled_orders), 0);
+  const monthGross = daily.reduce((sum, row) => sum + asNumber(row.gross_revenue), 0);
+  const monthEffective = daily.reduce((sum, row) => sum + asNumber(row.effective_revenue), 0);
+  const monthOrders = daily.reduce((sum, row) => sum + asNumber(row.orders_count), 0);
+  const monthCanceled = daily.reduce((sum, row) => sum + asNumber(row.canceled_orders), 0);
   const latestDay = daily[0] ?? null;
   const dailyChart = daily.slice(0, 18).reverse();
   const maxDailyRevenue = Math.max(...dailyChart.map((row) => asNumber(row.effective_revenue)), 1);
@@ -198,8 +223,14 @@ async function loadDashboard() {
   };
 }
 
-export default async function HomePage() {
-  const data = await loadDashboard();
+export default async function HomePage({
+  searchParams
+}: {
+  searchParams?: Promise<DashboardSearchParams>;
+}) {
+  const filters = getDashboardFilters(await searchParams);
+  const data = await loadDashboard(filters);
+  const filterQuery = `?start=${encodeURIComponent(filters.start)}&end=${encodeURIComponent(filters.end)}`;
   const latestOrderRunAt = data.latestOrderRun?.finished_at ?? data.latestOrderRun?.started_at ?? null;
   const latestStockRunAt = data.latestStockRun?.finished_at ?? data.latestStockRun?.started_at ?? null;
 
@@ -217,7 +248,7 @@ export default async function HomePage() {
         <nav className="nav-group" aria-label="Principal">
           <span>Principal</span>
           <Link href="/" className="nav-active">Analytics</Link>
-          <Link href="/pedidos">Pedidos</Link>
+          <Link href={`/pedidos${filterQuery}`}>Pedidos</Link>
           <Link href="/skus">SKUs</Link>
           <Link href="/skus">Análise SKU <em>Novo</em></Link>
           <Link href="/alertas">Alertas <b>{formatCount(data.stockWatchlist.length)}</b></Link>
@@ -245,48 +276,54 @@ export default async function HomePage() {
             <h1>Analytics</h1>
             <p>{formatCount(data.orderCount)} pedidos · {formatCount(data.productCount)} produtos</p>
           </div>
-          <div className="filter-row">
-            <span>01/06/2026</span>
-            <span>30/06/2026</span>
-            <strong>Jun/26</strong>
-          </div>
+          <form className="filter-row filter-form" method="get">
+            <label>
+              <span>Início</span>
+              <input type="date" name="start" defaultValue={filters.start} />
+            </label>
+            <label>
+              <span>Fim</span>
+              <input type="date" name="end" defaultValue={filters.end} />
+            </label>
+            <button type="submit">Aplicar</button>
+          </form>
         </header>
 
         <section className="metric-grid metric-grid-eight">
-          <article className="metric accent-white">
+          <Link className="metric metric-link accent-white" href={`/pedidos${filterQuery}`}>
             <span className="label">Receita Bruta</span>
             <strong>{formatCurrency(data.monthGross)}</strong>
             <small>Base Olist consolidada</small>
-          </article>
-          <article className="metric accent-yellow">
+          </Link>
+          <Link className="metric metric-link accent-yellow" href={`/pedidos${filterQuery}`}>
             <span className="label">Receita Efetiva</span>
             <strong>{formatCurrency(data.monthEffective)}</strong>
             <small>Sem pedidos cancelados</small>
-          </article>
-          <article className="metric accent-blue">
+          </Link>
+          <Link className="metric metric-link accent-blue" href={`/pedidos${filterQuery}`}>
             <span className="label">Vendas</span>
             <strong>{formatCount(data.monthOrders)}</strong>
             <small>{formatCount(data.orderCount)} no histórico</small>
-          </article>
-          <article className="metric accent-yellow">
+          </Link>
+          <Link className="metric metric-link accent-yellow" href="/skus">
             <span className="label">Unidades</span>
             <strong>{formatCount(data.itemCount)}</strong>
             <small>Itens detalhados</small>
-          </article>
-          <article className="metric accent-blue">
+          </Link>
+          <Link className="metric metric-link accent-blue" href={`/pedidos${filterQuery}`}>
             <span className="label">Ticket Médio</span>
             <strong>{formatCurrency(data.monthTicket)}</strong>
             <small>Receita efetiva / vendas</small>
-          </article>
-          <article className="metric accent-red">
+          </Link>
+          <Link className="metric metric-link accent-red" href={`/pedidos${filterQuery}`}>
             <span className="label">Cancelados</span>
             <strong>{formatCount(data.monthCanceled)}</strong>
             <small>Pedidos no mês</small>
-          </article>
+          </Link>
         </section>
 
         <section className="control-grid">
-          <article className="panel chart-panel">
+          <Link className="panel panel-link chart-panel" href={`/pedidos${filterQuery}`}>
             <div className="section-head section-row">
               <div>
                 <p className="eyebrow">Vendas por dia</p>
@@ -308,9 +345,9 @@ export default async function HomePage() {
                 );
               })}
             </div>
-          </article>
+          </Link>
 
-          <article className="panel funnel-panel">
+          <Link className="panel panel-link funnel-panel" href={`/pedidos${filterQuery}`}>
             <div>
               <p className="eyebrow">Canais</p>
               <h2>Receita por loja</h2>
@@ -330,7 +367,7 @@ export default async function HomePage() {
                 );
               })}
             </div>
-          </article>
+          </Link>
         </section>
 
         <section className="panel product-panel">
@@ -396,10 +433,10 @@ export default async function HomePage() {
             <h2>Ranking rápido</h2>
             <div className="rank-list">
               {data.skus.slice(0, 5).map((sku) => (
-                <div key={`rank-${sku.sku}`}>
+                <Link href={`/skus?sku=${encodeURIComponent(sku.sku ?? "")}`} key={`rank-${sku.sku}`}>
                   <span>{sku.product_name ?? "Sem nome"}</span>
                   <strong>{formatCurrency(sku.revenue_30d)}</strong>
-                </div>
+                </Link>
               ))}
             </div>
           </article>
@@ -409,7 +446,7 @@ export default async function HomePage() {
             <h2>Watchlist</h2>
             <div className="watchlist">
               {data.stockWatchlist.map((item) => (
-                <article key={`${item.sku}-${item.product_name}`}>
+                <Link href={`/skus?sku=${encodeURIComponent(item.sku ?? "")}`} key={`${item.sku}-${item.product_name}`}>
                   <div>
                     <strong>{item.product_name ?? "Sem nome"}</strong>
                     <span>{item.sku || "-"}</span>
@@ -422,7 +459,7 @@ export default async function HomePage() {
                       {formatCount(item.available_stock)} disp. · {formatDecimal(item.days_until_stockout, 0)}d
                     </small>
                   </div>
-                </article>
+                </Link>
               ))}
             </div>
           </article>
