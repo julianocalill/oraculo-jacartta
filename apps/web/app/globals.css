@@ -178,6 +178,12 @@ p {
   gap: 18px;
 }
 
+.single-workspace {
+  max-width: 1480px;
+  width: 100%;
+  margin: 0 auto;
+}
+
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -222,6 +228,20 @@ p {
   background: var(--amber);
   color: #121000;
   border-color: transparent;
+}
+
+.back-link {
+  color: var(--amber);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 750;
+  margin-bottom: 12px;
+  text-decoration: none;
+}
+
+.back-link:hover,
+.row-link:hover {
+  text-decoration: underline;
 }
 
 .metric-grid {
@@ -279,6 +299,13 @@ p {
   display: grid;
   gap: 18px;
   grid-template-columns: minmax(0, 0.95fr) minmax(420px, 1.05fr);
+}
+
+.detail-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.34fr);
+  align-items: start;
 }
 
 .panel {
@@ -473,6 +500,18 @@ h2 {
   white-space: nowrap;
 }
 
+.row-link {
+  color: var(--text);
+  display: inline-block;
+  font-weight: 750;
+  max-width: 420px;
+  overflow: hidden;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  white-space: nowrap;
+}
+
 .row-subtitle {
   color: var(--faint);
   font-size: 11px;
@@ -594,6 +633,60 @@ h2 {
   margin-bottom: 8px;
 }
 
+.sku-detail {
+  position: sticky;
+  top: 24px;
+  display: grid;
+  gap: 18px;
+}
+
+.sku-detail h2 {
+  line-height: 1.22;
+}
+
+.detail-code {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--amber);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  justify-self: start;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 8px 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-metrics {
+  display: grid;
+  gap: 10px;
+}
+
+.detail-metrics article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft);
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.detail-metrics span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.detail-metrics strong {
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1.1;
+}
+
 @media (max-width: 1180px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -611,8 +704,13 @@ h2 {
   }
 
   .control-grid,
+  .detail-grid,
   .bottom-grid {
     grid-template-columns: 1fr;
+  }
+
+  .sku-detail {
+    position: static;
   }
 }
 

@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "../lib/supabase/admin";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -215,20 +216,20 @@ export default async function HomePage() {
 
         <nav className="nav-group" aria-label="Principal">
           <span>Principal</span>
-          <a className="nav-active">Analytics</a>
-          <a>Pedidos</a>
-          <a>SKUs</a>
-          <a>Análise SKU <em>Novo</em></a>
-          <a>Alertas <b>{formatCount(data.stockWatchlist.length)}</b></a>
-          <a>Performance</a>
-          <a>Ruptura</a>
+          <Link href="/" className="nav-active">Analytics</Link>
+          <Link href="/pedidos">Pedidos</Link>
+          <Link href="/skus">SKUs</Link>
+          <Link href="/skus">Análise SKU <em>Novo</em></Link>
+          <Link href="/alertas">Alertas <b>{formatCount(data.stockWatchlist.length)}</b></Link>
+          <Link href="/">Performance</Link>
+          <Link href="/alertas">Ruptura</Link>
         </nav>
 
         <nav className="nav-group nav-admin" aria-label="Admin">
           <span>Admin</span>
-          <a>Usuários</a>
-          <a>Logs</a>
-          <a>Config</a>
+          <Link href="/">Usuários</Link>
+          <Link href="/">Logs</Link>
+          <Link href="/">Config</Link>
         </nav>
 
         <div className="sidebar-footer">
@@ -371,7 +372,9 @@ export default async function HomePage() {
                     <td><span className="grade green">A</span></td>
                     <td><span className="grade yellow">Y</span></td>
                     <td>
-                      <div className="row-title">{sku.product_name ?? "Sem nome"}</div>
+                      <Link className="row-link" href={`/skus?sku=${encodeURIComponent(sku.sku ?? "")}`}>
+                        {sku.product_name ?? "Sem nome"}
+                      </Link>
                       <div className="row-subtitle">{sku.category_name ?? "Sem categoria"}</div>
                     </td>
                     <td className="numeric">{formatCurrency(sku.revenue_30d)}</td>
