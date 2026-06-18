@@ -234,7 +234,6 @@ async function loadDashboard(filters: DashboardFilters) {
   ]);
 
   const daily = (dailyResponse.data ?? []) as DailySale[];
-  const monthGross = daily.reduce((sum, row) => sum + asNumber(row.gross_revenue), 0);
   const monthEffective = daily.reduce((sum, row) => sum + asNumber(row.effective_revenue), 0);
   const monthOrders = daily.reduce((sum, row) => sum + asNumber(row.orders_count), 0);
   const monthUnits = daily.reduce((sum, row) => sum + asNumber(row.units), 0);
@@ -250,11 +249,10 @@ async function loadDashboard(filters: DashboardFilters) {
     latestDay,
     dailyChart,
     maxDailyRevenue,
-    monthGross,
     monthEffective,
     monthOrders,
     monthUnits,
-    monthTicket: monthOrders > 0 ? monthGross / monthOrders : null,
+    monthTicket: monthOrders > 0 ? monthEffective / monthOrders : null,
     billingMetrics,
     channels: (channelsResponse.data ?? []) as ChannelSale[],
     skus: (skusResponse.data ?? []) as SkuCurrent[],
@@ -336,15 +334,10 @@ export default async function HomePage({
         </header>
 
         <section className="metric-grid metric-grid-eight">
-          <Link className="metric metric-link accent-white" href={`/pedidos${filterQuery}`}>
-            <span className="label">Receita Bruta</span>
-            <strong>{formatCurrency(data.monthGross)}</strong>
-            <small>Valor bruto dos itens vendidos no periodo</small>
-          </Link>
           <Link className="metric metric-link accent-yellow" href={`/pedidos${filterQuery}`}>
             <span className="label">Receita confirmada</span>
             <strong>{formatCurrency(data.monthEffective)}</strong>
-            <small>Exclui pedidos cancelados</small>
+            <small>Pedidos válidos no período</small>
           </Link>
           <Link className="metric metric-link accent-blue" href={`/pedidos${filterQuery}`}>
             <span className="label">Pedidos</span>
@@ -359,12 +352,12 @@ export default async function HomePage({
           <Link className="metric metric-link accent-blue" href={`/pedidos${filterQuery}`}>
             <span className="label">Ticket Médio</span>
             <strong>{data.monthTicket == null ? "-" : formatCurrency(data.monthTicket)}</strong>
-            <small>Receita bruta / pedidos do período</small>
+            <small>Receita confirmada / pedidos</small>
           </Link>
           <Link className="metric metric-link accent-red" href={`/pedidos${filterQuery}`}>
             <span className="label">Sem faturamento</span>
             <strong>{formatCount(data.billingMetrics.uninvoicedOrders)}</strong>
-            <small>{formatCount(data.billingMetrics.detailedOrders)} pedidos detalhados no período</small>
+            <small>{formatCount(data.billingMetrics.billedOrders)} de {formatCount(data.billingMetrics.detailedOrders)} detalhados faturados</small>
           </Link>
         </section>
 
@@ -380,9 +373,9 @@ export default async function HomePage({
 
             <div className="bar-chart" aria-label="Receita por dia">
               {data.dailyChart.map((row) => {
-                const grossRevenue = asNumber(row.gross_revenue);
-                const height = Math.max((grossRevenue / data.maxDailyRevenue) * 100, 3);
-                const tooltip = `${formatDate(row.order_date)}: ${formatCurrency(grossRevenue)}`;
+                const effectiveRevenue = asNumber(row.effective_revenue);
+                const height = Math.max((effectiveRevenue / data.maxDailyRevenue) * 100, 3);
+                const tooltip = `${formatDate(row.order_date)}: ${formatCurrency(effectiveRevenue)}`;
                 return (
                   <div className="bar-item" key={row.order_date} title={tooltip} aria-label={tooltip}>
                     <div className="bar-track">

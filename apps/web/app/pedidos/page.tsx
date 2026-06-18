@@ -145,7 +145,6 @@ async function loadPedidos(filters: PedidosFilters) {
 
   const daily = (dailyResponse.data ?? []) as DailySale[];
   const orders = daily.reduce((sum, row) => sum + n(row.orders_count), 0);
-  const grossRevenue = daily.reduce((sum, row) => sum + n(row.gross_revenue), 0);
   const revenue = daily.reduce((sum, row) => sum + n(row.effective_revenue), 0);
 
   return {
@@ -153,11 +152,10 @@ async function loadPedidos(filters: PedidosFilters) {
     channels: (channelsResponse.data ?? []) as ChannelSale[],
     totalOrders: orderCount.count ?? 0,
     windowOrders: orders,
-    windowGrossRevenue: grossRevenue,
     windowRevenue: revenue,
     billingMetrics,
     availableThrough: daily[0]?.order_date ?? null,
-    ticket: orders > 0 ? grossRevenue / orders : 0
+    ticket: orders > 0 ? revenue / orders : 0
   };
 }
 
@@ -202,19 +200,19 @@ export default async function PedidosPage({
           <small>Últimos registros cacheados</small>
         </article>
         <article className="metric accent-yellow">
-          <span className="label">Receita bruta</span>
-          <strong>{money(data.windowGrossRevenue)}</strong>
-          <small>Total dos pedidos no período</small>
+          <span className="label">Receita confirmada</span>
+          <strong>{money(data.windowRevenue)}</strong>
+          <small>Pedidos válidos no período</small>
         </article>
         <article className="metric accent-red">
           <span className="label">Sem faturamento</span>
           <strong>{count(data.billingMetrics.uninvoicedOrders)}</strong>
-          <small>{count(data.billingMetrics.detailedOrders)} pedidos detalhados no período</small>
+          <small>{count(data.billingMetrics.billedOrders)} de {count(data.billingMetrics.detailedOrders)} detalhados faturados</small>
         </article>
         <article className="metric accent-white">
           <span className="label">Ticket médio</span>
           <strong>{money(data.ticket)}</strong>
-          <small>Receita bruta / pedidos do período</small>
+          <small>Receita confirmada / pedidos</small>
         </article>
       </section>
 
