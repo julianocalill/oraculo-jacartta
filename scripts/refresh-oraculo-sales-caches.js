@@ -58,6 +58,28 @@ function getChannelName(payload) {
   return ecommerce?.nome ? String(ecommerce.nome) : "Sem canal";
 }
 
+function getIsCanceled(order) {
+  return String(order.situacao) === "8";
+}
+
+async function listOrderItemsForDay(env, limit, offset, dateKey) {
+  const filters = [
+    "select=order_id,quantidade,valor_unitario,valor_total,order_data_criacao",
+    "order=order_data_criacao.asc,order_id.asc",
+    `limit=${limit}`,
+    `offset=${offset}`,
+    `order_data_criacao=gte.${dateKey}`,
+    `order_data_criacao=lt.${addDays(dateKey, 1)}`
+  ];
+
+  const { response, text } = await supabaseFetch(env, `rest/v1/olist_order_items?${filters.join("&")}`);
+  if (!response.ok) {
+    throw new Error(`Falha ao listar itens (${response.status}): ${text.slice(0, 300)}`);
+  }
+
+  return parseJson(text, "Falha ao listar itens");
+}
+
 async function supabaseFetch(env, path, options = {}) {
   const url = new URL(path, env.SUPABASE_URL.endsWith("/") ? env.SUPABASE_URL : `${env.SUPABASE_URL}/`);
   const response = await fetch(url, {
@@ -154,7 +176,9 @@ async function main() {
 
   const daily = new Map();
   const channels = new Map();
+  const orderMeta = new Map();
   let ordersProcessed = 0;
+  let itemsProcessed = 0;
   let currentDate = startDate;
 
   while (currentDate < endDate) {
@@ -168,9 +192,13 @@ async function main() {
         const orderDate = toDateKey(order.data_criacao);
         if (!orderDate) continue;
 
-        const gross = parseMoney(order.payload?.valorTotalPedido ?? order.payload?.total ?? order.payload?.valorTotal);
-        const isCanceled = String(order.situacao) === "8";
-        const effective = isCanceled ? 0 : gross;
+        const isCanceled = getIsCanceled(order);
+        const channelName = getChannelName(order.payload);
+        orderMeta.set(order.id, {
+          orderDate,
+          isCanceled,
+          channelName
+        });
 
         if (!daily.has(orderDate)) {
           daily.set(orderDate, {
@@ -184,13 +212,10 @@ async function main() {
         }
 
         const dailyRow = daily.get(orderDate);
-        dailyRow.gross_revenue += gross;
-        dailyRow.effective_revenue += effective;
         dailyRow.orders_count += 1;
         dailyRow.canceled_orders += isCanceled ? 1 : 0;
 
         const weekStart = toWeekStart(orderDate);
-        const channelName = getChannelName(order.payload);
         const channelKey = `${weekStart}:${channelName}`;
 
         if (!channels.has(channelKey)) {
@@ -207,8 +232,6 @@ async function main() {
         }
 
         const channelRow = channels.get(channelKey);
-        channelRow.gross_revenue += gross;
-        channelRow.effective_revenue += effective;
         channelRow.orders_count += 1;
         channelRow.canceled_orders += isCanceled ? 1 : 0;
       }
@@ -218,6 +241,73 @@ async function main() {
       console.log(JSON.stringify({ currentDate, ordersProcessed, dailyRows: daily.size, channelRows: channels.size }));
 
       if (orders.length < pageSize) break;
+    }
+
+    let itemOffset = 0;
+
+    while (true) {
+      const items = await listOrderItemsForDay(env, pageSize, itemOffset, currentDate);
+      if (items.length === 0) break;
+
+      for (const item of items) {
+        const meta = orderMeta.get(item.order_id);
+        const orderDate = meta?.orderDate ?? toDateKey(item.order_data_criacao);
+        if (!orderDate) continue;
+
+        const quantity = Number(item.quantidade ?? 0);
+        const unitValue = parseMoney(item.valor_unitario);
+        const totalValue = parseMoney(item.valor_total);
+        const gross = Number.isFinite(totalValue) && totalValue > 0
+          ? totalValue
+          : Number.isFinite(quantity) && Number.isFinite(unitValue)
+            ? quantity * unitValue
+            : 0;
+        const effective = meta?.isCanceled ? 0 : gross;
+        const channelName = meta?.channelName ?? "Sem canal";
+        const weekStart = toWeekStart(orderDate);
+
+        if (!daily.has(orderDate)) {
+          daily.set(orderDate, {
+            order_date: orderDate,
+            gross_revenue: 0,
+            effective_revenue: 0,
+            orders_count: 0,
+            canceled_orders: 0,
+            units: 0
+          });
+        }
+
+        const dailyRow = daily.get(orderDate);
+        dailyRow.gross_revenue += gross;
+        dailyRow.effective_revenue += effective;
+        dailyRow.units += quantity;
+
+        const channelKey = `${weekStart}:${channelName}`;
+        if (!channels.has(channelKey)) {
+          channels.set(channelKey, {
+            week_start: weekStart,
+            channel_id: null,
+            channel_name: channelName,
+            gross_revenue: 0,
+            effective_revenue: 0,
+            orders_count: 0,
+            canceled_orders: 0,
+            units: 0
+          });
+        }
+
+        const channelRow = channels.get(channelKey);
+        channelRow.gross_revenue += gross;
+        channelRow.effective_revenue += effective;
+        channelRow.units += quantity;
+        itemsProcessed += 1;
+      }
+
+      console.log(JSON.stringify({ currentDate, ordersProcessed, itemsProcessed, dailyRows: daily.size, channelRows: channels.size }));
+
+      itemOffset += items.length;
+
+      if (items.length < pageSize) break;
     }
 
     currentDate = addDays(currentDate, 1);

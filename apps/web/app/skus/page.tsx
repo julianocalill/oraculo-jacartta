@@ -34,6 +34,12 @@ function count(value: number | null | undefined) {
   return new Intl.NumberFormat("pt-BR").format(n(value));
 }
 
+function stock(value: number | null | undefined) {
+  const current = n(value);
+  if (current <= 0) return "Sem estoque";
+  return count(current);
+}
+
 function percent(value: number | null | undefined) {
   if (value == null || !Number.isFinite(value)) return "-";
   return new Intl.NumberFormat("pt-BR", {
@@ -48,6 +54,13 @@ function date(value: string | null | undefined) {
     dateStyle: "short",
     timeZone: "America/Sao_Paulo"
   }).format(new Date(value));
+}
+
+function coverage(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value)) return "-";
+  if (value <= 0) return "Sem estoque";
+  if (value > 999) return "999d+";
+  return `${Math.round(value)}d`;
 }
 
 async function loadSkus(selectedSku?: string) {
@@ -95,7 +108,7 @@ export default async function SkusPage({
         <div className="filter-row">
           <strong>Receita ↓</strong>
           <span>30d</span>
-          <span>Estoque</span>
+          <span>Cobertura</span>
         </div>
       </header>
 
@@ -107,8 +120,8 @@ export default async function SkusPage({
               <h2>Ranking operacional</h2>
             </div>
             <div className="sku-actions">
-              <span>ABC</span>
-              <span>XYZ</span>
+              <span>Categoria</span>
+              <span>Marca</span>
               <strong>Receita</strong>
             </div>
           </div>
@@ -120,12 +133,14 @@ export default async function SkusPage({
                   <th>#</th>
                   <th>SKU</th>
                   <th>Produto</th>
+                  <th>Categoria</th>
+                  <th>Marca</th>
                   <th className="numeric">Receita</th>
                   <th className="numeric">Un.</th>
                   <th className="numeric">Ticket</th>
                   <th className="numeric">Var.</th>
                   <th className="numeric">Estoque</th>
-                  <th className="numeric">Ruptura</th>
+                  <th className="numeric">Cobertura</th>
                 </tr>
               </thead>
               <tbody>
@@ -137,14 +152,15 @@ export default async function SkusPage({
                       <Link className="row-link" href={`/skus?sku=${encodeURIComponent(row.sku ?? "")}`}>
                         {row.product_name ?? "Sem nome"}
                       </Link>
-                      <div className="row-subtitle">{row.category_name ?? "Sem categoria"}</div>
                     </td>
+                    <td>{row.category_name ?? "Sem categoria"}</td>
+                    <td>{row.brand_name ?? "Sem marca"}</td>
                     <td className="numeric">{money(row.revenue_30d)}</td>
                     <td className="numeric">{count(row.units_30d)}</td>
                     <td className="numeric">{money(n(row.revenue_30d) / Math.max(n(row.units_30d), 1))}</td>
                     <td className="numeric trend-value">{percent(row.revenue_change_pct)}</td>
-                    <td className="numeric">{count(row.available_stock)}</td>
-                    <td className="numeric">{count(row.days_until_stockout)}d</td>
+                    <td className="numeric">{stock(row.available_stock)}</td>
+                    <td className="numeric">{coverage(row.days_until_stockout)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -168,11 +184,11 @@ export default async function SkusPage({
             </article>
             <article>
               <span>Estoque</span>
-              <strong>{count(selected?.available_stock)}</strong>
+              <strong>{stock(selected?.available_stock)}</strong>
             </article>
             <article>
-              <span>Ruptura</span>
-              <strong>{count(selected?.days_until_stockout)}d</strong>
+              <span>Cobertura</span>
+              <strong>{coverage(selected?.days_until_stockout)}</strong>
             </article>
             <article>
               <span>Valor estoque</span>

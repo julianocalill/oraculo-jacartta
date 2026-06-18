@@ -33,6 +33,19 @@ function count(value: number | null | undefined) {
   return new Intl.NumberFormat("pt-BR").format(n(value));
 }
 
+function stock(value: number | null | undefined) {
+  const current = n(value);
+  if (current <= 0) return "Sem estoque";
+  return count(current);
+}
+
+function coverage(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value)) return "-";
+  if (value <= 0) return "Sem estoque";
+  if (value > 999) return "999d+";
+  return `${Math.round(value)}d`;
+}
+
 function label(signal: string | null | undefined) {
   const labels: Record<string, string> = {
     ruptura: "Ruptura",
@@ -122,7 +135,7 @@ export default async function AlertasPage() {
                 <th>SKU</th>
                 <th>Produto</th>
                 <th className="numeric">Disponível</th>
-                <th className="numeric">Dias</th>
+                <th className="numeric">Cobertura</th>
                 <th className="numeric">Un. 30d</th>
                 <th className="numeric">Receita 30d</th>
               </tr>
@@ -142,8 +155,8 @@ export default async function AlertasPage() {
                     </Link>
                     <div className="row-subtitle">{row.category_name ?? "Sem categoria"}</div>
                   </td>
-                  <td className="numeric">{count(row.available_stock)}</td>
-                  <td className="numeric">{count(row.days_until_stockout)}d</td>
+                  <td className="numeric">{stock(row.available_stock)}</td>
+                  <td className="numeric">{coverage(row.days_until_stockout)}</td>
                   <td className="numeric">{count(row.units_30d)}</td>
                   <td className="numeric">{money(row.revenue_30d)}</td>
                 </tr>

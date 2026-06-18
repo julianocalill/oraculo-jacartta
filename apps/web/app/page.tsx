@@ -27,6 +27,7 @@ type SkuCurrent = {
   sku: string | null;
   product_name: string | null;
   category_name: string | null;
+  brand_name: string | null;
   revenue_30d: number | null;
   units_30d: number | null;
   revenue_change_pct: number | null;
@@ -42,13 +43,6 @@ type StockSignal = {
   available_stock: number | null;
   days_until_stockout: number | null;
   last_sale_at: string | null;
-};
-
-type SyncRun = {
-  started_at: string;
-  finished_at: string | null;
-  status: string;
-  records_upserted: number | null;
 };
 
 type DashboardSearchParams = {
@@ -105,16 +99,6 @@ function formatDate(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
-function formatDateTime(value: string | null | undefined) {
-  if (!value) return "Sem registro";
-
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-    timeZone: "America/Sao_Paulo"
-  }).format(new Date(value));
-}
-
 function formatPercent(value: number | null | undefined) {
   if (value == null || !Number.isFinite(value)) return "-";
   return new Intl.NumberFormat("pt-BR", {
@@ -134,6 +118,19 @@ function signalLabel(value: string | null | undefined) {
   };
 
   return labels[value ?? ""] ?? "Atenção";
+}
+
+function stockLabel(value: number | null | undefined) {
+  const stock = asNumber(value);
+  if (stock <= 0) return "Sem estoque";
+  return `${formatCount(stock)} disp.`;
+}
+
+function coverageLabel(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value)) return "-";
+  if (value <= 0) return "0d";
+  if (value > 999) return "999d+";
+  return `${formatDecimal(value, 0)}d`;
 }
 
 async function loadDashboard(filters: DashboardFilters) {
@@ -160,15 +157,13 @@ async function loadDashboard(filters: DashboardFilters) {
     stockWatchlistResponse,
     orderCount,
     itemCount,
-    productCount,
-    latestOrderRunResponse,
-    latestStockRunResponse
+    productCount
   ] = await Promise.all([
     dailyQuery,
     channelsQuery,
     supabase
       .from("oraculo_sku_current")
-      .select("sku, product_name, category_name, revenue_30d, units_30d, revenue_change_pct, available_stock, days_until_stockout, last_sale_at")
+      .select("sku, product_name, category_name, brand_name, revenue_30d, units_30d, revenue_change_pct, available_stock, days_until_stockout, last_sale_at")
       .order("revenue_30d", { ascending: false })
       .limit(10),
     supabase
@@ -180,17 +175,7 @@ async function loadDashboard(filters: DashboardFilters) {
       .limit(8),
     supabase.from("olist_orders").select("id", { count: "exact", head: true }),
     supabase.from("olist_order_items").select("id", { count: "exact", head: true }),
-    supabase.from("olist_products").select("id", { count: "exact", head: true }),
-    supabase
-      .from("olist_sync_runs")
-      .select("started_at, finished_at, status, records_upserted")
-      .order("started_at", { ascending: false })
-      .limit(1),
-    supabase
-      .from("olist_stock_sync_runs")
-      .select("started_at, finished_at, status, records_upserted")
-      .order("started_at", { ascending: false })
-      .limit(1)
+    supabase.from("olist_products").select("id", { count: "exact", head: true })
   ]);
 
   const daily = (dailyResponse.data ?? []) as DailySale[];
@@ -198,9 +183,13 @@ async function loadDashboard(filters: DashboardFilters) {
   const monthEffective = daily.reduce((sum, row) => sum + asNumber(row.effective_revenue), 0);
   const monthOrders = daily.reduce((sum, row) => sum + asNumber(row.orders_count), 0);
   const monthCanceled = daily.reduce((sum, row) => sum + asNumber(row.canceled_orders), 0);
+  const monthUnits = daily.reduce((sum, row) => sum + asNumber(row.units), 0);
   const latestDay = daily[0] ?? null;
-  const dailyChart = daily.slice(0, 18).reverse();
+  const dailyChart = daily.slice().reverse();
   const maxDailyRevenue = Math.max(...dailyChart.map((row) => asNumber(row.effective_revenue)), 1);
+  const actionableWatchlist = ((stockWatchlistResponse.data ?? []) as StockSignal[]).filter(
+    (row) => row.stock_signal === "ruptura" || row.stock_signal === "ruptura_iminente"
+  );
 
   return {
     daily,
@@ -211,15 +200,15 @@ async function loadDashboard(filters: DashboardFilters) {
     monthEffective,
     monthOrders,
     monthCanceled,
-    monthTicket: monthOrders - monthCanceled > 0 ? monthEffective / (monthOrders - monthCanceled) : 0,
+    monthUnits,
+    monthTicket: monthOrders - monthCanceled > 0 ? monthEffective / (monthOrders - monthCanceled) : null,
     channels: (channelsResponse.data ?? []) as ChannelSale[],
     skus: (skusResponse.data ?? []) as SkuCurrent[],
     stockWatchlist: (stockWatchlistResponse.data ?? []) as StockSignal[],
+    actionableWatchlist,
     orderCount: orderCount.count ?? 0,
     itemCount: itemCount.count ?? 0,
-    productCount: productCount.count ?? 0,
-    latestOrderRun: (latestOrderRunResponse.data?.[0] ?? null) as SyncRun | null,
-    latestStockRun: (latestStockRunResponse.data?.[0] ?? null) as SyncRun | null
+    productCount: productCount.count ?? 0
   };
 }
 
@@ -231,8 +220,6 @@ export default async function HomePage({
   const filters = getDashboardFilters(await searchParams);
   const data = await loadDashboard(filters);
   const filterQuery = `?start=${encodeURIComponent(filters.start)}&end=${encodeURIComponent(filters.end)}`;
-  const latestOrderRunAt = data.latestOrderRun?.finished_at ?? data.latestOrderRun?.started_at ?? null;
-  const latestStockRunAt = data.latestStockRun?.finished_at ?? data.latestStockRun?.started_at ?? null;
 
   return (
     <div className="app-shell">
@@ -250,9 +237,9 @@ export default async function HomePage({
           <Link href="/" className="nav-active">Analytics</Link>
           <Link href={`/pedidos${filterQuery}`}>Pedidos</Link>
           <Link href="/skus">SKUs</Link>
-          <Link href="/skus">Análise SKU <em>Novo</em></Link>
-          <Link href="/alertas">Alertas <b>{formatCount(data.stockWatchlist.length)}</b></Link>
-          <Link href="/">Performance</Link>
+          <Link href="/skus">Análise SKU</Link>
+          <Link href="/alertas">Alertas <b>{formatCount(data.actionableWatchlist.length)}</b></Link>
+          <Link href="/pedidos">Performance</Link>
           <Link href="/alertas">Ruptura</Link>
         </nav>
 
@@ -265,8 +252,8 @@ export default async function HomePage({
 
         <div className="sidebar-footer">
           <span className="sync-dot">•••••</span>
-          <small>Sincronizado</small>
-          <strong>{formatDateTime(latestStockRunAt)}</strong>
+          <small>Período ativo</small>
+          <strong>{filters.start} a {filters.end}</strong>
         </div>
       </aside>
 
@@ -293,32 +280,32 @@ export default async function HomePage({
           <Link className="metric metric-link accent-white" href={`/pedidos${filterQuery}`}>
             <span className="label">Receita Bruta</span>
             <strong>{formatCurrency(data.monthGross)}</strong>
-            <small>Base Olist consolidada</small>
+            <small>Valor bruto dos itens vendidos no periodo</small>
           </Link>
           <Link className="metric metric-link accent-yellow" href={`/pedidos${filterQuery}`}>
-            <span className="label">Receita Efetiva</span>
+            <span className="label">Receita confirmada</span>
             <strong>{formatCurrency(data.monthEffective)}</strong>
-            <small>Sem pedidos cancelados</small>
+            <small>Exclui pedidos cancelados</small>
           </Link>
           <Link className="metric metric-link accent-blue" href={`/pedidos${filterQuery}`}>
-            <span className="label">Vendas</span>
+            <span className="label">Pedidos</span>
             <strong>{formatCount(data.monthOrders)}</strong>
             <small>{formatCount(data.orderCount)} no histórico</small>
           </Link>
           <Link className="metric metric-link accent-yellow" href="/skus">
-            <span className="label">Unidades</span>
-            <strong>{formatCount(data.itemCount)}</strong>
-            <small>Itens detalhados</small>
+            <span className="label">Itens vendidos</span>
+            <strong>{formatCount(data.monthUnits)}</strong>
+            <small>{formatCount(data.itemCount)} linhas de item na base</small>
           </Link>
           <Link className="metric metric-link accent-blue" href={`/pedidos${filterQuery}`}>
             <span className="label">Ticket Médio</span>
-            <strong>{formatCurrency(data.monthTicket)}</strong>
-            <small>Receita efetiva / vendas</small>
+            <strong>{data.monthTicket == null ? "-" : formatCurrency(data.monthTicket)}</strong>
+            <small>Receita confirmada / pedidos validos</small>
           </Link>
           <Link className="metric metric-link accent-red" href={`/pedidos${filterQuery}`}>
             <span className="label">Cancelados</span>
             <strong>{formatCount(data.monthCanceled)}</strong>
-            <small>Pedidos no mês</small>
+            <small>Status cancelado no periodo</small>
           </Link>
         </section>
 
@@ -326,15 +313,15 @@ export default async function HomePage({
           <Link className="panel panel-link chart-panel" href={`/pedidos${filterQuery}`}>
             <div className="section-head section-row">
               <div>
-                <p className="eyebrow">Vendas por dia</p>
-                <h2>Curva recente</h2>
+                <p className="eyebrow">Receita por dia</p>
+                <h2>Curva do periodo</h2>
               </div>
               <span className="pill">Último dia: {formatDate(data.latestDay?.order_date)}</span>
             </div>
 
-            <div className="bar-chart" aria-label="Vendas por dia">
+            <div className="bar-chart" aria-label="Receita por dia">
               {data.dailyChart.map((row) => {
-                const height = Math.max((asNumber(row.effective_revenue) / data.maxDailyRevenue) * 100, 3);
+                const height = Math.max((asNumber(row.gross_revenue) / data.maxDailyRevenue) * 100, 3);
                 return (
                   <div className="bar-item" key={row.order_date}>
                     <div className="bar-track">
@@ -350,7 +337,7 @@ export default async function HomePage({
           <Link className="panel panel-link funnel-panel" href={`/pedidos${filterQuery}`}>
             <div>
               <p className="eyebrow">Canais</p>
-              <h2>Receita por loja</h2>
+              <h2>Receita por canal</h2>
             </div>
 
             <div className="funnel-list">
@@ -376,12 +363,6 @@ export default async function HomePage({
               <p className="eyebrow">Produtos</p>
               <h2>SKUs por receita</h2>
             </div>
-            <div className="sku-actions">
-              <span>Sem custo</span>
-              <strong>Receita ↓</strong>
-              <span>Unidades</span>
-              <span>Ruptura</span>
-            </div>
           </div>
 
           <div className="table-wrap dense-table-wrap">
@@ -390,15 +371,15 @@ export default async function HomePage({
                 <tr>
                   <th>#</th>
                   <th>SKU</th>
-                  <th>ABC</th>
-                  <th>XYZ</th>
                   <th>Produto</th>
+                  <th>Categoria</th>
+                  <th>Marca</th>
                   <th className="numeric">Receita</th>
                   <th className="numeric">Un.</th>
                   <th className="numeric">Ticket</th>
                   <th className="numeric">Var %</th>
                   <th className="numeric">Estoque</th>
-                  <th className="numeric">Ruptura</th>
+                  <th className="numeric">Cobertura</th>
                 </tr>
               </thead>
               <tbody>
@@ -406,20 +387,19 @@ export default async function HomePage({
                   <tr key={sku.sku ?? sku.product_name}>
                     <td>{index + 1}</td>
                     <td>{sku.sku || "-"}</td>
-                    <td><span className="grade green">A</span></td>
-                    <td><span className="grade yellow">Y</span></td>
                     <td>
                       <Link className="row-link" href={`/skus?sku=${encodeURIComponent(sku.sku ?? "")}`}>
                         {sku.product_name ?? "Sem nome"}
                       </Link>
-                      <div className="row-subtitle">{sku.category_name ?? "Sem categoria"}</div>
                     </td>
+                    <td>{sku.category_name ?? "Sem categoria"}</td>
+                    <td>{sku.brand_name ?? "Sem marca"}</td>
                     <td className="numeric">{formatCurrency(sku.revenue_30d)}</td>
                     <td className="numeric">{formatCount(sku.units_30d)}</td>
                     <td className="numeric">{formatCurrency(asNumber(sku.revenue_30d) / Math.max(asNumber(sku.units_30d), 1))}</td>
                     <td className="numeric trend-value">{formatPercent(sku.revenue_change_pct)}</td>
                     <td className="numeric">{formatCount(sku.available_stock)}</td>
-                    <td className="numeric">{formatDecimal(sku.days_until_stockout, 0)}d</td>
+                    <td className="numeric">{coverageLabel(sku.days_until_stockout)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -443,9 +423,9 @@ export default async function HomePage({
 
           <article className="panel">
             <p className="eyebrow">Estoque</p>
-            <h2>Watchlist</h2>
+            <h2>Alertas urgentes</h2>
             <div className="watchlist">
-              {data.stockWatchlist.map((item) => (
+              {data.actionableWatchlist.map((item) => (
                 <Link href={`/skus?sku=${encodeURIComponent(item.sku ?? "")}`} key={`${item.sku}-${item.product_name}`}>
                   <div>
                     <strong>{item.product_name ?? "Sem nome"}</strong>
@@ -456,22 +436,11 @@ export default async function HomePage({
                       {signalLabel(item.stock_signal)}
                     </span>
                     <small>
-                      {formatCount(item.available_stock)} disp. · {formatDecimal(item.days_until_stockout, 0)}d
+                      {stockLabel(item.available_stock)} · {coverageLabel(item.days_until_stockout)}
                     </small>
                   </div>
                 </Link>
               ))}
-            </div>
-          </article>
-
-          <article className="panel">
-            <p className="eyebrow">Sync</p>
-            <h2>Pipeline</h2>
-            <div className="sync-list">
-              <span>Pedidos</span>
-              <strong>{formatDateTime(latestOrderRunAt)}</strong>
-              <span>Estoque</span>
-              <strong>{formatDateTime(latestStockRunAt)}</strong>
             </div>
           </article>
         </section>
