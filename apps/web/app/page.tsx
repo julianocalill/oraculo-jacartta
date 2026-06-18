@@ -203,183 +203,239 @@ export default async function HomePage() {
   const latestStockRunAt = data.latestStockRun?.finished_at ?? data.latestStockRun?.started_at ?? null;
 
   return (
-    <main className="page dashboard">
-      <section className="surface hero-dashboard">
-        <div>
-          <p className="eyebrow">Oraculo</p>
-          <h1>Operação, venda e estoque em uma visão única.</h1>
-          <p className="lede">
-            Painel conectado ao Supabase com pedidos, canais, SKUs e estoque da Olist.
-            A camada de vendas usa cache analítico para leitura rápida da operação.
-          </p>
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="brand">
+          <span className="brand-mark">O</span>
+          <div>
+            <strong>Oraculo</strong>
+            <small>Multi-channel BI</small>
+          </div>
         </div>
 
-        <div className="hero-kpis">
-          <article>
-            <span className="label">Receita efetiva do mês</span>
+        <nav className="nav-group" aria-label="Principal">
+          <span>Principal</span>
+          <a className="nav-active">Analytics</a>
+          <a>Pedidos</a>
+          <a>SKUs</a>
+          <a>Análise SKU <em>Novo</em></a>
+          <a>Alertas <b>{formatCount(data.stockWatchlist.length)}</b></a>
+          <a>Performance</a>
+          <a>Ruptura</a>
+        </nav>
+
+        <nav className="nav-group nav-admin" aria-label="Admin">
+          <span>Admin</span>
+          <a>Usuários</a>
+          <a>Logs</a>
+          <a>Config</a>
+        </nav>
+
+        <div className="sidebar-footer">
+          <span className="sync-dot">•••••</span>
+          <small>Sincronizado</small>
+          <strong>{formatDateTime(latestStockRunAt)}</strong>
+        </div>
+      </aside>
+
+      <main className="workspace">
+        <header className="topbar">
+          <div>
+            <h1>Analytics</h1>
+            <p>{formatCount(data.orderCount)} pedidos · {formatCount(data.productCount)} produtos</p>
+          </div>
+          <div className="filter-row">
+            <span>01/06/2026</span>
+            <span>30/06/2026</span>
+            <strong>Jun/26</strong>
+          </div>
+        </header>
+
+        <section className="metric-grid metric-grid-eight">
+          <article className="metric accent-white">
+            <span className="label">Receita Bruta</span>
+            <strong>{formatCurrency(data.monthGross)}</strong>
+            <small>Base Olist consolidada</small>
+          </article>
+          <article className="metric accent-yellow">
+            <span className="label">Receita Efetiva</span>
             <strong>{formatCurrency(data.monthEffective)}</strong>
+            <small>Sem pedidos cancelados</small>
           </article>
-          <article>
-            <span className="label">Pedidos no mês</span>
+          <article className="metric accent-blue">
+            <span className="label">Vendas</span>
             <strong>{formatCount(data.monthOrders)}</strong>
+            <small>{formatCount(data.orderCount)} no histórico</small>
           </article>
-        </div>
-      </section>
+          <article className="metric accent-yellow">
+            <span className="label">Unidades</span>
+            <strong>{formatCount(data.itemCount)}</strong>
+            <small>Itens detalhados</small>
+          </article>
+          <article className="metric accent-blue">
+            <span className="label">Ticket Médio</span>
+            <strong>{formatCurrency(data.monthTicket)}</strong>
+            <small>Receita efetiva / vendas</small>
+          </article>
+          <article className="metric accent-red">
+            <span className="label">Cancelados</span>
+            <strong>{formatCount(data.monthCanceled)}</strong>
+            <small>Pedidos no mês</small>
+          </article>
+        </section>
 
-      <section className="metric-grid metric-grid-six">
-        <article className="metric">
-          <span className="label">Receita bruta</span>
-          <strong>{formatCurrency(data.monthGross)}</strong>
-        </article>
-        <article className="metric">
-          <span className="label">Receita efetiva</span>
-          <strong>{formatCurrency(data.monthEffective)}</strong>
-        </article>
-        <article className="metric">
-          <span className="label">Vendas</span>
-          <strong>{formatCount(data.monthOrders)}</strong>
-        </article>
-        <article className="metric">
-          <span className="label">Ticket médio</span>
-          <strong>{formatCurrency(data.monthTicket)}</strong>
-        </article>
-        <article className="metric">
-          <span className="label">Cancelados</span>
-          <strong>{formatCount(data.monthCanceled)}</strong>
-        </article>
-        <article className="metric">
-          <span className="label">SKUs no cadastro</span>
-          <strong>{formatCount(data.productCount)}</strong>
-        </article>
-      </section>
-
-      <section className="surface split split-balanced">
-        <div>
-          <div className="section-head section-row">
-            <div>
-              <p className="eyebrow">Vendas por dia</p>
-              <h2>Curva recente</h2>
+        <section className="control-grid">
+          <article className="panel chart-panel">
+            <div className="section-head section-row">
+              <div>
+                <p className="eyebrow">Vendas por dia</p>
+                <h2>Curva recente</h2>
+              </div>
+              <span className="pill">Último dia: {formatDate(data.latestDay?.order_date)}</span>
             </div>
-            <span className="status-chip compact">
-              Último dia: {formatDate(data.latestDay?.order_date)}
-            </span>
-          </div>
 
-          <div className="bar-chart" aria-label="Vendas por dia">
-            {data.dailyChart.map((row) => {
-              const height = Math.max((asNumber(row.effective_revenue) / data.maxDailyRevenue) * 100, 3);
-              return (
-                <div className="bar-item" key={row.order_date}>
-                  <div className="bar-track">
-                    <span style={{ height: `${height}%` }} />
+            <div className="bar-chart" aria-label="Vendas por dia">
+              {data.dailyChart.map((row) => {
+                const height = Math.max((asNumber(row.effective_revenue) / data.maxDailyRevenue) * 100, 3);
+                return (
+                  <div className="bar-item" key={row.order_date}>
+                    <div className="bar-track">
+                      <span style={{ height: `${height}%` }} />
+                    </div>
+                    <small>{formatDate(row.order_date)}</small>
                   </div>
-                  <small>{formatDate(row.order_date)}</small>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                );
+              })}
+            </div>
+          </article>
 
-        <aside className="stack">
-          <section className="surface-card">
-            <p className="eyebrow">Base</p>
-            <h3>{formatCount(data.orderCount)} pedidos</h3>
-            <p className="body-copy">
-              {formatCount(data.itemCount)} itens detalhados e {formatCount(data.productCount)} produtos normalizados.
-            </p>
-          </section>
-          <section className="surface-card">
-            <p className="eyebrow">Sincronização</p>
+          <article className="panel funnel-panel">
+            <div>
+              <p className="eyebrow">Canais</p>
+              <h2>Receita por loja</h2>
+            </div>
+
+            <div className="funnel-list">
+              {data.channels.slice(0, 9).map((channel) => {
+                const max = Math.max(...data.channels.map((item) => asNumber(item.effective_revenue)), 1);
+                const width = Math.max((asNumber(channel.effective_revenue) / max) * 100, 2);
+                return (
+                  <div className="funnel-row" key={`${channel.week_start}-${channel.channel_name}`}>
+                    <span>{channel.channel_name ?? "Sem canal"}</span>
+                    <div><i style={{ width: `${width}%` }} /></div>
+                    <strong>{formatCount(channel.orders_count)}</strong>
+                    <em>{formatCurrency(channel.effective_revenue)}</em>
+                  </div>
+                );
+              })}
+            </div>
+          </article>
+        </section>
+
+        <section className="panel product-panel">
+          <div className="sku-toolbar">
+            <div>
+              <p className="eyebrow">Produtos</p>
+              <h2>SKUs por receita</h2>
+            </div>
+            <div className="sku-actions">
+              <span>Sem custo</span>
+              <strong>Receita ↓</strong>
+              <span>Unidades</span>
+              <span>Ruptura</span>
+            </div>
+          </div>
+
+          <div className="table-wrap dense-table-wrap">
+            <table className="data-table dense-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>SKU</th>
+                  <th>ABC</th>
+                  <th>XYZ</th>
+                  <th>Produto</th>
+                  <th className="numeric">Receita</th>
+                  <th className="numeric">Un.</th>
+                  <th className="numeric">Ticket</th>
+                  <th className="numeric">Var %</th>
+                  <th className="numeric">Estoque</th>
+                  <th className="numeric">Ruptura</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.skus.map((sku, index) => (
+                  <tr key={sku.sku ?? sku.product_name}>
+                    <td>{index + 1}</td>
+                    <td>{sku.sku || "-"}</td>
+                    <td><span className="grade green">A</span></td>
+                    <td><span className="grade yellow">Y</span></td>
+                    <td>
+                      <div className="row-title">{sku.product_name ?? "Sem nome"}</div>
+                      <div className="row-subtitle">{sku.category_name ?? "Sem categoria"}</div>
+                    </td>
+                    <td className="numeric">{formatCurrency(sku.revenue_30d)}</td>
+                    <td className="numeric">{formatCount(sku.units_30d)}</td>
+                    <td className="numeric">{formatCurrency(asNumber(sku.revenue_30d) / Math.max(asNumber(sku.units_30d), 1))}</td>
+                    <td className="numeric trend-value">{formatPercent(sku.revenue_change_pct)}</td>
+                    <td className="numeric">{formatCount(sku.available_stock)}</td>
+                    <td className="numeric">{formatDecimal(sku.days_until_stockout, 0)}d</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="bottom-grid">
+          <article className="panel">
+            <p className="eyebrow">Top SKUs</p>
+            <h2>Ranking rápido</h2>
+            <div className="rank-list">
+              {data.skus.slice(0, 5).map((sku) => (
+                <div key={`rank-${sku.sku}`}>
+                  <span>{sku.product_name ?? "Sem nome"}</span>
+                  <strong>{formatCurrency(sku.revenue_30d)}</strong>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="panel">
+            <p className="eyebrow">Estoque</p>
+            <h2>Watchlist</h2>
+            <div className="watchlist">
+              {data.stockWatchlist.map((item) => (
+                <article key={`${item.sku}-${item.product_name}`}>
+                  <div>
+                    <strong>{item.product_name ?? "Sem nome"}</strong>
+                    <span>{item.sku || "-"}</span>
+                  </div>
+                  <div className="watch-meta">
+                    <span className={`badge ${item.stock_signal ?? "atencao"}`}>
+                      {signalLabel(item.stock_signal)}
+                    </span>
+                    <small>
+                      {formatCount(item.available_stock)} disp. · {formatDecimal(item.days_until_stockout, 0)}d
+                    </small>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </article>
+
+          <article className="panel">
+            <p className="eyebrow">Sync</p>
+            <h2>Pipeline</h2>
             <div className="sync-list">
               <span>Pedidos</span>
               <strong>{formatDateTime(latestOrderRunAt)}</strong>
               <span>Estoque</span>
               <strong>{formatDateTime(latestStockRunAt)}</strong>
             </div>
-          </section>
-        </aside>
-      </section>
-
-      <section className="surface">
-        <div className="section-head">
-          <p className="eyebrow">Canais</p>
-          <h2>Receita por loja na semana mais recente.</h2>
-        </div>
-        <div className="channel-grid">
-          {data.channels.slice(0, 8).map((channel) => (
-            <article className="channel-card" key={`${channel.week_start}-${channel.channel_name}`}>
-              <span>{channel.channel_name ?? "Sem canal"}</span>
-              <strong>{formatCurrency(channel.effective_revenue)}</strong>
-              <small>
-                {formatCount(channel.orders_count)} pedidos · {formatCurrency(channel.average_ticket)} ticket
-              </small>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="surface split">
-        <div>
-          <div className="section-head">
-            <p className="eyebrow">Top SKUs</p>
-            <h2>Produtos por receita nos últimos 30 dias.</h2>
-          </div>
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Produto</th>
-                  <th>SKU</th>
-                  <th className="numeric">Receita</th>
-                  <th className="numeric">Unid.</th>
-                  <th className="numeric">Estoque</th>
-                  <th className="numeric">Var.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.skus.map((sku) => (
-                  <tr key={sku.sku ?? sku.product_name}>
-                    <td>
-                      <div className="row-title">{sku.product_name ?? "Sem nome"}</div>
-                      <div className="row-subtitle">{sku.category_name ?? "Sem categoria"}</div>
-                    </td>
-                    <td>{sku.sku || "-"}</td>
-                    <td className="numeric">{formatCurrency(sku.revenue_30d)}</td>
-                    <td className="numeric">{formatCount(sku.units_30d)}</td>
-                    <td className="numeric">{formatCount(sku.available_stock)}</td>
-                    <td className="numeric">{formatPercent(sku.revenue_change_pct)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <aside>
-          <div className="section-head">
-            <p className="eyebrow">Estoque</p>
-            <h2>Watchlist.</h2>
-          </div>
-          <div className="watchlist">
-            {data.stockWatchlist.map((item) => (
-              <article key={`${item.sku}-${item.product_name}`}>
-                <div>
-                  <strong>{item.product_name ?? "Sem nome"}</strong>
-                  <span>{item.sku || "-"}</span>
-                </div>
-                <div className="watch-meta">
-                  <span className={`badge ${item.stock_signal ?? "atencao"}`}>
-                    {signalLabel(item.stock_signal)}
-                  </span>
-                  <small>
-                    {formatCount(item.available_stock)} disp. · {formatDecimal(item.days_until_stockout, 0)} dias
-                  </small>
-                </div>
-              </article>
-            ))}
-          </div>
-        </aside>
-      </section>
-    </main>
+          </article>
+        </section>
+      </main>
+    </div>
   );
 }
