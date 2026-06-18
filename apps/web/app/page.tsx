@@ -55,6 +55,12 @@ type DashboardFilters = {
   end: string;
 };
 
+type BillingWindowMetrics = {
+  detailedOrders: number;
+  billedOrders: number;
+  uninvoicedOrders: number;
+};
+
 function isIsoDate(value: string | undefined) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
 }
@@ -143,6 +149,43 @@ function formatDateShort(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
+function addDays(value: string, days: number) {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+async function loadBillingWindowMetrics(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  filters: DashboardFilters
+): Promise<BillingWindowMetrics> {
+  const endExclusive = addDays(filters.end, 1);
+
+  const [detailedCountResponse, billedCountResponse] = await Promise.all([
+    supabase
+      .from("olist_orders")
+      .select("id", { count: "exact", head: true })
+      .gte("data_criacao", filters.start)
+      .lt("data_criacao", endExclusive)
+      .not("payload->itens", "is", null),
+    supabase
+      .from("olist_orders")
+      .select("id", { count: "exact", head: true })
+      .gte("data_criacao", filters.start)
+      .lt("data_criacao", endExclusive)
+      .not("payload->>dataFaturamento", "is", null)
+  ]);
+
+  const detailedOrders = detailedCountResponse.count ?? 0;
+  const billedOrders = billedCountResponse.count ?? 0;
+
+  return {
+    detailedOrders,
+    billedOrders,
+    uninvoicedOrders: Math.max(detailedOrders - billedOrders, 0)
+  };
+}
+
 async function loadDashboard(filters: DashboardFilters) {
   const supabase = createSupabaseAdminClient();
   let dailyQuery = supabase
@@ -167,7 +210,8 @@ async function loadDashboard(filters: DashboardFilters) {
     stockWatchlistResponse,
     orderCount,
     itemCount,
-    productCount
+    productCount,
+    billingMetrics
   ] = await Promise.all([
     dailyQuery,
     channelsQuery,
@@ -185,14 +229,14 @@ async function loadDashboard(filters: DashboardFilters) {
       .limit(8),
     supabase.from("olist_orders").select("id", { count: "exact", head: true }),
     supabase.from("olist_order_items").select("id", { count: "exact", head: true }),
-    supabase.from("olist_products").select("id", { count: "exact", head: true })
+    supabase.from("olist_products").select("id", { count: "exact", head: true }),
+    loadBillingWindowMetrics(supabase, filters)
   ]);
 
   const daily = (dailyResponse.data ?? []) as DailySale[];
   const monthGross = daily.reduce((sum, row) => sum + asNumber(row.gross_revenue), 0);
   const monthEffective = daily.reduce((sum, row) => sum + asNumber(row.effective_revenue), 0);
   const monthOrders = daily.reduce((sum, row) => sum + asNumber(row.orders_count), 0);
-  const monthCanceled = daily.reduce((sum, row) => sum + asNumber(row.canceled_orders), 0);
   const monthUnits = daily.reduce((sum, row) => sum + asNumber(row.units), 0);
   const latestDay = daily[0] ?? null;
   const dailyChart = daily.slice().reverse();
@@ -209,9 +253,9 @@ async function loadDashboard(filters: DashboardFilters) {
     monthGross,
     monthEffective,
     monthOrders,
-    monthCanceled,
     monthUnits,
     monthTicket: monthOrders > 0 ? monthGross / monthOrders : null,
+    billingMetrics,
     channels: (channelsResponse.data ?? []) as ChannelSale[],
     skus: (skusResponse.data ?? []) as SkuCurrent[],
     stockWatchlist: (stockWatchlistResponse.data ?? []) as StockSignal[],
@@ -318,9 +362,9 @@ export default async function HomePage({
             <small>Receita bruta / pedidos do período</small>
           </Link>
           <Link className="metric metric-link accent-red" href={`/pedidos${filterQuery}`}>
-            <span className="label">Cancelados</span>
-            <strong>{formatCount(data.monthCanceled)}</strong>
-            <small>Status cancelado no periodo</small>
+            <span className="label">Sem faturamento</span>
+            <strong>{formatCount(data.billingMetrics.uninvoicedOrders)}</strong>
+            <small>{formatCount(data.billingMetrics.detailedOrders)} pedidos detalhados no período</small>
           </Link>
         </section>
 
@@ -336,9 +380,11 @@ export default async function HomePage({
 
             <div className="bar-chart" aria-label="Receita por dia">
               {data.dailyChart.map((row) => {
-                const height = Math.max((asNumber(row.gross_revenue) / data.maxDailyRevenue) * 100, 3);
+                const grossRevenue = asNumber(row.gross_revenue);
+                const height = Math.max((grossRevenue / data.maxDailyRevenue) * 100, 3);
+                const tooltip = `${formatDate(row.order_date)}: ${formatCurrency(grossRevenue)}`;
                 return (
-                  <div className="bar-item" key={row.order_date}>
+                  <div className="bar-item" key={row.order_date} title={tooltip} aria-label={tooltip}>
                     <div className="bar-track">
                       <span style={{ height: `${height}%` }} />
                     </div>
