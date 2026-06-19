@@ -193,7 +193,7 @@ async function storeRefreshedToken(
   if (error) throw error;
 }
 
-async function fetchOlistOrders(accessToken: string) {
+async function fetchOlistOrders(accessToken: string, lookbackDays = 2, maxPages = 50) {
   const baseUrl = env.olistApiBaseUrl.endsWith('/') ? env.olistApiBaseUrl : `${env.olistApiBaseUrl}/`;
   const headers: Record<string, string> = {
     Accept: 'application/json'
@@ -205,7 +205,7 @@ async function fetchOlistOrders(accessToken: string) {
 
   const windowEnd = new Date();
   const windowStart = new Date(windowEnd);
-  windowStart.setDate(windowStart.getDate() - 2);
+  windowStart.setDate(windowStart.getDate() - lookbackDays);
 
   const startDate = toIsoDate(windowStart);
   const endDate = toIsoDate(windowEnd);
@@ -213,7 +213,7 @@ async function fetchOlistOrders(accessToken: string) {
   let offset = 0;
   const rows: Record<string, unknown>[] = [];
 
-  for (let page = 0; page < 50; page += 1) {
+  for (let page = 0; page < maxPages; page += 1) {
     const url = new URL('pedidos', baseUrl);
     url.searchParams.set('limit', String(limit));
     url.searchParams.set('offset', String(offset));
@@ -247,6 +247,54 @@ async function fetchOlistOrders(accessToken: string) {
     windowStart: startDate,
     windowEnd: endDate
   };
+}
+
+async function fetchOlistOrderDetail(accessToken: string, orderId: string) {
+  const baseUrl = env.olistApiBaseUrl.endsWith('/') ? env.olistApiBaseUrl : `${env.olistApiBaseUrl}/`;
+  const headers: Record<string, string> = {
+    Accept: 'application/json'
+  };
+
+  headers[env.olistApiAuthHeader] = env.olistApiAuthPrefix
+    ? `${env.olistApiAuthPrefix} ${accessToken}`
+    : accessToken;
+
+  const response = await fetch(new URL(`pedidos/${orderId}`, baseUrl), { headers });
+  const text = await response.text();
+
+  if (!response.ok) {
+    throw new Error(`Falha ao buscar detalhe do pedido ${orderId} (${response.status}): ${text.slice(0, 300)}`);
+  }
+
+  const payload = parseJsonOrThrow(text, `Falha ao buscar detalhe do pedido ${orderId}`) as Record<string, unknown>;
+
+  return {
+    id: String(payload.id ?? orderId),
+    numero_pedido: payload.numeroPedido ?? payload.numero_pedido ?? null,
+    situacao: payload.situacao == null ? null : String(payload.situacao),
+    data_criacao: payload.data ?? payload.dataCriacao ?? null,
+    data_atualizacao: payload.dataAtualizacao ?? payload.dataAlteracao ?? null,
+    cliente: payload.cliente && typeof payload.cliente === 'object' ? payload.cliente : {},
+    transportador: payload.transportador && typeof payload.transportador === 'object' ? payload.transportador : {},
+    payload,
+    synced_at: new Date().toISOString()
+  };
+}
+
+async function hydrateOrderDetails(accessToken: string, rows: Record<string, unknown>[]) {
+  const detailedRows: Record<string, unknown>[] = [];
+
+  for (const row of rows) {
+    const payload = row.payload && typeof row.payload === 'object' ? row.payload as Record<string, unknown> : {};
+    if (Array.isArray(payload.itens)) {
+      detailedRows.push(row);
+      continue;
+    }
+
+    detailedRows.push(await fetchOlistOrderDetail(accessToken, String(row.id)));
+  }
+
+  return detailedRows;
 }
 
 Deno.serve(async (req) => {
@@ -284,14 +332,29 @@ Deno.serve(async (req) => {
       error_message: null
     };
 
+    const requestBody = req.headers.get('content-type')?.includes('application/json')
+      ? await req.json().catch(() => ({}))
+      : {};
+    const typedBody = requestBody as {
+      hydrateDetails?: boolean;
+      lookbackDays?: number;
+      maxPages?: number;
+    };
+    const shouldHydrateDetails = Boolean(typedBody.hydrateDetails);
+    const lookbackDays = Number.isFinite(Number(typedBody.lookbackDays)) ? Number(typedBody.lookbackDays) : 2;
+    const maxPages = Number.isFinite(Number(typedBody.maxPages)) ? Number(typedBody.maxPages) : 50;
+
     const accessToken = await getAccessToken(supabase);
-    const syncResult = await fetchOlistOrders(accessToken);
+    const syncResult = await fetchOlistOrders(accessToken, lookbackDays, maxPages);
+    const rows = shouldHydrateDetails
+      ? await hydrateOrderDetails(accessToken, syncResult.rows)
+      : syncResult.rows;
 
     run.window_start = syncResult.windowStart;
     run.window_end = syncResult.windowEnd;
-    run.records_fetched = syncResult.rows.length;
+    run.records_fetched = rows.length;
 
-    for (const rows of chunk(syncResult.rows, 50)) {
+    for (const rows of chunk(rows, 50)) {
       const { error } = await supabase
         .from('olist_orders')
         .upsert(rows, { onConflict: 'id' });
