@@ -409,6 +409,36 @@ h2 {
   display: grid;
   gap: 7px;
   min-width: 0;
+  position: relative;
+}
+
+.bar-item.has-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  z-index: 4;
+  width: max-content;
+  max-width: 220px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: rgba(16, 10, 30, 0.98);
+  color: var(--text);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+  opacity: 0;
+  padding: 8px 10px;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 140ms ease, transform 140ms ease;
+  white-space: normal;
+}
+
+.bar-item.has-tooltip:hover::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .bar-track {
@@ -641,6 +671,18 @@ h2 {
 
 .rank-list strong {
   color: var(--amber);
+  white-space: nowrap;
+}
+
+.rank-metrics {
+  display: grid;
+  gap: 3px;
+  justify-items: end;
+}
+
+.rank-metrics small {
+  color: var(--muted);
+  font-size: 11px;
   white-space: nowrap;
 }
 

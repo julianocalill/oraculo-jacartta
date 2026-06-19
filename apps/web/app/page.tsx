@@ -36,6 +36,19 @@ type SkuCurrent = {
   last_sale_at: string | null;
 };
 
+type SkuSale = {
+  sku: string | null;
+  product_name: string | null;
+  category_name: string | null;
+  brand_name: string | null;
+  gross_revenue: number | null;
+  effective_revenue: number | null;
+  units: number | null;
+  available_stock: number | null;
+  days_until_stockout: number | null;
+  last_sale_at: string | null;
+};
+
 type StockSignal = {
   sku: string | null;
   product_name: string | null;
@@ -43,6 +56,22 @@ type StockSignal = {
   available_stock: number | null;
   days_until_stockout: number | null;
   last_sale_at: string | null;
+};
+
+type RuptureProduct = {
+  id: string;
+  sku: string | null;
+  product_name: string | null;
+  available_stock: number | null;
+  days_without_sale: number | null;
+  last_sale_at: string | null;
+};
+
+type OlistOrderRow = {
+  id: string;
+  situacao: string | null;
+  data_criacao: string | null;
+  payload: Record<string, unknown> | null;
 };
 
 type DashboardSearchParams = {
@@ -59,6 +88,20 @@ type BillingWindowMetrics = {
   detailedOrders: number;
   billedOrders: number;
   uninvoicedOrders: number;
+};
+
+type NfMetrics = {
+  confirmedRevenue: number;
+  emittedCount: number;
+  canceledCount: number;
+  pendingCount: number;
+};
+
+type NfMetricsRow = {
+  confirmed_revenue: number | string | null;
+  emitted_count: number | string | null;
+  canceled_count: number | string | null;
+  pending_count: number | string | null;
 };
 
 function isIsoDate(value: string | undefined) {
@@ -149,10 +192,180 @@ function formatDateShort(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
+function daysSince(value: string | null | undefined) {
+  if (!value) return null;
+  const today = new Date();
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return Math.max(Math.floor((today.getTime() - date.getTime()) / 86_400_000), 0);
+}
+
 function addDays(value: string, days: number) {
   const date = new Date(`${value}T00:00:00.000Z`);
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
+}
+
+function parseMoney(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return 0;
+  const normalized = value.replace(/\./g, "").replace(",", ".");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function asMetricNumber(value: number | string | null | undefined) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") return parseMoney(value);
+  return 0;
+}
+
+function orderValue(order: OlistOrderRow) {
+  const payload = order.payload ?? {};
+  return parseMoney(
+    payload.valorTotalPedido ??
+    payload.valor ??
+    payload.total ??
+    payload.valorTotalProdutos
+  );
+}
+
+function isCanceled(order: OlistOrderRow) {
+  return String(order.situacao ?? order.payload?.situacao ?? "") === "8";
+}
+
+function hasBillingDate(order: OlistOrderRow) {
+  return Boolean(String(order.payload?.dataFaturamento ?? "").trim());
+}
+
+async function fetchAll<T>(
+  buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>
+) {
+  const pageSize = 1000;
+  const rows: T[] = [];
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await buildQuery(from, from + pageSize - 1);
+    if (error) throw error;
+
+    const page = data ?? [];
+    rows.push(...page);
+
+    if (page.length < pageSize) break;
+  }
+
+  return rows;
+}
+
+async function loadNfMetrics(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  filters: DashboardFilters
+): Promise<NfMetrics> {
+  const { data, error } = await supabase
+    .rpc("oraculo_nf_metrics", {
+      start_date: filters.start,
+      end_date: filters.end
+    })
+    .maybeSingle();
+
+  if (error) throw error;
+
+  const row = data as NfMetricsRow | null;
+  return {
+    confirmedRevenue: asMetricNumber(row?.confirmed_revenue),
+    emittedCount: asMetricNumber(row?.emitted_count),
+    canceledCount: asMetricNumber(row?.canceled_count),
+    pendingCount: asMetricNumber(row?.pending_count)
+  };
+}
+
+function aggregateSkuSales(rows: SkuSale[]) {
+  const bySku = new Map<string, SkuCurrent>();
+
+  for (const row of rows) {
+    const key = row.sku || row.product_name || "sem-sku";
+    const current = bySku.get(key) ?? {
+      sku: row.sku,
+      product_name: row.product_name,
+      category_name: row.category_name,
+      brand_name: row.brand_name,
+      revenue_30d: 0,
+      units_30d: 0,
+      revenue_change_pct: null,
+      available_stock: row.available_stock,
+      days_until_stockout: row.days_until_stockout,
+      last_sale_at: row.last_sale_at
+    };
+
+    current.revenue_30d = asNumber(current.revenue_30d) + asNumber(row.effective_revenue);
+    current.units_30d = asNumber(current.units_30d) + asNumber(row.units);
+    current.available_stock = row.available_stock ?? current.available_stock;
+    current.days_until_stockout = row.days_until_stockout ?? current.days_until_stockout;
+    current.last_sale_at = !current.last_sale_at || (row.last_sale_at && row.last_sale_at > current.last_sale_at)
+      ? row.last_sale_at
+      : current.last_sale_at;
+
+    bySku.set(key, current);
+  }
+
+  return Array.from(bySku.values())
+    .sort((left, right) => asNumber(right.revenue_30d) - asNumber(left.revenue_30d))
+    .slice(0, 10);
+}
+
+async function loadRuptureProducts(
+  supabase: ReturnType<typeof createSupabaseAdminClient>
+): Promise<RuptureProduct[]> {
+  const { data: products, error } = await supabase
+    .from("olist_products")
+    .select("id, sku, nome, disponivel")
+    .eq("active", true)
+    .neq("tipo", "K")
+    .lte("disponivel", 0)
+    .order("disponivel", { ascending: true })
+    .limit(20);
+
+  if (error) throw error;
+
+  const productRows = (products ?? []) as Array<{
+    id: string;
+    sku: string | null;
+    nome: string | null;
+    disponivel: number | null;
+  }>;
+  const productIds = productRows.map((product) => product.id);
+
+  if (productIds.length === 0) return [];
+
+  const { data: salesRows, error: salesError } = await supabase
+    .from("olist_order_items")
+    .select("produto_id, order_data_criacao")
+    .in("produto_id", productIds)
+    .order("order_data_criacao", { ascending: false })
+    .limit(5000);
+
+  if (salesError) throw salesError;
+
+  const lastSaleByProduct = new Map<string, string>();
+  for (const sale of (salesRows ?? []) as Array<{ produto_id: string | null; order_data_criacao: string | null }>) {
+    if (!sale.produto_id || !sale.order_data_criacao || lastSaleByProduct.has(sale.produto_id)) continue;
+    lastSaleByProduct.set(sale.produto_id, sale.order_data_criacao);
+  }
+
+  return productRows
+    .map((product) => {
+      const lastSale = lastSaleByProduct.get(product.id) ?? null;
+      return {
+        id: product.id,
+        sku: product.sku,
+        product_name: product.nome,
+        available_stock: product.disponivel,
+        days_without_sale: daysSince(lastSale),
+        last_sale_at: lastSale
+      };
+    })
+    .sort((left, right) => asNumber(right.days_without_sale) - asNumber(left.days_without_sale))
+    .slice(0, 8);
 }
 
 async function loadBillingWindowMetrics(
@@ -206,20 +419,23 @@ async function loadDashboard(filters: DashboardFilters) {
   const [
     dailyResponse,
     channelsResponse,
-    skusResponse,
+    skuSalesResponse,
     stockWatchlistResponse,
     orderCount,
     itemCount,
     productCount,
-    billingMetrics
+    billingMetrics,
+    nfMetrics,
+    ruptureProducts
   ] = await Promise.all([
     dailyQuery,
     channelsQuery,
     supabase
-      .from("oraculo_sku_current")
-      .select("sku, product_name, category_name, brand_name, revenue_30d, units_30d, revenue_change_pct, available_stock, days_until_stockout, last_sale_at")
-      .order("revenue_30d", { ascending: false })
-      .limit(10),
+      .rpc("oraculo_sku_period_rank", {
+        start_date: filters.start,
+        end_date: filters.end,
+        result_limit: 10
+      }),
     supabase
       .from("oraculo_stock_watchlist")
       .select("sku, product_name, stock_signal, available_stock, days_until_stockout, last_sale_at")
@@ -230,7 +446,9 @@ async function loadDashboard(filters: DashboardFilters) {
     supabase.from("olist_orders").select("id", { count: "exact", head: true }),
     supabase.from("olist_order_items").select("id", { count: "exact", head: true }),
     supabase.from("olist_products").select("id", { count: "exact", head: true }),
-    loadBillingWindowMetrics(supabase, filters)
+    loadBillingWindowMetrics(supabase, filters),
+    loadNfMetrics(supabase, filters),
+    loadRuptureProducts(supabase)
   ]);
 
   const daily = (dailyResponse.data ?? []) as DailySale[];
@@ -250,13 +468,15 @@ async function loadDashboard(filters: DashboardFilters) {
     dailyChart,
     maxDailyRevenue,
     monthEffective,
+    nfMetrics,
     monthOrders,
     monthUnits,
     monthTicket: monthOrders > 0 ? monthEffective / monthOrders : null,
     billingMetrics,
     channels: (channelsResponse.data ?? []) as ChannelSale[],
-    skus: (skusResponse.data ?? []) as SkuCurrent[],
+    skus: (skuSalesResponse.data ?? []) as SkuCurrent[],
     stockWatchlist: (stockWatchlistResponse.data ?? []) as StockSignal[],
+    ruptureProducts,
     actionableWatchlist,
     filteredOrderCount: monthOrders,
     availableThrough: latestDay?.order_date ?? null,
@@ -336,13 +556,13 @@ export default async function HomePage({
         <section className="metric-grid metric-grid-eight">
           <Link className="metric metric-link accent-yellow" href={`/pedidos${filterQuery}`}>
             <span className="label">Receita confirmada</span>
-            <strong>{formatCurrency(data.monthEffective)}</strong>
-            <small>Pedidos válidos no período</small>
+            <strong>{formatCurrency(data.nfMetrics.confirmedRevenue)}</strong>
+            <small>Valor total das NFs emitidas</small>
           </Link>
           <Link className="metric metric-link accent-blue" href={`/pedidos${filterQuery}`}>
-            <span className="label">Pedidos</span>
-            <strong>{formatCount(data.monthOrders)}</strong>
-            <small>{formatCount(data.orderCount)} no histórico</small>
+            <span className="label">NFs emitidas</span>
+            <strong>{formatCount(data.nfMetrics.emittedCount)}</strong>
+            <small>No período selecionado</small>
           </Link>
           <Link className="metric metric-link accent-yellow" href="/skus">
             <span className="label">Itens vendidos</span>
@@ -351,13 +571,18 @@ export default async function HomePage({
           </Link>
           <Link className="metric metric-link accent-blue" href={`/pedidos${filterQuery}`}>
             <span className="label">Ticket Médio</span>
-            <strong>{data.monthTicket == null ? "-" : formatCurrency(data.monthTicket)}</strong>
-            <small>Receita confirmada / pedidos</small>
+            <strong>{data.nfMetrics.emittedCount <= 0 ? "-" : formatCurrency(data.nfMetrics.confirmedRevenue / data.nfMetrics.emittedCount)}</strong>
+            <small>Receita confirmada / NFs emitidas</small>
           </Link>
           <Link className="metric metric-link accent-red" href={`/pedidos${filterQuery}`}>
-            <span className="label">Sem faturamento</span>
-            <strong>{formatCount(data.billingMetrics.uninvoicedOrders)}</strong>
-            <small>{formatCount(data.billingMetrics.billedOrders)} de {formatCount(data.billingMetrics.detailedOrders)} detalhados faturados</small>
+            <span className="label">NFs canceladas</span>
+            <strong>{formatCount(data.nfMetrics.canceledCount)}</strong>
+            <small>Status cancelado no período</small>
+          </Link>
+          <Link className="metric metric-link accent-white" href={`/pedidos${filterQuery}`}>
+            <span className="label">NFs pendentes</span>
+            <strong>{formatCount(data.nfMetrics.pendingCount)}</strong>
+            <small>Sem data de faturamento</small>
           </Link>
         </section>
 
@@ -375,9 +600,9 @@ export default async function HomePage({
               {data.dailyChart.map((row) => {
                 const effectiveRevenue = asNumber(row.effective_revenue);
                 const height = Math.max((effectiveRevenue / data.maxDailyRevenue) * 100, 3);
-                const tooltip = `${formatDate(row.order_date)}: ${formatCurrency(effectiveRevenue)}`;
+                const tooltip = `${formatDate(row.order_date)}: ${formatCurrency(effectiveRevenue)} · ${formatCount(row.orders_count)} pedidos`;
                 return (
-                  <div className="bar-item" key={row.order_date} title={tooltip} aria-label={tooltip}>
+                  <div className="bar-item has-tooltip" key={row.order_date} title={tooltip} aria-label={tooltip} data-tooltip={tooltip}>
                     <div className="bar-track">
                       <span style={{ height: `${height}%` }} />
                     </div>
@@ -469,7 +694,10 @@ export default async function HomePage({
               {data.skus.slice(0, 5).map((sku) => (
                 <Link href={`/skus?sku=${encodeURIComponent(sku.sku ?? "")}`} key={`rank-${sku.sku}`}>
                   <span>{sku.product_name ?? "Sem nome"}</span>
-                  <strong>{formatCurrency(sku.revenue_30d)}</strong>
+                  <div className="rank-metrics">
+                    <strong>{formatCurrency(sku.revenue_30d)}</strong>
+                    <small>{formatCount(sku.units_30d)} un.</small>
+                  </div>
                 </Link>
               ))}
             </div>
@@ -477,20 +705,18 @@ export default async function HomePage({
 
           <article className="panel">
             <p className="eyebrow">Estoque</p>
-            <h2>Alertas urgentes</h2>
+            <h2>Ruptura por produto simples</h2>
             <div className="watchlist">
-              {data.actionableWatchlist.map((item) => (
-                <Link href={`/skus?sku=${encodeURIComponent(item.sku ?? "")}`} key={`${item.sku}-${item.product_name}`}>
+              {data.ruptureProducts.map((item) => (
+                <Link href={`/skus?sku=${encodeURIComponent(item.sku ?? "")}`} key={`${item.id}-${item.sku}`}>
                   <div>
                     <strong>{item.product_name ?? "Sem nome"}</strong>
                     <span>{item.sku || "-"}</span>
                   </div>
                   <div className="watch-meta">
-                    <span className={`badge ${item.stock_signal ?? "atencao"}`}>
-                      {signalLabel(item.stock_signal)}
-                    </span>
+                    <span className="badge ruptura">Ruptura</span>
                     <small>
-                      {stockLabel(item.available_stock)} · {coverageLabel(item.days_until_stockout)}
+                      {formatCount(item.days_without_sale)} dias sem venda · {stockLabel(item.available_stock)}
                     </small>
                   </div>
                 </Link>
