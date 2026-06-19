@@ -3,18 +3,19 @@ import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
+type SourceFilter = "all" | "olist" | "shopee";
+
 type SkuRow = {
+  source: string | null;
   sku: string | null;
   product_name: string | null;
-  category_name: string | null;
-  brand_name: string | null;
+  status_label: string | null;
   units_30d: number | null;
   revenue_30d: number | null;
   revenue_change_pct: number | null;
   available_stock: number | null;
   stock_balance: number | null;
   days_until_stockout: number | null;
-  stock_value: number | null;
   last_sale_at: string | null;
 };
 
@@ -35,6 +36,7 @@ function count(value: number | null | undefined) {
 }
 
 function stock(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value)) return "-";
   const current = n(value);
   if (current <= 0) return "Sem estoque";
   return count(current);
@@ -63,23 +65,47 @@ function coverage(value: number | null | undefined) {
   return `${Math.round(value)}d`;
 }
 
-async function loadSkus(selectedSku?: string) {
+function sourceLabel(value: string | null | undefined) {
+  if (value === "shopee") return "Shopee";
+  if (value === "olist") return "Olist";
+  return "Outros";
+}
+
+function asSource(value: string | undefined): SourceFilter {
+  if (value === "olist" || value === "shopee") return value;
+  return "all";
+}
+
+async function loadSkus(selectedSku?: string, source: SourceFilter = "all") {
   const supabase = createSupabaseAdminClient();
 
-  const [rowsResponse, selectedResponse] = await Promise.all([
-    supabase
-      .from("oraculo_sku_current")
-      .select("sku, product_name, category_name, brand_name, units_30d, revenue_30d, revenue_change_pct, available_stock, stock_balance, days_until_stockout, stock_value, last_sale_at")
-      .order("revenue_30d", { ascending: false })
-      .limit(80),
-    selectedSku
-      ? supabase
-          .from("oraculo_sku_current")
-          .select("sku, product_name, category_name, brand_name, units_30d, revenue_30d, revenue_change_pct, available_stock, stock_balance, days_until_stockout, stock_value, last_sale_at")
-          .eq("sku", selectedSku)
-          .limit(1)
-      : Promise.resolve({ data: [] })
-  ]);
+  let rowsQuery = supabase
+    .from("oraculo_sku_current_unified")
+    .select("source, sku, product_name, status_label, units_30d, revenue_30d, revenue_change_pct, available_stock, stock_balance, days_until_stockout, last_sale_at")
+    .order("revenue_30d", { ascending: false })
+    .limit(120);
+
+  if (source !== "all") {
+    rowsQuery = rowsQuery.eq("source", source);
+  }
+
+  const selectedQuery = (() => {
+    if (!selectedSku) return Promise.resolve({ data: [] as SkuRow[] });
+
+    let query = supabase
+      .from("oraculo_sku_current_unified")
+      .select("source, sku, product_name, status_label, units_30d, revenue_30d, revenue_change_pct, available_stock, stock_balance, days_until_stockout, last_sale_at")
+      .eq("sku", selectedSku)
+      .limit(1);
+
+    if (source !== "all") {
+      query = query.eq("source", source);
+    }
+
+    return query;
+  })();
+
+  const [rowsResponse, selectedResponse] = await Promise.all([rowsQuery, selectedQuery]);
 
   return {
     rows: (rowsResponse.data ?? []) as SkuRow[],
@@ -90,11 +116,12 @@ async function loadSkus(selectedSku?: string) {
 export default async function SkusPage({
   searchParams
 }: {
-  searchParams?: Promise<{ sku?: string }>;
+  searchParams?: Promise<{ sku?: string; source?: string }>;
 }) {
   const params = await searchParams;
   const selectedSku = params?.sku;
-  const data = await loadSkus(selectedSku);
+  const source = asSource(params?.source);
+  const data = await loadSkus(selectedSku, source);
   const selected = data.selected ?? data.rows[0] ?? null;
 
   return (
@@ -105,11 +132,17 @@ export default async function SkusPage({
           <h1>SKUs</h1>
           <p>{count(data.rows.length)} produtos carregados para análise</p>
         </div>
-        <div className="filter-row">
-          <strong>Receita ↓</strong>
-          <span>30d</span>
-          <span>Cobertura</span>
-        </div>
+        <form className="filter-row filter-form" method="get">
+          <label>
+            <span>Fonte</span>
+            <select name="source" defaultValue={source}>
+              <option value="all">Todas</option>
+              <option value="olist">Olist</option>
+              <option value="shopee">Shopee</option>
+            </select>
+          </label>
+          <button type="submit">Aplicar</button>
+        </form>
       </header>
 
       <section className="detail-grid">
@@ -120,8 +153,8 @@ export default async function SkusPage({
               <h2>Ranking operacional</h2>
             </div>
             <div className="sku-actions">
-              <span>Categoria</span>
-              <span>Marca</span>
+              <span>Fonte</span>
+              <span>Status</span>
               <strong>Receita</strong>
             </div>
           </div>
@@ -131,10 +164,10 @@ export default async function SkusPage({
               <thead>
                 <tr>
                   <th>#</th>
+                  <th>Fonte</th>
                   <th>SKU</th>
                   <th>Produto</th>
-                  <th>Categoria</th>
-                  <th>Marca</th>
+                  <th>Status</th>
                   <th className="numeric">Receita</th>
                   <th className="numeric">Un.</th>
                   <th className="numeric">Ticket</th>
@@ -145,16 +178,19 @@ export default async function SkusPage({
               </thead>
               <tbody>
                 {data.rows.map((row, index) => (
-                  <tr key={row.sku ?? row.product_name}>
+                  <tr key={`${row.source}-${row.sku ?? row.product_name}`}>
                     <td>{index + 1}</td>
+                    <td>{sourceLabel(row.source)}</td>
                     <td>{row.sku || "-"}</td>
                     <td>
-                      <Link className="row-link" href={`/skus?sku=${encodeURIComponent(row.sku ?? "")}`}>
+                      <Link
+                        className="row-link"
+                        href={`/skus?source=${encodeURIComponent(source)}&sku=${encodeURIComponent(row.sku ?? "")}`}
+                      >
                         {row.product_name ?? "Sem nome"}
                       </Link>
                     </td>
-                    <td>{row.category_name ?? "Sem categoria"}</td>
-                    <td>{row.brand_name ?? "Sem marca"}</td>
+                    <td>{row.status_label ?? "-"}</td>
                     <td className="numeric">{money(row.revenue_30d)}</td>
                     <td className="numeric">{count(row.units_30d)}</td>
                     <td className="numeric">{money(n(row.revenue_30d) / Math.max(n(row.units_30d), 1))}</td>
@@ -171,7 +207,7 @@ export default async function SkusPage({
         <aside className="panel sku-detail">
           <p className="eyebrow">Produto aberto</p>
           <h2>{selected?.product_name ?? "Selecione um SKU"}</h2>
-          <span className="detail-code">{selected?.sku ?? "-"}</span>
+          <span className="detail-code">{sourceLabel(selected?.source)} · {selected?.sku ?? "-"}</span>
 
           <div className="detail-metrics">
             <article>
@@ -191,8 +227,8 @@ export default async function SkusPage({
               <strong>{coverage(selected?.days_until_stockout)}</strong>
             </article>
             <article>
-              <span>Valor estoque</span>
-              <strong>{money(selected?.stock_value)}</strong>
+              <span>Saldo</span>
+              <strong>{selected?.stock_balance == null ? "-" : count(selected?.stock_balance)}</strong>
             </article>
             <article>
               <span>Última venda</span>

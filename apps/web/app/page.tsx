@@ -33,32 +33,20 @@ type SourceSummary = {
 };
 
 type SkuCurrent = {
+  source?: string | null;
   sku: string | null;
   product_name: string | null;
-  category_name: string | null;
-  brand_name: string | null;
   revenue_30d: number | null;
   units_30d: number | null;
   revenue_change_pct: number | null;
   available_stock: number | null;
-  days_until_stockout: number | null;
-  last_sale_at: string | null;
-};
-
-type SkuSale = {
-  sku: string | null;
-  product_name: string | null;
-  category_name: string | null;
-  brand_name: string | null;
-  gross_revenue: number | null;
-  effective_revenue: number | null;
-  units: number | null;
-  available_stock: number | null;
+  stock_balance?: number | null;
   days_until_stockout: number | null;
   last_sale_at: string | null;
 };
 
 type StockSignal = {
+  source?: string | null;
   sku: string | null;
   product_name: string | null;
   stock_signal: string | null;
@@ -294,40 +282,6 @@ async function loadNfMetrics(
   };
 }
 
-function aggregateSkuSales(rows: SkuSale[]) {
-  const bySku = new Map<string, SkuCurrent>();
-
-  for (const row of rows) {
-    const key = row.sku || row.product_name || "sem-sku";
-    const current = bySku.get(key) ?? {
-      sku: row.sku,
-      product_name: row.product_name,
-      category_name: row.category_name,
-      brand_name: row.brand_name,
-      revenue_30d: 0,
-      units_30d: 0,
-      revenue_change_pct: null,
-      available_stock: row.available_stock,
-      days_until_stockout: row.days_until_stockout,
-      last_sale_at: row.last_sale_at
-    };
-
-    current.revenue_30d = asNumber(current.revenue_30d) + asNumber(row.effective_revenue);
-    current.units_30d = asNumber(current.units_30d) + asNumber(row.units);
-    current.available_stock = row.available_stock ?? current.available_stock;
-    current.days_until_stockout = row.days_until_stockout ?? current.days_until_stockout;
-    current.last_sale_at = !current.last_sale_at || (row.last_sale_at && row.last_sale_at > current.last_sale_at)
-      ? row.last_sale_at
-      : current.last_sale_at;
-
-    bySku.set(key, current);
-  }
-
-  return Array.from(bySku.values())
-    .sort((left, right) => asNumber(right.revenue_30d) - asNumber(left.revenue_30d))
-    .slice(0, 10);
-}
-
 async function loadRuptureProducts(
   supabase: ReturnType<typeof createSupabaseAdminClient>
 ): Promise<RuptureProduct[]> {
@@ -445,14 +399,15 @@ async function loadDashboard(filters: DashboardFilters) {
     dailyQuery,
     channelsQuery,
     supabase
-      .rpc("oraculo_sku_period_rank", {
+      .rpc("oraculo_sku_period_rank_unified", {
         start_date: filters.start,
         end_date: filters.end,
-        result_limit: 10
+        result_limit: 10,
+        source_filter: null
       }),
     supabase
-      .from("oraculo_stock_watchlist")
-      .select("sku, product_name, stock_signal, available_stock, days_until_stockout, last_sale_at")
+      .from("oraculo_stock_watchlist_unified")
+      .select("source, sku, product_name, stock_signal, available_stock, days_until_stockout, last_sale_at")
       .not("sku", "is", null)
       .neq("sku", "")
       .order("days_until_stockout", { ascending: true, nullsFirst: false })
@@ -770,10 +725,9 @@ export default async function HomePage({
               <thead>
                 <tr>
                   <th>#</th>
+                  <th>Fonte</th>
                   <th>SKU</th>
                   <th>Produto</th>
-                  <th>Categoria</th>
-                  <th>Marca</th>
                   <th className="numeric">Receita</th>
                   <th className="numeric">Un.</th>
                   <th className="numeric">Ticket</th>
@@ -786,19 +740,18 @@ export default async function HomePage({
                 {data.skus.map((sku, index) => (
                   <tr key={sku.sku ?? sku.product_name}>
                     <td>{index + 1}</td>
+                    <td>{sourceLabel(sku.source)}</td>
                     <td>{sku.sku || "-"}</td>
                     <td>
                       <Link className="row-link" href={`/skus?sku=${encodeURIComponent(sku.sku ?? "")}`}>
                         {sku.product_name ?? "Sem nome"}
                       </Link>
                     </td>
-                    <td>{sku.category_name ?? "Sem categoria"}</td>
-                    <td>{sku.brand_name ?? "Sem marca"}</td>
                     <td className="numeric">{formatCurrency(sku.revenue_30d)}</td>
                     <td className="numeric">{formatCount(sku.units_30d)}</td>
                     <td className="numeric">{formatCurrency(asNumber(sku.revenue_30d) / Math.max(asNumber(sku.units_30d), 1))}</td>
                     <td className="numeric trend-value">{formatPercent(sku.revenue_change_pct)}</td>
-                    <td className="numeric">{formatCount(sku.available_stock)}</td>
+                    <td className="numeric">{sku.available_stock == null ? "-" : formatCount(sku.available_stock)}</td>
                     <td className="numeric">{coverageLabel(sku.days_until_stockout)}</td>
                   </tr>
                 ))}

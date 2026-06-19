@@ -4,10 +4,10 @@ import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 export const dynamic = "force-dynamic";
 
 type StockSignal = {
+  source: string | null;
   sku: string | null;
   product_name: string | null;
-  category_name: string | null;
-  brand_name: string | null;
+  status_label: string | null;
   stock_signal: string | null;
   available_stock: number | null;
   stock_balance: number | null;
@@ -19,6 +19,12 @@ type StockSignal = {
 
 function n(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function sourceLabel(value: string | null | undefined) {
+  if (value === "shopee") return "Shopee";
+  if (value === "olist") return "Olist";
+  return "Outros";
 }
 
 function money(value: number | null | undefined) {
@@ -61,8 +67,8 @@ async function loadAlertas() {
   const supabase = createSupabaseAdminClient();
 
   const response = await supabase
-    .from("oraculo_stock_watchlist")
-    .select("sku, product_name, category_name, brand_name, stock_signal, available_stock, stock_balance, units_30d, revenue_30d, days_until_stockout, last_sale_at")
+    .from("oraculo_stock_watchlist_unified")
+    .select("source, sku, product_name, status_label, stock_signal, available_stock, stock_balance, units_30d, revenue_30d, days_until_stockout, last_sale_at")
     .not("sku", "is", null)
     .neq("sku", "")
     .order("days_until_stockout", { ascending: true, nullsFirst: false })
@@ -132,6 +138,7 @@ export default async function AlertasPage() {
             <thead>
               <tr>
                 <th>Alerta</th>
+                <th>Fonte</th>
                 <th>SKU</th>
                 <th>Produto</th>
                 <th className="numeric">Disponível</th>
@@ -148,12 +155,13 @@ export default async function AlertasPage() {
                       {label(row.stock_signal)}
                     </span>
                   </td>
+                  <td>{sourceLabel(row.source)}</td>
                   <td>{row.sku || "-"}</td>
                   <td>
-                    <Link className="row-link" href={`/skus?sku=${encodeURIComponent(row.sku ?? "")}`}>
+                    <Link className="row-link" href={`/skus?source=${encodeURIComponent(row.source ?? "all")}&sku=${encodeURIComponent(row.sku ?? "")}`}>
                       {row.product_name ?? "Sem nome"}
                     </Link>
-                    <div className="row-subtitle">{row.category_name ?? "Sem categoria"}</div>
+                    <div className="row-subtitle">{row.status_label ?? "Sem status"}</div>
                   </td>
                   <td className="numeric">{stock(row.available_stock)}</td>
                   <td className="numeric">{coverage(row.days_until_stockout)}</td>
