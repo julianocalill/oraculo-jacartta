@@ -224,7 +224,8 @@ p {
   text-transform: uppercase;
 }
 
-.filter-form input {
+.filter-form input,
+.filter-form select {
   min-height: 34px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -247,6 +248,39 @@ p {
   font-size: 13px;
   font-weight: 800;
   padding: 0 14px;
+}
+
+.source-summary-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.source-summary-card {
+  min-height: 156px;
+}
+
+.source-summary-stats {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.source-summary-stats article {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.source-summary-stats span {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.source-summary-stats strong {
+  font-size: 22px;
+  line-height: 1;
 }
 
 .filter-row span,
@@ -809,7 +843,8 @@ h2 {
 
   .control-grid,
   .detail-grid,
-  .bottom-grid {
+  .bottom-grid,
+  .source-summary-grid {
     grid-template-columns: 1fr;
   }
 
@@ -830,6 +865,10 @@ h2 {
   }
 
   .metric-grid-eight {
+    grid-template-columns: 1fr;
+  }
+
+  .source-summary-stats {
     grid-template-columns: 1fr;
   }
 

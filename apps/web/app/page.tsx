@@ -13,14 +13,23 @@ type DailySale = {
   average_ticket: number | null;
 };
 
-type ChannelSale = {
-  week_start: string;
+type UnifiedChannelSale = {
+  order_date: string;
+  source: string | null;
   channel_name: string | null;
-  gross_revenue: number | null;
-  effective_revenue: number | null;
+  net_revenue: number | null;
   orders_count: number | null;
   canceled_orders: number | null;
   average_ticket: number | null;
+};
+
+type SourceSummary = {
+  source: string;
+  label: string;
+  orders: number;
+  canceled: number;
+  revenue: number;
+  averageTicket: number | null;
 };
 
 type SkuCurrent = {
@@ -155,6 +164,12 @@ function formatPercent(value: number | null | undefined) {
     maximumFractionDigits: 1,
     minimumFractionDigits: 1
   }).format(value);
+}
+
+function sourceLabel(value: string | null | undefined) {
+  if (value === "shopee") return "Shopee";
+  if (value === "olist") return "Olist";
+  return "Outros";
 }
 
 function signalLabel(value: string | null | undefined) {
@@ -407,14 +422,13 @@ async function loadDashboard(filters: DashboardFilters) {
     .order("order_date", { ascending: false })
     .limit(120);
   let channelsQuery = supabase
-    .from("oraculo_channel_sales")
+    .from("oraculo_channel_sales_unified")
     .select("*")
-    .order("week_start", { ascending: false })
-    .order("effective_revenue", { ascending: false })
-    .limit(24);
+    .order("order_date", { ascending: false })
+    .limit(240);
 
   dailyQuery = dailyQuery.gte("order_date", filters.start).lte("order_date", filters.end);
-  channelsQuery = channelsQuery.gte("week_start", filters.start).lte("week_start", filters.end);
+  channelsQuery = channelsQuery.gte("order_date", filters.start).lte("order_date", filters.end);
 
   const [
     dailyResponse,
@@ -461,6 +475,59 @@ async function loadDashboard(filters: DashboardFilters) {
   const actionableWatchlist = ((stockWatchlistResponse.data ?? []) as StockSignal[]).filter(
     (row) => row.stock_signal === "ruptura" || row.stock_signal === "ruptura_iminente"
   );
+  const unifiedRows = (channelsResponse.data ?? []) as UnifiedChannelSale[];
+  const sourceMap = new Map<string, SourceSummary>();
+  const channelMap = new Map<string, UnifiedChannelSale>();
+
+  for (const row of unifiedRows) {
+    const source = row.source ?? "other";
+    const sourceEntry = sourceMap.get(source) ?? {
+      source,
+      label: sourceLabel(source),
+      orders: 0,
+      canceled: 0,
+      revenue: 0,
+      averageTicket: null
+    };
+    sourceEntry.orders += asNumber(row.orders_count);
+    sourceEntry.canceled += asNumber(row.canceled_orders);
+    sourceEntry.revenue += asNumber(row.net_revenue);
+    sourceEntry.averageTicket = sourceEntry.orders > sourceEntry.canceled
+      ? sourceEntry.revenue / Math.max(sourceEntry.orders - sourceEntry.canceled, 1)
+      : null;
+    sourceMap.set(source, sourceEntry);
+
+    const channelKey = `${source}:${row.channel_name ?? "Sem canal"}`;
+    const channelEntry = channelMap.get(channelKey) ?? {
+      order_date: row.order_date,
+      source,
+      channel_name: row.channel_name,
+      net_revenue: 0,
+      orders_count: 0,
+      canceled_orders: 0,
+      average_ticket: null
+    };
+    channelEntry.orders_count = asNumber(channelEntry.orders_count) + asNumber(row.orders_count);
+    channelEntry.canceled_orders = asNumber(channelEntry.canceled_orders) + asNumber(row.canceled_orders);
+    channelEntry.net_revenue = asNumber(channelEntry.net_revenue) + asNumber(row.net_revenue);
+    channelEntry.average_ticket = asNumber(channelEntry.orders_count) - asNumber(channelEntry.canceled_orders) > 0
+      ? asNumber(channelEntry.net_revenue) / Math.max(asNumber(channelEntry.orders_count) - asNumber(channelEntry.canceled_orders), 1)
+      : null;
+    if (row.order_date > channelEntry.order_date) channelEntry.order_date = row.order_date;
+    channelMap.set(channelKey, channelEntry);
+  }
+
+  const sourceSummaries = Array.from(sourceMap.values()).sort((left, right) => right.revenue - left.revenue);
+  const channels = Array.from(channelMap.values()).sort(
+    (left, right) => asNumber(right.net_revenue) - asNumber(left.net_revenue)
+  );
+  const totalUnifiedOrders = sourceSummaries.reduce((sum, item) => sum + item.orders, 0);
+  const totalUnifiedRevenue = sourceSummaries.reduce((sum, item) => sum + item.revenue, 0);
+  const totalUnifiedCanceled = sourceSummaries.reduce((sum, item) => sum + item.canceled, 0);
+  const latestUnifiedDay = unifiedRows.reduce<string | null>(
+    (latest, row) => (!latest || row.order_date > latest ? row.order_date : latest),
+    latestDay?.order_date ?? null
+  );
 
   return {
     daily,
@@ -473,13 +540,17 @@ async function loadDashboard(filters: DashboardFilters) {
     monthUnits,
     monthTicket: monthOrders > 0 ? monthEffective / monthOrders : null,
     billingMetrics,
-    channels: (channelsResponse.data ?? []) as ChannelSale[],
+    sourceSummaries,
+    channels,
+    totalUnifiedOrders,
+    totalUnifiedRevenue,
+    totalUnifiedCanceled,
     skus: (skuSalesResponse.data ?? []) as SkuCurrent[],
     stockWatchlist: (stockWatchlistResponse.data ?? []) as StockSignal[],
     ruptureProducts,
     actionableWatchlist,
-    filteredOrderCount: monthOrders,
-    availableThrough: latestDay?.order_date ?? null,
+    filteredOrderCount: totalUnifiedOrders,
+    availableThrough: latestUnifiedDay,
     orderCount: orderCount.count ?? 0,
     itemCount: itemCount.count ?? 0,
     productCount: productCount.count ?? 0
@@ -536,7 +607,7 @@ export default async function HomePage({
           <div>
             <h1>Analytics</h1>
             <p>
-              {formatCount(data.filteredOrderCount)} pedidos no período · {formatCount(data.productCount)} produtos
+              {formatCount(data.filteredOrderCount)} pedidos no período · {formatCount(data.productCount)} produtos Olist
               {data.availableThrough ? ` · dados até ${formatDateShort(data.availableThrough)}` : ""}
             </p>
           </div>
@@ -586,6 +657,56 @@ export default async function HomePage({
           </Link>
         </section>
 
+        <section className="source-summary-grid">
+          <Link className="panel panel-link source-summary-card" href={`/pedidos${filterQuery}`}>
+            <div className="section-head">
+              <p className="eyebrow">Consolidado</p>
+              <h2>Total multi-canal</h2>
+            </div>
+            <div className="source-summary-stats">
+              <article>
+                <span>Pedidos</span>
+                <strong>{formatCount(data.totalUnifiedOrders)}</strong>
+              </article>
+              <article>
+                <span>Receita líquida</span>
+                <strong>{formatCurrency(data.totalUnifiedRevenue)}</strong>
+              </article>
+              <article>
+                <span>Cancelados</span>
+                <strong>{formatCount(data.totalUnifiedCanceled)}</strong>
+              </article>
+            </div>
+          </Link>
+
+          {data.sourceSummaries.map((summary) => (
+            <Link
+              key={summary.source}
+              className="panel panel-link source-summary-card"
+              href={`/pedidos${filterQuery}&source=${encodeURIComponent(summary.source)}`}
+            >
+              <div className="section-head">
+                <p className="eyebrow">Fonte</p>
+                <h2>{summary.label}</h2>
+              </div>
+              <div className="source-summary-stats">
+                <article>
+                  <span>Pedidos</span>
+                  <strong>{formatCount(summary.orders)}</strong>
+                </article>
+                <article>
+                  <span>Receita</span>
+                  <strong>{formatCurrency(summary.revenue)}</strong>
+                </article>
+                <article>
+                  <span>Ticket</span>
+                  <strong>{summary.averageTicket == null ? "-" : formatCurrency(summary.averageTicket)}</strong>
+                </article>
+              </div>
+            </Link>
+          ))}
+        </section>
+
         <section className="control-grid">
           <Link className="panel panel-link chart-panel" href={`/pedidos${filterQuery}`}>
             <div className="section-head section-row">
@@ -616,19 +737,19 @@ export default async function HomePage({
           <Link className="panel panel-link funnel-panel" href={`/pedidos${filterQuery}`}>
             <div>
               <p className="eyebrow">Canais</p>
-              <h2>Receita por canal</h2>
+              <h2>Receita por canal e fonte</h2>
             </div>
 
             <div className="funnel-list">
               {data.channels.slice(0, 9).map((channel) => {
-                const max = Math.max(...data.channels.map((item) => asNumber(item.effective_revenue)), 1);
-                const width = Math.max((asNumber(channel.effective_revenue) / max) * 100, 2);
+                const max = Math.max(...data.channels.map((item) => asNumber(item.net_revenue)), 1);
+                const width = Math.max((asNumber(channel.net_revenue) / max) * 100, 2);
                 return (
-                  <div className="funnel-row" key={`${channel.week_start}-${channel.channel_name}`}>
-                    <span>{channel.channel_name ?? "Sem canal"}</span>
+                  <div className="funnel-row" key={`${channel.source}-${channel.channel_name}`}>
+                    <span>{sourceLabel(channel.source)} · {channel.channel_name ?? "Sem canal"}</span>
                     <div><i style={{ width: `${width}%` }} /></div>
                     <strong>{formatCount(channel.orders_count)}</strong>
-                    <em>{formatCurrency(channel.effective_revenue)}</em>
+                    <em>{formatCurrency(channel.net_revenue)}</em>
                   </div>
                 );
               })}
