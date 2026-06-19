@@ -398,6 +398,12 @@ async function refreshNfCache(supabase: ReturnType<typeof createClient>, startDa
   return { refreshed: true };
 }
 
+async function refreshUnifiedSkuCache(supabase: ReturnType<typeof createClient>) {
+  const { error } = await supabase.rpc('refresh_oraculo_unified_sku_cache');
+  if (error) throw error;
+  return { refreshed: true };
+}
+
 Deno.serve(async (req) => {
   try {
     requireValue('SUPABASE_URL', env.supabaseUrl);
@@ -424,8 +430,9 @@ Deno.serve(async (req) => {
     const stockSnapshot = await snapshotStock(supabase, snapshotDate);
     const salesCaches = await refreshSalesCaches(supabase, startDate, endDate);
     const nfCache = await refreshNfCache(supabase, startDate, endDate);
+    const unifiedSkuCache = await refreshUnifiedSkuCache(supabase);
 
-    return jsonResponse({ ok: true, startDate, endDate, orderItems, dimensions, stockSnapshot, salesCaches, nfCache });
+    return jsonResponse({ ok: true, startDate, endDate, orderItems, dimensions, stockSnapshot, salesCaches, nfCache, unifiedSkuCache });
   } catch (error) {
     console.error(error);
     return jsonResponse({ ok: false, error: error instanceof Error ? error.message : String(error) }, 500);

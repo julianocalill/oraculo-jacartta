@@ -692,6 +692,18 @@ async function patchRun(env, id, payload) {
   if (!response.ok) throw new Error(`Falha ao atualizar shopee_sync_runs (${response.status}): ${text.slice(0, 300)}`);
 }
 
+async function refreshUnifiedSkuCache(env) {
+  const { response, text } = await supabaseFetch(env, "rest/v1/rpc/refresh_oraculo_unified_sku_cache", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: "{}"
+  });
+  if (!response.ok) {
+    throw new Error(`Falha ao atualizar cache unificado (${response.status}): ${text.slice(0, 300)}`);
+  }
+  return parseJson(text, "Falha ao atualizar cache unificado");
+}
+
 async function main() {
   const env = loadEnv();
   const n8nEnv = loadN8nEnv();
@@ -820,6 +832,8 @@ async function main() {
         pages
       }
     });
+
+    await refreshUnifiedSkuCache(env);
 
     console.log(JSON.stringify({
       ok: true,
