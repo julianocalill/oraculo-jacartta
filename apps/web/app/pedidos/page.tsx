@@ -89,12 +89,19 @@ function count(value: number | null | undefined) {
   return new Intl.NumberFormat("pt-BR").format(n(value));
 }
 
+function toDisplayDate(value: string) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return new Date(`${value}T12:00:00.000Z`);
+  }
+  return new Date(value);
+}
+
 function shortDate(value: string) {
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "short",
     timeZone: "America/Sao_Paulo"
-  }).format(new Date(value));
+  }).format(toDisplayDate(value));
 }
 
 function fullDate(value: string | null | undefined) {
@@ -104,7 +111,7 @@ function fullDate(value: string | null | undefined) {
     month: "2-digit",
     year: "numeric",
     timeZone: "America/Sao_Paulo"
-  }).format(new Date(value));
+  }).format(toDisplayDate(value));
 }
 
 function addDays(value: string, days: number) {

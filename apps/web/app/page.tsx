@@ -135,6 +135,13 @@ function formatDecimal(value: number | null | undefined, digits = 1) {
   }).format(asNumber(value));
 }
 
+function toDisplayDate(value: string) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return new Date(`${value}T12:00:00.000Z`);
+  }
+  return new Date(value);
+}
+
 function formatDate(value: string | null | undefined) {
   if (!value) return "-";
 
@@ -142,7 +149,7 @@ function formatDate(value: string | null | undefined) {
     day: "2-digit",
     month: "short",
     timeZone: "America/Sao_Paulo"
-  }).format(new Date(value));
+  }).format(toDisplayDate(value));
 }
 
 function formatPercent(value: number | null | undefined) {
@@ -192,7 +199,7 @@ function formatDateShort(value: string | null | undefined) {
     month: "2-digit",
     year: "numeric",
     timeZone: "America/Sao_Paulo"
-  }).format(new Date(value));
+  }).format(toDisplayDate(value));
 }
 
 function daysSince(value: string | null | undefined) {
