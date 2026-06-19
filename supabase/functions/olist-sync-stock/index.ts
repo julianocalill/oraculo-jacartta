@@ -241,7 +241,7 @@ async function fetchProductDetail(accessToken: string, productId: string) {
     : accessToken;
 
   const url = new URL(`produtos/${productId}`, baseUrl);
-  for (let attempt = 0; attempt < 5; attempt += 1) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
     const response = await fetch(url, { headers });
     const text = await response.text();
 
@@ -251,7 +251,7 @@ async function fetchProductDetail(accessToken: string, productId: string) {
 
     if (response.status === 429 || response.status >= 500) {
       const retryAfter = Number(response.headers.get('retry-after') ?? '0');
-      const waitMs = retryAfter > 0 ? retryAfter * 1000 : 750 * (attempt + 1);
+      const waitMs = retryAfter > 0 ? retryAfter * 1000 : 1500 * (attempt + 1);
       await sleep(waitMs);
       continue;
     }
@@ -317,13 +317,28 @@ Deno.serve(async (req) => {
     const batchId = crypto.randomUUID();
     const startedAt = new Date().toISOString();
     const accessToken = await getAccessToken(supabase);
+    const requestBody = req.headers.get('content-type')?.includes('application/json')
+      ? await req.json().catch(() => ({}))
+      : {};
+    const typedBody = requestBody as {
+      maxPages?: number;
+      detailConcurrency?: number;
+      detailDelayMs?: number;
+    };
     const limit = 100;
+    const maxPages = Number.isFinite(Number(typedBody.maxPages)) ? Number(typedBody.maxPages) : 1000;
+    const detailConcurrency = Number.isFinite(Number(typedBody.detailConcurrency))
+      ? Math.max(1, Math.min(2, Number(typedBody.detailConcurrency)))
+      : 1;
+    const detailDelayMs = Number.isFinite(Number(typedBody.detailDelayMs))
+      ? Math.max(0, Number(typedBody.detailDelayMs))
+      : 300;
     let offset = 0;
     let fetched = 0;
     let upserted = 0;
     let total = 0;
 
-    for (let page = 0; page < 1000; page += 1) {
+    for (let page = 0; page < maxPages; page += 1) {
       const productPage = await fetchProductPage(accessToken, limit, offset);
       total = productPage.total;
 
@@ -333,7 +348,8 @@ Deno.serve(async (req) => {
 
       fetched += productPage.products.length;
 
-      const details = await mapConcurrent(productPage.products, 2, async (product) => {
+      const details = await mapConcurrent(productPage.products, detailConcurrency, async (product) => {
+        if (detailDelayMs > 0) await sleep(detailDelayMs);
         const detail = await fetchProductDetail(accessToken, product.id);
         return normalizeStockRow(detail, batchId);
       });

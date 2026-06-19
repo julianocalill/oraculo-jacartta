@@ -11,6 +11,9 @@ const env = {
   supabaseUrl: Deno.env.get('SUPABASE_URL') ?? '',
   supabaseServiceRoleKey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   olistSyncJobSecret: Deno.env.get('OLIST_SYNC_JOB_SECRET') ?? '',
+  olistOauthAuthorizeUrl: Deno.env.get('OLIST_OAUTH_AUTHORIZE_URL')
+    ?? 'https://accounts.tiny.com.br/realms/tiny/protocol/openid-connect/auth',
+  olistOauthScope: Deno.env.get('OLIST_OAUTH_SCOPE') ?? 'openid email offline_access',
   olistApiClientId: Deno.env.get('OLIST_API_CLIENT_ID') ?? '',
   olistOauthRedirectUri: Deno.env.get('OLIST_OAUTH_REDIRECT_URI') ?? '',
   olistOauthStateSecret: Deno.env.get('OLIST_OAUTH_STATE_SECRET') ?? ''
@@ -63,11 +66,11 @@ function buildOauthAuthorizeUrl() {
     return null;
   }
 
-  const url = new URL('https://id.olist.com/openid/authorize');
+  const url = new URL(env.olistOauthAuthorizeUrl);
   url.searchParams.set('client_id', env.olistApiClientId);
   url.searchParams.set('redirect_uri', env.olistOauthRedirectUri);
   url.searchParams.set('response_type', 'code');
-  url.searchParams.set('scope', 'openid email profile');
+  url.searchParams.set('scope', env.olistOauthScope);
   url.searchParams.set('state', env.olistOauthStateSecret);
 
   return url.toString();

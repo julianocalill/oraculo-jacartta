@@ -354,13 +354,13 @@ Deno.serve(async (req) => {
     run.window_end = syncResult.windowEnd;
     run.records_fetched = rows.length;
 
-    for (const rows of chunk(rows, 50)) {
+    for (const batch of chunk(rows, 50)) {
       const { error } = await supabase
         .from('olist_orders')
-        .upsert(rows, { onConflict: 'id' });
+        .upsert(batch, { onConflict: 'id' });
 
       if (error) throw error;
-      run.records_upserted += rows.length;
+      run.records_upserted += batch.length;
     }
 
     run.status = 'success';
