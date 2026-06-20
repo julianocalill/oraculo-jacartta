@@ -676,7 +676,7 @@ export default async function HomePage({
                 <p className="eyebrow">Receita por dia</p>
                 <h2>Curva do periodo</h2>
               </div>
-              <span className="pill">Último dia: {formatDate(data.latestDay?.order_date)}</span>
+              <span className="pill">Último dia: {formatDate(data.availableThrough)}</span>
             </div>
 
             <div className="bar-chart" aria-label="Receita por dia">
