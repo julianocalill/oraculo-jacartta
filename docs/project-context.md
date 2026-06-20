@@ -33,6 +33,7 @@ The current product direction is practical executive intelligence for the operat
 - Dashboard now reads cached channel metrics instead of recalculating heavy views directly.
 - A metric contract was created in `docs/metric-contract.md`.
 - Audit tooling was added in `scripts/audit-oraculo-metrics.js`.
+- Supabase Auth now protects the app, with `/login` and admin user control in `/usuarios`.
 - The main known issue is semantic: the current Olist operational revenue is reliable by order status/date, but strict fiscal `dataFaturamento` coverage is incomplete in the imported base.
 
 ## Working rule

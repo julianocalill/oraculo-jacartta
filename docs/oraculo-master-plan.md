@@ -1086,6 +1086,28 @@ Regra de governança:
 - O que não vier por API deve ser colocado em `Parâmetros`, sem edição direta no banco.
 - Shopee segue como somente leitura: a tela grava parâmetros internos do Oraculo, nunca altera dados dentro da Shopee.
 
+### Login e controle de usuários
+
+Foi adicionada autenticação no app usando Supabase Auth.
+
+Arquivos principais:
+
+- [apps/web/app/login/page.tsx](/Users/julianocalil/oraculo/apps/web/app/login/page.tsx)
+- [apps/web/app/usuarios/page.tsx](/Users/julianocalil/oraculo/apps/web/app/usuarios/page.tsx)
+- [apps/web/lib/auth/session.ts](/Users/julianocalil/oraculo/apps/web/lib/auth/session.ts)
+- [apps/web/middleware.ts](/Users/julianocalil/oraculo/apps/web/middleware.ts)
+
+Comportamento:
+
+- sem sessão, o app redireciona para `/login`;
+- se não existir nenhum usuário no Supabase Auth, `/login` cria o primeiro administrador;
+- depois do primeiro usuário, `/login` vira tela de entrada;
+- `/usuarios` permite criar e editar usuários;
+- somente usuários com `app_metadata.role = admin` acessam o controle de usuários;
+- usuários podem ser marcados como admin ou usuário comum;
+- usuários podem ser bloqueados/desbloqueados;
+- a sessão usa cookies HTTP-only e tenta renovar o access token com refresh token.
+
 ---
 
 ## Referências relacionadas

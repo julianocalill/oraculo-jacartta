@@ -553,7 +553,7 @@ export default async function HomePage({
 
         <nav className="nav-group nav-admin" aria-label="Admin">
           <span>Admin</span>
-          <Link href="/">Usuários</Link>
+          <Link href="/usuarios">Usuários</Link>
           <Link href="/">Logs</Link>
           <Link href="/parametros">Config</Link>
         </nav>
