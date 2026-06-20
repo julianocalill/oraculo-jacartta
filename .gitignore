@@ -10,3 +10,4 @@ coverage
 logs/*.log
 supabase/.temp/
 supabase/supabase/
+.vercel
