@@ -383,7 +383,7 @@ async function loadDashboard(filters: DashboardFilters) {
     .order("order_date", { ascending: false })
     .limit(120);
   let channelsQuery = supabase
-    .from("oraculo_channel_sales_unified")
+    .from("oraculo_channel_sales_unified_cache")
     .select("*")
     .order("order_date", { ascending: false })
     .limit(240);
@@ -588,14 +588,14 @@ export default async function HomePage({
 
         <section className="metric-grid metric-grid-eight">
           <Link className="metric metric-link accent-yellow" href={`/pedidos${filterQuery}`}>
-            <span className="label">Receita confirmada</span>
+            <span className="label">Receita operacional</span>
             <strong>{formatCurrency(data.nfMetrics.confirmedRevenue)}</strong>
-            <small>Valor total das NFs emitidas</small>
+            <small>Pedidos válidos no período</small>
           </Link>
           <Link className="metric metric-link accent-blue" href={`/pedidos${filterQuery}`}>
-            <span className="label">NFs emitidas</span>
+            <span className="label">Vendas confirmadas</span>
             <strong>{formatCount(data.nfMetrics.emittedCount)}</strong>
-            <small>No período selecionado</small>
+            <small>Status não pendente/cancelado</small>
           </Link>
           <Link className="metric metric-link accent-yellow" href="/skus">
             <span className="label">Itens vendidos</span>
@@ -605,17 +605,17 @@ export default async function HomePage({
           <Link className="metric metric-link accent-blue" href={`/pedidos${filterQuery}`}>
             <span className="label">Ticket Médio</span>
             <strong>{data.nfMetrics.emittedCount <= 0 ? "-" : formatCurrency(data.nfMetrics.confirmedRevenue / data.nfMetrics.emittedCount)}</strong>
-            <small>Receita confirmada / NFs emitidas</small>
+            <small>Receita operacional / vendas</small>
           </Link>
           <Link className="metric metric-link accent-red" href={`/pedidos${filterQuery}`}>
-            <span className="label">NFs canceladas</span>
+            <span className="label">Canceladas</span>
             <strong>{formatCount(data.nfMetrics.canceledCount)}</strong>
             <small>Status cancelado no período</small>
           </Link>
           <Link className="metric metric-link accent-white" href={`/pedidos${filterQuery}`}>
-            <span className="label">NFs pendentes</span>
+            <span className="label">Pendentes</span>
             <strong>{formatCount(data.nfMetrics.pendingCount)}</strong>
-            <small>Sem data de faturamento</small>
+            <small>Status pendente no período</small>
           </Link>
         </section>
 
