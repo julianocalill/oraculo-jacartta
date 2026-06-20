@@ -101,7 +101,17 @@ Regra Shopee: somente leitura. Podemos puxar produtos, pedidos e itens, mas nunc
 
 ## ROI e margem
 
-Ainda nao existe base suficiente para ROI confiavel. Para isso precisamos cadastrar ou importar:
+Foi criada a primeira base tecnica de ROI e margem em `2026-06-20`.
+
+Objetos criados:
+
+- `oraculo_margin_channel_params`
+- `oraculo_margin_sku_params`
+- `oraculo_sku_margin_30d`
+
+O objetivo e separar o que ja existe daquilo que ainda precisa de configuracao. A view pode calcular margem quando existe custo unitario, mas o status fica `configurar_parametros` enquanto impostos, tarifas, frete subsidiado, embalagem e metas nao forem validados.
+
+Para ROI confiavel, ainda precisamos cadastrar ou importar:
 
 - custo do produto;
 - imposto por canal ou por marketplace;
@@ -116,6 +126,15 @@ Formula inicial proposta:
 `roi_produto = margem_bruta / custo_produto`
 
 Enquanto esses campos nao existirem, o painel pode mostrar receita e quantidade, mas nao deve chamar nenhum numero de margem ou ROI.
+
+Status de margem:
+
+- `configurar_parametros`: existe base de venda, mas falta validar parametros do canal.
+- `sem_custo`: falta custo unitario do SKU.
+- `sem_venda`: SKU sem venda nos ultimos 30 dias.
+- `critico`: margem abaixo do minimo.
+- `atencao`: margem abaixo da meta.
+- `saudavel`: margem acima da meta.
 
 ## Auditoria executavel
 

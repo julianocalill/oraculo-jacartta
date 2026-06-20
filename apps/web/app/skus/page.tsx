@@ -17,6 +17,13 @@ type SkuRow = {
   stock_balance: number | null;
   days_until_stockout: number | null;
   last_sale_at: string | null;
+  unit_cost: number | null;
+  product_cost_30d: number | null;
+  margin_amount_30d: number | null;
+  margin_rate_30d: number | null;
+  roi_30d: number | null;
+  margin_signal: string | null;
+  params_configured: boolean | null;
 };
 
 function n(value: number | null | undefined) {
@@ -50,6 +57,23 @@ function percent(value: number | null | undefined) {
   }).format(value);
 }
 
+function marginSignalLabel(value: string | null | undefined) {
+  if (value === "saudavel") return "Saudável";
+  if (value === "atencao") return "Atenção";
+  if (value === "critico") return "Crítico";
+  if (value === "sem_custo") return "Sem custo";
+  if (value === "configurar_parametros") return "Configurar";
+  if (value === "sem_venda") return "Sem venda";
+  return "Pendente";
+}
+
+function marginSignalClass(value: string | null | undefined) {
+  if (value === "saudavel") return "signal-good";
+  if (value === "atencao") return "signal-warning";
+  if (value === "critico") return "signal-danger";
+  return "signal-muted";
+}
+
 function date(value: string | null | undefined) {
   if (!value) return "-";
   return new Intl.DateTimeFormat("pt-BR", {
@@ -80,8 +104,8 @@ async function loadSkus(selectedSku?: string, source: SourceFilter = "all") {
   const supabase = createSupabaseAdminClient();
 
   let rowsQuery = supabase
-    .from("oraculo_sku_current_unified")
-    .select("source, sku, product_name, status_label, units_30d, revenue_30d, revenue_change_pct, available_stock, stock_balance, days_until_stockout, last_sale_at")
+    .from("oraculo_sku_margin_30d")
+    .select("source, sku, product_name, status_label, units_30d, revenue_30d, revenue_change_pct, available_stock, stock_balance, days_until_stockout, last_sale_at, unit_cost, product_cost_30d, margin_amount_30d, margin_rate_30d, roi_30d, margin_signal, params_configured")
     .order("revenue_30d", { ascending: false })
     .limit(120);
 
@@ -93,8 +117,8 @@ async function loadSkus(selectedSku?: string, source: SourceFilter = "all") {
     if (!selectedSku) return Promise.resolve({ data: [] as SkuRow[] });
 
     let query = supabase
-      .from("oraculo_sku_current_unified")
-      .select("source, sku, product_name, status_label, units_30d, revenue_30d, revenue_change_pct, available_stock, stock_balance, days_until_stockout, last_sale_at")
+      .from("oraculo_sku_margin_30d")
+      .select("source, sku, product_name, status_label, units_30d, revenue_30d, revenue_change_pct, available_stock, stock_balance, days_until_stockout, last_sale_at, unit_cost, product_cost_30d, margin_amount_30d, margin_rate_30d, roi_30d, margin_signal, params_configured")
       .eq("sku", selectedSku)
       .limit(1);
 
@@ -154,7 +178,7 @@ export default async function SkusPage({
             </div>
             <div className="sku-actions">
               <span>Fonte</span>
-              <span>Status</span>
+              <span>Margem</span>
               <strong>Receita</strong>
             </div>
           </div>
@@ -171,6 +195,9 @@ export default async function SkusPage({
                   <th className="numeric">Receita</th>
                   <th className="numeric">Un.</th>
                   <th className="numeric">Ticket</th>
+                  <th className="numeric">Margem</th>
+                  <th className="numeric">ROI</th>
+                  <th>Status margem</th>
                   <th className="numeric">Var.</th>
                   <th className="numeric">Estoque</th>
                   <th className="numeric">Cobertura</th>
@@ -194,6 +221,13 @@ export default async function SkusPage({
                     <td className="numeric">{money(row.revenue_30d)}</td>
                     <td className="numeric">{count(row.units_30d)}</td>
                     <td className="numeric">{money(n(row.revenue_30d) / Math.max(n(row.units_30d), 1))}</td>
+                    <td className="numeric">{percent(row.margin_rate_30d)}</td>
+                    <td className="numeric">{percent(row.roi_30d)}</td>
+                    <td>
+                      <span className={`status-pill ${marginSignalClass(row.margin_signal)}`}>
+                        {marginSignalLabel(row.margin_signal)}
+                      </span>
+                    </td>
                     <td className="numeric trend-value">{percent(row.revenue_change_pct)}</td>
                     <td className="numeric">{stock(row.available_stock)}</td>
                     <td className="numeric">{coverage(row.days_until_stockout)}</td>
@@ -219,6 +253,22 @@ export default async function SkusPage({
               <strong>{count(selected?.units_30d)}</strong>
             </article>
             <article>
+              <span>Margem 30d</span>
+              <strong>{percent(selected?.margin_rate_30d)}</strong>
+            </article>
+            <article>
+              <span>ROI 30d</span>
+              <strong>{percent(selected?.roi_30d)}</strong>
+            </article>
+            <article>
+              <span>Lucro estimado</span>
+              <strong>{selected?.margin_amount_30d == null ? "-" : money(selected.margin_amount_30d)}</strong>
+            </article>
+            <article>
+              <span>Custo unit.</span>
+              <strong>{selected?.unit_cost == null ? "-" : money(selected.unit_cost)}</strong>
+            </article>
+            <article>
               <span>Estoque</span>
               <strong>{stock(selected?.available_stock)}</strong>
             </article>
@@ -234,6 +284,19 @@ export default async function SkusPage({
               <span>Última venda</span>
               <strong>{date(selected?.last_sale_at)}</strong>
             </article>
+          </div>
+
+          <div className={`margin-callout ${marginSignalClass(selected?.margin_signal)}`}>
+            <span>{marginSignalLabel(selected?.margin_signal)}</span>
+            <p>
+              {selected?.margin_signal === "configurar_parametros"
+                ? "Faltam parâmetros de imposto, tarifa e meta para liberar margem/ROI confiável."
+                : selected?.margin_signal === "sem_custo"
+                  ? "Este SKU ainda não tem custo unitário validado."
+                  : selected?.margin_signal === "sem_venda"
+                    ? "Sem venda nos últimos 30 dias."
+                    : "Margem calculada com os parâmetros cadastrados no banco."}
+            </p>
           </div>
         </aside>
       </section>

@@ -666,6 +666,42 @@ h2 {
   color: var(--red);
 }
 
+.status-pill {
+  min-width: 92px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  display: inline-flex;
+  justify-content: center;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.signal-good {
+  background: rgba(32, 201, 151, 0.14);
+  border-color: rgba(32, 201, 151, 0.34);
+  color: #9ff2d3;
+}
+
+.signal-warning {
+  background: rgba(255, 211, 77, 0.14);
+  border-color: rgba(255, 211, 77, 0.38);
+  color: var(--amber);
+}
+
+.signal-danger {
+  background: rgba(255, 122, 157, 0.14);
+  border-color: rgba(255, 122, 157, 0.38);
+  color: var(--red);
+}
+
+.signal-muted {
+  background: rgba(157, 140, 255, 0.12);
+  border-color: rgba(157, 140, 255, 0.28);
+  color: var(--muted);
+}
+
 .bottom-grid {
   display: grid;
   gap: 18px;
@@ -823,6 +859,27 @@ h2 {
   color: var(--text);
   font-size: 20px;
   line-height: 1.1;
+}
+
+.margin-callout {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+}
+
+.margin-callout span {
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.margin-callout p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 @media (max-width: 1180px) {

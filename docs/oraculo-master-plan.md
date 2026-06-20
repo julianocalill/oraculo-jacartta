@@ -1023,10 +1023,10 @@ Docs relevantes criados/atualizados:
 
 Fase seguinte aprovada conceitualmente pelo usuário:
 
-1. Criar tabela de parâmetros de margem por produto/canal.
-2. Definir custo do produto, imposto, tarifa, frete subsidiado e regra de ROI.
-3. Criar visão/tabela de `product_margin_snapshot`.
-4. Ajustar tela de SKU/produto para mostrar:
+1. Criar tabela de parâmetros de margem por produto/canal. `Feito em 2026-06-20`
+2. Definir custo do produto, imposto, tarifa, frete subsidiado e regra de ROI. `Base criada; valores ainda precisam ser configurados`
+3. Criar visão/tabela de `product_margin_snapshot`. `Primeira versão criada como oraculo_sku_margin_30d`
+4. Ajustar tela de SKU/produto para mostrar. `Primeira versão feita em /skus`
    - receita;
    - quantidade vendida;
    - estoque;
@@ -1038,6 +1038,31 @@ Fase seguinte aprovada conceitualmente pelo usuário:
 5. Criar curva de saída e não saída por produto.
 6. Criar alertas de ruptura e produto parado por produto mãe/simples.
 7. Só depois avançar para IA explicativa.
+
+### Avanço em margem/ROI em 2026-06-20
+
+Foram adicionadas as tabelas de parâmetro:
+
+- `oraculo_margin_channel_params`
+- `oraculo_margin_sku_params`
+
+Foi adicionada a view:
+
+- `oraculo_sku_margin_30d`
+
+A tela [SKUs](/Users/julianocalil/oraculo/apps/web/app/skus/page.tsx) passou a mostrar:
+
+- margem 30d;
+- ROI 30d;
+- lucro estimado;
+- custo unitário;
+- status da margem.
+
+Regra de segurança de produto:
+
+- quando faltam parâmetros de canal, o status fica `Configurar`;
+- quando falta custo, o status fica `Sem custo`;
+- o sistema não deve vender margem/ROI como definitivo até os parâmetros serem preenchidos e validados.
 
 ---
 
