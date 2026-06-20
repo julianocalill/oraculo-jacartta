@@ -69,55 +69,6 @@ function date(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
-function parseCsvLine(line: string) {
-  const cells: string[] = [];
-  let current = "";
-  let quoted = false;
-  const separator = line.includes(";") ? ";" : ",";
-
-  for (let index = 0; index < line.length; index += 1) {
-    const char = line[index];
-    const next = line[index + 1];
-
-    if (char === "\"" && quoted && next === "\"") {
-      current += "\"";
-      index += 1;
-      continue;
-    }
-
-    if (char === "\"") {
-      quoted = !quoted;
-      continue;
-    }
-
-    if (char === separator && !quoted) {
-      cells.push(current.trim());
-      current = "";
-      continue;
-    }
-
-    current += char;
-  }
-
-  cells.push(current.trim());
-  return cells;
-}
-
-function parseCsv(text: string) {
-  const lines = text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  if (lines.length < 2) return [];
-
-  const headers = parseCsvLine(lines[0]).map((header) => header.trim());
-  return lines.slice(1).map((line) => {
-    const values = parseCsvLine(line);
-    return Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""]));
-  });
-}
-
 function parseNumber(value: unknown) {
   if (value == null || String(value).trim() === "") return null;
   const normalized = String(value).trim().replace(/\./g, "").replace(",", ".");
@@ -139,45 +90,30 @@ function parseBoolean(value: unknown, fallback = true) {
   return fallback;
 }
 
-async function formText(formData: FormData) {
-  const pasted = String(formData.get("csv") ?? "").trim();
-  if (pasted) return pasted;
-
-  const file = formData.get("file");
-  if (file && typeof file === "object" && "text" in file) {
-    return String(await file.text()).trim();
-  }
-
-  return "";
-}
-
-async function importChannelParams(formData: FormData) {
+async function saveChannelParam(formData: FormData) {
   "use server";
 
-  const text = await formText(formData);
-  const rows = parseCsv(text)
-    .map((row) => ({
-      source: String(row.source ?? "").trim().toLowerCase(),
-      channel_key: String(row.channel_key || "*").trim() || "*",
-      display_name: String(row.display_name || "").trim() || null,
-      tax_rate: parseRate(row.tax_rate) ?? 0,
-      marketplace_fee_rate: parseRate(row.marketplace_fee_rate) ?? 0,
-      payment_fee_rate: parseRate(row.payment_fee_rate) ?? 0,
-      freight_subsidy_per_unit: parseNumber(row.freight_subsidy_per_unit) ?? 0,
-      packaging_cost_per_unit: parseNumber(row.packaging_cost_per_unit) ?? 0,
-      target_margin_rate: parseRate(row.target_margin_rate) ?? 0.25,
-      minimum_margin_rate: parseRate(row.minimum_margin_rate) ?? 0.12,
-      params_configured: parseBoolean(row.params_configured, true),
-      notes: String(row.notes || "").trim() || null,
-      updated_at: new Date().toISOString()
-    }))
-    .filter((row) => row.source);
+  const row = {
+    source: String(formData.get("source") ?? "").trim().toLowerCase(),
+    channel_key: String(formData.get("channel_key") || "*").trim() || "*",
+    display_name: String(formData.get("display_name") || "").trim() || null,
+    tax_rate: parseRate(formData.get("tax_rate")) ?? 0,
+    marketplace_fee_rate: parseRate(formData.get("marketplace_fee_rate")) ?? 0,
+    payment_fee_rate: parseRate(formData.get("payment_fee_rate")) ?? 0,
+    freight_subsidy_per_unit: parseNumber(formData.get("freight_subsidy_per_unit")) ?? 0,
+    packaging_cost_per_unit: parseNumber(formData.get("packaging_cost_per_unit")) ?? 0,
+    target_margin_rate: parseRate(formData.get("target_margin_rate")) ?? 0.25,
+    minimum_margin_rate: parseRate(formData.get("minimum_margin_rate")) ?? 0.12,
+    params_configured: parseBoolean(formData.get("params_configured"), true),
+    notes: String(formData.get("notes") || "").trim() || null,
+    updated_at: new Date().toISOString()
+  };
 
-  if (rows.length > 0) {
+  if (row.source) {
     const supabase = createSupabaseAdminClient();
     const { error } = await supabase
       .from("oraculo_margin_channel_params")
-      .upsert(rows, { onConflict: "source,channel_key" });
+      .upsert(row, { onConflict: "source,channel_key" });
 
     if (error) throw error;
   }
@@ -186,28 +122,25 @@ async function importChannelParams(formData: FormData) {
   revalidatePath("/skus");
 }
 
-async function importSkuParams(formData: FormData) {
+async function saveSkuParam(formData: FormData) {
   "use server";
 
-  const text = await formText(formData);
-  const rows = parseCsv(text)
-    .map((row) => ({
-      source: String(row.source ?? "").trim().toLowerCase(),
-      sku: String(row.sku ?? "").trim(),
-      unit_cost_override: parseNumber(row.unit_cost_override),
-      target_margin_rate_override: parseRate(row.target_margin_rate_override),
-      minimum_margin_rate_override: parseRate(row.minimum_margin_rate_override),
-      active: parseBoolean(row.active, true),
-      notes: String(row.notes || "").trim() || null,
-      updated_at: new Date().toISOString()
-    }))
-    .filter((row) => row.source && row.sku);
+  const row = {
+    source: String(formData.get("source") ?? "").trim().toLowerCase(),
+    sku: String(formData.get("sku") ?? "").trim(),
+    unit_cost_override: parseNumber(formData.get("unit_cost_override")),
+    target_margin_rate_override: parseRate(formData.get("target_margin_rate_override")),
+    minimum_margin_rate_override: parseRate(formData.get("minimum_margin_rate_override")),
+    active: parseBoolean(formData.get("active"), true),
+    notes: String(formData.get("notes") || "").trim() || null,
+    updated_at: new Date().toISOString()
+  };
 
-  if (rows.length > 0) {
+  if (row.source && row.sku) {
     const supabase = createSupabaseAdminClient();
     const { error } = await supabase
       .from("oraculo_margin_sku_params")
-      .upsert(rows, { onConflict: "source,sku" });
+      .upsert(row, { onConflict: "source,sku" });
 
     if (error) throw error;
   }
@@ -306,16 +239,62 @@ export default async function ParametrosPage() {
             <h2>Taxas, impostos e metas</h2>
           </div>
 
-          <form action={importChannelParams} className="upload-form">
-            <input type="file" name="file" accept=".csv,text/csv" />
-            <textarea
-              name="csv"
-              rows={8}
-              placeholder={`source,channel_key,display_name,tax_rate,marketplace_fee_rate,payment_fee_rate,freight_subsidy_per_unit,packaging_cost_per_unit,target_margin_rate,minimum_margin_rate,params_configured,notes
-olist,*,Olist padrão,8%,12%,2%,0,1.20,30%,15%,true,validado pelo financeiro
-shopee,*,Shopee Donacor,8%,18%,2%,0,1.20,30%,15%,true,validado pelo financeiro`}
-            />
-            <button type="submit">Importar parâmetros de canal</button>
+          <form action={saveChannelParam} className="upload-form manual-form">
+            <label>
+              <span>Fonte</span>
+              <select name="source" required defaultValue="olist">
+                <option value="olist">Olist</option>
+                <option value="shopee">Shopee</option>
+              </select>
+            </label>
+            <label>
+              <span>Canal</span>
+              <input name="channel_key" defaultValue="*" />
+            </label>
+            <label>
+              <span>Nome</span>
+              <input name="display_name" placeholder="Shopee Donacor" />
+            </label>
+            <label>
+              <span>Imposto</span>
+              <input name="tax_rate" inputMode="decimal" placeholder="8%" />
+            </label>
+            <label>
+              <span>Comissão marketplace</span>
+              <input name="marketplace_fee_rate" inputMode="decimal" placeholder="18%" />
+            </label>
+            <label>
+              <span>Taxa pagamento</span>
+              <input name="payment_fee_rate" inputMode="decimal" placeholder="2%" />
+            </label>
+            <label>
+              <span>Frete subsidiado/item</span>
+              <input name="freight_subsidy_per_unit" inputMode="decimal" placeholder="0,00" />
+            </label>
+            <label>
+              <span>Embalagem/item</span>
+              <input name="packaging_cost_per_unit" inputMode="decimal" placeholder="1,20" />
+            </label>
+            <label>
+              <span>Margem meta</span>
+              <input name="target_margin_rate" inputMode="decimal" placeholder="30%" />
+            </label>
+            <label>
+              <span>Margem mínima</span>
+              <input name="minimum_margin_rate" inputMode="decimal" placeholder="15%" />
+            </label>
+            <label>
+              <span>Status</span>
+              <select name="params_configured" defaultValue="true">
+                <option value="true">Configurado</option>
+                <option value="false">Pendente</option>
+              </select>
+            </label>
+            <label className="form-wide">
+              <span>Observação</span>
+              <input name="notes" placeholder="validado pelo financeiro" />
+            </label>
+            <button type="submit">Salvar canal</button>
           </form>
         </article>
 
@@ -325,16 +304,42 @@ shopee,*,Shopee Donacor,8%,18%,2%,0,1.20,30%,15%,true,validado pelo financeiro`}
             <h2>Custo e exceções</h2>
           </div>
 
-          <form action={importSkuParams} className="upload-form">
-            <input type="file" name="file" accept=".csv,text/csv" />
-            <textarea
-              name="csv"
-              rows={8}
-              placeholder={`source,sku,unit_cost_override,target_margin_rate_override,minimum_margin_rate_override,active,notes
-shopee,CABIDE VELUDO-50UN-PRETO,22.50,30%,15%,true,custo informado pelo financeiro
-olist,213986,14.43,30%,15%,true,custo conferido`}
-            />
-            <button type="submit">Importar parâmetros de SKU</button>
+          <form action={saveSkuParam} className="upload-form manual-form">
+            <label>
+              <span>Fonte</span>
+              <select name="source" required defaultValue="shopee">
+                <option value="olist">Olist</option>
+                <option value="shopee">Shopee</option>
+              </select>
+            </label>
+            <label>
+              <span>SKU</span>
+              <input name="sku" required placeholder="CABIDE VELUDO-50UN-PRETO" />
+            </label>
+            <label>
+              <span>Custo unitário</span>
+              <input name="unit_cost_override" inputMode="decimal" placeholder="22,50" />
+            </label>
+            <label>
+              <span>Margem meta</span>
+              <input name="target_margin_rate_override" inputMode="decimal" placeholder="30%" />
+            </label>
+            <label>
+              <span>Margem mínima</span>
+              <input name="minimum_margin_rate_override" inputMode="decimal" placeholder="15%" />
+            </label>
+            <label>
+              <span>Status</span>
+              <select name="active" defaultValue="true">
+                <option value="true">Ativo</option>
+                <option value="false">Inativo</option>
+              </select>
+            </label>
+            <label className="form-wide">
+              <span>Observação</span>
+              <input name="notes" placeholder="custo informado pelo financeiro" />
+            </label>
+            <button type="submit">Salvar SKU</button>
           </form>
         </article>
       </section>

@@ -140,17 +140,32 @@ Status de margem:
 
 A tela `/parametros` recebe os dados que não vêm da Olist ou das APIs dos marketplaces.
 
-Parâmetros por canal:
+Os parâmetros são digitados no frontend, campo a campo. Não é necessário subir arquivo.
 
-```text
-source,channel_key,display_name,tax_rate,marketplace_fee_rate,payment_fee_rate,freight_subsidy_per_unit,packaging_cost_per_unit,target_margin_rate,minimum_margin_rate,params_configured,notes
-```
+Campos por canal:
 
-Parâmetros por SKU:
+- fonte;
+- canal;
+- nome;
+- imposto;
+- comissão marketplace;
+- taxa de pagamento;
+- frete subsidiado por item;
+- embalagem por item;
+- margem meta;
+- margem mínima;
+- status;
+- observação.
 
-```text
-source,sku,unit_cost_override,target_margin_rate_override,minimum_margin_rate_override,active,notes
-```
+Campos por SKU:
+
+- fonte;
+- SKU;
+- custo unitário;
+- margem meta;
+- margem mínima;
+- status;
+- observação.
 
 Regra:
 

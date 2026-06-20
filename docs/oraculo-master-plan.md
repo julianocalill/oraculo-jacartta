@@ -1074,8 +1074,8 @@ Foi criada a tela:
 
 Uso da tela:
 
-- importar parâmetros de canal por CSV ou texto colado;
-- importar exceções/custos por SKU por CSV ou texto colado;
+- digitar parâmetros de canal diretamente no frontend;
+- digitar exceções/custos por SKU diretamente no frontend;
 - visualizar parâmetros atuais de canal;
 - visualizar overrides recentes por SKU;
 - acompanhar quantos SKUs têm custo e quantos ainda precisam de preenchimento.

@@ -285,7 +285,25 @@ p {
   gap: 10px;
 }
 
-.upload-form input[type="file"],
+.manual-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.upload-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.upload-form label span {
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.upload-form input,
+.upload-form select,
 .upload-form textarea {
   width: 100%;
   border: 1px solid var(--line);
@@ -294,15 +312,17 @@ p {
   color: var(--text);
   font: inherit;
   font-size: 13px;
+  min-height: 36px;
+  padding: 0 10px;
 }
 
-.upload-form input[type="file"] {
-  padding: 10px;
+.form-wide,
+.upload-form button {
+  grid-column: 1 / -1;
 }
 
 .upload-form textarea {
   min-height: 150px;
-  padding: 12px;
   resize: vertical;
 }
 
