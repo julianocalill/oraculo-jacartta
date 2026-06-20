@@ -166,7 +166,7 @@ async function loadBillingWindowMetrics(
 async function loadPedidos(filters: PedidosFilters) {
   const supabase = createSupabaseAdminClient();
   let unifiedQuery = supabase
-    .from("oraculo_channel_sales_unified")
+    .from("oraculo_channel_sales_unified_cache")
     .select("*")
     .gte("order_date", filters.start)
     .lte("order_date", filters.end)

@@ -548,13 +548,14 @@ export default async function HomePage({
           <Link href="/alertas">Alertas <b>{formatCount(data.actionableWatchlist.length)}</b></Link>
           <Link href="/pedidos">Performance</Link>
           <Link href="/alertas">Ruptura</Link>
+          <Link href="/parametros">Parâmetros</Link>
         </nav>
 
         <nav className="nav-group nav-admin" aria-label="Admin">
           <span>Admin</span>
           <Link href="/">Usuários</Link>
           <Link href="/">Logs</Link>
-          <Link href="/">Config</Link>
+          <Link href="/parametros">Config</Link>
         </nav>
 
         <div className="sidebar-footer">

@@ -1064,6 +1064,28 @@ Regra de segurança de produto:
 - quando falta custo, o status fica `Sem custo`;
 - o sistema não deve vender margem/ROI como definitivo até os parâmetros serem preenchidos e validados.
 
+### Aba de parâmetros manuais
+
+Foi decidido que qualquer informação necessária para margem/ROI que não venha da Olist ou das APIs dos marketplaces deve ser enviada manualmente pelo app.
+
+Foi criada a tela:
+
+- [apps/web/app/parametros/page.tsx](/Users/julianocalil/oraculo/apps/web/app/parametros/page.tsx)
+
+Uso da tela:
+
+- importar parâmetros de canal por CSV ou texto colado;
+- importar exceções/custos por SKU por CSV ou texto colado;
+- visualizar parâmetros atuais de canal;
+- visualizar overrides recentes por SKU;
+- acompanhar quantos SKUs têm custo e quantos ainda precisam de preenchimento.
+
+Regra de governança:
+
+- O que conseguimos puxar automaticamente da Olist ou APIs dos marketplaces deve continuar vindo por sync.
+- O que não vier por API deve ser colocado em `Parâmetros`, sem edição direta no banco.
+- Shopee segue como somente leitura: a tela grava parâmetros internos do Oraculo, nunca altera dados dentro da Shopee.
+
 ---
 
 ## Referências relacionadas

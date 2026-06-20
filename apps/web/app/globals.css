@@ -250,10 +250,73 @@ p {
   padding: 0 14px;
 }
 
+.button-link {
+  min-height: 34px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--amber);
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 0 12px;
+  text-decoration: none;
+}
+
 .source-summary-grid {
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.settings-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.settings-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.upload-form {
+  display: grid;
+  gap: 10px;
+}
+
+.upload-form input[type="file"],
+.upload-form textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(16, 12, 30, 0.78);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.upload-form input[type="file"] {
+  padding: 10px;
+}
+
+.upload-form textarea {
+  min-height: 150px;
+  padding: 12px;
+  resize: vertical;
+}
+
+.upload-form button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--amber);
+  color: #121000;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+  padding: 0 14px;
 }
 
 .source-summary-card {
@@ -901,6 +964,7 @@ h2 {
   .control-grid,
   .detail-grid,
   .bottom-grid,
+  .settings-grid,
   .source-summary-grid {
     grid-template-columns: 1fr;
   }

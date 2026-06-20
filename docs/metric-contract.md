@@ -136,6 +136,29 @@ Status de margem:
 - `atencao`: margem abaixo da meta.
 - `saudavel`: margem acima da meta.
 
+### Entrada manual de parâmetros
+
+A tela `/parametros` recebe os dados que não vêm da Olist ou das APIs dos marketplaces.
+
+Parâmetros por canal:
+
+```text
+source,channel_key,display_name,tax_rate,marketplace_fee_rate,payment_fee_rate,freight_subsidy_per_unit,packaging_cost_per_unit,target_margin_rate,minimum_margin_rate,params_configured,notes
+```
+
+Parâmetros por SKU:
+
+```text
+source,sku,unit_cost_override,target_margin_rate_override,minimum_margin_rate_override,active,notes
+```
+
+Regra:
+
+- custo Olist deve vir automaticamente de `olist_products` quando estiver confiável;
+- custos e exceções que não vierem por API entram em `oraculo_margin_sku_params`;
+- taxas/impostos/metas por canal entram em `oraculo_margin_channel_params`;
+- Shopee é somente leitura: estes parâmetros são internos do Oraculo e não alteram nada na Shopee.
+
 ## Auditoria executavel
 
 O script `scripts/audit-oraculo-metrics.js` chama a funcao `oraculo_reconciliation_snapshot` no Supabase e compara:
