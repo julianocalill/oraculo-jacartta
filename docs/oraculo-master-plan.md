@@ -14,6 +14,49 @@ O sistema desejado não é apenas um dashboard. Ele precisa:
 
 ---
 
+## Estado executivo em 2026-06-20
+
+O projeto saiu da fase de prova isolada da Olist e entrou na fase de consolidação multi-canal e reconciliação de métricas.
+
+O foco definido pelo usuário agora é:
+
+- entendimento rápido e prático de ROI por produto;
+- curva de saída e de não saída de produto;
+- margem por produto;
+- alertas de margem conforme parâmetros configuráveis no frontend;
+- visão confiável por SKU, canal, estoque, ruptura e dias sem venda;
+- dados da Olist e marketplaces cruzados no mesmo banco.
+
+Decisão importante: antes de avançar em ROI/margem, o projeto precisa ter métricas auditáveis. Foi identificado que parte dos números do dashboard estava semanticamente incorreta: a tela chamava de `NFs emitidas` e `receita confirmada`, mas a métrica vinha de pedidos criados/status, não de `dataFaturamento` fiscal completo.
+
+Por isso, foi criada uma camada de contrato e auditoria:
+
+- [docs/metric-contract.md](/Users/julianocalil/oraculo/docs/metric-contract.md)
+- [scripts/audit-oraculo-metrics.js](/Users/julianocalil/oraculo/scripts/audit-oraculo-metrics.js)
+- função Supabase `oraculo_reconciliation_snapshot`
+
+Resultado da auditoria para `2026-06-01` a `2026-06-30`:
+
+- Olist por data de criação do pedido: `69.501` pedidos
+- Olist cancelados: `554`
+- Olist pendentes: `18`
+- Receita operacional Olist preferencial: `R$ 5.097.896,89` bruta e cerca de `R$ 5.060.984,62` líquida operacional no cache de canais
+- Olist com `dataFaturamento` fiscal preenchida no período: `656` NFs
+- Receita por `dataFaturamento` fiscal preenchida: `R$ 42.968,72`
+- Shopee Donacor importada no cache de canais: `9.873` pedidos, `1.106` cancelados, `R$ 601.481,08` líquido operacional
+
+Leitura correta:
+
+- O dashboard principal deve falar em `receita operacional` e `vendas confirmadas`, não em `NF fiscal`, enquanto `dataFaturamento` estiver incompleto.
+- A visão fiscal por NF só deve ser usada como auditoria específica, não como KPI principal da operação.
+- ROI e margem ainda não podem ser exibidos como prontos porque faltam custo, impostos, tarifas, frete subsidiado e parâmetros por canal/produto.
+
+Commit de referência:
+
+- `a200b0b Add metric reconciliation and channel cache`
+
+---
+
 ## O que já foi feito
 
 ### 1. Estrutura do projeto
@@ -758,123 +801,243 @@ O próximo passo mais correto é:
 
 ## Ponto de parada em 2026-06-17
 
-O projeto está pausado por bloqueio de quota no Supabase.
+Este ponto foi superado. O Supabase voltou a aceitar migrations e consultas, e o projeto avançou para a camada multi-canal.
 
-### Bloqueio atual
+---
 
-O Supabase está respondendo:
+## Estado atualizado em 2026-06-20
 
-```text
-402 exceed_egress_quota
+### Repositórios e deploy
+
+O projeto está versionado e conectado ao GitHub.
+
+Remotes relevantes:
+
+- `origin`: `https://github.com/Grupo-Jacartta/oraculo.git`
+- `personal`: `https://github.com/julianocalill/oraculo-jacartta.git`
+
+Como a Vercel pode estar apontada para o repositório pessoal, os commits recentes foram enviados para os dois remotes.
+
+Decisão de custo:
+
+- usar Vercel sem custo agora;
+- manter o repositório pessoal como alternativa para deploy gratuito;
+- evitar dependência de Vercel Pro neste estágio.
+
+### App web
+
+O frontend está em:
+
+- [apps/web](/Users/julianocalil/oraculo/apps/web)
+
+Telas existentes:
+
+- [Analytics](/Users/julianocalil/oraculo/apps/web/app/page.tsx)
+- [Pedidos](/Users/julianocalil/oraculo/apps/web/app/pedidos/page.tsx)
+- [SKUs](/Users/julianocalil/oraculo/apps/web/app/skus/page.tsx)
+- [Alertas](/Users/julianocalil/oraculo/apps/web/app/alertas/page.tsx)
+
+O visual foi ajustado para uma tela operacional escura, limpa, com tons roxos e amarelos.
+
+Correções recentes:
+
+- cards e áreas clicáveis;
+- filtros de período;
+- tooltip na curva do período;
+- ranking de SKU com quantidade;
+- retirada/renomeação de métricas que confundiam receita bruta, receita confirmada e NF;
+- troca de texto para `Receita operacional`, `Vendas confirmadas`, `Canceladas` e `Pendentes`.
+
+Build validado:
+
+```bash
+cd /Users/julianocalil/oraculo/apps/web
+npm run build
 ```
 
-Isso indica limite de tráfego de saída/spend cap, não necessariamente falta de espaço no banco.
+Resultado: build Next.js passou.
 
-Enquanto esse bloqueio existir:
+### Supabase
 
-- não dá para validar os dados via API
-- não dá para aplicar migrations
-- não dá para popular as novas tabelas analíticas
-- o app web não consegue consultar normalmente o Supabase
+Supabase é a base canônica.
 
-### O que o usuário vai fazer antes de retomar
+Principais grupos de tabelas/views/funções:
 
-O usuário vai assinar/ajustar o plano do Supabase ou remover o spend cap.
+- Olist: `olist_orders`, `olist_order_items`, `olist_products`, `olist_stock_items`
+- Olist OAuth/sync: `olist_oauth_tokens`, `olist_sync_runs`, `olist_stock_sync_runs`
+- Shopee Donacor: `shopee_orders`, `shopee_order_items`, `shopee_products`, tabelas auxiliares de sync
+- Métricas Olist: `oraculo_daily_sales`, `oraculo_nf_daily_cache`, `oraculo_sku_period_rank`
+- Multi-canal: `oraculo_orders_unified`, `oraculo_order_items_unified`, `oraculo_channel_sales_unified`
+- Cache multi-canal: `oraculo_channel_sales_unified_cache`
+- Produto/SKU unificado: `oraculo_products_unified`, `oraculo_sku_sales_unified`, `oraculo_sku_current_unified`, caches relacionados
 
-Depois disso, a primeira ação técnica deve ser testar se a API voltou:
+Migrations recentes importantes:
+
+- [20260619182000_create_oraculo_cross_channel_views.sql](/Users/julianocalil/oraculo/supabase/migrations/20260619182000_create_oraculo_cross_channel_views.sql)
+- [20260619183600_create_oraculo_products_unified.sql](/Users/julianocalil/oraculo/supabase/migrations/20260619183600_create_oraculo_products_unified.sql)
+- [20260619195000_create_oraculo_unified_sku_views.sql](/Users/julianocalil/oraculo/supabase/migrations/20260619195000_create_oraculo_unified_sku_views.sql)
+- [20260619203000_cache_oraculo_unified_sku_views.sql](/Users/julianocalil/oraculo/supabase/migrations/20260619203000_cache_oraculo_unified_sku_views.sql)
+- [20260620110000_create_oraculo_reconciliation_snapshot.sql](/Users/julianocalil/oraculo/supabase/migrations/20260620110000_create_oraculo_reconciliation_snapshot.sql)
+- [20260620120000_fix_unified_olist_order_amounts.sql](/Users/julianocalil/oraculo/supabase/migrations/20260620120000_fix_unified_olist_order_amounts.sql)
+- [20260620121500_cache_oraculo_channel_sales_unified.sql](/Users/julianocalil/oraculo/supabase/migrations/20260620121500_cache_oraculo_channel_sales_unified.sql)
+- [20260620123000_optimize_unified_channel_cache_refresh.sql](/Users/julianocalil/oraculo/supabase/migrations/20260620123000_optimize_unified_channel_cache_refresh.sql)
+
+### Olist
+
+Olist está conectada via OAuth, com refresh token salvo no Supabase.
+
+O sync automático diário foi planejado para rodar pelo Supabase/n8n, com refresh token automático e sem aprovação manual.
+
+Estado dos dados:
+
+- pedidos importados;
+- itens normalizados existem, mas a cobertura precisa ser monitorada;
+- produtos/estoque importados;
+- payload bruto preservado em JSONB;
+- detalhes de pedido podem trazer `itens` e `dataFaturamento`, mas `dataFaturamento` vem vazio em muitos pedidos válidos.
+
+Ponto crítico descoberto:
+
+- `dataFaturamento` não pode ser tratado como fonte única da receita operacional enquanto a cobertura estiver incompleta.
+- A métrica operacional deve usar `data_criacao` + status.
+- A métrica fiscal por NF deve ser separada e auditada.
+
+### Shopee Donacor
+
+Dados da loja Donacor na Shopee foram puxados para o mesmo banco.
+
+Regra de segurança e produto:
+
+- Shopee é somente leitura.
+- O Oraculo nunca deve alterar pedido, estoque, preço, produto ou qualquer dado dentro da Shopee.
+- A integração Shopee serve para cruzar pedidos, itens, receita, quantidade e produto com Olist e outros canais.
+
+Estado atual no cache de junho:
+
+- `9.873` pedidos Shopee
+- `1.106` cancelados
+- `R$ 601.481,08` de receita líquida operacional
+
+### Métricas e auditoria
+
+Foi criado o contrato oficial:
+
+- [docs/metric-contract.md](/Users/julianocalil/oraculo/docs/metric-contract.md)
+
+Regras atuais:
+
+- `Receita operacional`: pedidos válidos no período, excluindo cancelados e pendentes.
+- `Vendas confirmadas`: pedidos com status não pendente/cancelado.
+- `Canceladas`: status cancelado.
+- `Pendentes`: status pendente.
+- `Ticket médio`: receita operacional / vendas confirmadas.
+- `NF fiscal`: somente quando houver `dataFaturamento`, separada da visão operacional.
+
+Foi criado o audit executável:
+
+- [scripts/audit-oraculo-metrics.js](/Users/julianocalil/oraculo/scripts/audit-oraculo-metrics.js)
+
+Uso:
 
 ```bash
 cd /Users/julianocalil/oraculo
-node --input-type=module -e "import { readFileSync } from 'node:fs'; const envText = readFileSync('.env','utf8'); const env = {}; for (const raw of envText.split(/\r?\n/)) { const line = raw.trim(); if (!line || line.startsWith('#')) continue; const i = line.indexOf('='); if (i === -1) continue; env[line.slice(0,i)] = line.slice(i+1); } const base = env.SUPABASE_URL.endsWith('/') ? env.SUPABASE_URL : env.SUPABASE_URL + '/'; const r = await fetch(new URL('rest/v1/olist_orders?select=id&limit=1', base), { method: 'HEAD', headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY, Prefer: 'count=exact' } }); console.log(r.status, r.headers.get('content-range'));"
+node scripts/audit-oraculo-metrics.js --start=2026-06-01 --end=2026-06-30
 ```
 
-Resultado esperado:
+Resultado observado para junho:
 
-- `200` ou `206`
-- `content-range` preenchido
+- Olist por criação do pedido: `69.501` pedidos
+- Olist cancelados: `554`
+- Olist pendentes: `18`
+- Receita Olist preferencial: `R$ 5.097.896,89`
+- Olist por `dataFaturamento`: `656` NFs
+- Receita por `dataFaturamento`: `R$ 42.968,72`
 
-Se ainda retornar `402`, o Supabase ainda está bloqueado.
+Diagnóstico:
 
-### Estado da importação antes da pausa
+- O número operacional de junho existe e é útil.
+- O número fiscal por NF ainda não representa a operação inteira.
+- O dashboard não deve misturar os dois conceitos.
 
-Foi executado backfill de pedidos Olist com janela de `2` meses para trás:
+### Cache multi-canal
 
-- início: `2026-04-01`
-- fim: `2026-06-16`
-- janelas diárias processadas: `77`
-- pedidos reportados pelo importador: `241.180`
-- enviados para upsert: `241.180`
+Foi criado cache diário para evitar timeout nas views unificadas:
 
-A validação final não pôde ser feita por causa do `exceed_egress_quota`.
+- `oraculo_channel_sales_unified_cache`
+- função `refresh_oraculo_channel_sales_unified_cache`
+- script [scripts/refresh-oraculo-unified-channel-cache.js](/Users/julianocalil/oraculo/scripts/refresh-oraculo-unified-channel-cache.js)
 
-### Arquivos criados para a próxima etapa
-
-Migration da camada analítica:
-
-- [supabase/migrations/20260616170000_create_olist_analytics_foundation.sql](/Users/julianocalil/oraculo/supabase/migrations/20260616170000_create_olist_analytics_foundation.sql)
-
-Scripts de normalização:
-
-- [scripts/sync-olist-order-items.js](/Users/julianocalil/oraculo/scripts/sync-olist-order-items.js)
-- [scripts/sync-olist-dimensions.js](/Users/julianocalil/oraculo/scripts/sync-olist-dimensions.js)
-- [scripts/snapshot-olist-stock.js](/Users/julianocalil/oraculo/scripts/snapshot-olist-stock.js)
-- [scripts/sync-olist-rolling-window.js](/Users/julianocalil/oraculo/scripts/sync-olist-rolling-window.js)
-
-Job diário:
-
-- [scripts/run-olist-current-month-sync.sh](/Users/julianocalil/oraculo/scripts/run-olist-current-month-sync.sh)
-- [ops/launchd/com.oraculo.olist-current-month-sync.plist](/Users/julianocalil/oraculo/ops/launchd/com.oraculo.olist-current-month-sync.plist)
-
-### O que fazer quando voltar
-
-1. Confirmar que Supabase não retorna mais `402`.
-2. Aplicar a migration `20260616170000_create_olist_analytics_foundation.sql`.
-3. Validar quantidade e janela de `olist_orders`.
-4. Rodar extração de itens:
+Uso:
 
 ```bash
 cd /Users/julianocalil/oraculo
-ORDER_ITEMS_START_DATE=2026-04-01 ORDER_ITEMS_END_DATE=2026-06-17 node scripts/sync-olist-order-items.js
+node scripts/refresh-oraculo-unified-channel-cache.js --start=2026-06-01 --end=2026-06-30
 ```
 
-5. Rodar dimensões:
+Resultado observado:
 
-```bash
-cd /Users/julianocalil/oraculo
-DIMENSIONS_START_DATE=2026-04-01 DIMENSIONS_END_DATE=2026-06-17 node scripts/sync-olist-dimensions.js
-```
+- `225` linhas de cache geradas para junho.
+- O dashboard agora consulta o cache, não a view bruta pesada.
 
-6. Criar snapshot de estoque:
+### Skills e documentação
 
-```bash
-cd /Users/julianocalil/oraculo
-node scripts/snapshot-olist-stock.js
-```
+Foram avaliadas skills locais e foi criado um processo mais claro:
 
-7. Depois disso, criar views/facts para o dashboard:
+- Codex/terminal para desenvolvimento e execução técnica;
+- VS Code opcional para inspeção visual e edição manual;
+- GitHub como versionamento e deploy;
+- Obsidian como memória auxiliar, mas docs do repo são oficiais;
+- Supabase como backend e banco;
+- Vercel como hosting frontend.
 
-- receita diária
-- vendas diárias
-- canal por dia
-- SKU por dia
-- status por dia
-- distribuição por UF
+Docs relevantes criados/atualizados:
 
-### Observação sobre hidratação de detalhes
+- [docs/metric-contract.md](/Users/julianocalil/oraculo/docs/metric-contract.md)
+- [docs/project-context.md](/Users/julianocalil/oraculo/docs/project-context.md)
+- [docs/runbooks/roadmap-consultoria-action-plan-2026-06-18.md](/Users/julianocalil/oraculo/docs/runbooks/roadmap-consultoria-action-plan-2026-06-18.md)
+- [docs/product/analytics-foundation.md](/Users/julianocalil/oraculo/docs/product/analytics-foundation.md)
 
-O script de hidratação de detalhes bateu rate limit da Olist:
+### O que está funcionando
 
-```text
-429
-```
+- App Next.js compila.
+- Supabase aceita migrations.
+- Olist OAuth funciona.
+- Olist pedidos/estoque/produtos estão no banco.
+- Shopee Donacor foi importada em modo somente leitura.
+- Views multi-canal existem.
+- Cache multi-canal foi criado e preenchido.
+- Dashboard carrega métricas por período e fonte a partir do cache.
+- Auditoria de métricas já aponta divergências entre visão operacional e fiscal.
 
-Por isso, `sync-olist-rolling-window.js` foi ajustado para deixar hidratação como opcional via:
+### O que ainda não está confiável
 
-```bash
-HYDRATE_ORDER_DETAILS=true
-```
+- ROI por produto: ainda falta custo e regra de cálculo.
+- Margem por produto: ainda faltam custos, impostos, tarifas e frete subsidiado por canal.
+- `dataFaturamento` fiscal da Olist: cobertura insuficiente no banco para ser KPI principal.
+- Itens vendidos no dashboard ainda precisam ser reconciliados com a cobertura real de `olist_order_items`.
+- Produto mãe/simples em ruptura ainda precisa ser refinado para não misturar kit, SKU filho e item de marketplace.
+- ABC/XYZ ainda não deve ser tratado como pronto.
+- Alertas de margem ainda não existem como camada configurável.
 
-O padrão é `false` para o job diário não falhar.
+### Próxima fase
+
+Fase seguinte aprovada conceitualmente pelo usuário:
+
+1. Criar tabela de parâmetros de margem por produto/canal.
+2. Definir custo do produto, imposto, tarifa, frete subsidiado e regra de ROI.
+3. Criar visão/tabela de `product_margin_snapshot`.
+4. Ajustar tela de SKU/produto para mostrar:
+   - receita;
+   - quantidade vendida;
+   - estoque;
+   - última venda;
+   - dias sem venda;
+   - margem;
+   - ROI;
+   - alerta de margem.
+5. Criar curva de saída e não saída por produto.
+6. Criar alertas de ruptura e produto parado por produto mãe/simples.
+7. Só depois avançar para IA explicativa.
 
 ---
 
