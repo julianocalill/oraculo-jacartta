@@ -30,6 +30,21 @@ type SkuParam = {
   updated_at: string | null;
 };
 
+type StateTaxParam = {
+  uf: string;
+  operation_type: string;
+  icms_rate: number | null;
+  fcp_rate: number | null;
+  difal_rate: number | null;
+  effective_tax_rate: number | null;
+  applies_to_source: string;
+  params_configured: boolean | null;
+  valid_from: string | null;
+  valid_to: string | null;
+  notes: string | null;
+  updated_at: string | null;
+};
+
 type MarginProbe = {
   source: string | null;
   unit_cost: number | null;
@@ -88,6 +103,11 @@ function parseBoolean(value: unknown, fallback = true) {
   if (["true", "1", "sim", "yes", "y"].includes(normalized)) return true;
   if (["false", "0", "nao", "não", "no", "n"].includes(normalized)) return false;
   return fallback;
+}
+
+function parseDateValue(value: unknown) {
+  const normalized = String(value ?? "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : null;
 }
 
 async function saveChannelParam(formData: FormData) {
@@ -149,10 +169,45 @@ async function saveSkuParam(formData: FormData) {
   revalidatePath("/skus");
 }
 
+async function saveStateTaxParam(formData: FormData) {
+  "use server";
+
+  const icmsRate = parseRate(formData.get("icms_rate")) ?? 0;
+  const fcpRate = parseRate(formData.get("fcp_rate")) ?? 0;
+  const difalRate = parseRate(formData.get("difal_rate")) ?? 0;
+
+  const row = {
+    uf: String(formData.get("uf") ?? "").trim().toUpperCase(),
+    operation_type: String(formData.get("operation_type") || "venda_consumidor").trim() || "venda_consumidor",
+    applies_to_source: String(formData.get("applies_to_source") || "*").trim().toLowerCase() || "*",
+    icms_rate: icmsRate,
+    fcp_rate: fcpRate,
+    difal_rate: difalRate,
+    effective_tax_rate: parseRate(formData.get("effective_tax_rate")) ?? icmsRate + fcpRate + difalRate,
+    params_configured: parseBoolean(formData.get("params_configured"), false),
+    valid_from: parseDateValue(formData.get("valid_from")) ?? new Date().toISOString().slice(0, 10),
+    valid_to: parseDateValue(formData.get("valid_to")),
+    notes: String(formData.get("notes") || "").trim() || null,
+    updated_at: new Date().toISOString()
+  };
+
+  if (/^[A-Z]{2}$/.test(row.uf)) {
+    const supabase = createSupabaseAdminClient();
+    const { error } = await supabase
+      .from("oraculo_state_tax_params")
+      .upsert(row, { onConflict: "uf,operation_type,applies_to_source,valid_from" });
+
+    if (error) throw error;
+  }
+
+  revalidatePath("/parametros");
+  revalidatePath("/skus");
+}
+
 async function loadParametros() {
   const supabase = createSupabaseAdminClient();
 
-  const [channelsResponse, skuResponse, marginResponse] = await Promise.all([
+  const [channelsResponse, skuResponse, stateTaxResponse, marginResponse] = await Promise.all([
     supabase
       .from("oraculo_margin_channel_params")
       .select("*")
@@ -164,6 +219,12 @@ async function loadParametros() {
       .order("updated_at", { ascending: false })
       .limit(80),
     supabase
+      .from("oraculo_state_tax_params")
+      .select("*")
+      .order("uf", { ascending: true })
+      .order("applies_to_source", { ascending: true })
+      .order("valid_from", { ascending: false }),
+    supabase
       .from("oraculo_sku_margin_30d")
       .select("source, unit_cost, margin_signal")
       .limit(5000)
@@ -171,6 +232,7 @@ async function loadParametros() {
 
   if (channelsResponse.error) throw channelsResponse.error;
   if (skuResponse.error) throw skuResponse.error;
+  if (stateTaxResponse.error) throw stateTaxResponse.error;
   if (marginResponse.error) throw marginResponse.error;
 
   const probes = (marginResponse.data ?? []) as MarginProbe[];
@@ -184,6 +246,7 @@ async function loadParametros() {
   return {
     channels: (channelsResponse.data ?? []) as ChannelParam[],
     skuParams: (skuResponse.data ?? []) as SkuParam[],
+    stateTaxes: (stateTaxResponse.data ?? []) as StateTaxParam[],
     summary: {
       total: probes.length,
       withCost,
@@ -300,6 +363,75 @@ export default async function ParametrosPage() {
 
         <article className="panel settings-panel">
           <div className="section-head">
+            <p className="eyebrow">Fiscal</p>
+            <h2>Imposto por UF</h2>
+          </div>
+
+          <form action={saveStateTaxParam} className="upload-form manual-form">
+            <label>
+              <span>UF</span>
+              <select name="uf" required defaultValue="SP">
+                {[
+                  "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
+                  "PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"
+                ].map((uf) => (
+                  <option key={uf} value={uf}>{uf}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Fonte</span>
+              <select name="applies_to_source" defaultValue="*">
+                <option value="*">Todas</option>
+                <option value="olist">Olist</option>
+                <option value="shopee">Shopee</option>
+              </select>
+            </label>
+            <label>
+              <span>Operação</span>
+              <input name="operation_type" defaultValue="venda_consumidor" />
+            </label>
+            <label>
+              <span>ICMS</span>
+              <input name="icms_rate" inputMode="decimal" placeholder="18%" />
+            </label>
+            <label>
+              <span>FCP</span>
+              <input name="fcp_rate" inputMode="decimal" placeholder="2%" />
+            </label>
+            <label>
+              <span>DIFAL</span>
+              <input name="difal_rate" inputMode="decimal" placeholder="0%" />
+            </label>
+            <label>
+              <span>Taxa efetiva</span>
+              <input name="effective_tax_rate" inputMode="decimal" placeholder="deixe vazio para somar" />
+            </label>
+            <label>
+              <span>Vigência início</span>
+              <input name="valid_from" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
+            </label>
+            <label>
+              <span>Vigência fim</span>
+              <input name="valid_to" type="date" />
+            </label>
+            <label>
+              <span>Status</span>
+              <select name="params_configured" defaultValue="false">
+                <option value="false">Pendente</option>
+                <option value="true">Validado</option>
+              </select>
+            </label>
+            <label className="form-wide">
+              <span>Observação</span>
+              <input name="notes" placeholder="regra validada com contador/fiscal" />
+            </label>
+            <button type="submit">Salvar UF</button>
+          </form>
+        </article>
+
+        <article className="panel settings-panel">
+          <div className="section-head">
             <p className="eyebrow">SKU</p>
             <h2>Custo e exceções</h2>
           </div>
@@ -342,6 +474,59 @@ export default async function ParametrosPage() {
             <button type="submit">Salvar SKU</button>
           </form>
         </article>
+      </section>
+
+      <section className="panel product-panel">
+        <div className="sku-toolbar">
+          <div>
+            <p className="eyebrow">Fiscal</p>
+            <h2>Regras por UF</h2>
+          </div>
+          <div className="sku-actions">
+            <strong>{count(data.stateTaxes.length)} linhas</strong>
+            <span>UF</span>
+            <span>Vigência</span>
+          </div>
+        </div>
+
+        <div className="table-wrap dense-table-wrap">
+          <table className="data-table dense-table">
+            <thead>
+              <tr>
+                <th>UF</th>
+                <th>Fonte</th>
+                <th>Operação</th>
+                <th className="numeric">ICMS</th>
+                <th className="numeric">FCP</th>
+                <th className="numeric">DIFAL</th>
+                <th className="numeric">Efetiva</th>
+                <th>Vigência</th>
+                <th>Status</th>
+                <th>Obs.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.stateTaxes.map((row) => (
+                <tr key={`${row.uf}-${row.operation_type}-${row.applies_to_source}-${row.valid_from}`}>
+                  <td>{row.uf}</td>
+                  <td>{row.applies_to_source === "*" ? "Todas" : row.applies_to_source}</td>
+                  <td>{row.operation_type}</td>
+                  <td className="numeric">{percent(row.icms_rate)}</td>
+                  <td className="numeric">{percent(row.fcp_rate)}</td>
+                  <td className="numeric">{percent(row.difal_rate)}</td>
+                  <td className="numeric">{percent(row.effective_tax_rate)}</td>
+                  <td>{row.valid_from ?? "-"} até {row.valid_to ?? "atual"}</td>
+                  <td>
+                    <span className={`status-pill ${row.params_configured ? "signal-good" : "signal-muted"}`}>
+                      {row.params_configured ? "Validado" : "Pendente"}
+                    </span>
+                  </td>
+                  <td>{row.notes ?? "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="panel product-panel">
