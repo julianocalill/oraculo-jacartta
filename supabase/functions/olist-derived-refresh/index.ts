@@ -37,6 +37,20 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+function errorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object') {
+    const record = error as Record<string, unknown>;
+    return JSON.stringify({
+      message: record.message,
+      code: record.code,
+      details: record.details,
+      hint: record.hint
+    });
+  }
+  return String(error);
+}
+
 function addDays(dateKey: string, days: number) {
   const date = new Date(`${dateKey}T00:00:00.000Z`);
   date.setUTCDate(date.getUTCDate() + days);
@@ -187,21 +201,27 @@ async function syncOrderItems(supabase: ReturnType<typeof createClient>, startDa
   return { ordersProcessed: orders.length, itemsUpserted: itemRows.length };
 }
 
-async function syncDimensions(supabase: ReturnType<typeof createClient>, startDate: string, endDate: string) {
-  const [orders, stockItems] = await Promise.all([
-    selectAll(
-      supabase,
-      'olist_orders',
-      'id,data_criacao,payload,situacao',
-      (query) => query.gte('data_criacao', startDate).lt('data_criacao', endDate)
-    ),
-    selectAll(
+async function syncDimensions(
+  supabase: ReturnType<typeof createClient>,
+  startDate: string,
+  endDate: string,
+  includeProducts: boolean
+) {
+  const orders = await selectAll(
+    supabase,
+    'olist_orders',
+    'id,data_criacao,payload,situacao',
+    (query) => query.gte('data_criacao', startDate).lt('data_criacao', endDate)
+  );
+
+  const stockItems = includeProducts
+    ? await selectAll(
       supabase,
       'olist_stock_items',
       'id,produto_id,sku,nome,saldo,reservado,disponivel,active,payload,synced_at',
       (query) => query.order('synced_at', { ascending: false })
     )
-  ]);
+    : [];
 
   const channels = new Map<string, Record<string, unknown>>();
   const statusCodes = new Set<string>();
@@ -389,19 +409,36 @@ async function refreshSalesCaches(supabase: ReturnType<typeof createClient>, sta
 }
 
 async function refreshNfCache(supabase: ReturnType<typeof createClient>, startDate: string, endDate: string) {
-  const { error } = await supabase.rpc('refresh_oraculo_nf_daily_cache', {
-    start_date: startDate,
-    end_date: endDate
-  });
+  let days = 0;
+  for (let current = startDate; current < endDate; current = addDays(current, 1)) {
+    const { error } = await supabase.rpc('refresh_oraculo_nf_daily_cache', {
+      start_date: current,
+      end_date: current
+    });
 
-  if (error) throw error;
-  return { refreshed: true };
+    if (error) throw error;
+    days += 1;
+  }
+  return { refreshed: true, days };
 }
 
 async function refreshUnifiedSkuCache(supabase: ReturnType<typeof createClient>) {
   const { error } = await supabase.rpc('refresh_oraculo_unified_sku_cache');
   if (error) throw error;
   return { refreshed: true };
+}
+
+async function refreshUnifiedChannelCache(supabase: ReturnType<typeof createClient>, startDate: string, endDate: string) {
+  let refreshedRows = 0;
+  for (let current = startDate; current < endDate; current = addDays(current, 1)) {
+    const { data, error } = await supabase.rpc('refresh_oraculo_channel_sales_unified_cache', {
+      p_start_date: current,
+      p_end_date: current
+    });
+    if (error) throw error;
+    refreshedRows += Number(data ?? 0);
+  }
+  return { refreshedRows };
 }
 
 Deno.serve(async (req) => {
@@ -420,21 +457,65 @@ Deno.serve(async (req) => {
     const startDate = typeof body.startDate === 'string' ? body.startDate : firstDayMonthsBack(monthsBack);
     const endDate = typeof body.endDate === 'string' ? body.endDate : addDays(new Date().toISOString().slice(0, 10), 1);
     const snapshotDate = new Date().toISOString().slice(0, 10);
+    const incremental = body.mode === 'incremental' || body.incremental === true;
+    const includeProductDimensions = typeof body.includeProductDimensions === 'boolean'
+      ? body.includeProductDimensions
+      : !incremental;
+    const includeStockSnapshot = typeof body.includeStockSnapshot === 'boolean'
+      ? body.includeStockSnapshot
+      : !incremental;
+    const includeUnifiedSkuCache = typeof body.includeUnifiedSkuCache === 'boolean'
+      ? body.includeUnifiedSkuCache
+      : !incremental;
+    const includeOrderItems = typeof body.includeOrderItems === 'boolean' ? body.includeOrderItems : true;
+    const includeDimensions = typeof body.includeDimensions === 'boolean' ? body.includeDimensions : true;
+    const includeSalesCaches = typeof body.includeSalesCaches === 'boolean' ? body.includeSalesCaches : true;
+    const includeNfCache = typeof body.includeNfCache === 'boolean' ? body.includeNfCache : true;
+    const includeUnifiedChannelCache = typeof body.includeUnifiedChannelCache === 'boolean'
+      ? body.includeUnifiedChannelCache
+      : true;
 
     const supabase = createClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false }
     });
 
-    const orderItems = await syncOrderItems(supabase, startDate, endDate);
-    const dimensions = await syncDimensions(supabase, startDate, endDate);
-    const stockSnapshot = await snapshotStock(supabase, snapshotDate);
-    const salesCaches = await refreshSalesCaches(supabase, startDate, endDate);
-    const nfCache = await refreshNfCache(supabase, startDate, endDate);
-    const unifiedSkuCache = await refreshUnifiedSkuCache(supabase);
+    const orderItems = includeOrderItems
+      ? await syncOrderItems(supabase, startDate, endDate)
+      : { skipped: true };
+    const dimensions = includeDimensions
+      ? await syncDimensions(supabase, startDate, endDate, includeProductDimensions)
+      : { skipped: true };
+    const stockSnapshot = includeStockSnapshot
+      ? await snapshotStock(supabase, snapshotDate)
+      : { skipped: true };
+    const salesCaches = includeSalesCaches
+      ? await refreshSalesCaches(supabase, startDate, endDate)
+      : { skipped: true };
+    const nfCache = includeNfCache
+      ? await refreshNfCache(supabase, startDate, endDate)
+      : { skipped: true };
+    const unifiedChannelCache = includeUnifiedChannelCache
+      ? await refreshUnifiedChannelCache(supabase, startDate, endDate)
+      : { skipped: true };
+    const unifiedSkuCache = includeUnifiedSkuCache
+      ? await refreshUnifiedSkuCache(supabase)
+      : { skipped: true };
 
-    return jsonResponse({ ok: true, startDate, endDate, orderItems, dimensions, stockSnapshot, salesCaches, nfCache, unifiedSkuCache });
+    return jsonResponse({
+      ok: true,
+      mode: incremental ? 'incremental' : 'full',
+      startDate,
+      endDate,
+      orderItems,
+      dimensions,
+      stockSnapshot,
+      salesCaches,
+      nfCache,
+      unifiedChannelCache,
+      unifiedSkuCache
+    });
   } catch (error) {
     console.error(error);
-    return jsonResponse({ ok: false, error: error instanceof Error ? error.message : String(error) }, 500);
+    return jsonResponse({ ok: false, error: errorMessage(error) }, 500);
   }
 });

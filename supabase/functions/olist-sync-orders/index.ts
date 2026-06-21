@@ -57,6 +57,10 @@ function chunk<T>(items: T[], size: number) {
   return chunks;
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function parseJsonOrThrow(text: string, context: string) {
   if (!text) return {};
 
@@ -259,29 +263,85 @@ async function fetchOlistOrderDetail(accessToken: string, orderId: string) {
     ? `${env.olistApiAuthPrefix} ${accessToken}`
     : accessToken;
 
-  const response = await fetch(new URL(`pedidos/${orderId}`, baseUrl), { headers });
-  const text = await response.text();
+  const url = new URL(`pedidos/${orderId}`, baseUrl);
 
-  if (!response.ok) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const response = await fetch(url, { headers });
+    const text = await response.text();
+
+    if (response.ok) {
+      const payload = parseJsonOrThrow(text, `Falha ao buscar detalhe do pedido ${orderId}`) as Record<string, unknown>;
+
+      return {
+        id: String(payload.id ?? orderId),
+        numero_pedido: payload.numeroPedido ?? payload.numero_pedido ?? null,
+        situacao: payload.situacao == null ? null : String(payload.situacao),
+        data_criacao: payload.data ?? payload.dataCriacao ?? null,
+        data_atualizacao: payload.dataAtualizacao ?? payload.dataAlteracao ?? null,
+        cliente: payload.cliente && typeof payload.cliente === 'object' ? payload.cliente : {},
+        transportador: payload.transportador && typeof payload.transportador === 'object' ? payload.transportador : {},
+        payload,
+        synced_at: new Date().toISOString()
+      };
+    }
+
+    if (response.status === 429 || response.status >= 500) {
+      const retryAfter = Number(response.headers.get('retry-after') ?? '0');
+      const waitMs = retryAfter > 0 ? retryAfter * 1000 : 1500 * (attempt + 1);
+      await sleep(waitMs);
+      continue;
+    }
+
     throw new Error(`Falha ao buscar detalhe do pedido ${orderId} (${response.status}): ${text.slice(0, 300)}`);
   }
 
-  const payload = parseJsonOrThrow(text, `Falha ao buscar detalhe do pedido ${orderId}`) as Record<string, unknown>;
+  throw new Error(`Falha ao buscar detalhe do pedido ${orderId} (429): limite de taxa da Olist excedido`);
+}
 
+function mergeExistingDetail(
+  row: Record<string, unknown>,
+  existing: { payload: Record<string, unknown>; data_atualizacao: string | null }
+) {
   return {
-    id: String(payload.id ?? orderId),
-    numero_pedido: payload.numeroPedido ?? payload.numero_pedido ?? null,
-    situacao: payload.situacao == null ? null : String(payload.situacao),
-    data_criacao: payload.data ?? payload.dataCriacao ?? null,
-    data_atualizacao: payload.dataAtualizacao ?? payload.dataAlteracao ?? null,
-    cliente: payload.cliente && typeof payload.cliente === 'object' ? payload.cliente : {},
-    transportador: payload.transportador && typeof payload.transportador === 'object' ? payload.transportador : {},
-    payload,
-    synced_at: new Date().toISOString()
+    ...row,
+    payload: {
+      ...existing.payload,
+      ...(row.payload && typeof row.payload === 'object' ? row.payload as Record<string, unknown> : {}),
+      itens: existing.payload.itens
+    }
   };
 }
 
-async function hydrateOrderDetails(accessToken: string, rows: Record<string, unknown>[]) {
+async function hydrateOrderDetails(
+  supabase: ReturnType<typeof createClient>,
+  accessToken: string,
+  rows: Record<string, unknown>[],
+  detailDelayMs: number
+) {
+  const existingById = new Map<string, { payload: Record<string, unknown>; data_atualizacao: string | null }>();
+
+  for (const batch of chunk(rows, 200)) {
+    const ids = batch.map((row) => String(row.id));
+    const { data, error } = await supabase
+      .from('olist_orders')
+      .select('id,payload,data_atualizacao')
+      .in('id', ids);
+
+    if (error) throw error;
+
+    for (const existing of data ?? []) {
+      const payload = existing.payload && typeof existing.payload === 'object'
+        ? existing.payload as Record<string, unknown>
+        : {};
+      if (Array.isArray(payload.itens)) {
+        existingById.set(String(existing.id), {
+          payload,
+          data_atualizacao: existing.data_atualizacao == null ? null : String(existing.data_atualizacao)
+        });
+      }
+    }
+  }
+
   const detailedRows: Record<string, unknown>[] = [];
 
   for (const row of rows) {
@@ -291,6 +351,14 @@ async function hydrateOrderDetails(accessToken: string, rows: Record<string, unk
       continue;
     }
 
+    const existing = existingById.get(String(row.id));
+    const rowUpdatedAt = row.data_atualizacao == null ? null : String(row.data_atualizacao);
+    if (existing && existing.data_atualizacao === rowUpdatedAt) {
+      detailedRows.push(mergeExistingDetail(row, existing));
+      continue;
+    }
+
+    if (detailDelayMs > 0) await sleep(detailDelayMs);
     detailedRows.push(await fetchOlistOrderDetail(accessToken, String(row.id)));
   }
 
@@ -339,15 +407,19 @@ Deno.serve(async (req) => {
       hydrateDetails?: boolean;
       lookbackDays?: number;
       maxPages?: number;
+      detailDelayMs?: number;
     };
     const shouldHydrateDetails = Boolean(typedBody.hydrateDetails);
     const lookbackDays = Number.isFinite(Number(typedBody.lookbackDays)) ? Number(typedBody.lookbackDays) : 2;
     const maxPages = Number.isFinite(Number(typedBody.maxPages)) ? Number(typedBody.maxPages) : 50;
+    const detailDelayMs = Number.isFinite(Number(typedBody.detailDelayMs))
+      ? Math.max(0, Number(typedBody.detailDelayMs))
+      : 250;
 
     const accessToken = await getAccessToken(supabase);
     const syncResult = await fetchOlistOrders(accessToken, lookbackDays, maxPages);
     const rows = shouldHydrateDetails
-      ? await hydrateOrderDetails(accessToken, syncResult.rows)
+      ? await hydrateOrderDetails(supabase, accessToken, syncResult.rows, detailDelayMs)
       : syncResult.rows;
 
     run.window_start = syncResult.windowStart;
