@@ -1,6 +1,6 @@
 # Contrato de Metricas do Oraculo
 
-Data da versao: 2026-06-20
+Data da versao: 2026-06-21
 
 Este documento define a regra que o painel deve seguir antes de evoluirmos ROI, margem, curva de saida e ruptura. A prioridade agora e confiabilidade: cada numero precisa ter fonte, filtro de data e formula explicita.
 
@@ -107,6 +107,7 @@ Objetos criados:
 
 - `oraculo_margin_channel_params`
 - `oraculo_margin_sku_params`
+- `oraculo_state_tax_params`
 - `oraculo_sku_margin_30d`
 
 O objetivo e separar o que ja existe daquilo que ainda precisa de configuracao. A view pode calcular margem quando existe custo unitario, mas o status fica `configurar_parametros` enquanto impostos, tarifas, frete subsidiado, embalagem e metas nao forem validados.
@@ -114,7 +115,7 @@ O objetivo e separar o que ja existe daquilo que ainda precisa de configuracao. 
 Para ROI confiavel, ainda precisamos cadastrar ou importar:
 
 - custo do produto;
-- imposto por canal ou por marketplace;
+- imposto por canal, marketplace ou UF;
 - tarifa/comissao por canal;
 - frete subsidiado, quando aplicavel;
 - custo de embalagem ou operacional, se a diretoria quiser margem mais completa.
@@ -167,12 +168,44 @@ Campos por SKU:
 - status;
 - observação.
 
+Campos por UF/estado:
+
+- UF;
+- fonte aplicavel: todas, Olist ou Shopee;
+- tipo de operação;
+- ICMS;
+- FCP;
+- DIFAL;
+- taxa efetiva;
+- vigência inicial e final;
+- status pendente/validado;
+- observação.
+
 Regra:
 
 - custo Olist deve vir automaticamente de `olist_products` quando estiver confiável;
 - custos e exceções que não vierem por API entram em `oraculo_margin_sku_params`;
 - taxas/impostos/metas por canal entram em `oraculo_margin_channel_params`;
+- impostos por UF entram em `oraculo_state_tax_params`;
 - Shopee é somente leitura: estes parâmetros são internos do Oraculo e não alteram nada na Shopee.
+- as 27 UFs foram criadas como pendentes, sem alíquota preenchida automaticamente;
+- alíquotas fiscais só devem ser marcadas como validadas depois de conferência com contador/fiscal.
+
+## Sincronização e cache
+
+Estado em `2026-06-21`:
+
+- Pedidos Olist: Supabase cron `oraculo-olist-orders-hourly`, minuto `:05`, janela de 1 dia, até 100 pedidos por rodada.
+- Derivados/caches operacionais: Supabase cron `oraculo-olist-derived-hourly`, minuto `:25`, janela de 2 dias.
+- NF cache: Supabase cron `oraculo-nf-cache-hourly`, minuto `:35`, executado diretamente no Postgres.
+- Estoque/produtos: Supabase cron `oraculo-olist-stock-6h`, a cada 6 horas, porque a função atual não é incremental segura.
+- Dashboard pode recalcular `oraculo_channel_sales_unified_cache` sob demanda por dia quando o período selecionado ainda não existe no cache.
+
+Limites conhecidos:
+
+- períodos históricos podem ter `olist_orders` sem `olist_order_items`; nesses casos, rankings de SKU ficam vazios até backfill de itens;
+- `dataFaturamento` fiscal segue incompleta em parte da base, então KPIs principais continuam operacionais por status/data de criação;
+- estoque/produtos ainda dependem de varredura ampla e não devem rodar hora a hora.
 
 ## Auditoria executavel
 
@@ -198,8 +231,8 @@ node scripts/audit-oraculo-metrics.js --start=2026-06-01 --end=2026-06-30 --json
 
 ## Proxima implementacao
 
-1. Aplicar a migration de reconciliação no Supabase.
-2. Rodar a auditoria de junho e comparar com a tela da Olist.
-3. Corrigir as views que usam apenas `valorTotal`.
-4. Ajustar o dashboard para consumir somente metricas canonicas.
-5. Criar tabela de parametros de margem e ROI no frontend.
+1. Backfill controlado de `olist_order_items` para períodos históricos com pedidos mas sem itens.
+2. Aplicar parâmetros fiscais por UF na fórmula de margem/ROI quando a UF de destino estiver confiável.
+3. Melhorar auditoria de NF fiscal separando claramente KPI operacional e KPI fiscal.
+4. Criar alertas de margem/ROI conforme parâmetros validados.
+5. Criar monitoramento visual dos syncs: última execução, status, registros processados e erro.

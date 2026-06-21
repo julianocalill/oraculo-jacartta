@@ -6,6 +6,22 @@ O Oraculo sera a camada central de inteligencia operacional da empresa. A primei
 
 O objetivo nao e criar apenas mais um dashboard. O objetivo e criar uma base confiavel para acompanhar venda, estoque, desempenho de SKU, ruptura, produtos parados, canais de venda e alertas operacionais em um unico lugar.
 
+## Status atual em 2026-06-21
+
+O projeto ja possui uma primeira versao operacional em producao:
+
+- URL de producao: `https://oraculo.oliverhome.com.br`
+- login e controle de usuarios;
+- dashboard operacional com filtros de data;
+- leitura por canal/fonte;
+- ranking de SKU por receita e quantidade;
+- ruptura e dias sem venda por produto simples;
+- parametros manuais por canal, SKU e UF;
+- layout responsivo para mobile;
+- sincronizacao automatica no Supabase.
+
+A prioridade agora e transformar a fundacao de margem/ROI em uma leitura executiva confiavel. Para isso, ainda precisamos validar custos, impostos por UF, tarifas, fretes/embalagem e completar itens historicos onde houver pedidos sem detalhe.
+
 ## O problema que queremos resolver
 
 Hoje, parte das decisoes operacionais depende de consultas manuais, telas separadas, planilhas ou analises feitas depois que o problema ja aconteceu. Isso cria alguns riscos:
@@ -36,6 +52,7 @@ Dados previstos nesta fase:
 - canais/lojas
 - status dos pedidos
 - historico de sincronizacoes
+- parametros fiscais e operacionais manuais
 
 Como faremos:
 
@@ -43,7 +60,8 @@ Como faremos:
 - usaremos upsert para evitar duplicidade de pedidos e itens
 - criaremos consultas paginadas para nao perder dados por limite de API
 - manteremos tokens e chaves apenas no backend
-- criaremos uma camada analitica com views de leitura para alimentar o painel
+- criaremos uma camada analitica com views/cache de leitura para alimentar o painel
+- manteremos syncs incrementais no Supabase para reduzir carga e evitar recarregar historico desnecessariamente
 
 ## 2. Dashboard operacional
 
@@ -97,6 +115,7 @@ Como faremos:
 - calcularemos vendas dos ultimos 30 dias e periodo anterior
 - classificaremos sinais como ruptura, ruptura iminente, parado ou em crescimento
 - depois evoluiremos para curvas ABC/XYZ e metas por produto
+- usaremos parametros de custo, imposto por UF, comissao e frete/embalagem para calcular margem/ROI confiavel
 
 ## 4. Alertas e automacao
 
@@ -117,6 +136,20 @@ Como faremos:
 - criaremos uma rotina que avalia os dados diariamente
 - cada alerta tera status aberto ou resolvido
 - no inicio, a notificacao pode ser por email; depois, WhatsApp ou outro canal interno
+
+## 5. Parametros fiscais e operacionais
+
+Alguns dados necessarios para ROI/margem nao vêm de forma confiavel das APIs. Esses dados entram pelo frontend, sem planilha.
+
+Ja existe uma area em `/parametros` para cadastrar:
+
+- taxas e metas por canal;
+- custo e excecoes por SKU;
+- ICMS, FCP, DIFAL e taxa efetiva por UF;
+- vigencia da regra fiscal;
+- status pendente ou validado.
+
+Regra importante: as aliquotas por UF foram criadas como pendentes. Elas so devem ser marcadas como validadas depois de conferencia com contador/fiscal.
 
 ## Plano de execucao
 

@@ -14,9 +14,9 @@ O sistema desejado não é apenas um dashboard. Ele precisa:
 
 ---
 
-## Estado executivo em 2026-06-20
+## Estado executivo em 2026-06-21
 
-O projeto saiu da fase de prova isolada da Olist e entrou na fase de consolidação multi-canal e reconciliação de métricas.
+O projeto saiu da fase de prova isolada da Olist e entrou na fase de consolidação multi-canal, reconciliação de métricas e parametrização operacional.
 
 O foco definido pelo usuário agora é:
 
@@ -26,6 +26,7 @@ O foco definido pelo usuário agora é:
 - alertas de margem conforme parâmetros configuráveis no frontend;
 - visão confiável por SKU, canal, estoque, ruptura e dias sem venda;
 - dados da Olist e marketplaces cruzados no mesmo banco.
+- operação utilizável em desktop e mobile.
 
 Decisão importante: antes de avançar em ROI/margem, o projeto precisa ter métricas auditáveis. Foi identificado que parte dos números do dashboard estava semanticamente incorreta: a tela chamava de `NFs emitidas` e `receita confirmada`, mas a métrica vinha de pedidos criados/status, não de `dataFaturamento` fiscal completo.
 
@@ -54,6 +55,19 @@ Leitura correta:
 Commit de referência:
 
 - `a200b0b Add metric reconciliation and channel cache`
+
+Entregas mais recentes:
+
+- Login com Supabase Auth, tela `/login` e controle de usuários em `/usuarios`.
+- Deploy de produção na Vercel com domínio `https://oraculo.oliverhome.com.br`.
+- Dashboard corrigido para respeitar filtro de data em receita por canal/fonte, SKU por receita, ranking rápido e ruptura.
+- Cache `oraculo_channel_sales_unified_cache` recalculado sob demanda por janela/dia quando o período selecionado ainda não existe no cache.
+- Função `oraculo_sku_period_rank_unified` otimizada para ler itens vendidos do período em vez de depender de views pesadas.
+- Tela `/parametros` consolidada para entrada manual de parâmetros por canal, SKU e UF.
+- Tabela `oraculo_state_tax_params` criada para ICMS/FCP/DIFAL/taxa efetiva por estado, fonte, operação e vigência.
+- Sincronização Olist transferida para Supabase `pg_cron`, com ciclos horários incrementais.
+- Edge Functions de Olist ajustadas para reduzir chamadas desnecessárias de detalhe e lidar melhor com limite `429`.
+- Layout mobile-friendly publicado: navegação horizontal no topo, cards em uma coluna, tabelas com rolagem controlada, formulários responsivos.
 
 ---
 
@@ -169,17 +183,38 @@ Resultado reportado pelo importador:
 
 Observação: a validação final via API do Supabase ficou bloqueada porque o projeto passou a responder `402` com `exceed_egress_quota`. O dono do projeto precisa remover o spend cap ou ajustar o plano para restaurar a API.
 
-### 7. Agendamento diário
+### 7. Sincronização automática
 
-Foi instalado um job diário local no macOS via `launchd` para sincronizar pedidos às `10:00` da manhã.
+O projeto começou com job diário local no macOS via `launchd`, mas a estratégia atual é Supabase-first.
 
-O job foi ajustado para usar a janela rolante de `2` meses, não apenas o mês atual.
+Estado atual em `2026-06-21`:
+
+- `oraculo-olist-orders-hourly`: roda a cada hora no minuto `:05`.
+  - Chama `olist-sync-orders`.
+  - Payload: `lookbackDays=1`, `maxPages=1`, `hydrateDetails=true`, `detailDelayMs=150`.
+  - Objetivo: puxar novos/alterados sem recarregar histórico.
+- `oraculo-olist-derived-hourly`: roda a cada hora no minuto `:25`.
+  - Chama `olist-derived-refresh` em modo `incremental`.
+  - Janela: `current_date - 2 days` até `current_date + 1 day`.
+  - Atualiza itens derivados, dimensões leves, vendas/cache e canal/fonte.
+  - Não roda snapshot de estoque, produtos ou cache SKU global.
+- `oraculo-nf-cache-hourly`: roda a cada hora no minuto `:35`.
+  - Executa `refresh_oraculo_nf_daily_cache` diretamente no Postgres.
+  - Foi separado da Edge Function para evitar timeout de API.
+- `oraculo-olist-stock-6h`: roda a cada 6 horas no minuto `:15`.
+  - Chama `olist-sync-stock`.
+  - Motivo: estoque/produtos ainda não têm filtro incremental seguro; rodar hora a hora sobrecarregaria API/banco.
+
+O job local via `launchd` permanece documentado como histórico/fallback, mas não deve ser considerado o motor principal enquanto o Supabase cron estiver ativo.
 
 Arquivos:
 
 - [scripts/run-olist-current-month-sync.sh](/Users/julianocalil/oraculo/scripts/run-olist-current-month-sync.sh)
 - [scripts/sync-olist-rolling-window.js](/Users/julianocalil/oraculo/scripts/sync-olist-rolling-window.js)
 - [ops/launchd/com.oraculo.olist-current-month-sync.plist](/Users/julianocalil/oraculo/ops/launchd/com.oraculo.olist-current-month-sync.plist)
+- [supabase/functions/olist-sync-orders/index.ts](/Users/julianocalil/oraculo/supabase/functions/olist-sync-orders/index.ts)
+- [supabase/functions/olist-derived-refresh/index.ts](/Users/julianocalil/oraculo/supabase/functions/olist-derived-refresh/index.ts)
+- [supabase/functions/olist-sync-stock/index.ts](/Users/julianocalil/oraculo/supabase/functions/olist-sync-stock/index.ts)
 
 Instalação efetiva no sistema:
 
@@ -189,6 +224,12 @@ Logs:
 
 - `/Users/julianocalil/oraculo/logs/olist-current-month-sync.log`
 - `/Users/julianocalil/oraculo/logs/olist-current-month-sync.err.log`
+
+Validações recentes:
+
+- Payload exato do cron de pedidos processou `100` pedidos em `46s`.
+- Derived incremental processou janela `2026-06-20` a `2026-06-22` com sucesso.
+- Cron jobs ativos confirmados em `cron.job`.
 
 ### 8. Referências de produto recebidas
 

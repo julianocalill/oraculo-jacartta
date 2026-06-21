@@ -22,7 +22,7 @@ The current product direction is practical executive intelligence for the operat
 - `Obsidian` can store durable project memory, but repository docs are the source of truth.
 - `AI agents` assist architecture, coding, review and documentation, but repository files remain the source of truth.
 
-## Current state on 2026-06-20
+## Current state on 2026-06-21
 
 - Next.js web app exists in `apps/web`.
 - Supabase migrations and Edge Functions exist in `supabase`.
@@ -34,7 +34,17 @@ The current product direction is practical executive intelligence for the operat
 - A metric contract was created in `docs/metric-contract.md`.
 - Audit tooling was added in `scripts/audit-oraculo-metrics.js`.
 - Supabase Auth now protects the app, with `/login` and admin user control in `/usuarios`.
+- Vercel production is aliased at `https://oraculo.oliverhome.com.br`.
+- The dashboard has responsive/mobile breakpoints for navigation, cards, charts, forms and tables.
+- The `/parametros` area now stores manual channel, SKU and state/UF fiscal parameters.
+- `oraculo_state_tax_params` stores ICMS/FCP/DIFAL/effective tax rate by UF, source, operation and validity.
+- Olist sync now runs in Supabase using `pg_cron`:
+  - orders hourly at minute `:05`, incremental one-day window, max 100 orders per run;
+  - derived metrics hourly at minute `:25`, two-day window, without heavy global refresh;
+  - NF cache hourly at minute `:35`, directly in Postgres;
+  - stock/products every 6 hours because the current stock endpoint is not safely incremental.
 - The main known issue is semantic: the current Olist operational revenue is reliable by order status/date, but strict fiscal `dataFaturamento` coverage is incomplete in the imported base.
+- Another known limitation: some historical periods have Olist orders but not detailed `olist_order_items`; SKU/ranking metrics will be empty for those periods until item details are backfilled.
 
 ## Working rule
 

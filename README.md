@@ -45,6 +45,37 @@ oraculo/
 - `Supabase` for database, auth, storage and Edge Functions
 - `Obsidian` vault inside the repository for portable project memory
 
+## Current production state
+
+- Production URL: `https://oraculo.oliverhome.com.br`
+- GitHub repository: `https://github.com/julianocalill/oraculo-jacartta`
+- Web app: `apps/web`
+- Backend/data core: `supabase`
+- App authentication: Supabase Auth
+- User management: `/usuarios`
+- Manual parameters: `/parametros`
+- Mobile responsive layout: enabled for dashboard, forms and tables
+
+Current product areas:
+
+- Analytics dashboard with date filters.
+- Orders/channel metrics from cached Supabase views/tables.
+- SKU and margin foundation.
+- Rupture/no-sale product watchlist.
+- Manual parameters by channel, SKU and UF.
+- Read-only Shopee Donacor data.
+
+## Active Supabase jobs
+
+Scheduling is handled inside Supabase through `pg_cron`:
+
+- `oraculo-olist-orders-hourly`: hourly at minute `:05`, incremental order sync.
+- `oraculo-olist-derived-hourly`: hourly at minute `:25`, derived metrics/cache sync.
+- `oraculo-nf-cache-hourly`: hourly at minute `:35`, NF cache refresh inside Postgres.
+- `oraculo-olist-stock-6h`: every 6 hours, stock/product refresh.
+
+The local macOS `launchd` job remains as historical/fallback documentation, not the primary sync owner.
+
 ## Runtime configuration
 
 Local development reads secrets from the repository root `.env` file. The web app also falls back to that file when `process.env` is not already populated.

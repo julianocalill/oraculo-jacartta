@@ -2,8 +2,10 @@
 
 ## Objective
 
-Build the first operational analytics layer for Oraculo from Olist data.
+Build the operational analytics layer for Oraculo from Olist and marketplace data.
 The product must answer daily decision questions, not just store history.
+
+As of `2026-06-21`, the first analytics foundation is live in production and the next step is making ROI/margin/product alerts reliable.
 
 ## Visual direction
 
@@ -32,13 +34,12 @@ Purpose:
 
 Required blocks:
 
-- KPI cards
+- KPI cards using canonical operational definitions
 - revenue over time chart
-- channel share
-- channel trend
+- channel/source revenue
 - status funnel
-- products ascending
-- products declining
+- top SKUs by revenue and quantity
+- stock rupture/no-sale watchlist
 
 ### 2. Product intelligence
 
@@ -56,8 +57,22 @@ Required blocks:
 - stock, stock value, rupture
 - trend sparkline
 - movement vs baseline
+- margin/ROI status once cost, tax and fee parameters are valid
 
-### 3. Operational feed
+### 3. Parameters
+
+Purpose:
+
+- capture data that does not come reliably from Olist/Shopee APIs;
+- keep margin/ROI assumptions explicit and auditable.
+
+Current blocks:
+
+- channel parameters: tax, marketplace fee, payment fee, freight subsidy, packaging, target/minimum margin;
+- SKU overrides: unit cost, target/minimum margin;
+- state tax parameters: ICMS, FCP, DIFAL, effective tax rate, source, operation and validity.
+
+### 4. Operational feed
 
 Purpose:
 
@@ -93,6 +108,12 @@ Required blocks:
 - rupture risk
 - alert queue
 
+### Parameters
+
+- `oraculo_margin_channel_params`
+- `oraculo_margin_sku_params`
+- `oraculo_state_tax_params`
+
 ## Core metrics
 
 - faturamento bruto
@@ -116,13 +137,14 @@ This allows us to model more later without reimporting the source.
 
 ## Implementation order
 
-1. orders ingestion
-2. order items ingestion
-3. product dimension
-4. stock ingestion
-5. daily aggregations
-6. product intelligence views
-7. alert generation
+1. orders ingestion - active
+2. order items ingestion - active for current/recent windows, historical gaps remain
+3. product dimension - active
+4. stock ingestion - active every 6 hours
+5. daily aggregations - active
+6. product intelligence views - foundation active
+7. parameter UI - active for channel, SKU and UF fiscal rules
+8. alert generation - next milestone
 
 ## Product rule
 
