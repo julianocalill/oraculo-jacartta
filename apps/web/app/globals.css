@@ -761,6 +761,15 @@ h2 {
   text-align: right;
 }
 
+.empty-state {
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  color: var(--muted);
+  margin: 0;
+  padding: 18px;
+  text-align: center;
+}
+
 .product-panel {
   padding-bottom: 0;
 }
@@ -834,6 +843,10 @@ h2 {
 
 .data-table td {
   font-size: 13px;
+}
+
+.table-empty {
+  margin: 6px 8px;
 }
 
 .numeric {

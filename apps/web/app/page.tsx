@@ -45,6 +45,19 @@ type SkuCurrent = {
   last_sale_at: string | null;
 };
 
+type SkuPeriodRank = {
+  source?: string | null;
+  sku: string | null;
+  product_name: string | null;
+  gross_revenue: number | null;
+  effective_revenue: number | null;
+  units: number | null;
+  available_stock: number | null;
+  stock_balance?: number | null;
+  days_until_stockout: number | null;
+  last_sale_at: string | null;
+};
+
 type StockSignal = {
   source?: string | null;
   sku: string | null;
@@ -216,6 +229,18 @@ function addDays(value: string, days: number) {
   return date.toISOString().slice(0, 10);
 }
 
+function dateRange(start: string, end: string, maxDays = 45) {
+  const dates: string[] = [];
+  let cursor = start;
+
+  while (cursor <= end && dates.length < maxDays) {
+    dates.push(cursor);
+    cursor = addDays(cursor, 1);
+  }
+
+  return dates;
+}
+
 function parseMoney(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value !== "string") return 0;
@@ -375,6 +400,42 @@ async function loadBillingWindowMetrics(
   };
 }
 
+async function loadUnifiedChannelRows(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  filters: DashboardFilters
+) {
+  const fetchRows = () =>
+    supabase
+      .from("oraculo_channel_sales_unified_cache")
+      .select("*")
+      .gte("order_date", filters.start)
+      .lte("order_date", filters.end)
+      .order("order_date", { ascending: false })
+      .limit(240);
+
+  let response = await fetchRows();
+
+  if (!response.error && (response.data ?? []).length === 0) {
+    const dates = dateRange(filters.start, filters.end);
+
+    for (let index = 0; index < dates.length; index += 5) {
+      const batch = dates.slice(index, index + 5);
+      await Promise.all(
+        batch.map((date) =>
+          supabase.rpc("refresh_oraculo_channel_sales_unified_cache", {
+            p_start_date: date,
+            p_end_date: date
+          })
+        )
+      );
+    }
+
+    response = await fetchRows();
+  }
+
+  return response;
+}
+
 async function loadDashboard(filters: DashboardFilters) {
   const supabase = createSupabaseAdminClient();
   let dailyQuery = supabase
@@ -382,14 +443,8 @@ async function loadDashboard(filters: DashboardFilters) {
     .select("*")
     .order("order_date", { ascending: false })
     .limit(120);
-  let channelsQuery = supabase
-    .from("oraculo_channel_sales_unified_cache")
-    .select("*")
-    .order("order_date", { ascending: false })
-    .limit(240);
 
   dailyQuery = dailyQuery.gte("order_date", filters.start).lte("order_date", filters.end);
-  channelsQuery = channelsQuery.gte("order_date", filters.start).lte("order_date", filters.end);
 
   const [
     dailyResponse,
@@ -404,7 +459,7 @@ async function loadDashboard(filters: DashboardFilters) {
     ruptureProducts
   ] = await Promise.all([
     dailyQuery,
-    channelsQuery,
+    loadUnifiedChannelRows(supabase, filters),
     supabase
       .rpc("oraculo_sku_period_rank_unified", {
         start_date: filters.start,
@@ -428,6 +483,18 @@ async function loadDashboard(filters: DashboardFilters) {
   ]);
 
   const daily = (dailyResponse.data ?? []) as DailySale[];
+  const skuRows = ((skuSalesResponse.data ?? []) as SkuPeriodRank[]).map((sku) => ({
+    source: sku.source,
+    sku: sku.sku,
+    product_name: sku.product_name,
+    revenue_30d: asNumber(sku.effective_revenue),
+    units_30d: asNumber(sku.units),
+    revenue_change_pct: null,
+    available_stock: sku.available_stock,
+    stock_balance: sku.stock_balance,
+    days_until_stockout: sku.days_until_stockout,
+    last_sale_at: sku.last_sale_at
+  }));
   const monthEffective = daily.reduce((sum, row) => sum + asNumber(row.effective_revenue), 0);
   const monthOrders = daily.reduce((sum, row) => sum + asNumber(row.orders_count), 0);
   const monthUnits = daily.reduce((sum, row) => sum + asNumber(row.units), 0);
@@ -507,7 +574,7 @@ async function loadDashboard(filters: DashboardFilters) {
     totalUnifiedOrders,
     totalUnifiedRevenue,
     totalUnifiedCanceled,
-    skus: (skuSalesResponse.data ?? []) as SkuCurrent[],
+    skus: skuRows,
     stockWatchlist: (stockWatchlistResponse.data ?? []) as StockSignal[],
     ruptureProducts,
     actionableWatchlist,
@@ -704,18 +771,22 @@ export default async function HomePage({
             </div>
 
             <div className="funnel-list">
-              {data.channels.slice(0, 9).map((channel) => {
-                const max = Math.max(...data.channels.map((item) => asNumber(item.net_revenue)), 1);
-                const width = Math.max((asNumber(channel.net_revenue) / max) * 100, 2);
-                return (
-                  <div className="funnel-row" key={`${channel.source}-${channel.channel_name}`}>
-                    <span>{sourceLabel(channel.source)} · {channel.channel_name ?? "Sem canal"}</span>
-                    <div><i style={{ width: `${width}%` }} /></div>
-                    <strong>{formatCount(channel.orders_count)}</strong>
-                    <em>{formatCurrency(channel.net_revenue)}</em>
-                  </div>
-                );
-              })}
+              {data.channels.length === 0 ? (
+                <p className="empty-state">Sem receita por canal no periodo selecionado.</p>
+              ) : (
+                data.channels.slice(0, 9).map((channel) => {
+                  const max = Math.max(...data.channels.map((item) => asNumber(item.net_revenue)), 1);
+                  const width = Math.max((asNumber(channel.net_revenue) / max) * 100, 2);
+                  return (
+                    <div className="funnel-row" key={`${channel.source}-${channel.channel_name}`}>
+                      <span>{sourceLabel(channel.source)} · {channel.channel_name ?? "Sem canal"}</span>
+                      <div><i style={{ width: `${width}%` }} /></div>
+                      <strong>{formatCount(channel.orders_count)}</strong>
+                      <em>{formatCurrency(channel.net_revenue)}</em>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </Link>
         </section>
@@ -745,24 +816,32 @@ export default async function HomePage({
                 </tr>
               </thead>
               <tbody>
-                {data.skus.map((sku, index) => (
-                  <tr key={sku.sku ?? sku.product_name}>
-                    <td>{index + 1}</td>
-                    <td>{sourceLabel(sku.source)}</td>
-                    <td>{sku.sku || "-"}</td>
-                    <td>
-                      <Link className="row-link" href={`/skus?sku=${encodeURIComponent(sku.sku ?? "")}`}>
-                        {sku.product_name ?? "Sem nome"}
-                      </Link>
+                {data.skus.length === 0 ? (
+                  <tr>
+                    <td colSpan={10}>
+                      <p className="empty-state table-empty">Sem SKUs vendidos no periodo selecionado.</p>
                     </td>
-                    <td className="numeric">{formatCurrency(sku.revenue_30d)}</td>
-                    <td className="numeric">{formatCount(sku.units_30d)}</td>
-                    <td className="numeric">{formatCurrency(asNumber(sku.revenue_30d) / Math.max(asNumber(sku.units_30d), 1))}</td>
-                    <td className="numeric trend-value">{formatPercent(sku.revenue_change_pct)}</td>
-                    <td className="numeric">{sku.available_stock == null ? "-" : formatCount(sku.available_stock)}</td>
-                    <td className="numeric">{coverageLabel(sku.days_until_stockout)}</td>
                   </tr>
-                ))}
+                ) : (
+                  data.skus.map((sku, index) => (
+                    <tr key={sku.sku ?? sku.product_name}>
+                      <td>{index + 1}</td>
+                      <td>{sourceLabel(sku.source)}</td>
+                      <td>{sku.sku || "-"}</td>
+                      <td>
+                        <Link className="row-link" href={`/skus?sku=${encodeURIComponent(sku.sku ?? "")}`}>
+                          {sku.product_name ?? "Sem nome"}
+                        </Link>
+                      </td>
+                      <td className="numeric">{formatCurrency(sku.revenue_30d)}</td>
+                      <td className="numeric">{formatCount(sku.units_30d)}</td>
+                      <td className="numeric">{formatCurrency(asNumber(sku.revenue_30d) / Math.max(asNumber(sku.units_30d), 1))}</td>
+                      <td className="numeric trend-value">{formatPercent(sku.revenue_change_pct)}</td>
+                      <td className="numeric">{sku.available_stock == null ? "-" : formatCount(sku.available_stock)}</td>
+                      <td className="numeric">{coverageLabel(sku.days_until_stockout)}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -773,15 +852,19 @@ export default async function HomePage({
             <p className="eyebrow">Top SKUs</p>
             <h2>Ranking rápido</h2>
             <div className="rank-list">
-              {data.skus.slice(0, 5).map((sku) => (
-                <Link href={`/skus?sku=${encodeURIComponent(sku.sku ?? "")}`} key={`rank-${sku.sku}`}>
-                  <span>{sku.product_name ?? "Sem nome"}</span>
-                  <div className="rank-metrics">
-                    <strong>{formatCurrency(sku.revenue_30d)}</strong>
-                    <small>{formatCount(sku.units_30d)} un.</small>
-                  </div>
-                </Link>
-              ))}
+              {data.skus.length === 0 ? (
+                <p className="empty-state">Sem ranking para o periodo selecionado.</p>
+              ) : (
+                data.skus.slice(0, 5).map((sku) => (
+                  <Link href={`/skus?sku=${encodeURIComponent(sku.sku ?? "")}`} key={`rank-${sku.sku}`}>
+                    <span>{sku.product_name ?? "Sem nome"}</span>
+                    <div className="rank-metrics">
+                      <strong>{formatCurrency(sku.revenue_30d)}</strong>
+                      <small>{formatCount(sku.units_30d)} un.</small>
+                    </div>
+                  </Link>
+                ))
+              )}
             </div>
           </article>
 
@@ -789,20 +872,24 @@ export default async function HomePage({
             <p className="eyebrow">Estoque</p>
             <h2>Ruptura por produto simples</h2>
             <div className="watchlist">
-              {data.ruptureProducts.map((item) => (
-                <Link href={`/skus?sku=${encodeURIComponent(item.sku ?? "")}`} key={`${item.id}-${item.sku}`}>
-                  <div>
-                    <strong>{item.product_name ?? "Sem nome"}</strong>
-                    <span>{item.sku || "-"}</span>
-                  </div>
-                  <div className="watch-meta">
-                    <span className="badge ruptura">Ruptura</span>
-                    <small>
-                      {formatCount(item.days_without_sale)} dias sem venda · {stockLabel(item.available_stock)}
-                    </small>
-                  </div>
-                </Link>
-              ))}
+              {data.ruptureProducts.length === 0 ? (
+                <p className="empty-state">Nenhum produto simples em ruptura encontrado.</p>
+              ) : (
+                data.ruptureProducts.map((item) => (
+                  <Link href={`/skus?sku=${encodeURIComponent(item.sku ?? "")}`} key={`${item.id}-${item.sku}`}>
+                    <div>
+                      <strong>{item.product_name ?? "Sem nome"}</strong>
+                      <span>{item.sku || "-"}</span>
+                    </div>
+                    <div className="watch-meta">
+                      <span className="badge ruptura">Ruptura</span>
+                      <small>
+                        {formatCount(item.days_without_sale)} dias sem venda · {stockLabel(item.available_stock)}
+                      </small>
+                    </div>
+                  </Link>
+                ))
+              )}
             </div>
           </article>
         </section>
