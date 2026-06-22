@@ -684,3 +684,228 @@ A coluna `manual_screen_value` precisa ser preenchida olhando a tela da Olist. O
 A reconciliação ainda não atingiu a tolerância. Próximo passo: comparar a amostra de 20 NFs na tela Olist para descobrir se a divergência vem de data visual, status visual, campo financeiro ou atualização posterior da base.
 
 Enquanto não bater, manter a trava: não criar `oraculo_fiscal_daily_revenue`, `oraculo_fiscal_sku_sales`, `oraculo_fiscal_channel_sales` e não migrar dashboard/margem/ROI.
+
+## Investigação de Notas Excedentes
+
+Arquivo CSV de possíveis excedentes: `reports/olist-invoice-reconciliation-excess-2026-06-01-2026-06-19.csv`
+
+### Base Comparada
+
+- Base API candidata: status in (6,7): 71.928 NFs, R$ 5.306.230,52.
+- Alvo tela Olist: 71.197 NFs, R$ 5.243.629,96.
+- Delta da base candidata: 731 NFs, R$ 62.600,56.
+
+### Status Separados
+
+- status 6: 71.908 NFs, R$ 5.014.631,93.
+- status 7: 20 NFs, R$ 291.598,59.
+- status 8: 89 NFs, R$ 1.750.174,08.
+- demais status: 95 NFs, R$ 7.922,22.
+
+### Melhor Filtro Encontrado
+
+- Filtro: status in (6,7) excluindo nature=E
+- Resultado: 71.198 NFs, R$ 5.243.715,76.
+- Delta quantidade: 1 (0.001%).
+- Delta valor: R$ 85,80 (0.002%).
+- Registros excluídos por esse filtro: 730 NFs, R$ 62.514,76.
+
+Esse filtro atinge o critério de aceite estatístico. Ainda precisa validação manual em tela antes de criar views oficiais.
+
+### Combinações Mais Próximas
+
+| Filtro | Qtde | Valor | Delta Qtde | Delta Qtde % | Delta Valor | Delta Valor % | Excluídas | Valor Excluído |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| status in (6,7) excluindo nature=E | 71.198 | R$ 5.243.715,76 | 1 | 0.001% | R$ 85,80 | 0.002% | 730 | R$ 62.514,76 |
+| somente type=S | 71.198 | R$ 5.243.715,76 | 1 | 0.001% | R$ 85,80 | 0.002% | 730 | R$ 62.514,76 |
+| status in (6,7) excluindo type=E | 71.198 | R$ 5.243.715,76 | 1 | 0.001% | R$ 85,80 | 0.002% | 730 | R$ 62.514,76 |
+| status in (6,7) excluindo raw_json.tipo=E | 71.198 | R$ 5.243.715,76 | 1 | 0.001% | R$ 85,80 | 0.002% | 730 | R$ 62.514,76 |
+| status in (6,7) excluindo raw_json.origem.tipo=devolucao | 71.198 | R$ 5.243.715,76 | 1 | 0.001% | R$ 85,80 | 0.002% | 730 | R$ 62.514,76 |
+| status in (6,7) excluindo raw_json.cliente.endereco.pais=(vazio) | 71.198 | R$ 5.243.715,76 | 1 | 0.001% | R$ 85,80 | 0.002% | 730 | R$ 62.514,76 |
+| somente nature=S | 71.173 | R$ 5.242.137,68 | -24 | 0.034% | -R$ 1.492,28 | 0.028% | 755 | R$ 64.092,84 |
+| status in (6,7) excluindo uf=PB | 71.203 | R$ 5.246.796,78 | 6 | 0.008% | R$ 3.166,82 | 0.060% | 725 | R$ 59.433,74 |
+| status in (6,7) excluindo raw_json.cliente.endereco.uf=PB | 71.203 | R$ 5.246.796,78 | 6 | 0.008% | R$ 3.166,82 | 0.060% | 725 | R$ 59.433,74 |
+| status in (6,7) excluindo channel=Amazon | 71.240 | R$ 5.240.788,74 | 43 | 0.060% | -R$ 2.841,22 | 0.054% | 688 | R$ 65.441,78 |
+| status in (6,7) excluindo ecommerce_id=12758 | 71.240 | R$ 5.240.788,74 | 43 | 0.060% | -R$ 2.841,22 | 0.054% | 688 | R$ 65.441,78 |
+| status in (6,7) excluindo ecommerce_name=Amazon | 71.240 | R$ 5.240.788,74 | 43 | 0.060% | -R$ 2.841,22 | 0.054% | 688 | R$ 65.441,78 |
+| status in (6,7) excluindo raw_json.ecommerce.id=12758 | 71.240 | R$ 5.240.788,74 | 43 | 0.060% | -R$ 2.841,22 | 0.054% | 688 | R$ 65.441,78 |
+| status in (6,7) excluindo raw_json.ecommerce.nome=Amazon | 71.240 | R$ 5.240.788,74 | 43 | 0.060% | -R$ 2.841,22 | 0.054% | 688 | R$ 65.441,78 |
+| status in (6,7) excluindo raw_json.idFormaEnvio=341073841 | 71.240 | R$ 5.240.788,74 | 43 | 0.060% | -R$ 2.841,22 | 0.054% | 688 | R$ 65.441,78 |
+| status in (6,7) excluindo uf=MT | 71.236 | R$ 5.252.628,12 | 39 | 0.055% | R$ 8.998,16 | 0.172% | 692 | R$ 53.602,40 |
+| status in (6,7) excluindo raw_json.cliente.endereco.uf=MT | 71.236 | R$ 5.252.628,12 | 39 | 0.055% | R$ 8.998,16 | 0.172% | 692 | R$ 53.602,40 |
+| status in (6,7) excluindo uf=MS | 71.028 | R$ 5.239.524,78 | -169 | 0.237% | -R$ 4.105,18 | 0.078% | 900 | R$ 66.705,74 |
+| status in (6,7) excluindo raw_json.cliente.endereco.uf=MS | 71.028 | R$ 5.239.524,78 | -169 | 0.237% | -R$ 4.105,18 | 0.078% | 900 | R$ 66.705,74 |
+| status in (6,7) excluindo raw_json.enderecoEntrega.uf=BA | 71.123 | R$ 5.257.268,55 | -74 | 0.104% | R$ 13.638,59 | 0.260% | 805 | R$ 48.961,97 |
+| status in (6,7) excluindo raw_json.enderecoEntrega.uf=ES | 71.154 | R$ 5.262.033,04 | -43 | 0.060% | R$ 18.403,08 | 0.351% | 774 | R$ 44.197,48 |
+| status in (6,7) excluindo uf=RN | 71.337 | R$ 5.258.728,29 | 140 | 0.197% | R$ 15.098,33 | 0.288% | 591 | R$ 47.502,23 |
+| status in (6,7) excluindo raw_json.cliente.endereco.uf=RN | 71.337 | R$ 5.258.728,29 | 140 | 0.197% | R$ 15.098,33 | 0.288% | 591 | R$ 47.502,23 |
+| status in (6,7) excluindo raw_json.enderecoEntrega.uf=GO | 71.287 | R$ 5.263.128,93 | 90 | 0.126% | R$ 19.498,97 | 0.372% | 641 | R$ 43.101,59 |
+| status in (6,7) excluindo uf=MA | 71.369 | R$ 5.257.419,26 | 172 | 0.242% | R$ 13.789,30 | 0.263% | 559 | R$ 48.811,26 |
+| status in (6,7) excluindo raw_json.cliente.endereco.uf=MA | 71.369 | R$ 5.257.419,26 | 172 | 0.242% | R$ 13.789,30 | 0.263% | 559 | R$ 48.811,26 |
+| status in (6,7) excluindo uf=AL | 71.338 | R$ 5.260.608,31 | 141 | 0.198% | R$ 16.978,35 | 0.324% | 590 | R$ 45.622,21 |
+| status in (6,7) excluindo raw_json.cliente.endereco.uf=AL | 71.338 | R$ 5.260.608,31 | 141 | 0.198% | R$ 16.978,35 | 0.324% | 590 | R$ 45.622,21 |
+| status in (6,7) excluindo raw_json.enderecoEntrega.uf=RS | 70.839 | R$ 5.240.715,94 | -358 | 0.503% | -R$ 2.914,02 | 0.056% | 1.089 | R$ 65.514,58 |
+| status in (6,7) excluindo channel=TikTok Shop Toca | 71.318 | R$ 5.266.471,83 | 121 | 0.170% | R$ 22.841,87 | 0.436% | 610 | R$ 39.758,69 |
+
+### Agrupamento por Status
+
+| Grupo | Qtde | Valor |
+| --- | --- | --- |
+| 6 | 71.908 | R$ 5.014.631,93 |
+| 8 | 89 | R$ 1.750.174,08 |
+| 7 | 20 | R$ 291.598,59 |
+| 1 | 56 | R$ 5.228,25 |
+| 3 | 39 | R$ 2.693,97 |
+
+### Agrupamento por Integração/Canal e Status
+
+| Grupo | Qtde | Valor |
+| --- | --- | --- |
+| (sem canal) / status 8 | 89 | R$ 1.750.174,08 |
+| Shopee Oliver / status 6 | 11.201 | R$ 993.833,25 |
+| Shopee toca / status 6 | 10.337 | R$ 882.795,74 |
+| TikTok Shop Donacor / status 6 | 15.748 | R$ 695.210,62 |
+| Shopee Donacor / status 6 | 9.017 | R$ 599.285,19 |
+| Shopee Jacartta / status 6 | 8.216 | R$ 586.327,59 |
+| TikTok Shop Oliver / status 6 | 8.569 | R$ 532.264,30 |
+| TikTok Shop Jacartta / status 6 | 3.729 | R$ 295.232,19 |
+| (sem canal) / status 7 | 17 | R$ 291.378,97 |
+| Mercado Livre Fulfillment / status 6 | 2.686 | R$ 223.797,15 |
+| Amazon / status 6 | 688 | R$ 65.441,78 |
+| (sem canal) / status 6 | 720 | R$ 61.940,10 |
+| TikTok Shop Toca / status 6 | 610 | R$ 39.758,69 |
+| Mercado Livre / status 6 | 284 | R$ 26.767,83 |
+| Shein / status 6 | 103 | R$ 11.977,50 |
+| (sem canal) / status 1 | 38 | R$ 3.665,13 |
+| Mercado Livre Fulfillment / status 3 | 34 | R$ 2.693,97 |
+| Shopee toca / status 1 | 7 | R$ 478,45 |
+| Shopee Jacartta / status 1 | 5 | R$ 436,92 |
+| Shopee Donacor / status 1 | 1 | R$ 282,05 |
+| Shopee Oliver / status 1 | 3 | R$ 228,90 |
+| Shein / status 1 | 2 | R$ 136,80 |
+| TikTok Shop Donacor / status 7 | 2 | R$ 125,72 |
+| Shopee Donacor / status 7 | 1 | R$ 93,90 |
+| Shopee toca / status 3 | 1 | R$ 0,00 |
+| Shopee Oliver / status 3 | 1 | R$ 0,00 |
+| Shopee Donacor / status 3 | 3 | R$ 0,00 |
+
+### Agrupamento por Empresa/Conta/Loja
+
+| Grupo | Qtde | Valor |
+| --- | --- | --- |
+| (sem empresa/loja) | 72.112 | R$ 7.064.326,82 |
+
+### Agrupamento por Tipo/Natureza/Finalidade/Origem
+
+Natureza:
+
+| Grupo | Qtde | Valor |
+| --- | --- | --- |
+| S | 71.230 | R$ 5.246.394,77 |
+| E | 856 | R$ 1.815.044,97 |
+| 1 | 26 | R$ 2.887,08 |
+
+Tipo:
+
+| Grupo | Qtde | Valor |
+| --- | --- | --- |
+| S | 71.255 | R$ 5.247.972,85 |
+| E | 857 | R$ 1.816.353,97 |
+
+Finalidade:
+
+| Grupo | Qtde | Valor |
+| --- | --- | --- |
+| (sem finalidade) | 72.086 | R$ 7.061.439,74 |
+| 1 | 26 | R$ 2.887,08 |
+
+Origem:
+
+| Grupo | Qtde | Valor |
+| --- | --- | --- |
+| null | 96 | R$ 1.750.637,70 |
+| {"id":"361395257","tipo":"venda"} | 1 | R$ 143.473,80 |
+| {"id":"361397377","tipo":"venda"} | 1 | R$ 141.423,60 |
+| {"id":"360956453","tipo":"venda"} | 1 | R$ 3.900,00 |
+| {"id":"362212792","tipo":"venda"} | 1 | R$ 2.374,90 |
+| {"id":"362126606","tipo":"venda"} | 1 | R$ 1.872,00 |
+| {"id":"362562739","tipo":"venda"} | 1 | R$ 1.038,70 |
+| {"id":"361967197","tipo":"venda"} | 1 | R$ 1.012,40 |
+| {"id":"362887973","tipo":"venda"} | 1 | R$ 881,87 |
+| {"id":"362488604","tipo":"venda"} | 1 | R$ 852,40 |
+| {"id":"362859002","tipo":"venda"} | 1 | R$ 738,68 |
+| {"id":"362538892","tipo":"venda"} | 1 | R$ 731,80 |
+| {"id":"363053828","tipo":"venda"} | 1 | R$ 731,80 |
+| {"id":"361484945","tipo":"venda"} | 1 | R$ 710,10 |
+| {"id":"361237234","tipo":"venda"} | 1 | R$ 698,80 |
+| {"id":"361736156","tipo":"venda"} | 1 | R$ 696,82 |
+| {"id":"362363514","tipo":"venda"} | 1 | R$ 696,73 |
+| {"id":"362186913","tipo":"venda"} | 1 | R$ 693,82 |
+| {"id":"361516766","tipo":"venda"} | 1 | R$ 687,30 |
+| {"id":"361516768","tipo":"venda"} | 1 | R$ 687,30 |
+| {"id":"361552918","tipo":"venda"} | 1 | R$ 674,90 |
+| {"id":"362054399","tipo":"venda"} | 1 | R$ 666,60 |
+| {"id":"362453386","tipo":"venda"} | 1 | R$ 659,60 |
+| {"id":"361311719","tipo":"venda"} | 1 | R$ 649,80 |
+| {"id":"21237","tipo":"devolucao"} | 1 | R$ 649,80 |
+| {"id":"360692692","tipo":"venda"} | 1 | R$ 648,70 |
+| {"id":"361124838","tipo":"venda"} | 1 | R$ 648,70 |
+| {"id":"361381554","tipo":"venda"} | 1 | R$ 648,70 |
+| {"id":"361330147","tipo":"venda"} | 1 | R$ 620,06 |
+| {"id":"362207070","tipo":"venda"} | 1 | R$ 613,93 |
+| {"id":"20449","tipo":"devolucao"} | 1 | R$ 603,43 |
+| {"id":"362784658","tipo":"venda"} | 1 | R$ 587,48 |
+| {"id":"362831408","tipo":"venda"} | 1 | R$ 584,90 |
+| {"id":"361378142","tipo":"venda"} | 1 | R$ 582,82 |
+| {"id":"362200451","tipo":"venda"} | 1 | R$ 579,00 |
+| {"id":"362141083","tipo":"venda"} | 1 | R$ 541,40 |
+| {"id":"361673493","tipo":"venda"} | 1 | R$ 528,00 |
+| {"id":"361260505","tipo":"venda"} | 1 | R$ 524,50 |
+| {"id":"19611","tipo":"devolucao"} | 1 | R$ 522,70 |
+| {"id":"362371210","tipo":"venda"} | 1 | R$ 515,30 |
+| {"id":"361815417","tipo":"venda"} | 1 | R$ 511,88 |
+| {"id":"361734636","tipo":"venda"} | 1 | R$ 509,32 |
+| {"id":"362191263","tipo":"venda"} | 1 | R$ 501,90 |
+| {"id":"361849209","tipo":"venda"} | 1 | R$ 501,60 |
+| {"id":"20729","tipo":"devolucao"} | 1 | R$ 498,46 |
+| {"id":"361579558","tipo":"venda"} | 1 | R$ 494,20 |
+| {"id":"361539809","tipo":"venda"} | 1 | R$ 493,43 |
+| {"id":"361539820","tipo":"venda"} | 1 | R$ 493,43 |
+| {"id":"361549010","tipo":"venda"} | 1 | R$ 493,43 |
+| {"id":"362213015","tipo":"venda"} | 1 | R$ 484,70 |
+| {"id":"361507019","tipo":"venda"} | 1 | R$ 479,40 |
+| {"id":"362793889","tipo":"venda"} | 1 | R$ 479,40 |
+| {"id":"362577358","tipo":"venda"} | 1 | R$ 474,80 |
+| {"id":"361498817","tipo":"venda"} | 1 | R$ 473,40 |
+| {"id":"362943867","tipo":"venda"} | 1 | R$ 470,00 |
+| {"id":"361085231","tipo":"venda"} | 1 | R$ 469,96 |
+| {"id":"362841374","tipo":"venda"} | 1 | R$ 461,00 |
+| {"id":"20112","tipo":"devolucao"} | 1 | R$ 460,76 |
+| {"id":"362962783","tipo":"venda"} | 1 | R$ 453,60 |
+| {"id":"363206260","tipo":"venda"} | 1 | R$ 452,58 |
+| {"id":"362590498","tipo":"venda"} | 1 | R$ 451,29 |
+| {"id":"361615440","tipo":"venda"} | 1 | R$ 439,21 |
+| {"id":"361809708","tipo":"venda"} | 1 | R$ 430,20 |
+| {"id":"361044945","tipo":"venda"} | 1 | R$ 428,24 |
+| {"id":"363206851","tipo":"venda"} | 1 | R$ 428,15 |
+| {"id":"362503204","tipo":"venda"} | 1 | R$ 426,53 |
+| {"id":"362949774","tipo":"venda"} | 1 | R$ 424,42 |
+| {"id":"362407256","tipo":"venda"} | 1 | R$ 423,51 |
+| {"id":"361070826","tipo":"venda"} | 1 | R$ 423,38 |
+| {"id":"361062989","tipo":"venda"} | 1 | R$ 423,00 |
+| {"id":"362689659","tipo":"venda"} | 1 | R$ 418,21 |
+| {"id":"361159444","tipo":"venda"} | 1 | R$ 417,90 |
+| {"id":"361266318","tipo":"venda"} | 1 | R$ 415,10 |
+| {"id":"363086962","tipo":"venda"} | 1 | R$ 414,30 |
+| {"id":"361232611","tipo":"venda"} | 1 | R$ 411,31 |
+| {"id":"363184562","tipo":"venda"} | 1 | R$ 408,30 |
+| {"id":"362610018","tipo":"venda"} | 1 | R$ 407,25 |
+| {"id":"362044972","tipo":"venda"} | 1 | R$ 404,91 |
+| {"id":"362073006","tipo":"venda"} | 1 | R$ 404,91 |
+| {"id":"362950851","tipo":"venda"} | 1 | R$ 403,96 |
+
+### Conclusão da Investigação de Excedentes
+
+Foi encontrado um filtro candidato dentro da tolerância. Não promover para views oficiais até a conferência manual confirmar que essas notas realmente não aparecem na aba emitidas da Olist.
+
+Mantida a trava: não criar views fiscais oficiais e não migrar dashboard, margem, ROI ou SKUs.

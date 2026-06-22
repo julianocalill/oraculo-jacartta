@@ -8,6 +8,7 @@ coverage
 .turbo
 *.tsbuildinfo
 logs/*.log
+reports/*.csv
 supabase/.temp/
 supabase/supabase/
 .vercel
