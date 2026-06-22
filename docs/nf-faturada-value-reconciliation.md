@@ -908,4 +908,46 @@ Origem:
 
 Foi encontrado um filtro candidato dentro da tolerância. Não promover para views oficiais até a conferência manual confirmar que essas notas realmente não aparecem na aba emitidas da Olist.
 
-Mantida a trava: não criar views fiscais oficiais e não migrar dashboard, margem, ROI ou SKUs.
+## Camada Fiscal Oficial Aprovada
+
+Em `2026-06-22`, a reconciliação foi considerada validada pelo usuário.
+
+Regra oficial:
+
+- status em `6` ou `7`;
+- excluir `tipo = E`;
+- excluir `raw_json.origem.tipo = devolucao`;
+- usar data de emissão da NF como data fiscal;
+- usar o valor fiscal validado da NF como receita faturada oficial.
+
+Resultado para `2026-06-01` a `2026-06-19`:
+
+- Tela Olist: `71.197` NFs / `R$ 5.243.629,96`;
+- Supabase filtrado: `71.198` NFs / `R$ 5.243.715,76`;
+- diferença: `+1` NF / `+R$ 85,80`;
+- status: dentro da tolerância.
+
+Objetos criados:
+
+- view `oraculo_fiscal_invoices_valid`;
+- view `oraculo_fiscal_daily_revenue`;
+- view `oraculo_fiscal_channel_sales`;
+- RPC `oraculo_fiscal_metrics(start_date, end_date)`;
+- RPC `oraculo_fiscal_channel_metrics(start_date, end_date)`;
+- script `scripts/audit-oraculo-fiscal-metrics.js`.
+
+Validação do script:
+
+```text
+Periodo fiscal: 2026-06-01 a 2026-06-19
+NFs faturadas validas: 71.198
+Receita faturada: R$ 5.243.715,76
+Ticket medio faturado: R$ 73,65
+NFs com pedido vinculado: 71.191
+Devolucoes/tipo E: 857 / R$ 1.816.353,97
+Canceladas/status 8: 89 / R$ 1.750.174,08
+```
+
+`oraculo_fiscal_sku_sales` não foi criada nesta etapa. A cobertura atual de itens fiscais ainda é baixa: apenas `25` NFs válidas com itens hidratados contra `71.198` NFs fiscais válidas no período validado.
+
+Trava mantida: não migrar margem, ROI, ROAS, lucro ou SKUs oficiais enquanto `olist_invoice_items` não estiver com cobertura auditada.

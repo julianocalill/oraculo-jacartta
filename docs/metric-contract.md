@@ -12,8 +12,8 @@ O dashboard nao deve misturar conceitos financeiros e operacionais no mesmo card
 
 Decisao de `2026-06-22`:
 
-- Venda oficial = NF emitida/faturada.
-- Receita oficial = valor total das NFs emitidas.
+- Venda oficial = NF faturada de saida.
+- Receita oficial = valor total das NFs emitidas/autorizadas.
 - Produto vendido para margem, ROI e ROAS = item vinculado a NF emitida.
 
 A tela manual da Olist em `Notas Fiscais`, no periodo `2026-06-01` a `2026-06-19`, mostrou `71.197` NFs emitidas e `R$ 5.243.629,96` em valor total. O Oraculo encontrou apenas `656` pedidos com `payload.dataFaturamento` preenchida e `R$ 42.968,72` por data fiscal, provando que `dataFaturamento` em `olist_orders` nao e a camada fiscal completa.
@@ -24,6 +24,45 @@ Antes de migrar dashboard, SKUs, margem, ROI ou ROAS, precisamos popular e recon
 - `olist_invoice_items`
 
 Documento de auditoria: `docs/nf-faturada-audit.md`.
+
+## Camada fiscal oficial
+
+Regra validada contra a tela `Notas Fiscais` da Olist:
+
+- status fiscal em `6` ou `7`;
+- excluir `tipo = E`;
+- excluir `raw_json.origem.tipo = devolucao`;
+- data fiscal = `emission_date`, exposta como `issued_at` e `issued_date`;
+- receita faturada = valor fiscal validado da NF, exposto como `billed_revenue`.
+
+Resultado validado para `2026-06-01` a `2026-06-19`:
+
+- Tela Olist: `71.197` NFs e `R$ 5.243.629,96`;
+- Supabase filtrado: `71.198` NFs e `R$ 5.243.715,76`;
+- diferenca: `+1` NF e `+R$ 85,80`, dentro da tolerancia aprovada.
+
+Objetos oficiais criados:
+
+- `oraculo_fiscal_invoices_valid`;
+- `oraculo_fiscal_daily_revenue`;
+- `oraculo_fiscal_channel_sales`;
+- `oraculo_fiscal_metrics(start_date, end_date)`;
+- `oraculo_fiscal_channel_metrics(start_date, end_date)`.
+
+Para desempenho, `olist_invoices` tambem possui campos fiscais gerados:
+
+- `fiscal_invoice_type`;
+- `fiscal_origin_type`;
+- `fiscal_amount`;
+- `fiscal_channel_label`.
+
+Esses campos sao derivados do payload e atualizados automaticamente pelo Postgres quando a NF e inserida/atualizada.
+
+### O que ainda nao virou oficial
+
+`oraculo_fiscal_sku_sales` nao foi criada porque a cobertura atual de `olist_invoice_items` ainda e insuficiente: apenas `25` NFs validas tinham itens hidratados no momento da auditoria, contra `71.198` NFs fiscais validas no periodo validado.
+
+Margem, ROI, ROAS, lucro e ranking oficial por SKU devem usar item vinculado a NF. Enquanto a cobertura de `olist_invoice_items` nao estiver auditada, essas telas continuam operacionais/auxiliares e nao devem ser tratadas como metricas fiscais oficiais.
 
 ## Metricas canonicas
 

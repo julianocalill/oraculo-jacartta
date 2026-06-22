@@ -32,8 +32,8 @@ Decisão importante: antes de avançar em ROI/margem, o projeto precisa ter mét
 
 Nova premissa oficial definida em `2026-06-22`:
 
-- Venda oficial = NF emitida/faturada.
-- Receita oficial = valor total das NFs emitidas.
+- Venda oficial = NF faturada de saida.
+- Receita oficial = valor total das NFs emitidas/autorizadas.
 - Produto vendido para margem, ROI e ROAS = item vinculado a NF emitida.
 
 A tela `Notas Fiscais` da Olist mostrou, para `2026-06-01` a `2026-06-19`, `71.197` NFs emitidas e `R$ 5.243.629,96`. O Oraculo encontrou apenas `656` pedidos com `payload.dataFaturamento` e `R$ 42.968,72`, provando que `dataFaturamento` em `olist_orders` nao captura a tela fiscal.
@@ -64,9 +64,33 @@ Leitura correta anterior, antes da nova premissa fiscal:
 
 Leitura correta atual:
 
-- O dashboard ainda nao deve ser alterado ate a auditoria fiscal bater com a Olist.
-- A fonte oficial futura deve ser `olist_invoices` e `olist_invoice_items`, nao `olist_orders.payload.dataFaturamento`.
-- ROI, margem e ROAS so devem migrar depois que a tabela canonica de NFs fechar com a tela da Olist.
+- A auditoria fiscal bateu com a tela da Olist dentro da tolerancia aprovada.
+- A fonte oficial de venda e receita passa a ser `olist_invoices`, nao `olist_orders.payload.dataFaturamento`.
+- O dashboard recebeu uma secao fiscal oficial isolada, sem migrar a tela inteira de uma vez.
+- ROI, margem, ROAS e SKU fiscal so devem migrar depois que `olist_invoice_items` tiver cobertura auditada.
+
+Regra fiscal oficial validada:
+
+- `status in (6,7)`;
+- excluir `tipo = E`;
+- excluir `raw_json.origem.tipo = devolucao`;
+- data fiscal = data de emissao da NF;
+- receita oficial = valor fiscal validado da NF.
+
+Resultado aceito para `2026-06-01` a `2026-06-19`:
+
+- Tela Olist: `71.197` NFs / `R$ 5.243.629,96`;
+- Supabase filtrado: `71.198` NFs / `R$ 5.243.715,76`;
+- diferenca: `+1` NF / `+R$ 85,80`.
+
+Objetos oficiais criados:
+
+- `oraculo_fiscal_invoices_valid`;
+- `oraculo_fiscal_daily_revenue`;
+- `oraculo_fiscal_channel_sales`;
+- `oraculo_fiscal_metrics`;
+- `oraculo_fiscal_channel_metrics`;
+- [scripts/audit-oraculo-fiscal-metrics.js](/Users/julianocalil/oraculo/scripts/audit-oraculo-fiscal-metrics.js).
 
 Commit de referência:
 
@@ -88,7 +112,9 @@ Entregas mais recentes:
 - Script fiscal criado para auditar endpoint de NFs e comparar Supabase vs tela manual da Olist.
 - Sync incremental de NFs implementado em `scripts/sync-olist-invoices.js` e executado para `2026-06-01` a `2026-06-19`, carregando `72.112` NFs da API `notas`.
 - Sync incremental de itens fiscais implementado em `scripts/sync-olist-invoice-items.js`; teste inicial confirmou que `notas/{id}` traz `itens`.
-- A reconciliacao ainda nao bate com o print manual da Olist: status `6` atual soma `71.908` NFs e `R$ 5.014.631,93`, contra `71.197` e `R$ 5.243.629,96` informados manualmente.
+- Reconciliacao fiscal validada: a regra `status in (6,7)`, sem `tipo = E` e sem devolucao retorna `71.198` NFs e `R$ 5.243.715,76`, contra `71.197` e `R$ 5.243.629,96` na tela Olist.
+- Secao fiscal oficial adicionada ao dashboard com NFs emitidas, receita faturada, ticket medio faturado, canceladas e devolucoes excluidas.
+- `oraculo_fiscal_sku_sales` ainda nao foi criada porque apenas `25` NFs validas tinham itens hidratados contra `71.198` NFs fiscais validas no periodo auditado.
 
 ---
 

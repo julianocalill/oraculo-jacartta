@@ -552,6 +552,11 @@ p {
   grid-template-columns: repeat(6, minmax(150px, 1fr));
 }
 
+.dashboard-section {
+  display: grid;
+  gap: 12px;
+}
+
 .metric,
 .panel {
   border: 1px solid var(--line);

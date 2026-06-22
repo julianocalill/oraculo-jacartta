@@ -114,6 +114,28 @@ type NfMetricsRow = {
   pending_count: number | string | null;
 };
 
+type FiscalMetrics = {
+  invoicesCount: number;
+  billedRevenue: number;
+  averageInvoiceValue: number;
+  linkedOrdersCount: number;
+  excludedDevolutionsCount: number;
+  excludedDevolutionsRevenue: number;
+  canceledCount: number;
+  canceledRevenue: number;
+};
+
+type FiscalMetricsRow = {
+  invoices_count: number | string | null;
+  billed_revenue: number | string | null;
+  average_invoice_value: number | string | null;
+  linked_orders_count: number | string | null;
+  excluded_devolutions_count: number | string | null;
+  excluded_devolutions_revenue: number | string | null;
+  canceled_count: number | string | null;
+  canceled_revenue: number | string | null;
+};
+
 function isIsoDate(value: string | undefined) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
 }
@@ -314,6 +336,32 @@ async function loadNfMetrics(
   };
 }
 
+async function loadFiscalMetrics(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  filters: DashboardFilters
+): Promise<FiscalMetrics> {
+  const { data, error } = await supabase
+    .rpc("oraculo_fiscal_metrics", {
+      start_date: filters.start,
+      end_date: filters.end
+    })
+    .maybeSingle();
+
+  if (error) throw error;
+
+  const row = data as FiscalMetricsRow | null;
+  return {
+    invoicesCount: asMetricNumber(row?.invoices_count),
+    billedRevenue: asMetricNumber(row?.billed_revenue),
+    averageInvoiceValue: asMetricNumber(row?.average_invoice_value),
+    linkedOrdersCount: asMetricNumber(row?.linked_orders_count),
+    excludedDevolutionsCount: asMetricNumber(row?.excluded_devolutions_count),
+    excludedDevolutionsRevenue: asMetricNumber(row?.excluded_devolutions_revenue),
+    canceledCount: asMetricNumber(row?.canceled_count),
+    canceledRevenue: asMetricNumber(row?.canceled_revenue)
+  };
+}
+
 async function loadRuptureProducts(
   supabase: ReturnType<typeof createSupabaseAdminClient>
 ): Promise<RuptureProduct[]> {
@@ -456,6 +504,7 @@ async function loadDashboard(filters: DashboardFilters) {
     productCount,
     billingMetrics,
     nfMetrics,
+    fiscalMetrics,
     ruptureProducts
   ] = await Promise.all([
     dailyQuery,
@@ -479,6 +528,7 @@ async function loadDashboard(filters: DashboardFilters) {
     supabase.from("olist_products").select("id", { count: "exact", head: true }),
     loadBillingWindowMetrics(supabase, filters),
     loadNfMetrics(supabase, filters),
+    loadFiscalMetrics(supabase, filters),
     loadRuptureProducts(supabase)
   ]);
 
@@ -565,6 +615,7 @@ async function loadDashboard(filters: DashboardFilters) {
     maxDailyRevenue,
     monthEffective,
     nfMetrics,
+    fiscalMetrics,
     monthOrders,
     monthUnits,
     monthTicket: monthOrders > 0 ? monthEffective / monthOrders : null,
@@ -654,6 +705,53 @@ export default async function HomePage({
           </form>
         </header>
 
+        <section className="dashboard-section">
+          <div className="section-head section-row">
+            <div>
+              <p className="eyebrow">Fiscal oficial</p>
+              <h2>Venda por NF faturada</h2>
+            </div>
+            <span className="pill">Regra: status 6/7 · saída · sem devolução</span>
+          </div>
+          <div className="metric-grid metric-grid-eight">
+            <Link className="metric metric-link accent-yellow" href={`/pedidos${filterQuery}`}>
+              <span className="label">Receita faturada</span>
+              <strong>{formatCurrency(data.fiscalMetrics.billedRevenue)}</strong>
+              <small>Valor total das NFs emitidas/autorizadas</small>
+            </Link>
+            <Link className="metric metric-link accent-blue" href={`/pedidos${filterQuery}`}>
+              <span className="label">NFs emitidas</span>
+              <strong>{formatCount(data.fiscalMetrics.invoicesCount)}</strong>
+              <small>NFs fiscais válidas no período</small>
+            </Link>
+            <Link className="metric metric-link accent-blue" href={`/pedidos${filterQuery}`}>
+              <span className="label">Ticket médio faturado</span>
+              <strong>{data.fiscalMetrics.invoicesCount <= 0 ? "-" : formatCurrency(data.fiscalMetrics.averageInvoiceValue)}</strong>
+              <small>Receita faturada / NFs emitidas</small>
+            </Link>
+            <Link className="metric metric-link accent-white" href={`/pedidos${filterQuery}`}>
+              <span className="label">NFs com pedido</span>
+              <strong>{formatCount(data.fiscalMetrics.linkedOrdersCount)}</strong>
+              <small>Cobertura de vínculo pedido/NF</small>
+            </Link>
+            <Link className="metric metric-link accent-red" href={`/pedidos${filterQuery}`}>
+              <span className="label">Canceladas</span>
+              <strong>{formatCount(data.fiscalMetrics.canceledCount)}</strong>
+              <small>{formatCurrency(data.fiscalMetrics.canceledRevenue)} fora da receita</small>
+            </Link>
+            <Link className="metric metric-link accent-red" href={`/pedidos${filterQuery}`}>
+              <span className="label">Devoluções excluídas</span>
+              <strong>{formatCount(data.fiscalMetrics.excludedDevolutionsCount)}</strong>
+              <small>{formatCurrency(data.fiscalMetrics.excludedDevolutionsRevenue)} fora da receita</small>
+            </Link>
+          </div>
+        </section>
+
+        <section className="dashboard-section">
+          <div className="section-head">
+            <p className="eyebrow">Operacional auxiliar</p>
+            <h2>Pedidos e itens ainda não oficiais para ROI</h2>
+          </div>
         <section className="metric-grid metric-grid-eight">
           <Link className="metric metric-link accent-yellow" href={`/pedidos${filterQuery}`}>
             <span className="label">Receita operacional</span>
@@ -685,6 +783,7 @@ export default async function HomePage({
             <strong>{formatCount(data.nfMetrics.pendingCount)}</strong>
             <small>Status pendente no período</small>
           </Link>
+        </section>
         </section>
 
         <section className="source-summary-grid">
