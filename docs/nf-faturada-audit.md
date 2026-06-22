@@ -188,6 +188,84 @@ Proxima acao tecnica:
 
 Uma varredura completa sem persistencia foi iniciada com paginação de `100` registros por pagina, mas a API aplicou limite `429` e a execucao longa foi interrompida. O script recebeu retry/backoff e progresso por pagina, mas o sync definitivo deve ser incremental com checkpoint, nao uma varredura monolitica.
 
+## Sync incremental implementado
+
+Data: 2026-06-22
+
+Scripts criados:
+
+- `scripts/sync-olist-invoices.js`
+- `scripts/sync-olist-invoice-items.js`
+
+### Sync de NFs
+
+Uso:
+
+```bash
+node scripts/sync-olist-invoices.js --start=2026-06-01 --end=2026-06-19 --page-size=100 --max-pages=50 --delay-ms=1000 --progress-every=10 --resume
+```
+
+Parametros suportados:
+
+- `--start=YYYY-MM-DD`
+- `--end=YYYY-MM-DD`
+- `--page-size`
+- `--max-pages`
+- `--delay-ms`
+- `--resume`
+- `--hydrate-details`
+- `--detail-delay-ms`
+- `--progress-every`
+
+O checkpoint fica em `olist_invoice_sync_runs.metadata.next_offset`. O script retoma o run com maior `next_offset` para a mesma janela.
+
+Resultado da carga de listagem para `2026-06-01` a `2026-06-19`:
+
+- Endpoint: `notas`
+- Registros reportados pela API: `72.112`
+- Registros processados e salvos: `72.112`
+- Checkpoint final: `next_offset = 72112`
+- Status do run: completo
+
+Resumo estavel via SQL:
+
+- NFs totais em `olist_invoices`: `72.112`
+- Status `6`: `71.908`
+- Receita status `6`, campo `valor`: `R$ 5.014.631,93`
+- Status `8`: `89`
+- Receita status `8`, campo `valor`: `R$ 1.750.174,08`
+- NFs com vinculo de pedido: `71.248`
+
+Esse resultado ainda nao bate com o print manual da Olist (`71.197` NFs emitidas e `R$ 5.243.629,96`). Portanto, as views oficiais ainda nao devem ser criadas.
+
+Hipoteses para o gap:
+
+- o print manual foi tirado antes de mudancas posteriores na Olist;
+- a tela da Olist aplica outro filtro alem de `situacao = 6`;
+- a tela usa outro campo financeiro ou composicao de valor;
+- a API `notas` filtra por um criterio de data que nao e exatamente igual ao filtro visual da tela.
+
+### Sync de itens
+
+Foi confirmado que:
+
+- a listagem `notas` nao traz itens;
+- o detalhe `notas/{id}` traz `itens`;
+- `scripts/sync-olist-invoice-items.js` hidrata detalhes de NFs ja salvas e grava em `olist_invoice_items`.
+
+Uso:
+
+```bash
+node scripts/sync-olist-invoice-items.js --start=2026-06-01 --end=2026-06-19 --page-size=50 --max-pages=1 --delay-ms=500 --progress-every=1 --status=6 --resume
+```
+
+Resultado do teste inicial:
+
+- NFs detalhadas: `6`
+- Linhas de item gravadas: `6`
+
+Como hidratar 71 mil NFs exige uma chamada `notas/{id}` por nota, essa etapa deve ser executada em lotes pequenos com checkpoint, nao em uma unica execucao longa.
+
 ## Regra de migracao das metricas
 
 Nao migrar dashboard, SKUs, margem, ROI ou ROAS ainda.

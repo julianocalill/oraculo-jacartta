@@ -47,6 +47,9 @@ The current product direction is practical executive intelligence for the operat
   - stock/products every 6 hours because the current stock endpoint is not safely incremental.
 - The main known issue is fiscal: official sale/revenue must now come from issued NFs, not operational orders. Olist showed `71.197` issued NFs and `R$ 5.243.629,96` for `2026-06-01` to `2026-06-19`, while `olist_orders.payload.dataFaturamento` only found `656` records and `R$ 42.968,72`.
 - Canonical NF tables were introduced: `olist_invoices`, `olist_invoice_items` and `olist_invoice_sync_runs`.
+- `scripts/sync-olist-invoices.js` now performs incremental NF sync from endpoint `notas` with checkpoint/resume.
+- The `2026-06-01` to `2026-06-19` NF listing sync loaded `72.112` invoices. Stable SQL summary: status `6` = `71.908`, status `8` = `89`, status `6` revenue = `R$ 5.014.631,93`, order link coverage = `71.248`.
+- `scripts/sync-olist-invoice-items.js` hydrates invoice details through `notas/{id}` and populates `olist_invoice_items`; initial test saved `6` invoice item rows.
 - Do not migrate dashboard, SKUs, ROI, margin or ROAS until `olist_invoices` reconciles with the Olist `Notas Fiscais` screen.
 - Another known limitation: some historical periods have Olist orders but not detailed `olist_order_items`; SKU/ranking metrics will be empty for those periods until item details are backfilled.
 

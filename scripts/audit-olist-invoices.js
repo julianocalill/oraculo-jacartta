@@ -138,12 +138,13 @@ function normalizeInvoice(row) {
   if (!id) return null;
 
   const totalAmount = parseNumber(firstValue(row, [
+    "valor",
     "valorTotal",
     "valor_total",
     "valorTotalNota",
     "valorNota",
-    "valor",
     "total",
+    "valorNotaComImpostos",
     "notaFiscal.valorTotal",
     "nfe.valorTotal"
   ]));
@@ -158,13 +159,20 @@ function normalizeInvoice(row) {
     status_label: firstValue(row, ["descricaoSituacao", "statusDescricao", "situacaoDescricao", "notaFiscal.descricaoSituacao"]),
     client_name: firstValue(row, ["cliente.nome", "cliente.razaoSocial", "nomeCliente", "cliente", "destinatario.nome"]),
     client_document: firstValue(row, ["cliente.cpfCnpj", "cliente.cnpj", "cliente.cpf", "documentoCliente", "destinatario.cpfCnpj"]),
-    uf: firstValue(row, ["cliente.uf", "cliente.endereco.uf", "uf", "estado", "destinatario.uf", "destinatario.endereco.uf"]),
+    uf: firstValue(row, ["cliente.endereco.uf", "cliente.uf", "enderecoEntrega.uf", "uf", "estado", "destinatario.uf", "destinatario.endereco.uf"]),
     total_amount: totalAmount,
-    channel_name: firstValue(row, ["canal", "canalVenda", "ecommerce.nome", "marketplace.nome"]),
-    integration_name: firstValue(row, ["integracao", "integracao.nome", "origem", "fonte"]),
-    marketplace_name: firstValue(row, ["marketplace", "marketplace.nome", "ecommerce", "ecommerce.nome"]),
+    channel_name: firstValue(row, ["ecommerce.canalVenda", "canal", "canalVenda", "marketplace.nome"]),
+    integration_name: firstValue(row, ["ecommerce.nome", "integracao", "integracao.nome", "origem.nome", "fonte"]),
+    marketplace_name: firstValue(row, ["ecommerce.nome", "marketplace", "marketplace.nome"]),
     order_id: firstValue(row, ["pedido.id", "idPedido", "pedidoId", "idPedidoEcommerce"]),
-    order_number: firstValue(row, ["pedido.numero", "numeroPedido", "numero_pedido", "pedido.numeroPedido"]),
+    order_number: firstValue(row, [
+      "ecommerce.numeroPedidoEcommerce",
+      "ecommerce.numeroPedidoCanalVenda",
+      "pedido.numero",
+      "numeroPedido",
+      "numero_pedido",
+      "pedido.numeroPedido"
+    ]),
     access_key: accessKey == null ? null : String(accessKey),
     raw_json: row,
     synced_at: new Date().toISOString()
@@ -173,15 +181,17 @@ function normalizeInvoice(row) {
 
 function normalizeInvoiceItems(invoice, row) {
   return normalizeItems(row).map((item, index) => {
-    const productId = firstValue(item, ["produto.id", "idProduto", "produtoId", "codigoProduto"]);
-    const sku = firstValue(item, ["produto.codigo", "sku", "codigo", "codigoProduto", "produto.sku"]);
+    const itemId = firstValue(item, ["idItem", "id", "codigoItem"]);
+    const productId = firstValue(item, ["idProduto", "produto.id", "produtoId", "codigoProduto"]);
+    const sku = firstValue(item, ["codigo", "produto.codigo", "sku", "codigoProduto", "produto.sku"]);
     const quantity = parseNumber(firstValue(item, ["quantidade", "qtde", "qtd"]));
     const unitValue = parseNumber(firstValue(item, ["valorUnitario", "valor_unitario", "preco", "valor"]));
     const totalValue = parseNumber(firstValue(item, ["valorTotal", "valor_total", "total"]));
 
     return {
-      id: `${invoice.id}:${index + 1}`,
+      id: `${invoice.id}:${itemId ?? index + 1}`,
       invoice_id: invoice.id,
+      invoice_number: invoice.invoice_number,
       line_number: index + 1,
       product_id: productId == null ? null : String(productId),
       sku: sku == null ? null : String(sku),
@@ -206,6 +216,10 @@ function isCanceledInvoice(invoice) {
   return status === "8" || label.includes("cancel");
 }
 
+function isEmittedInvoice(invoice) {
+  return normalizeStatusKey(invoice.status) === "6";
+}
+
 async function supabaseFetch(env, path, options = {}) {
   const supabaseUrl = requireEnv(env, ["SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL"]);
   const serviceKey = requireEnv(env, ["SUPABASE_SERVICE_ROLE_KEY"]);
@@ -226,6 +240,18 @@ async function supabaseFetch(env, path, options = {}) {
     throw error;
   }
   return text ? JSON.parse(text) : null;
+}
+
+async function supabaseFetchAll(env, path, pageSize = 1000) {
+  const rows = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const separator = path.includes("?") ? "&" : "?";
+    const page = await supabaseFetch(env, `${path}${separator}limit=${pageSize}&offset=${offset}`);
+    const batch = Array.isArray(page) ? page : [];
+    rows.push(...batch);
+    if (batch.length < pageSize) break;
+  }
+  return rows;
 }
 
 async function getStoredRefreshToken(env) {
@@ -389,8 +415,7 @@ async function fetchDirectOlistInvoices(env, accessToken, endpoint, startDate, e
         try {
           if (detailDelayMs > 0) await new Promise((resolve) => setTimeout(resolve, detailDelayMs));
           const detailPayload = await fetchOlistInvoiceDetail(env, accessToken, endpoint, preliminaryInvoice.id);
-          const detailRows = normalizeRows(detailPayload);
-          sourceRow = detailRows[0] ?? detailPayload;
+          sourceRow = detailPayload && typeof detailPayload === "object" ? detailPayload : row;
         } catch {
           detailErrors += 1;
         }
@@ -435,15 +460,37 @@ async function summarizeCurrentOrders(env, startDate, endDate) {
 async function summarizeCanonicalInvoices(env, startDate, endDate) {
   try {
     const exclusiveEnd = normalizeDateForFilter(endDate, true);
-    const rows = await supabaseFetch(
+    const rows = await supabaseFetchAll(
       env,
-      `/rest/v1/olist_invoices?select=id,total_amount,status,emission_date&emission_date=gte.${startDate}&emission_date=lt.${exclusiveEnd}&limit=100000`
+      `/rest/v1/olist_invoices?select=id,total_amount,status,status_label,emission_date,order_number&emission_date=gte.${startDate}&emission_date=lt.${exclusiveEnd}&order=emission_date.asc,id.asc`
     );
-    const emitted = (rows ?? []).filter((row) => !["8", "cancelada", "cancelado", "canceled"].includes(String(row.status ?? "").toLowerCase()));
+    const invoices = rows ?? [];
+    const emitted = invoices.filter((row) => isEmittedInvoice(row));
+    const canceled = invoices.filter((row) => isCanceledInvoice(row));
+    const invoiceIds = new Set(invoices.map((row) => String(row.id)));
+    const itemRows = await supabaseFetchAll(
+      env,
+      "/rest/v1/olist_invoice_items?select=invoice_id"
+    );
+    const itemInvoiceIds = new Set(
+      (itemRows ?? [])
+        .map((row) => String(row.invoice_id))
+        .filter((invoiceId) => invoiceIds.has(invoiceId))
+    );
     return {
       exists: true,
       count: emitted.length,
-      revenue: emitted.reduce((sum, row) => sum + parseNumber(row.total_amount), 0)
+      revenue: emitted.reduce((sum, row) => sum + parseNumber(row.total_amount), 0),
+      total_count: invoices.length,
+      canceled_count: canceled.length,
+      canceled_revenue: canceled.reduce((sum, row) => sum + parseNumber(row.total_amount), 0),
+      status_counts: invoices.reduce((acc, row) => {
+        const key = normalizeStatusKey(row.status_label ?? row.status);
+        acc[key] = Number(acc[key] ?? 0) + 1;
+        return acc;
+      }, {}),
+      order_linked_count: invoices.filter((row) => row.order_number != null && String(row.order_number).trim() !== "").length,
+      item_invoice_count: itemInvoiceIds.size
     };
   } catch (error) {
     if (error.status === 404) return { exists: false, count: 0, revenue: 0 };
@@ -526,8 +573,14 @@ function printSummary(summary) {
   console.log("");
   console.log("Tabela canonica olist_invoices");
   console.log(`- Existe no banco: ${summary.canonical.exists ? "sim" : "nao"}`);
+  console.log(`- NFs totais salvas: ${count(summary.canonical.total_count)}`);
   console.log(`- NFs emitidas salvas: ${count(summary.canonical.count)}`);
+  console.log(`- NFs canceladas salvas: ${count(summary.canonical.canceled_count)}`);
   console.log(`- Receita salva: ${money(summary.canonical.revenue)}`);
+  console.log(`- Receita cancelada salva: ${money(summary.canonical.canceled_revenue)}`);
+  console.log(`- Status salvos: ${JSON.stringify(summary.canonical.status_counts ?? {})}`);
+  console.log(`- NFs com vinculo de pedido: ${count(summary.canonical.order_linked_count)}`);
+  console.log(`- NFs com itens salvos: ${count(summary.canonical.item_invoice_count)}`);
   console.log("");
   console.log("Endpoint fiscal Olist");
   console.log(`- Endpoint selecionado: ${summary.endpoint || "nao identificado"}`);
@@ -545,6 +598,7 @@ function printSummary(summary) {
     console.log(`- NFs canceladas lidas: ${count(summary.direct.canceledCount)}`);
     console.log(`- Receita emitida lida: ${money(summary.direct.emittedRevenue)}`);
     console.log(`- Itens de NF lidos: ${count(summary.direct.items)}`);
+    console.log(`- NFs lidas com vinculo de pedido: ${count(summary.direct.orderLinkedCount)}`);
     if (summary.direct.detailErrors) {
       console.log(`- Erros ao hidratar detalhe: ${count(summary.direct.detailErrors)}`);
     }
@@ -579,7 +633,7 @@ async function main() {
   let direct = null;
   if (discovery.endpoint && !skipDirect) {
     const result = await fetchDirectOlistInvoices(env, accessToken, discovery.endpoint, startDate, endDate, maxPages);
-    const emittedInvoices = result.invoices.filter((row) => !isCanceledInvoice(row));
+    const emittedInvoices = result.invoices.filter((row) => isEmittedInvoice(row));
     const canceledInvoices = result.invoices.filter((row) => isCanceledInvoice(row));
     direct = {
       count: result.invoices.length,
@@ -588,6 +642,7 @@ async function main() {
       emittedRevenue: emittedInvoices.reduce((sum, row) => sum + parseNumber(row.total_amount), 0),
       canceledCount: canceledInvoices.length,
       items: result.invoiceItems.length,
+      orderLinkedCount: result.invoices.filter((row) => row.order_number != null && String(row.order_number).trim() !== "").length,
       detailErrors: result.detailErrors,
       pagination: result.pagination,
       statusCounts: result.invoices.reduce((acc, row) => {

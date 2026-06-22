@@ -86,6 +86,9 @@ Entregas mais recentes:
 - Layout mobile-friendly publicado: navegação horizontal no topo, cards em uma coluna, tabelas com rolagem controlada, formulários responsivos.
 - Migração criada para `olist_invoices`, `olist_invoice_items` e `olist_invoice_sync_runs`.
 - Script fiscal criado para auditar endpoint de NFs e comparar Supabase vs tela manual da Olist.
+- Sync incremental de NFs implementado em `scripts/sync-olist-invoices.js` e executado para `2026-06-01` a `2026-06-19`, carregando `72.112` NFs da API `notas`.
+- Sync incremental de itens fiscais implementado em `scripts/sync-olist-invoice-items.js`; teste inicial confirmou que `notas/{id}` traz `itens`.
+- A reconciliacao ainda nao bate com o print manual da Olist: status `6` atual soma `71.908` NFs e `R$ 5.014.631,93`, contra `71.197` e `R$ 5.243.629,96` informados manualmente.
 
 ---
 
