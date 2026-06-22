@@ -64,6 +64,13 @@ Esses campos sao derivados do payload e atualizados automaticamente pelo Postgre
 
 Margem, ROI, ROAS, lucro e ranking oficial por SKU devem usar item vinculado a NF. Enquanto a cobertura de `olist_invoice_items` nao estiver auditada, essas telas continuam operacionais/auxiliares e nao devem ser tratadas como metricas fiscais oficiais.
 
+Auditoria posterior em `docs/fiscal-sku-items-coverage.md` mostrou:
+
+- `olist_invoice_items`: `25` NFs cobertas, `0,04%` das NFs validas e `0,03%` da receita;
+- ponte NF -> pedido por `payload.ecommerce.numeroPedidoEcommerce`: `71.032` NFs, `99,77%` de cobertura de vinculo;
+- ponte NF -> pedido -> `olist_order_items`: `690` NFs com itens, `0,97%` das NFs e `0,87%` da receita;
+- conclusao: a melhor fonte candidata e `fiscal_sku_sales_by_order_link`, mas ela depende de backfill de `olist_order_items` para os pedidos vinculados.
+
 ## Metricas canonicas
 
 Observacao: as metricas abaixo descrevem a implementacao historica/operacional existente. Elas nao devem ser tratadas como regra oficial de receita depois da decisao de `2026-06-22`; servem como referencia enquanto a camada fiscal de NFs e auditada.

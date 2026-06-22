@@ -115,6 +115,9 @@ Entregas mais recentes:
 - Reconciliacao fiscal validada: a regra `status in (6,7)`, sem `tipo = E` e sem devolucao retorna `71.198` NFs e `R$ 5.243.715,76`, contra `71.197` e `R$ 5.243.629,96` na tela Olist.
 - Secao fiscal oficial adicionada ao dashboard com NFs emitidas, receita faturada, ticket medio faturado, canceladas e devolucoes excluidas.
 - `oraculo_fiscal_sku_sales` ainda nao foi criada porque apenas `25` NFs validas tinham itens hidratados contra `71.198` NFs fiscais validas no periodo auditado.
+- Auditoria de cobertura de itens fiscais criada em `scripts/audit-olist-invoice-items-coverage.js` e documentada em `docs/fiscal-sku-items-coverage.md`.
+- Resultado da cobertura de itens para `2026-06-01` a `2026-06-19`: item fiscal puro cobre `0,04%` das NFs; NF vinculada a pedido cobre `99,77%`; NF vinculada a pedido com itens em `olist_order_items` cobre apenas `0,97%` das NFs e `0,87%` da receita.
+- Proxima etapa tecnica: backfill controlado de `olist_order_items` para os pedidos vinculados por `payload.ecommerce.numeroPedidoEcommerce`. So depois disso criar a view candidata `fiscal_sku_sales_by_order_link`.
 
 ---
 

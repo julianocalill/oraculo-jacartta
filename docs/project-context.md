@@ -53,7 +53,7 @@ The current product direction is practical executive intelligence for the operat
 - `scripts/sync-olist-invoice-items.js` hydrates invoice details through `notas/{id}` and populates `olist_invoice_items`; initial test saved `6` invoice item rows.
 - Official fiscal views/RPCs now exist: `oraculo_fiscal_invoices_valid`, `oraculo_fiscal_daily_revenue`, `oraculo_fiscal_channel_sales`, `oraculo_fiscal_metrics` and `oraculo_fiscal_channel_metrics`.
 - The dashboard now has a separate official fiscal section with NFs emitted, billed revenue, billed average ticket, canceled NFs and excluded returns. Operational order/SKU sections remain auxiliary.
-- Do not migrate SKUs, ROI, margin or ROAS until `olist_invoice_items` coverage is audited. Current valid invoice item coverage is insufficient: `25` valid NFs with hydrated items vs `71.198` valid fiscal NFs in the validated period.
+- Do not migrate SKUs, ROI, margin or ROAS until fiscal item coverage passes. `docs/fiscal-sku-items-coverage.md` shows that pure invoice items cover only `25` valid NFs (`0,04%`) and order-linked items cover `690` valid NFs (`0,97%`). The NF-to-order link is strong (`71.032` NFs / `99,77%`) via `payload.ecommerce.numeroPedidoEcommerce`, so the next technical step is backfilling `olist_order_items` for linked orders.
 - Another known limitation: some historical periods have Olist orders but not detailed `olist_order_items`; SKU/ranking metrics will be empty for those periods until item details are backfilled.
 
 ## Working rule
