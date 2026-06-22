@@ -1,6 +1,6 @@
 # Contrato de Metricas do Oraculo
 
-Data da versao: 2026-06-21
+Data da versao: 2026-06-22
 
 Este documento define a regra que o painel deve seguir antes de evoluirmos ROI, margem, curva de saida e ruptura. A prioridade agora e confiabilidade: cada numero precisa ter fonte, filtro de data e formula explicita.
 
@@ -8,7 +8,26 @@ Este documento define a regra que o painel deve seguir antes de evoluirmos ROI, 
 
 O dashboard nao deve misturar conceitos financeiros e operacionais no mesmo card. A Olist tem pedidos, itens e notas fiscais. A Shopee tem pedidos e itens. Cada visao precisa dizer qual data esta usando.
 
+## Nova premissa oficial
+
+Decisao de `2026-06-22`:
+
+- Venda oficial = NF emitida/faturada.
+- Receita oficial = valor total das NFs emitidas.
+- Produto vendido para margem, ROI e ROAS = item vinculado a NF emitida.
+
+A tela manual da Olist em `Notas Fiscais`, no periodo `2026-06-01` a `2026-06-19`, mostrou `71.197` NFs emitidas e `R$ 5.243.629,96` em valor total. O Oraculo encontrou apenas `656` pedidos com `payload.dataFaturamento` preenchida e `R$ 42.968,72` por data fiscal, provando que `dataFaturamento` em `olist_orders` nao e a camada fiscal completa.
+
+Antes de migrar dashboard, SKUs, margem, ROI ou ROAS, precisamos popular e reconciliar as tabelas canonicas:
+
+- `olist_invoices`
+- `olist_invoice_items`
+
+Documento de auditoria: `docs/nf-faturada-audit.md`.
+
 ## Metricas canonicas
+
+Observacao: as metricas abaixo descrevem a implementacao historica/operacional existente. Elas nao devem ser tratadas como regra oficial de receita depois da decisao de `2026-06-22`; servem como referencia enquanto a camada fiscal de NFs e auditada.
 
 ### Receita operacional confirmada
 
@@ -39,7 +58,7 @@ Filtro de data: `data_criacao`.
 
 Regra: contar pedidos com status diferente de pendente e cancelado.
 
-Observacao: o payload detalhado da Olist traz `dataFaturamento`, mas em muitos pedidos validos ela vem vazia. Portanto, ate corrigirmos/confirmarmos isso com a Olist, o painel principal deve assumir a leitura operacional por status, nao a leitura fiscal estrita.
+Observacao historica: o payload detalhado da Olist traz `dataFaturamento`, mas em muitos pedidos validos ela vem vazia. A partir da premissa oficial de `2026-06-22`, essa leitura nao deve ser usada como receita oficial.
 
 ### NFs com data fiscal
 

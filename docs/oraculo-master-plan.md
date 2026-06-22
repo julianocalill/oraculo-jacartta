@@ -14,7 +14,7 @@ O sistema desejado não é apenas um dashboard. Ele precisa:
 
 ---
 
-## Estado executivo em 2026-06-21
+## Estado executivo em 2026-06-22
 
 O projeto saiu da fase de prova isolada da Olist e entrou na fase de consolidação multi-canal, reconciliação de métricas e parametrização operacional.
 
@@ -28,12 +28,22 @@ O foco definido pelo usuário agora é:
 - dados da Olist e marketplaces cruzados no mesmo banco.
 - operação utilizável em desktop e mobile.
 
-Decisão importante: antes de avançar em ROI/margem, o projeto precisa ter métricas auditáveis. Foi identificado que parte dos números do dashboard estava semanticamente incorreta: a tela chamava de `NFs emitidas` e `receita confirmada`, mas a métrica vinha de pedidos criados/status, não de `dataFaturamento` fiscal completo.
+Decisão importante: antes de avançar em ROI/margem, o projeto precisa ter métricas auditáveis. Foi identificado que parte dos números do dashboard estava semanticamente incorreta: a tela chamava de `NFs emitidas` e `receita confirmada`, mas a métrica vinha de pedidos criados/status, não da camada fiscal completa de notas fiscais.
+
+Nova premissa oficial definida em `2026-06-22`:
+
+- Venda oficial = NF emitida/faturada.
+- Receita oficial = valor total das NFs emitidas.
+- Produto vendido para margem, ROI e ROAS = item vinculado a NF emitida.
+
+A tela `Notas Fiscais` da Olist mostrou, para `2026-06-01` a `2026-06-19`, `71.197` NFs emitidas e `R$ 5.243.629,96`. O Oraculo encontrou apenas `656` pedidos com `payload.dataFaturamento` e `R$ 42.968,72`, provando que `dataFaturamento` em `olist_orders` nao captura a tela fiscal.
 
 Por isso, foi criada uma camada de contrato e auditoria:
 
 - [docs/metric-contract.md](/Users/julianocalil/oraculo/docs/metric-contract.md)
+- [docs/nf-faturada-audit.md](/Users/julianocalil/oraculo/docs/nf-faturada-audit.md)
 - [scripts/audit-oraculo-metrics.js](/Users/julianocalil/oraculo/scripts/audit-oraculo-metrics.js)
+- [scripts/audit-olist-invoices.js](/Users/julianocalil/oraculo/scripts/audit-olist-invoices.js)
 - função Supabase `oraculo_reconciliation_snapshot`
 
 Resultado da auditoria para `2026-06-01` a `2026-06-30`:
@@ -46,11 +56,17 @@ Resultado da auditoria para `2026-06-01` a `2026-06-30`:
 - Receita por `dataFaturamento` fiscal preenchida: `R$ 42.968,72`
 - Shopee Donacor importada no cache de canais: `9.873` pedidos, `1.106` cancelados, `R$ 601.481,08` líquido operacional
 
-Leitura correta:
+Leitura correta anterior, antes da nova premissa fiscal:
 
 - O dashboard principal deve falar em `receita operacional` e `vendas confirmadas`, não em `NF fiscal`, enquanto `dataFaturamento` estiver incompleto.
 - A visão fiscal por NF só deve ser usada como auditoria específica, não como KPI principal da operação.
 - ROI e margem ainda não podem ser exibidos como prontos porque faltam custo, impostos, tarifas, frete subsidiado e parâmetros por canal/produto.
+
+Leitura correta atual:
+
+- O dashboard ainda nao deve ser alterado ate a auditoria fiscal bater com a Olist.
+- A fonte oficial futura deve ser `olist_invoices` e `olist_invoice_items`, nao `olist_orders.payload.dataFaturamento`.
+- ROI, margem e ROAS so devem migrar depois que a tabela canonica de NFs fechar com a tela da Olist.
 
 Commit de referência:
 
@@ -68,6 +84,8 @@ Entregas mais recentes:
 - Sincronização Olist transferida para Supabase `pg_cron`, com ciclos horários incrementais.
 - Edge Functions de Olist ajustadas para reduzir chamadas desnecessárias de detalhe e lidar melhor com limite `429`.
 - Layout mobile-friendly publicado: navegação horizontal no topo, cards em uma coluna, tabelas com rolagem controlada, formulários responsivos.
+- Migração criada para `olist_invoices`, `olist_invoice_items` e `olist_invoice_sync_runs`.
+- Script fiscal criado para auditar endpoint de NFs e comparar Supabase vs tela manual da Olist.
 
 ---
 
