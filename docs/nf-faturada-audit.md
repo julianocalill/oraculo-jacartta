@@ -283,3 +283,18 @@ Depois disso, as metricas oficiais devem passar a usar:
 - Margem sobre faturado;
 - ROI sobre faturado;
 - ROAS sobre faturado.
+
+## Reconciliacao de valores
+
+Em `2026-06-22`, foi criado o relatório complementar:
+
+- `docs/nf-faturada-value-reconciliation.md`
+- script gerador: `scripts/audit-olist-invoice-values.js`
+
+Resultado:
+
+- nenhuma combinacao de status + campo monetario bateu dentro da tolerancia de `0,5%`;
+- melhor combinacao encontrada: `status in (6,7)` + `total_amount`;
+- quantidade: `71.928`, delta `1,027%`;
+- valor: `R$ 5.306.230,52`, delta `1,194%`;
+- portanto, as views fiscais oficiais continuam bloqueadas.
