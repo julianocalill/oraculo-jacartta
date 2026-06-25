@@ -170,6 +170,7 @@ Somente apos o gate:
 
 Commits de referencia:
 
+- `c487925 Add controlled fiscal order item backfill`
 - `1b61a8c Add official fiscal analytics layer`
 - `7bcf78a Audit fiscal invoice item coverage`
 

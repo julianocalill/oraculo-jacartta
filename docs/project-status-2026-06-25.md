@@ -5,7 +5,8 @@ Data: `2026-06-25`
 ## Producao
 
 - App: `https://oraculo.oliverhome.com.br`
-- Repositorio: `https://github.com/julianocalill/oraculo-jacartta`
+- Repositorio principal: `https://github.com/Grupo-Jacartta/oraculo.git`
+- Espelho pessoal: `https://github.com/julianocalill/oraculo-jacartta`
 - Frontend: Next.js em `apps/web`
 - Backend canonico: Supabase/Postgres
 - Deploy: GitHub `main` conectado a Vercel
@@ -104,5 +105,7 @@ Depois do gate:
 
 ## Commits de Referencia
 
+- `c487925` - backfill controlado de itens de pedido para NFs fiscais validas;
+- `d26efb9` - atualizacao documental ate a auditoria fiscal de itens;
 - `1b61a8c` - camada fiscal oficial;
 - `7bcf78a` - auditoria de cobertura de itens fiscais.

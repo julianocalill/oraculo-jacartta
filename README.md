@@ -50,7 +50,8 @@ oraculo/
 
 - State updated: `2026-06-25`
 - Production URL: `https://oraculo.oliverhome.com.br`
-- GitHub repository: `https://github.com/julianocalill/oraculo-jacartta`
+- Primary GitHub repository: `https://github.com/Grupo-Jacartta/oraculo.git`
+- Personal mirror: `https://github.com/julianocalill/oraculo-jacartta`
 - Web app: `apps/web`
 - Backend/data core: `supabase`
 - App authentication: Supabase Auth
@@ -105,6 +106,10 @@ Latest audit:
 - fiscal revenue covered by order items: `0,90%`.
 
 The controlled backfill is implemented in `scripts/backfill-olist-order-items-for-valid-invoices.js`, with persistent checkpoint, per-order errors, retry/backoff and automatic coverage audit.
+
+Latest validated commit:
+
+- `c487925` - controlled fiscal backfill for `olist_order_items`
 
 Continue the validated run with:
 

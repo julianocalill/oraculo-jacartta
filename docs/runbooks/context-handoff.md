@@ -14,7 +14,8 @@ Never rely on "the next agent will infer it from chat".
 Production:
 
 - URL: `https://oraculo.oliverhome.com.br`
-- Repo: `https://github.com/julianocalill/oraculo-jacartta`
+- Primary repo: `https://github.com/Grupo-Jacartta/oraculo.git`
+- Personal mirror: `https://github.com/julianocalill/oraculo-jacartta`
 - Latest documented focus: reliable ROI/margin/product intelligence for the operations director.
 
 Implemented recently:
@@ -39,6 +40,7 @@ Known technical caveats:
 - `dataFaturamento` in `olist_orders` is not an official fiscal source.
 - NF-to-order matching reaches `99,99%` through the materialized `oraculo_fiscal_invoice_order_links` bridge.
 - `702` valid NFs currently have linked `olist_order_items`, covering `0,90%` of fiscal revenue.
+- Latest backfill implementation commit: `c487925`.
 - UF tax parameters exist but are not yet applied in ROI/margin formulas.
 - Stock sync is not hourly because the current Olist stock flow scans products broadly.
 
