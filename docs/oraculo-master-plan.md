@@ -14,7 +14,7 @@ O sistema desejado não é apenas um dashboard. Ele precisa:
 
 ---
 
-## Estado executivo em 2026-06-22
+## Estado executivo em 2026-06-25
 
 O projeto saiu da fase de prova isolada da Olist e entrou na fase de consolidação multi-canal, reconciliação de métricas e parametrização operacional.
 
@@ -118,6 +118,52 @@ Entregas mais recentes:
 - Auditoria de cobertura de itens fiscais criada em `scripts/audit-olist-invoice-items-coverage.js` e documentada em `docs/fiscal-sku-items-coverage.md`.
 - Resultado da cobertura de itens para `2026-06-01` a `2026-06-19`: item fiscal puro cobre `0,04%` das NFs; NF vinculada a pedido cobre `99,77%`; NF vinculada a pedido com itens em `olist_order_items` cobre apenas `0,97%` das NFs e `0,87%` da receita.
 - Proxima etapa tecnica: backfill controlado de `olist_order_items` para os pedidos vinculados por `payload.ecommerce.numeroPedidoEcommerce`. So depois disso criar a view candidata `fiscal_sku_sales_by_order_link`.
+
+### Checkpoint atual
+
+Entregue e validado:
+
+- camada fiscal oficial de cabecalho;
+- reconciliacao da tela Olist com tolerancia aprovada;
+- dashboard fiscal separado da camada operacional;
+- auditoria de campos monetarios, status, tipos e devolucoes;
+- auditoria de cobertura de itens fiscais;
+- vinculo NF -> pedido validado por `payload.ecommerce.numeroPedidoEcommerce`;
+- documentacao central e memoria Obsidian atualizadas.
+
+Numeros de referencia para `2026-06-01` a `2026-06-19`:
+
+- NFs fiscais validas: `71.198`;
+- receita fiscal: `R$ 5.243.715,76`;
+- NFs vinculadas a pedido: `71.032` (`99,77%`);
+- NFs com itens fiscais puros: `25` (`0,04%`);
+- NFs com itens via pedido: `690` (`0,97%`);
+- receita fiscal coberta por itens via pedido: `0,87%`.
+
+Proxima implementacao:
+
+- criar `scripts/backfill-olist-order-items-for-valid-invoices.js`;
+- selecionar somente pedidos vinculados a NFs validas e sem itens;
+- processar em lotes limitados com delay, runtime maximo, checkpoint e resume;
+- aplicar retry/backoff para rede, `429` e `5xx`;
+- registrar processados, sem itens e erros;
+- executar a auditoria de cobertura depois de cada lote.
+
+Gate para a view candidata:
+
+- NFs validas com itens via pedido >= `98%`; ou
+- receita fiscal sem cobertura < `0,5%`.
+
+Somente apos o gate:
+
+- criar `oraculo_fiscal_sku_sales_by_order_link`;
+- auditar distribuicao de receita por SKU;
+- manter margem, ROI e ROAS bloqueados ate a auditoria da view candidata.
+
+Commits de referencia:
+
+- `1b61a8c Add official fiscal analytics layer`
+- `7bcf78a Audit fiscal invoice item coverage`
 
 ---
 
@@ -1104,7 +1150,8 @@ Docs relevantes criados/atualizados:
 
 - ROI por produto: ainda falta custo e regra de cálculo.
 - Margem por produto: ainda faltam custos, impostos, tarifas e frete subsidiado por canal.
-- `dataFaturamento` fiscal da Olist: cobertura insuficiente no banco para ser KPI principal.
+- `dataFaturamento` em pedidos não é fonte fiscal; a camada oficial de cabeçalho já usa `olist_invoices`.
+- Itens fiscais/por pedido ainda não têm cobertura suficiente para SKU oficial.
 - Itens vendidos no dashboard ainda precisam ser reconciliados com a cobertura real de `olist_order_items`.
 - Produto mãe/simples em ruptura ainda precisa ser refinado para não misturar kit, SKU filho e item de marketplace.
 - ABC/XYZ ainda não deve ser tratado como pronto.

@@ -22,7 +22,7 @@ The current product direction is practical executive intelligence for the operat
 - `Obsidian` can store durable project memory, but repository docs are the source of truth.
 - `AI agents` assist architecture, coding, review and documentation, but repository files remain the source of truth.
 
-## Current state on 2026-06-22
+## Current state on 2026-06-25
 
 - Next.js web app exists in `apps/web`.
 - Supabase migrations and Edge Functions exist in `supabase`.
@@ -55,6 +55,27 @@ The current product direction is practical executive intelligence for the operat
 - The dashboard now has a separate official fiscal section with NFs emitted, billed revenue, billed average ticket, canceled NFs and excluded returns. Operational order/SKU sections remain auxiliary.
 - Do not migrate SKUs, ROI, margin or ROAS until fiscal item coverage passes. `docs/fiscal-sku-items-coverage.md` shows that pure invoice items cover only `25` valid NFs (`0,04%`) and order-linked items cover `690` valid NFs (`0,97%`). The NF-to-order link is strong (`71.032` NFs / `99,77%`) via `payload.ecommerce.numeroPedidoEcommerce`, so the next technical step is backfilling `olist_order_items` for linked orders.
 - Another known limitation: some historical periods have Olist orders but not detailed `olist_order_items`; SKU/ranking metrics will be empty for those periods until item details are backfilled.
+
+## Immediate priority
+
+Implement `scripts/backfill-olist-order-items-for-valid-invoices.js`.
+
+Required behavior:
+
+- select only Olist orders linked to `oraculo_fiscal_invoices_valid`;
+- use `payload.ecommerce.numeroPedidoEcommerce` as the validated bridge;
+- prioritize linked orders without rows in `olist_order_items`;
+- support bounded batches, delay, runtime limit and resume/checkpoint;
+- retry network failures, `429` and `5xx`;
+- persist raw item payloads and per-order errors;
+- run `scripts/audit-olist-invoice-items-coverage.js` after each batch.
+
+Release gate:
+
+- at least `98%` of valid fiscal invoices covered by linked order items; or
+- less than `0,5%` of fiscal revenue without item coverage.
+
+Only after that gate may the candidate view `oraculo_fiscal_sku_sales_by_order_link` be created and audited. Margin, ROI and ROAS remain blocked.
 
 ## Working rule
 

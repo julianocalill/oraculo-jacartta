@@ -9,7 +9,7 @@ Before handing work to another agent or account:
 
 Never rely on "the next agent will infer it from chat".
 
-## Current handoff - 2026-06-21
+## Current handoff - 2026-06-25
 
 Production:
 
@@ -28,17 +28,24 @@ Implemented recently:
 - Stock/product sync every 6 hours.
 - Mobile responsive CSS for app navigation, dashboard, tables and forms.
 - Vercel deploys to production domain.
+- Canonical fiscal tables: `olist_invoices`, `olist_invoice_items`, `olist_invoice_sync_runs`.
+- Official fiscal reconciliation against the Olist screen.
+- Official fiscal views/RPCs and a separate fiscal section in the dashboard.
+- Fiscal item coverage audit in `scripts/audit-olist-invoice-items-coverage.js`.
 
 Known technical caveats:
 
-- Some historical windows have `olist_orders` but no `olist_order_items`; SKU rankings will be incomplete there.
-- `dataFaturamento` is incomplete in imported Olist payloads; operational KPIs use order date/status until fiscal coverage is proven.
+- Official fiscal headers are validated, but item-level coverage is not.
+- `dataFaturamento` in `olist_orders` is not an official fiscal source.
+- NF-to-order matching reaches `99,77%` through `payload.ecommerce.numeroPedidoEcommerce`.
+- Only `690` valid NFs currently have linked `olist_order_items`, covering `0,87%` of fiscal revenue.
 - UF tax parameters exist but are not yet applied in ROI/margin formulas.
 - Stock sync is not hourly because the current Olist stock flow scans products broadly.
 
 Recommended next work:
 
-1. Build a sync status screen showing latest `olist_sync_runs`, stock runs, cron status and `pg_net` failures.
-2. Backfill historical `olist_order_items` in controlled small windows.
-3. Connect destination UF to margin/ROI calculation.
-4. Add executive alerts for low margin, rupture and no-sale products.
+1. Implement `scripts/backfill-olist-order-items-for-valid-invoices.js`.
+2. Backfill only orders linked to valid NFs, with checkpoint, rate-limit control and bounded runtime.
+3. Re-run `scripts/audit-olist-invoice-items-coverage.js` after every batch.
+4. Create `oraculo_fiscal_sku_sales_by_order_link` only after coverage reaches `98%` of NFs or leaves less than `0,5%` of revenue uncovered.
+5. Keep margin, ROI and ROAS blocked until the candidate SKU view is audited.

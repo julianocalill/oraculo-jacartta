@@ -13,7 +13,7 @@
 
 Build an operational intelligence system where Supabase is the canonical backend, Vercel is the product surface, and documentation preserves continuity across people and AI agents.
 
-## Current status - 2026-06-21
+## Current status - 2026-06-25
 
 - Production: `https://oraculo.oliverhome.com.br`
 - Repository: `https://github.com/julianocalill/oraculo-jacartta`
@@ -31,10 +31,15 @@ Build an operational intelligence system where Supabase is the canonical backend
   - stock/products every 6 hours.
 - Shopee Donacor data is read-only.
 - Mobile responsive layout is live.
+- Official fiscal sale/revenue uses valid outbound NFs, not order creation.
+- Fiscal reconciliation is accepted: `71.198` valid NFs and `R$ 5.243.715,76` for `2026-06-01` to `2026-06-19`.
+- NF-to-order linking reaches `99,77%` through `payload.ecommerce.numeroPedidoEcommerce`.
+- Fiscal SKU/ROI/margin remain blocked because linked order items cover only `0,87%` of fiscal revenue.
 
 ## Immediate next work
 
-- Backfill missing `olist_order_items` for historical periods with orders but no item detail.
-- Apply UF tax parameters to margin/ROI calculations once destination UF is reliable.
-- Build sync status/monitoring UI.
-- Convert margin/ROI from foundation to executive-ready alerts.
+- Implement controlled backfill of `olist_order_items` only for orders linked to valid fiscal NFs.
+- Add checkpoint/resume, rate-limit backoff and batch progress reporting.
+- Re-run the fiscal item coverage audit after each batch.
+- Create `oraculo_fiscal_sku_sales_by_order_link` only after the coverage gate passes.
+- Keep margin, ROI and ROAS disabled until the SKU candidate view is audited.

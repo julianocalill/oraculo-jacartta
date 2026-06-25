@@ -269,7 +269,9 @@ Estado em `2026-06-21`:
 Limites conhecidos:
 
 - períodos históricos podem ter `olist_orders` sem `olist_order_items`; nesses casos, rankings de SKU ficam vazios até backfill de itens;
-- `dataFaturamento` fiscal segue incompleta em parte da base, então KPIs principais continuam operacionais por status/data de criação;
+- `dataFaturamento` em `olist_orders` segue incompleta e não deve ser usada como fonte fiscal;
+- KPIs oficiais de venda e receita usam `oraculo_fiscal_invoices_valid`;
+- SKU fiscal, margem, ROI e ROAS continuam bloqueados até o backfill de itens vinculados passar no gate de cobertura;
 - estoque/produtos ainda dependem de varredura ampla e não devem rodar hora a hora.
 
 ## Auditoria executavel
@@ -296,8 +298,8 @@ node scripts/audit-oraculo-metrics.js --start=2026-06-01 --end=2026-06-30 --json
 
 ## Proxima implementacao
 
-1. Backfill controlado de `olist_order_items` para períodos históricos com pedidos mas sem itens.
-2. Aplicar parâmetros fiscais por UF na fórmula de margem/ROI quando a UF de destino estiver confiável.
-3. Melhorar auditoria de NF fiscal separando claramente KPI operacional e KPI fiscal.
-4. Criar alertas de margem/ROI conforme parâmetros validados.
-5. Criar monitoramento visual dos syncs: última execução, status, registros processados e erro.
+1. Criar `scripts/backfill-olist-order-items-for-valid-invoices.js`.
+2. Backfill controlado apenas dos pedidos vinculados às NFs fiscais válidas e ainda sem itens.
+3. Reexecutar a auditoria após cada lote até atingir `98%` das NFs ou menos de `0,5%` da receita sem cobertura.
+4. Criar e auditar `oraculo_fiscal_sku_sales_by_order_link`.
+5. Só depois aplicar parâmetros fiscais por UF e evoluir margem/ROI/ROAS oficiais.

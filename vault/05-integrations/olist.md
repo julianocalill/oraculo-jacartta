@@ -18,18 +18,21 @@ Older implementation work existed outside this monorepo at:
 
 That folder can still be used as historical reference, but the repository is now the source of truth.
 
-## First-layer scope
+## Canonical scope
 
 The first canonical layer for Oraculo is:
 
 - `olist_stock_items` for product and inventory snapshot
 - `olist_orders` for commercial history and revenue analysis
+- `olist_order_items` for operational order item detail
+- `olist_invoices` for official fiscal invoice headers
+- `olist_invoice_items` for pure fiscal items when available
 - `olist_oauth_tokens` for API renewal
 - sync-run tables for observability
 
-`olist-sync-orders` is the next required feed for dashboards of faturamento, ticket médio, cancelamentos and canal trend.
+Official fiscal revenue is sourced from `olist_invoices`, not from `olist_orders.payload.dataFaturamento`.
 
-## Active sync - 2026-06-21
+## Active sync - 2026-06-25
 
 Scheduling is handled by Supabase `pg_cron`.
 
@@ -65,4 +68,9 @@ Scheduling is handled by Supabase `pg_cron`.
 
 - Some historical periods have `olist_orders` but no corresponding `olist_order_items`.
 - SKU/ranking metrics depend on item detail; those periods need controlled backfill.
-- Strict fiscal `dataFaturamento` coverage is incomplete, so executive KPIs use operational status/date until the fiscal import is proven complete.
+- Fiscal invoice headers are reconciled and official.
+- Valid fiscal rule: status `6,7`, exclude type `E`, exclude return origin, use emission date.
+- NF-to-order link is `payload.ecommerce.numeroPedidoEcommerce` and covers `99,77%` of valid NFs.
+- Linked order items cover only `0,87%` of official fiscal revenue.
+- The next required implementation is `scripts/backfill-olist-order-items-for-valid-invoices.js`.
+- Do not create fiscal SKU, margin, ROI or ROAS metrics before the item coverage gate passes.

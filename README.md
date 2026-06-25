@@ -35,8 +35,9 @@ oraculo/
 2. [docs/engineering-playbook.md](docs/engineering-playbook.md)
 3. [docs/deployment-map.md](docs/deployment-map.md)
 4. [docs/oraculo-master-plan.md](docs/oraculo-master-plan.md)
-5. [docs/runbooks/resume-after-supabase-upgrade.md](docs/runbooks/resume-after-supabase-upgrade.md)
-6. [vault/00-home/index.md](vault/00-home/index.md)
+5. [docs/project-status-2026-06-25.md](docs/project-status-2026-06-25.md)
+6. [docs/runbooks/resume-after-supabase-upgrade.md](docs/runbooks/resume-after-supabase-upgrade.md)
+7. [vault/00-home/index.md](vault/00-home/index.md)
 
 ## Tooling choices
 
@@ -47,6 +48,7 @@ oraculo/
 
 ## Current production state
 
+- State updated: `2026-06-25`
 - Production URL: `https://oraculo.oliverhome.com.br`
 - GitHub repository: `https://github.com/julianocalill/oraculo-jacartta`
 - Web app: `apps/web`
@@ -59,11 +61,50 @@ oraculo/
 Current product areas:
 
 - Analytics dashboard with date filters.
+- Official fiscal dashboard section based on issued/authorized outbound invoices.
 - Orders/channel metrics from cached Supabase views/tables.
 - SKU and margin foundation.
 - Rupture/no-sale product watchlist.
 - Manual parameters by channel, SKU and UF.
 - Read-only Shopee Donacor data.
+
+## Official fiscal contract
+
+Official sales and revenue no longer come from order creation or `dataFaturamento` in `olist_orders`.
+
+Validated rule:
+
+- status in `6,7`;
+- exclude `tipo = E`;
+- exclude `raw_json.origem.tipo = devolucao`;
+- fiscal date = invoice emission date;
+- official revenue = validated invoice amount.
+
+Validation for `2026-06-01` to `2026-06-19`:
+
+- Olist screen: `71.197` invoices / `R$ 5.243.629,96`;
+- Supabase official layer: `71.198` invoices / `R$ 5.243.715,76`.
+
+Official objects:
+
+- `oraculo_fiscal_invoices_valid`
+- `oraculo_fiscal_daily_revenue`
+- `oraculo_fiscal_channel_sales`
+- `oraculo_fiscal_metrics`
+- `oraculo_fiscal_channel_metrics`
+
+## Current blocker
+
+SKU fiscal, margin, ROI and ROAS remain blocked because item coverage is insufficient.
+
+Latest audit:
+
+- NF to Olist order link: `71.032` invoices / `99,77%`;
+- link field: `olist_orders.payload.ecommerce.numeroPedidoEcommerce`;
+- invoices with order items: `690` / `0,97%`;
+- fiscal revenue covered by order items: `0,87%`.
+
+Next implementation: controlled backfill of `olist_order_items` only for orders linked to valid fiscal invoices. The requested script `scripts/backfill-olist-order-items-for-valid-invoices.js` is not implemented yet.
 
 ## Active Supabase jobs
 

@@ -7,6 +7,8 @@ The canonical model should converge around these entities:
 - channel
 - order
 - order_item
+- invoice
+- invoice_item
 - stock_snapshot
 - cost_snapshot
 - margin_channel_param
@@ -23,6 +25,9 @@ Products are treated as durable operational assets, not just catalog rows.
 - Olist:
   - `olist_orders`
   - `olist_order_items`
+  - `olist_invoices`
+  - `olist_invoice_items`
+  - `olist_invoice_sync_runs`
   - `olist_products`
   - `olist_stock_items`
   - `olist_oauth_tokens`
@@ -37,6 +42,9 @@ Products are treated as durable operational assets, not just catalog rows.
   - `oraculo_margin_sku_params`
   - `oraculo_state_tax_params`
 - Derived/cached:
+  - `oraculo_fiscal_invoices_valid`
+  - `oraculo_fiscal_daily_revenue`
+  - `oraculo_fiscal_channel_sales`
   - `oraculo_daily_sales`
   - `oraculo_channel_sales_unified_cache`
   - `oraculo_sku_margin_30d`
@@ -44,6 +52,8 @@ Products are treated as durable operational assets, not just catalog rows.
 
 ## Current data caveats
 
-- `dataFaturamento` is not complete enough to be the main executive revenue KPI.
+- `dataFaturamento` in orders is not a fiscal source. Official revenue comes from valid invoices.
+- Fiscal invoice headers are reconciled; fiscal/order-linked item coverage is still insufficient.
+- NF-to-order matching uses `olist_orders.payload.ecommerce.numeroPedidoEcommerce`.
 - Historical Olist orders may lack item detail; SKU metrics require `olist_order_items`.
 - State tax parameters exist, but are not yet applied to margin/ROI until destination UF rules are connected and validated.
