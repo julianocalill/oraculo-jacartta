@@ -9,20 +9,20 @@ Periodo: `2026-06-01` a `2026-06-19`
 - NFs com itens em `olist_invoice_items`: `25` (0,04%)
 - Receita coberta por `olist_invoice_items`: `R$ 1.578,08` (0,03%)
 - NFs com referencia de pedido: `71.191`
-- NFs com pedido encontrado: `71.032` (99,77%)
-- NFs com pedido encontrado e itens em `olist_order_items`: `690` (0,97%)
-- Receita coberta via pedido+itens: `R$ 45.857,35` (0,87%)
-- Receita sem itens via pedido: `R$ 5.197.858,41` (99,13%)
+- NFs com pedido encontrado: `71.191` (99,99%)
+- NFs com pedido encontrado e itens em `olist_order_items`: `702` (0,99%)
+- Receita coberta via pedido+itens: `R$ 46.988,51` (0,90%)
+- Receita sem itens via pedido: `R$ 5.196.727,25` (99,10%)
 - SKUs distintos em itens fiscais puros: `16`
-- SKUs distintos via pedido vinculado: `122`
+- SKUs distintos via pedido vinculado: `120`
 
 ## Leitura
 
 - `notas/{id}` existe e pode retornar itens, mas a cobertura atual em `olist_invoice_items` ainda e baixa para virar SKU fiscal oficial.
 - O caminho alternativo e usar a NF valida como fonte financeira e o pedido vinculado como ponte para distribuir a receita por SKU via `olist_order_items`.
-- A ponte NF -> pedido e forte: `71.032` NFs, ou `99,77%`, foram vinculadas por `payload.ecommerce.numeroPedidoEcommerce`.
+- A ponte NF -> pedido e forte: `71.191` NFs, ou `99,99%`, foram vinculadas por `payload.ecommerce.numeroPedidoEcommerce`.
 - O bloqueio atual nao e mais o vinculo NF-pedido; o bloqueio e a falta de itens em `olist_order_items` para os pedidos vinculados no periodo.
-- Se essa ponte atingir pelo menos 98% das NFs validas ou deixar menos de 0,5% da receita sem cobertura, a view candidata deve se chamar `fiscal_sku_sales_by_order_link`, para deixar claro que nao e item fiscal puro.
+- Se essa ponte atingir pelo menos 98% das NFs validas ou deixar menos de 0,5% da receita sem cobertura, a view candidata deve se chamar `oraculo_fiscal_sku_sales_by_order_link`, para deixar claro que nao e item fiscal puro.
 - Recomendacao atual: `bloqueado_para_sku_roi_margem_roas`
 
 ## Comparacao das fontes investigadas
@@ -43,15 +43,52 @@ Status: melhor caminho tecnico, mas depende de backfill de itens de pedido.
 
 Evidencia:
 
-- `71.032` NFs validas encontram pedido na Olist pelo numero do marketplace;
+- `71.191` NFs validas encontram pedido na Olist pelo numero do marketplace;
 - o metodo encontrado foi `ecommerce.numeroPedidoEcommerce`;
-- apenas `690` NFs validas tambem tinham itens em `olist_order_items`;
-- isso cobre `0,97%` das NFs e `0,87%` da receita;
+- apos o lote de validacao, `702` NFs validas tinham itens em `olist_order_items`;
+- isso cobre `0,99%` das NFs e `0,90%` da receita;
 - o caminho e promissor porque o vinculo existe, mas a tabela de itens de pedido esta incompleta para o periodo.
+
+## Backfill Controlado
+
+Implementado em `scripts/backfill-olist-order-items-for-valid-invoices.js`.
+
+O fluxo:
+
+- seleciona apenas pedidos ligados a NFs validas e ainda sem itens;
+- usa a ponte materializada `oraculo_fiscal_invoice_order_links`;
+- aceita `--start`, `--end`, `--limit`, `--delay-ms`, `--max-runtime-minutes` e `--resume`;
+- persiste checkpoint em `olist_order_items_backfill_runs`;
+- persiste erros e pedidos sem itens em `olist_order_items_backfill_errors`;
+- reutiliza itens ja presentes no payload do pedido antes de chamar `pedidos/{id}`;
+- aplica retry/backoff para rede, `429` e `5xx`;
+- executa a auditoria de cobertura depois de cada lote.
+
+Lote de validacao em `2026-06-25`:
+
+- pedidos processados: `12`;
+- pedidos com itens: `12`;
+- pedidos sem itens: `0`;
+- pedidos com erro: `0`;
+- itens inseridos: `12`;
+- run: `4b462157-1705-4460-b688-c06cabb783ec`;
+- gate de liberacao: ainda nao atingido.
+
+Comando de continuidade:
+
+```bash
+node scripts/backfill-olist-order-items-for-valid-invoices.js \
+  --start=2026-06-01 \
+  --end=2026-06-19 \
+  --limit=100 \
+  --delay-ms=750 \
+  --max-runtime-minutes=15 \
+  --resume
+```
 
 View candidata futura:
 
-- nome: `fiscal_sku_sales_by_order_link`;
+- nome: `oraculo_fiscal_sku_sales_by_order_link`;
 - fonte financeira: `oraculo_fiscal_invoices_valid`;
 - ponte: `oraculo_fiscal_invoices_valid.order_number = olist_orders.payload.ecommerce.numeroPedidoEcommerce`;
 - itens: `olist_order_items`;
@@ -108,8 +145,8 @@ O endpoint fiscal confirmado continua sendo `notas`. `notas-fiscais` retornou `4
 
 Nao liberar margem, ROI, ROAS, lucro ou SKU fiscal oficial ate a cobertura passar no criterio de aceite.
 
-Proxima acao recomendada: executar backfill controlado de itens dos pedidos vinculados, priorizando as NFs validas de `2026-06-01` a `2026-06-19`, e repetir esta auditoria ate a cobertura passar no criterio.
+Proxima acao recomendada: continuar o run de backfill em lotes controlados e repetir a auditoria ate a cobertura passar no criterio.
 
 ## Métodos de vínculo encontrados
 
-- ecommerce.numeroPedidoEcommerce: 71.032 NFs
+- ecommerce.numeroPedidoEcommerce: 71.191 NFs

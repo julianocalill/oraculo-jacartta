@@ -99,12 +99,24 @@ SKU fiscal, margin, ROI and ROAS remain blocked because item coverage is insuffi
 
 Latest audit:
 
-- NF to Olist order link: `71.032` invoices / `99,77%`;
+- NF to Olist order link: `71.191` invoices / `99,99%`;
 - link field: `olist_orders.payload.ecommerce.numeroPedidoEcommerce`;
-- invoices with order items: `690` / `0,97%`;
-- fiscal revenue covered by order items: `0,87%`.
+- invoices with order items: `702` / `0,99%`;
+- fiscal revenue covered by order items: `0,90%`.
 
-Next implementation: controlled backfill of `olist_order_items` only for orders linked to valid fiscal invoices. The requested script `scripts/backfill-olist-order-items-for-valid-invoices.js` is not implemented yet.
+The controlled backfill is implemented in `scripts/backfill-olist-order-items-for-valid-invoices.js`, with persistent checkpoint, per-order errors, retry/backoff and automatic coverage audit.
+
+Continue the validated run with:
+
+```bash
+node scripts/backfill-olist-order-items-for-valid-invoices.js \
+  --start=2026-06-01 \
+  --end=2026-06-19 \
+  --limit=100 \
+  --delay-ms=750 \
+  --max-runtime-minutes=15 \
+  --resume
+```
 
 ## Active Supabase jobs
 

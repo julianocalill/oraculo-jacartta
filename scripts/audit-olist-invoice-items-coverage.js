@@ -113,6 +113,14 @@ async function buildCoverageReport(env, start, end, sampleLimit) {
   const endExclusive = addDays(end, 1);
   const encodedStart = encodeURIComponent(`${start}T00:00:00.000Z`);
   const encodedEnd = encodeURIComponent(`${endExclusive}T00:00:00.000Z`);
+  const fiscalOrderProgress = await supabaseFetch(
+    env,
+    "/rest/v1/rpc/oraculo_fiscal_order_item_backfill_progress",
+    {
+      method: "POST",
+      body: JSON.stringify({ p_start_date: start, p_end_date: end })
+    }
+  );
 
   const [invoices, invoiceItems, orders, orderItems] = await Promise.all([
     fetchAll(
@@ -129,7 +137,6 @@ async function buildCoverageReport(env, start, end, sampleLimit) {
       `/rest/v1/olist_order_items?select=order_id,sku,quantidade,valor_total&order_data_criacao=gte.${encodedStart}&order_data_criacao=lt.${encodedEnd}&order=order_data_criacao.asc`
     )
   ]);
-
   const invoiceItemsByInvoice = new Map();
   const invoiceSkuSet = new Set();
   for (const item of invoiceItems) {
@@ -246,6 +253,17 @@ async function buildCoverageReport(env, start, end, sampleLimit) {
     }
   }
 
+  const officialOrderMetrics = fiscalOrderProgress?.metrics ?? null;
+  const officialOrderCoverage = fiscalOrderProgress?.coverage ?? null;
+  if (officialOrderMetrics && officialOrderCoverage) {
+    metrics.invoices_with_matched_order = parseNumber(officialOrderMetrics.invoices_with_matched_order);
+    metrics.invoices_with_order_items = parseNumber(officialOrderMetrics.invoices_with_order_items);
+    metrics.revenue_with_order_items = parseNumber(officialOrderMetrics.revenue_with_order_items);
+    metrics.invoices_without_order_items = parseNumber(officialOrderMetrics.invoices_without_order_items);
+    metrics.revenue_without_order_items = parseNumber(officialOrderMetrics.revenue_without_order_items);
+    orderSkuSet.clear();
+  }
+
   return {
     period: { start, end },
     metrics,
@@ -254,15 +272,25 @@ async function buildCoverageReport(env, start, end, sampleLimit) {
       .sort((left, right) => right.invoices - left.invoices),
     sku_counts: {
       distinct_invoice_item_skus: invoiceSkuSet.size,
-      distinct_order_item_skus: orderSkuSet.size
+      distinct_order_item_skus: fiscalOrderProgress
+        ? parseNumber(fiscalOrderProgress.distinct_order_item_skus)
+        : orderSkuSet.size
     },
     coverage: {
       invoice_item_invoice_pct: metrics.total_valid_invoices ? metrics.invoices_with_invoice_items / metrics.total_valid_invoices * 100 : 0,
       invoice_item_revenue_pct: metrics.total_valid_revenue ? metrics.revenue_with_invoice_items / metrics.total_valid_revenue * 100 : 0,
-      order_link_invoice_pct: metrics.total_valid_invoices ? metrics.invoices_with_matched_order / metrics.total_valid_invoices * 100 : 0,
-      order_items_invoice_pct: metrics.total_valid_invoices ? metrics.invoices_with_order_items / metrics.total_valid_invoices * 100 : 0,
-      order_items_revenue_pct: metrics.total_valid_revenue ? metrics.revenue_with_order_items / metrics.total_valid_revenue * 100 : 0,
-      missing_order_items_revenue_pct: metrics.total_valid_revenue ? metrics.revenue_without_order_items / metrics.total_valid_revenue * 100 : 0
+      order_link_invoice_pct: officialOrderCoverage
+        ? parseNumber(officialOrderCoverage.order_link_invoice_pct)
+        : metrics.total_valid_invoices ? metrics.invoices_with_matched_order / metrics.total_valid_invoices * 100 : 0,
+      order_items_invoice_pct: officialOrderCoverage
+        ? parseNumber(officialOrderCoverage.order_items_invoice_pct)
+        : metrics.total_valid_invoices ? metrics.invoices_with_order_items / metrics.total_valid_invoices * 100 : 0,
+      order_items_revenue_pct: officialOrderCoverage
+        ? parseNumber(officialOrderCoverage.order_items_revenue_pct)
+        : metrics.total_valid_revenue ? metrics.revenue_with_order_items / metrics.total_valid_revenue * 100 : 0,
+      missing_order_items_revenue_pct: officialOrderCoverage
+        ? parseNumber(officialOrderCoverage.missing_order_items_revenue_pct)
+        : metrics.total_valid_revenue ? metrics.revenue_without_order_items / metrics.total_valid_revenue * 100 : 0
     },
     examples: {
       valid_invoices_without_invoice_items: examplesWithoutInvoiceItems,
@@ -282,7 +310,7 @@ function recommendation(report) {
   }
 
   if (orderInvoicePct >= 98 || missingRevenuePct <= 0.5) {
-    return "propor_fiscal_sku_sales_by_order_link_como_ponte";
+    return "propor_oraculo_fiscal_sku_sales_by_order_link_como_ponte";
   }
 
   return "bloqueado_para_sku_roi_margem_roas";
@@ -318,7 +346,7 @@ function toMarkdown(report) {
     "",
     "- `notas/{id}` existe e pode retornar itens, mas a cobertura atual em `olist_invoice_items` ainda e baixa para virar SKU fiscal oficial.",
     "- O caminho alternativo e usar a NF valida como fonte financeira e o pedido vinculado como ponte para distribuir a receita por SKU via `olist_order_items`.",
-    "- Se essa ponte atingir pelo menos 98% das NFs validas ou deixar menos de 0,5% da receita sem cobertura, a view candidata deve se chamar `fiscal_sku_sales_by_order_link`, para deixar claro que nao e item fiscal puro.",
+    "- Se essa ponte atingir pelo menos 98% das NFs validas ou deixar menos de 0,5% da receita sem cobertura, a view candidata deve se chamar `oraculo_fiscal_sku_sales_by_order_link`, para deixar claro que nao e item fiscal puro.",
     `- Recomendacao atual: \`${rec}\``,
     "",
     "## Exemplos de NFs validas sem item fiscal puro",

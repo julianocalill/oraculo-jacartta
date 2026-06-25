@@ -1,0 +1,30 @@
+{
+  "ok": true,
+  "run_id": "4b462157-1705-4460-b688-c06cabb783ec",
+  "status": "partial",
+  "period": {
+    "start": "2026-06-01",
+    "end": "2026-06-19"
+  },
+  "candidates_total_at_start": 70464,
+  "processed_this_invocation": 2,
+  "totals": {
+    "orders_processed": 12,
+    "orders_with_items": 12,
+    "orders_without_items": 0,
+    "orders_with_error": 0,
+    "items_upserted": 12
+  },
+  "stopped_by_runtime": false,
+  "checkpoint_order_id": "360004336",
+  "coverage": {
+    "invoice_item_invoice_pct": 0.03511334588050226,
+    "invoice_item_revenue_pct": 0.030094689953216677,
+    "order_link_invoice_pct": 99.9902,
+    "order_items_invoice_pct": 0.986,
+    "order_items_revenue_pct": 0.8961,
+    "missing_order_items_revenue_pct": 99.1039
+  },
+  "release_gate_passed": false,
+  "next_action": "continuar_backfill_com_resume"
+}

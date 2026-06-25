@@ -53,21 +53,20 @@ The current product direction is practical executive intelligence for the operat
 - `scripts/sync-olist-invoice-items.js` hydrates invoice details through `notas/{id}` and populates `olist_invoice_items`; initial test saved `6` invoice item rows.
 - Official fiscal views/RPCs now exist: `oraculo_fiscal_invoices_valid`, `oraculo_fiscal_daily_revenue`, `oraculo_fiscal_channel_sales`, `oraculo_fiscal_metrics` and `oraculo_fiscal_channel_metrics`.
 - The dashboard now has a separate official fiscal section with NFs emitted, billed revenue, billed average ticket, canceled NFs and excluded returns. Operational order/SKU sections remain auxiliary.
-- Do not migrate SKUs, ROI, margin or ROAS until fiscal item coverage passes. `docs/fiscal-sku-items-coverage.md` shows that pure invoice items cover only `25` valid NFs (`0,04%`) and order-linked items cover `690` valid NFs (`0,97%`). The NF-to-order link is strong (`71.032` NFs / `99,77%`) via `payload.ecommerce.numeroPedidoEcommerce`, so the next technical step is backfilling `olist_order_items` for linked orders.
+- Do not migrate SKUs, ROI, margin or ROAS until fiscal item coverage passes. `docs/fiscal-sku-items-coverage.md` shows that pure invoice items cover only `25` valid NFs (`0,04%`) and order-linked items currently cover `702` valid NFs (`0,99%`). The materialized NF-to-order bridge covers `71.191` NFs (`99,99%`) via `payload.ecommerce.numeroPedidoEcommerce`.
+- `scripts/backfill-olist-order-items-for-valid-invoices.js` is implemented with bounded batches, checkpoint/resume, Olist retry/backoff, raw item payload preservation, per-order issue tracking and automatic audit.
+- `oraculo_fiscal_invoice_order_links` materializes all valid fiscal invoices and their selected Olist order, including the seven unmatched invoices with `order_id = null`.
 - Another known limitation: some historical periods have Olist orders but not detailed `olist_order_items`; SKU/ranking metrics will be empty for those periods until item details are backfilled.
 
 ## Immediate priority
 
-Implement `scripts/backfill-olist-order-items-for-valid-invoices.js`.
+Continue the existing controlled backfill run.
 
 Required behavior:
 
-- select only Olist orders linked to `oraculo_fiscal_invoices_valid`;
-- use `payload.ecommerce.numeroPedidoEcommerce` as the validated bridge;
-- prioritize linked orders without rows in `olist_order_items`;
-- support bounded batches, delay, runtime limit and resume/checkpoint;
-- retry network failures, `429` and `5xx`;
-- persist raw item payloads and per-order errors;
+- run with `--resume` for `2026-06-01` to `2026-06-19`;
+- keep batches bounded and preserve the configured delay;
+- monitor `olist_order_items_backfill_runs` and `olist_order_items_backfill_errors`;
 - run `scripts/audit-olist-invoice-items-coverage.js` after each batch.
 
 Release gate:

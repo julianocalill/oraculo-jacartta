@@ -116,8 +116,8 @@ Entregas mais recentes:
 - Secao fiscal oficial adicionada ao dashboard com NFs emitidas, receita faturada, ticket medio faturado, canceladas e devolucoes excluidas.
 - `oraculo_fiscal_sku_sales` ainda nao foi criada porque apenas `25` NFs validas tinham itens hidratados contra `71.198` NFs fiscais validas no periodo auditado.
 - Auditoria de cobertura de itens fiscais criada em `scripts/audit-olist-invoice-items-coverage.js` e documentada em `docs/fiscal-sku-items-coverage.md`.
-- Resultado da cobertura de itens para `2026-06-01` a `2026-06-19`: item fiscal puro cobre `0,04%` das NFs; NF vinculada a pedido cobre `99,77%`; NF vinculada a pedido com itens em `olist_order_items` cobre apenas `0,97%` das NFs e `0,87%` da receita.
-- Proxima etapa tecnica: backfill controlado de `olist_order_items` para os pedidos vinculados por `payload.ecommerce.numeroPedidoEcommerce`. So depois disso criar a view candidata `fiscal_sku_sales_by_order_link`.
+- Resultado atualizado da cobertura de itens para `2026-06-01` a `2026-06-19`: item fiscal puro cobre `0,04%` das NFs; a ponte materializada NF-pedido cobre `99,99%`; pedidos com itens cobrem `0,99%` das NFs e `0,90%` da receita.
+- O backfill controlado de `olist_order_items` foi implementado e validado. A proxima etapa tecnica e continuar o run em lotes ate o gate; so depois criar a view candidata `oraculo_fiscal_sku_sales_by_order_link`.
 
 ### Checkpoint atual
 
@@ -135,19 +135,27 @@ Numeros de referencia para `2026-06-01` a `2026-06-19`:
 
 - NFs fiscais validas: `71.198`;
 - receita fiscal: `R$ 5.243.715,76`;
-- NFs vinculadas a pedido: `71.032` (`99,77%`);
+- NFs vinculadas a pedido: `71.191` (`99,99%`);
 - NFs com itens fiscais puros: `25` (`0,04%`);
-- NFs com itens via pedido: `690` (`0,97%`);
-- receita fiscal coberta por itens via pedido: `0,87%`.
+- NFs com itens via pedido: `702` (`0,99%`);
+- receita fiscal coberta por itens via pedido: `0,90%`.
 
-Proxima implementacao:
+Implementacao concluida:
 
-- criar `scripts/backfill-olist-order-items-for-valid-invoices.js`;
+- `scripts/backfill-olist-order-items-for-valid-invoices.js` criado;
 - selecionar somente pedidos vinculados a NFs validas e sem itens;
 - processar em lotes limitados com delay, runtime maximo, checkpoint e resume;
 - aplicar retry/backoff para rede, `429` e `5xx`;
 - registrar processados, sem itens e erros;
 - executar a auditoria de cobertura depois de cada lote.
+
+Validacao inicial:
+
+- `12` pedidos processados;
+- `12` pedidos com itens;
+- `0` sem itens;
+- `0` erros;
+- gate ainda nao atingido.
 
 Gate para a view candidata:
 
