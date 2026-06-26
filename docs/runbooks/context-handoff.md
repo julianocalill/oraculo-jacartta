@@ -39,15 +39,16 @@ Known technical caveats:
 - Official fiscal headers are validated, but item-level coverage is not.
 - `dataFaturamento` in `olist_orders` is not an official fiscal source.
 - NF-to-order matching reaches `99,99%` through the materialized `oraculo_fiscal_invoice_order_links` bridge.
-- `702` valid NFs currently have linked `olist_order_items`, covering `0,90%` of fiscal revenue.
-- Latest backfill implementation commit: `c487925`.
+- `6.512` valid NFs currently have linked `olist_order_items`, covering `9,23%` of fiscal revenue.
+- Backfill candidates are now materialized in `olist_order_item_backfill_queue`; do not use the old recalculating candidate RPC for long batches.
+- Latest backfill implementation includes the queue migrations from `20260625203050`, `20260625203602` and `20260626095120`.
 - UF tax parameters exist but are not yet applied in ROI/margin formulas.
 - Stock sync is not hourly because the current Olist stock flow scans products broadly.
 
 Recommended next work:
 
 1. Continue `scripts/backfill-olist-order-items-for-valid-invoices.js` with `--resume`.
-2. Keep batches bounded, with rate-limit delay and runtime cap.
-3. Monitor the run/error tables and the automatic audit after every batch.
+2. Use batches around `--limit=2000 --delay-ms=750 --max-runtime-minutes=60 --skip-audit`; the script applies an effective `1000ms` delay for long batches to avoid `429`.
+3. Run `scripts/audit-olist-invoice-items-coverage.js` separately after batches.
 4. Create `oraculo_fiscal_sku_sales_by_order_link` only after coverage reaches `98%` of NFs or leaves less than `0,5%` of revenue uncovered.
 5. Keep margin, ROI and ROAS blocked until the candidate SKU view is audited.

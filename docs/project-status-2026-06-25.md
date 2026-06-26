@@ -64,6 +64,8 @@ Conclusao:
 
 Entregue:
 
+- fila materializada `olist_order_item_backfill_queue`;
+- preparacao paginada da fila por `scripts/prepare-olist-order-item-backfill-queue.js`;
 - selecao somente de pedidos vinculados a NFs validas e sem itens;
 - ponte materializada `oraculo_fiscal_invoice_order_links`;
 - parametros de inicio, fim, limite, delay, runtime e resume;
@@ -71,15 +73,21 @@ Entregue:
 - retry/backoff para rede, `429` e `5xx`;
 - upsert com payload bruto;
 - registro de erros por pedido;
-- relatorio JSON e auditoria automatica.
+- relatorio JSON;
+- auditoria de cobertura separada.
 
-Lote validado:
+Lotes validados:
 
-- `12` pedidos processados;
-- `12` pedidos com itens;
+- fila preparada: `68.462` candidatos;
+- lote `500`: concluido limpo;
+- lote `2.000`: concluido limpo;
+- `5.821` pedidos processados no run acumulado;
+- `5.821` pedidos com itens;
 - `0` sem itens;
 - `0` erros;
-- cobertura atual: `702` NFs / `0,99%`;
+- `0` ocorrencias de `429` no lote otimizado de `2.000`;
+- cobertura atual: `6.512` NFs / `9,15%`;
+- receita coberta: `R$ 484.122,02` / `9,23%`;
 - gate ainda nao atingido.
 
 Gate:

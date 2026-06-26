@@ -159,7 +159,7 @@ function olistHeaders(env, accessToken) {
   };
 }
 
-async function fetchOrderDetail(env, accessToken, orderId) {
+async function fetchOrderDetail(env, accessToken, orderId, stats = null) {
   const baseUrl = requireEnv(env, ["OLIST_API_BASE_URL"]).replace(/\/?$/, "/");
   const url = new URL(`pedidos/${encodeURIComponent(orderId)}`, baseUrl);
 
@@ -171,6 +171,7 @@ async function fetchOrderDetail(env, accessToken, orderId) {
       text = await response.text();
     } catch (error) {
       if (attempt === 7) throw error;
+      if (stats) stats.network_retries += 1;
       const waitMs = Math.min(30000, 1500 * 2 ** (attempt - 1));
       console.warn(`[backfill-order-items] pedido=${orderId} falha de rede; retry em ${waitMs}ms`);
       await sleep(waitMs);
@@ -179,6 +180,7 @@ async function fetchOrderDetail(env, accessToken, orderId) {
 
     if (response.ok) return parseJson(text, `Olist pedidos/${orderId}`) || {};
     if (response.status === 429 || response.status >= 500) {
+      if (response.status === 429 && stats) stats.rate_limit_events += 1;
       if (attempt === 7) {
         const error = new Error(`Olist pedidos/${orderId} falhou apos retries (${response.status}): ${text.slice(0, 300)}`);
         error.status = response.status;
@@ -278,24 +280,28 @@ async function candidateCount(env, start, end) {
   }) || 0);
 }
 
-async function refreshInvoiceOrderLinks(env, start, end) {
-  return Number(await supabaseFetch(env, "/rest/v1/rpc/refresh_oraculo_fiscal_invoice_order_links", {
-    method: "POST",
-    body: JSON.stringify({ p_start_date: start, p_end_date: end })
-  }) || 0);
-}
-
-async function listCandidates(env, start, end, afterOrderId, limit) {
-  const rows = await supabaseFetch(env, "/rest/v1/rpc/oraculo_fiscal_order_item_backfill_candidates", {
+async function listCandidates(env, start, end, limit) {
+  const rows = await supabaseFetch(env, "/rest/v1/rpc/oraculo_fiscal_order_item_backfill_queue_candidates", {
     method: "POST",
     body: JSON.stringify({
       p_start_date: start,
       p_end_date: end,
-      p_after_order_id: afterOrderId || null,
       p_limit: limit
     })
   });
   return Array.isArray(rows) ? rows : [];
+}
+
+async function markQueueItem(env, candidate, status, error = null) {
+  if (!candidate.queue_id) return;
+  await supabaseFetch(env, "/rest/v1/rpc/mark_olist_order_item_backfill_queue", {
+    method: "POST",
+    body: JSON.stringify({
+      p_queue_id: candidate.queue_id,
+      p_status: status,
+      p_last_error: error?.message || null
+    })
+  });
 }
 
 async function findResumeRun(env, start, end) {
@@ -418,16 +424,21 @@ async function main() {
   const skipAudit = hasFlag("skip-audit");
   const startedAt = Date.now();
   const deadline = startedAt + maxRuntimeMinutes * 60 * 1000;
-  const refreshedLinks = await refreshInvoiceOrderLinks(env, start, end);
+  const effectiveDelayMs = limit > 500 ? Math.max(delayMs, 1000) : delayMs;
   const candidatesTotal = await candidateCount(env, start, end);
+  const runtimeStats = {
+    rate_limit_events: 0,
+    network_retries: 0
+  };
   const options = {
     start,
     end,
     limit,
-    delay_ms: delayMs,
+    delay_ms_requested: delayMs,
+    delay_ms_effective: effectiveDelayMs,
     max_runtime_minutes: maxRuntimeMinutes,
     resume,
-    refreshed_links: refreshedLinks
+    candidate_source: "olist_order_item_backfill_queue"
   };
 
   let run = resume ? await findResumeRun(env, start, end) : null;
@@ -483,18 +494,18 @@ async function main() {
 
     try {
       if (!rawOrder) {
-        await sleep(delayMs);
-        rawOrder = await fetchOrderDetail(env, accessToken, candidate.order_id);
+        await sleep(effectiveDelayMs);
+        rawOrder = await fetchOrderDetail(env, accessToken, candidate.order_id, runtimeStats);
       }
 
       const normalizedOrder = normalizeOrder(candidate, rawOrder);
       const items = orderItems(normalizedOrder.payload)
         .map((item, index) => normalizeItemRow(normalizedOrder, item, index));
 
-      await upsertRows(env, "olist_orders", [normalizedOrder]);
       if (items.length === 0) {
         ordersWithoutItems += 1;
         await recordOrderIssue(env, run.id, candidate, "no_items");
+        await markQueueItem(env, candidate, "no_items");
       } else {
         await upsertRows(env, "olist_order_items", items);
         ordersWithItems += 1;
@@ -504,13 +515,16 @@ async function main() {
     } catch (error) {
       ordersWithError += 1;
       await recordOrderIssue(env, run.id, candidate, "pending", error);
+      await markQueueItem(env, candidate, "error", error).catch(() => null);
       console.error(`[backfill-order-items] pedido=${candidate.order_id} erro=${error.message}`);
     }
 
     ordersProcessed += 1;
     processedThisInvocation += 1;
     if (!isRetry) checkpoint = String(candidate.order_id);
-    await persistProgress({ last_order_id: candidate.order_id });
+    if (processedThisInvocation % 25 === 0) {
+      await persistProgress({ last_order_id: candidate.order_id, ...runtimeStats });
+    }
   }
 
   try {
@@ -532,7 +546,7 @@ async function main() {
       }
 
       const pageLimit = Math.min(100, limit - processedThisInvocation);
-      const candidates = await listCandidates(env, start, end, checkpoint, pageLimit);
+      const candidates = await listCandidates(env, start, end, pageLimit);
       if (candidates.length === 0) {
         exhausted = true;
         break;
@@ -580,6 +594,7 @@ async function main() {
         orders_with_error: ordersWithError,
         items_upserted: itemsUpserted
       },
+      runtime: runtimeStats,
       stopped_by_runtime: stoppedByRuntime,
       checkpoint_order_id: checkpoint,
       coverage: coverage?.coverage || null,
@@ -613,6 +628,7 @@ async function main() {
         coverage: coverage?.coverage || null,
         release_gate_passed: releaseGatePassed,
         stopped_by_runtime: stoppedByRuntime,
+        runtime: runtimeStats,
         updated_at: finishedAt
       }
     });

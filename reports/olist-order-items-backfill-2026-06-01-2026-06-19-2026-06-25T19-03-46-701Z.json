@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "run_id": "4b462157-1705-4460-b688-c06cabb783ec",
+  "status": "partial",
+  "period": {
+    "start": "2026-06-01",
+    "end": "2026-06-19"
+  },
+  "candidates_total_at_start": 70362,
+  "processed_this_invocation": 500,
+  "totals": {
+    "orders_processed": 612,
+    "orders_with_items": 612,
+    "orders_without_items": 0,
+    "orders_with_error": 0,
+    "items_upserted": 635
+  },
+  "stopped_by_runtime": false,
+  "checkpoint_order_id": "360771094",
+  "coverage": null,
+  "release_gate_passed": false,
+  "next_action": "continuar_backfill_com_resume"
+}

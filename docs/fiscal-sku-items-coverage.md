@@ -55,24 +55,45 @@ Implementado em `scripts/backfill-olist-order-items-for-valid-invoices.js`.
 
 O fluxo:
 
+- prepara uma fila materializada em `olist_order_item_backfill_queue`;
 - seleciona apenas pedidos ligados a NFs validas e ainda sem itens;
-- usa a ponte materializada `oraculo_fiscal_invoice_order_links`;
+- usa a ponte materializada `oraculo_fiscal_invoice_order_links` apenas para preparar a fila;
 - aceita `--start`, `--end`, `--limit`, `--delay-ms`, `--max-runtime-minutes` e `--resume`;
 - persiste checkpoint em `olist_order_items_backfill_runs`;
 - persiste erros e pedidos sem itens em `olist_order_items_backfill_errors`;
 - reutiliza itens ja presentes no payload do pedido antes de chamar `pedidos/{id}`;
 - aplica retry/backoff para rede, `429` e `5xx`;
-- executa a auditoria de cobertura depois de cada lote.
+- permite pular auditoria com `--skip-audit`, mantendo a auditoria como etapa separada;
+- marca a fila como concluida automaticamente quando `olist_order_items` recebe itens para o pedido.
 
-Lote de validacao em `2026-06-25`:
+O gargalo anterior era o RPC `oraculo_fiscal_order_item_backfill_candidates`, que recalculava candidatos a cada pagina. Ele foi substituido por leitura indexada da fila:
 
-- pedidos processados: `12`;
-- pedidos com itens: `12`;
+- fila preparada para 01/06/2026 a 19/06/2026: `68.462` candidatos;
+- selecao da fila: `processed_at is null`, `status = pending`, ordenada por `id`;
+- lote de `500`: concluido limpo;
+- lote de `2.000`: concluido limpo, sem `429`, sem erro persistido e sem pedido sem item.
+
+Estado apos o lote de `2.000` em `2026-06-26`:
+
+- pedidos processados no run acumulado: `5.821`;
+- pedidos com itens: `5.821`;
 - pedidos sem itens: `0`;
 - pedidos com erro: `0`;
-- itens inseridos: `12`;
+- itens inseridos: `5.969`;
 - run: `4b462157-1705-4460-b688-c06cabb783ec`;
+- fila: `68.462` total, `3.809` concluidos, `64.653` pendentes, `0` erros;
+- cobertura via pedido + itens: `6.512` NFs (`9,15%`);
+- receita coberta via pedido + itens: `R$ 484.122,02` (`9,23%`);
 - gate de liberacao: ainda nao atingido.
+
+Preparar fila:
+
+```bash
+node scripts/prepare-olist-order-item-backfill-queue.js \
+  --start=2026-06-01 \
+  --end=2026-06-19 \
+  --page-size=2000
+```
 
 Comando de continuidade:
 
@@ -80,10 +101,11 @@ Comando de continuidade:
 node scripts/backfill-olist-order-items-for-valid-invoices.js \
   --start=2026-06-01 \
   --end=2026-06-19 \
-  --limit=100 \
+  --limit=2000 \
   --delay-ms=750 \
-  --max-runtime-minutes=15 \
-  --resume
+  --max-runtime-minutes=60 \
+  --resume \
+  --skip-audit
 ```
 
 View candidata futura:
