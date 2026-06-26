@@ -71,6 +71,9 @@ Entregue:
 - parametros de inicio, fim, limite, delay, runtime e resume;
 - checkpoint persistente;
 - retry/backoff para rede, `429` e `5xx`;
+- concorrencia controlada por `--concurrency`;
+- upsert em lote de itens por pagina de candidatos;
+- metricas de performance no relatorio JSON;
 - upsert com payload bruto;
 - registro de erros por pedido;
 - relatorio JSON;
@@ -89,6 +92,17 @@ Lotes validados:
 - cobertura atual: `6.512` NFs / `9,15%`;
 - receita coberta: `R$ 484.122,02` / `9,23%`;
 - gate ainda nao atingido.
+
+Otimizacao de performance em `2026-06-26`:
+
+- `delay-ms=250` com `concurrency=2` ficou rapido, mas gerou `429` recorrente em lote longo;
+- `delay-ms=500` com `concurrency=2` processou `1.000` pedidos sem erro, mas ainda gerou `16` eventos de `429`;
+- `delay-ms=750` com `concurrency=2` processou `1.000` pedidos com `0` erros, `0` `429` e `0` retries;
+- throughput seguro observado: `79,55` pedidos/minuto;
+- melhoria sobre o lote antigo de cerca de `4h30` para `2.000` pedidos: mais de `10x`;
+- cobertura apos auditoria separada: `8.980` NFs / `12,61%`;
+- receita coberta apos auditoria separada: `R$ 667.711,82` / `12,73%`;
+- gate continua nao atingido.
 
 Gate:
 

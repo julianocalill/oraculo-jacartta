@@ -54,6 +54,18 @@ function sleep(ms) {
   return ms > 0 ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve();
 }
 
+function nowMs() {
+  return Number(process.hrtime.bigint() / 1000000n);
+}
+
+function addTiming(stats, key, elapsedMs) {
+  stats[`${key}_ms`] = Number(stats[`${key}_ms`] || 0) + elapsedMs;
+}
+
+function averageMs(totalMs, count) {
+  return count > 0 ? Math.round((totalMs / count) * 100) / 100 : 0;
+}
+
 function parseJson(text, context) {
   if (!text) return null;
   try {
@@ -188,6 +200,12 @@ async function fetchOrderDetail(env, accessToken, orderId, stats = null) {
       }
       const retryAfter = Number(response.headers.get("retry-after") || "0");
       const waitMs = retryAfter > 0 ? retryAfter * 1000 : Math.min(30000, 1500 * 2 ** (attempt - 1));
+      if (response.status === 429 && stats) {
+        stats.rate_limit_cooldown_until = Math.max(
+          Number(stats.rate_limit_cooldown_until || 0),
+          Date.now() + waitMs
+        );
+      }
       console.warn(`[backfill-order-items] pedido=${orderId} recebeu ${response.status}; retry em ${waitMs}ms`);
       await sleep(waitMs);
       continue;
@@ -419,16 +437,25 @@ async function main() {
 
   const limit = positiveInt("limit", 100, 10000);
   const delayMs = positiveInt("delay-ms", 750, 60000);
+  const concurrency = positiveInt("concurrency", 1, 10);
   const maxRuntimeMinutes = positiveInt("max-runtime-minutes", 15, 1440);
   const resume = hasFlag("resume");
   const skipAudit = hasFlag("skip-audit");
   const startedAt = Date.now();
   const deadline = startedAt + maxRuntimeMinutes * 60 * 1000;
-  const effectiveDelayMs = limit > 500 ? Math.max(delayMs, 1000) : delayMs;
+  const effectiveDelayMs = delayMs;
   const candidatesTotal = await candidateCount(env, start, end);
   const runtimeStats = {
     rate_limit_events: 0,
-    network_retries: 0
+    network_retries: 0,
+    rate_limit_cooldown_until: 0,
+    api_ms: 0,
+    parse_ms: 0,
+    supabase_ms: 0,
+    queue_ms: 0,
+    delay_ms: 0,
+    total_candidate_ms: 0,
+    candidates_timed: 0
   };
   const options = {
     start,
@@ -436,6 +463,7 @@ async function main() {
     limit,
     delay_ms_requested: delayMs,
     delay_ms_effective: effectiveDelayMs,
+    concurrency,
     max_runtime_minutes: maxRuntimeMinutes,
     resume,
     candidate_source: "olist_order_item_backfill_queue"
@@ -467,6 +495,37 @@ async function main() {
   let processedThisInvocation = 0;
   let stoppedByRuntime = false;
   let exhausted = false;
+  let nextOlistSlotAt = Date.now();
+  let olistSlotQueue = Promise.resolve();
+
+  async function waitForOlistSlot() {
+    if (effectiveDelayMs <= 0) return;
+
+    let release;
+    const previous = olistSlotQueue;
+    olistSlotQueue = new Promise((resolve) => {
+      release = resolve;
+    });
+
+    await previous;
+    const now = Date.now();
+    const waitMs = Math.max(0, nextOlistSlotAt - now);
+    nextOlistSlotAt = Math.max(now, nextOlistSlotAt) + effectiveDelayMs;
+    release();
+
+    if (waitMs > 0) {
+      const startDelay = nowMs();
+      await sleep(waitMs);
+      addTiming(runtimeStats, "delay", nowMs() - startDelay);
+    }
+
+    const cooldownMs = Math.max(0, Number(runtimeStats.rate_limit_cooldown_until || 0) - Date.now());
+    if (cooldownMs > 0) {
+      const startDelay = nowMs();
+      await sleep(cooldownMs);
+      addTiming(runtimeStats, "delay", nowMs() - startDelay);
+    }
+  }
 
   async function persistProgress(extraMetadata = {}) {
     await patchRun(env, run.id, {
@@ -487,56 +546,158 @@ async function main() {
     });
   }
 
-  async function processCandidate(candidate, isRetry = false) {
+  async function timedSupabase(operation, key = "supabase") {
+    const started = nowMs();
+    try {
+      return await operation();
+    } finally {
+      addTiming(runtimeStats, key, nowMs() - started);
+    }
+  }
+
+  async function fetchCandidateItems(candidate) {
+    const candidateStarted = nowMs();
     let rawOrder = candidate.order_payload && orderItems(candidate.order_payload).length > 0
       ? candidate.order_payload
       : null;
 
     try {
       if (!rawOrder) {
-        await sleep(effectiveDelayMs);
+        await waitForOlistSlot();
+        const apiStarted = nowMs();
         rawOrder = await fetchOrderDetail(env, accessToken, candidate.order_id, runtimeStats);
+        addTiming(runtimeStats, "api", nowMs() - apiStarted);
       }
 
+      const parseStarted = nowMs();
       const normalizedOrder = normalizeOrder(candidate, rawOrder);
       const items = orderItems(normalizedOrder.payload)
         .map((item, index) => normalizeItemRow(normalizedOrder, item, index));
+      addTiming(runtimeStats, "parse", nowMs() - parseStarted);
+      return { candidate, items };
+    } catch (error) {
+      return { candidate, items: [], error };
+    } finally {
+      addTiming(runtimeStats, "total_candidate", nowMs() - candidateStarted);
+      runtimeStats.candidates_timed += 1;
+    }
+  }
+
+  async function processCandidate(candidate, isRetry = false) {
+    const candidateStarted = nowMs();
+    let rawOrder = candidate.order_payload && orderItems(candidate.order_payload).length > 0
+      ? candidate.order_payload
+      : null;
+
+    try {
+      if (!rawOrder) {
+        await waitForOlistSlot();
+        const apiStarted = nowMs();
+        rawOrder = await fetchOrderDetail(env, accessToken, candidate.order_id, runtimeStats);
+        addTiming(runtimeStats, "api", nowMs() - apiStarted);
+      }
+
+      const parseStarted = nowMs();
+      const normalizedOrder = normalizeOrder(candidate, rawOrder);
+      const items = orderItems(normalizedOrder.payload)
+        .map((item, index) => normalizeItemRow(normalizedOrder, item, index));
+      addTiming(runtimeStats, "parse", nowMs() - parseStarted);
 
       if (items.length === 0) {
         ordersWithoutItems += 1;
-        await recordOrderIssue(env, run.id, candidate, "no_items");
-        await markQueueItem(env, candidate, "no_items");
+        await timedSupabase(() => recordOrderIssue(env, run.id, candidate, "no_items"));
+        await timedSupabase(() => markQueueItem(env, candidate, "no_items"), "queue");
       } else {
-        await upsertRows(env, "olist_order_items", items);
+        await timedSupabase(() => upsertRows(env, "olist_order_items", items));
         ordersWithItems += 1;
         itemsUpserted += items.length;
-        if (isRetry) await resolveOrderIssue(env, run.id, candidate.order_id);
+        if (isRetry) await timedSupabase(() => resolveOrderIssue(env, run.id, candidate.order_id));
       }
     } catch (error) {
       ordersWithError += 1;
-      await recordOrderIssue(env, run.id, candidate, "pending", error);
-      await markQueueItem(env, candidate, "error", error).catch(() => null);
+      await timedSupabase(() => recordOrderIssue(env, run.id, candidate, "pending", error));
+      await timedSupabase(() => markQueueItem(env, candidate, "error", error).catch(() => null), "queue");
       console.error(`[backfill-order-items] pedido=${candidate.order_id} erro=${error.message}`);
     }
 
     ordersProcessed += 1;
     processedThisInvocation += 1;
     if (!isRetry) checkpoint = String(candidate.order_id);
-    if (processedThisInvocation % 25 === 0) {
-      await persistProgress({ last_order_id: candidate.order_id, ...runtimeStats });
+    addTiming(runtimeStats, "total_candidate", nowMs() - candidateStarted);
+    runtimeStats.candidates_timed += 1;
+  }
+
+  async function processCandidatesConcurrently(candidates, isRetry = false) {
+    if (!isRetry) {
+      const results = [];
+      let index = 0;
+      const workerCount = Math.min(concurrency, candidates.length);
+
+      async function worker() {
+        while (index < candidates.length && processedThisInvocation < limit) {
+          if (Date.now() >= deadline) {
+            stoppedByRuntime = true;
+            return;
+          }
+          const candidate = candidates[index];
+          index += 1;
+          results.push(await fetchCandidateItems(candidate));
+        }
+      }
+
+      await Promise.all(Array.from({ length: workerCount }, () => worker()));
+
+      const rowsToUpsert = results.flatMap((result) => result.error ? [] : result.items);
+      if (rowsToUpsert.length > 0) {
+        await timedSupabase(() => upsertRows(env, "olist_order_items", rowsToUpsert));
+      }
+
+      for (const result of results) {
+        const { candidate, items, error } = result;
+        if (error) {
+          ordersWithError += 1;
+          await timedSupabase(() => recordOrderIssue(env, run.id, candidate, "pending", error));
+          await timedSupabase(() => markQueueItem(env, candidate, "error", error).catch(() => null), "queue");
+          console.error(`[backfill-order-items] pedido=${candidate.order_id} erro=${error.message}`);
+        } else if (items.length === 0) {
+          ordersWithoutItems += 1;
+          await timedSupabase(() => recordOrderIssue(env, run.id, candidate, "no_items"));
+          await timedSupabase(() => markQueueItem(env, candidate, "no_items"), "queue");
+        } else {
+          ordersWithItems += 1;
+          itemsUpserted += items.length;
+        }
+
+        ordersProcessed += 1;
+        processedThisInvocation += 1;
+        checkpoint = String(candidate.order_id);
+      }
+      return;
     }
+
+    let index = 0;
+    const workerCount = Math.min(concurrency, candidates.length);
+
+    async function worker() {
+      while (index < candidates.length && processedThisInvocation < limit) {
+        if (Date.now() >= deadline) {
+          stoppedByRuntime = true;
+          return;
+        }
+        const candidate = candidates[index];
+        index += 1;
+        await processCandidate(candidate, isRetry);
+      }
+    }
+
+    await Promise.all(Array.from({ length: workerCount }, () => worker()));
   }
 
   try {
     if (resume && processedThisInvocation < limit) {
       const pendingErrors = await listPendingErrors(env, run.id, limit - processedThisInvocation);
-      for (const row of pendingErrors) {
-        if (Date.now() >= deadline) {
-          stoppedByRuntime = true;
-          break;
-        }
-        await processCandidate(candidateFromError(row), true);
-      }
+      await processCandidatesConcurrently(pendingErrors.map(candidateFromError), true);
+      if (processedThisInvocation > 0) await persistProgress({ last_phase: "retry_errors", ...runtimeStats });
     }
 
     while (!stoppedByRuntime && processedThisInvocation < limit) {
@@ -545,20 +706,15 @@ async function main() {
         break;
       }
 
-      const pageLimit = Math.min(100, limit - processedThisInvocation);
+      const pageLimit = Math.min(Math.max(100, concurrency * 100), limit - processedThisInvocation);
       const candidates = await listCandidates(env, start, end, pageLimit);
       if (candidates.length === 0) {
         exhausted = true;
         break;
       }
 
-      for (const candidate of candidates) {
-        if (Date.now() >= deadline || processedThisInvocation >= limit) {
-          stoppedByRuntime = Date.now() >= deadline;
-          break;
-        }
-        await processCandidate(candidate);
-      }
+      await processCandidatesConcurrently(candidates);
+      await persistProgress({ last_order_id: checkpoint, ...runtimeStats });
 
       console.log(JSON.stringify({
         run_id: run.id,
@@ -580,6 +736,25 @@ async function main() {
     const missingRevenue = Number(coverage?.coverage?.missing_order_items_revenue_pct || 100);
     const releaseGatePassed = orderCoverage >= 98 || missingRevenue < 0.5;
     const finishedAt = new Date().toISOString();
+    const elapsedMs = Date.now() - startedAt;
+    const elapsedMinutes = elapsedMs / 60000;
+    const processedPerMinute = elapsedMinutes > 0 ? processedThisInvocation / elapsedMinutes : 0;
+    const queuePending = await candidateCount(env, start, end).catch(() => null);
+    const estimatedRemainingMinutes = queuePending != null && processedPerMinute > 0
+      ? queuePending / processedPerMinute
+      : null;
+    const performance = {
+      elapsed_ms: elapsedMs,
+      processed_per_minute: Math.round(processedPerMinute * 100) / 100,
+      avg_total_ms_per_order: averageMs(runtimeStats.total_candidate_ms, runtimeStats.candidates_timed),
+      avg_api_ms_per_order: averageMs(runtimeStats.api_ms, runtimeStats.candidates_timed),
+      avg_supabase_ms_per_order: averageMs(runtimeStats.supabase_ms, runtimeStats.candidates_timed),
+      avg_queue_ms_per_order: averageMs(runtimeStats.queue_ms, runtimeStats.candidates_timed),
+      avg_parse_ms_per_order: averageMs(runtimeStats.parse_ms, runtimeStats.candidates_timed),
+      avg_delay_ms_per_order: averageMs(runtimeStats.delay_ms, runtimeStats.candidates_timed),
+      queue_pending_after_run: queuePending,
+      estimated_remaining_minutes: estimatedRemainingMinutes == null ? null : Math.round(estimatedRemainingMinutes * 100) / 100
+    };
     const report = {
       ok: true,
       run_id: run.id,
@@ -595,6 +770,7 @@ async function main() {
         items_upserted: itemsUpserted
       },
       runtime: runtimeStats,
+      performance,
       stopped_by_runtime: stoppedByRuntime,
       checkpoint_order_id: checkpoint,
       coverage: coverage?.coverage || null,

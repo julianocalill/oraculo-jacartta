@@ -58,13 +58,15 @@ O fluxo:
 - prepara uma fila materializada em `olist_order_item_backfill_queue`;
 - seleciona apenas pedidos ligados a NFs validas e ainda sem itens;
 - usa a ponte materializada `oraculo_fiscal_invoice_order_links` apenas para preparar a fila;
-- aceita `--start`, `--end`, `--limit`, `--delay-ms`, `--max-runtime-minutes` e `--resume`;
+- aceita `--start`, `--end`, `--limit`, `--delay-ms`, `--max-runtime-minutes`, `--resume` e `--concurrency`;
 - persiste checkpoint em `olist_order_items_backfill_runs`;
 - persiste erros e pedidos sem itens em `olist_order_items_backfill_errors`;
 - reutiliza itens ja presentes no payload do pedido antes de chamar `pedidos/{id}`;
 - aplica retry/backoff para rede, `429` e `5xx`;
 - permite pular auditoria com `--skip-audit`, mantendo a auditoria como etapa separada;
-- marca a fila como concluida automaticamente quando `olist_order_items` recebe itens para o pedido.
+- marca a fila como concluida automaticamente quando `olist_order_items` recebe itens para o pedido;
+- usa upsert em lote por pagina de candidatos para reduzir chamadas ao Supabase;
+- registra metricas de performance: pedidos por minuto, media de API, media de Supabase, media total por pedido e estimativa de tempo restante.
 
 O gargalo anterior era o RPC `oraculo_fiscal_order_item_backfill_candidates`, que recalculava candidatos a cada pagina. Ele foi substituido por leitura indexada da fila:
 
@@ -73,7 +75,7 @@ O gargalo anterior era o RPC `oraculo_fiscal_order_item_backfill_candidates`, qu
 - lote de `500`: concluido limpo;
 - lote de `2.000`: concluido limpo, sem `429`, sem erro persistido e sem pedido sem item.
 
-Estado apos o lote de `2.000` em `2026-06-26`:
+Estado apos o primeiro lote otimizado de `2.000` em `2026-06-26`:
 
 - pedidos processados no run acumulado: `5.821`;
 - pedidos com itens: `5.821`;
@@ -84,6 +86,52 @@ Estado apos o lote de `2.000` em `2026-06-26`:
 - fila: `68.462` total, `3.809` concluidos, `64.653` pendentes, `0` erros;
 - cobertura via pedido + itens: `6.512` NFs (`9,15%`);
 - receita coberta via pedido + itens: `R$ 484.122,02` (`9,23%`);
+- gate de liberacao: ainda nao atingido.
+
+## Otimizacao de Performance
+
+Auditoria do backfill em `2026-06-26`:
+
+- o script processava pedidos de forma serial antes desta etapa;
+- o delay era aplicado antes de cada chamada a `pedidos/{id}`;
+- para lotes acima de `500`, o script forcava delay efetivo minimo de `1000ms`;
+- o upsert de itens era feito por pedido, gerando muitas chamadas pequenas ao Supabase.
+
+Mudancas aplicadas:
+
+- `--concurrency` com limite maximo de `10`;
+- rate limit compartilhado entre workers;
+- cooldown global quando a Olist retorna `429`;
+- upsert de itens em lote por pagina de candidatos;
+- metricas de performance no relatorio JSON.
+
+Testes:
+
+- `limit=100`, `delay-ms=250`, `concurrency=2`: `100` pedidos, `0` erros, `0` `429`, throughput `200,78` pedidos/minuto;
+- `limit=1000`, `delay-ms=250`, `concurrency=2`: gerou `429` recorrente, portanto nao e configuracao operacional segura;
+- `limit=1000`, `delay-ms=500`, `concurrency=2`: `1000` pedidos, `0` erros, mas `16` eventos de `429`;
+- `limit=1000`, `delay-ms=750`, `concurrency=2`: `1000` pedidos, `1000` com itens, `0` erros, `0` `429`, `0` retries, throughput `79,55` pedidos/minuto.
+
+Configuracao operacional recomendada inicial:
+
+```bash
+node scripts/backfill-olist-order-items-for-valid-invoices.js \
+  --start=2026-06-01 \
+  --end=2026-06-19 \
+  --limit=2000 \
+  --delay-ms=750 \
+  --max-runtime-minutes=60 \
+  --resume \
+  --skip-audit \
+  --concurrency=2
+```
+
+Estado apos a auditoria separada de cobertura em `2026-06-26`:
+
+- NFs com pedido + itens: `8.980` (`12,61%`);
+- receita coberta via pedido + itens: `R$ 667.711,82` (`12,73%`);
+- receita sem cobertura via pedido + itens: `R$ 4.576.003,94` (`87,27%`);
+- SKUs via pedido distintos: `294`;
 - gate de liberacao: ainda nao atingido.
 
 Preparar fila:
@@ -105,7 +153,8 @@ node scripts/backfill-olist-order-items-for-valid-invoices.js \
   --delay-ms=750 \
   --max-runtime-minutes=60 \
   --resume \
-  --skip-audit
+  --skip-audit \
+  --concurrency=2
 ```
 
 View candidata futura:

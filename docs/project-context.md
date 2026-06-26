@@ -54,7 +54,8 @@ The current product direction is practical executive intelligence for the operat
 - Official fiscal views/RPCs now exist: `oraculo_fiscal_invoices_valid`, `oraculo_fiscal_daily_revenue`, `oraculo_fiscal_channel_sales`, `oraculo_fiscal_metrics` and `oraculo_fiscal_channel_metrics`.
 - The dashboard now has a separate official fiscal section with NFs emitted, billed revenue, billed average ticket, canceled NFs and excluded returns. Operational order/SKU sections remain auxiliary.
 - Do not migrate SKUs, ROI, margin or ROAS until fiscal item coverage passes. `docs/fiscal-sku-items-coverage.md` shows that pure invoice items cover only `25` valid NFs (`0,04%`) and order-linked items currently cover `702` valid NFs (`0,99%`). The materialized NF-to-order bridge covers `71.191` NFs (`99,99%`) via `payload.ecommerce.numeroPedidoEcommerce`.
-- `scripts/backfill-olist-order-items-for-valid-invoices.js` is implemented with bounded batches, checkpoint/resume, Olist retry/backoff, raw item payload preservation, per-order issue tracking and automatic audit.
+- `scripts/backfill-olist-order-items-for-valid-invoices.js` is implemented with bounded batches, checkpoint/resume, Olist retry/backoff, raw item payload preservation, per-order issue tracking, optional audit, controlled concurrency and batch item upsert.
+- Latest safe performance setting validated on `2026-06-26`: `--delay-ms=750 --concurrency=2`, with `1.000` processed orders, `0` errors, `0` `429`, `0` retries and throughput near `79,55` orders/minute.
 - `oraculo_fiscal_invoice_order_links` materializes all valid fiscal invoices and their selected Olist order, including the seven unmatched invoices with `order_id = null`.
 - Another known limitation: some historical periods have Olist orders but not detailed `olist_order_items`; SKU/ranking metrics will be empty for those periods until item details are backfilled.
 
@@ -65,7 +66,7 @@ Continue the existing controlled backfill run.
 Required behavior:
 
 - run with `--resume` for `2026-06-01` to `2026-06-19`;
-- keep batches bounded and preserve the configured delay;
+- keep batches bounded and use the tested delay/concurrency pair unless a new rate-limit test proves safer;
 - monitor `olist_order_items_backfill_runs` and `olist_order_items_backfill_errors`;
 - run `scripts/audit-olist-invoice-items-coverage.js` after each batch.
 
