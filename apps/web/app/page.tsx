@@ -136,6 +136,35 @@ type FiscalMetricsRow = {
   canceled_revenue: number | string | null;
 };
 
+type FiscalDailyRevenue = {
+  issued_date: string;
+  invoices_count: number | string | null;
+  billed_revenue: number | string | null;
+  average_invoice_value: number | string | null;
+};
+
+type FiscalChannelMetric = {
+  channel_label: string | null;
+  invoices_count: number | string | null;
+  billed_revenue: number | string | null;
+  average_invoice_value: number | string | null;
+};
+
+type FiscalCoverage = {
+  totalValidInvoices: number;
+  totalValidRevenue: number;
+  invoicesWithMatchedOrder: number;
+  invoicesWithOrderItems: number;
+  revenueWithOrderItems: number;
+  invoicesWithoutOrderItems: number;
+  revenueWithoutOrderItems: number;
+  orderLinkInvoicePct: number;
+  orderItemsInvoicePct: number;
+  orderItemsRevenuePct: number;
+  missingOrderItemsRevenuePct: number;
+  distinctOrderItemSkus: number;
+};
+
 function isIsoDate(value: string | undefined) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
 }
@@ -277,6 +306,11 @@ function asMetricNumber(value: number | string | null | undefined) {
   return 0;
 }
 
+function asPercentNumber(value: unknown) {
+  const numeric = typeof value === "number" ? value : typeof value === "string" ? Number(value) : 0;
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
 function orderValue(order: OlistOrderRow) {
   const payload = order.payload ?? {};
   return parseMoney(
@@ -359,6 +393,41 @@ async function loadFiscalMetrics(
     excludedDevolutionsRevenue: asMetricNumber(row?.excluded_devolutions_revenue),
     canceledCount: asMetricNumber(row?.canceled_count),
     canceledRevenue: asMetricNumber(row?.canceled_revenue)
+  };
+}
+
+async function loadFiscalCoverage(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  filters: DashboardFilters
+): Promise<FiscalCoverage> {
+  const { data, error } = await supabase.rpc("oraculo_fiscal_order_item_backfill_progress", {
+    p_start_date: filters.start,
+    p_end_date: filters.end
+  });
+
+  if (error) throw error;
+
+  const payload = (data ?? {}) as {
+    metrics?: Record<string, unknown>;
+    coverage?: Record<string, unknown>;
+    distinct_order_item_skus?: number | string | null;
+  };
+  const metrics = payload.metrics ?? {};
+  const coverage = payload.coverage ?? {};
+
+  return {
+    totalValidInvoices: asMetricNumber(metrics.total_valid_invoices as number | string | null),
+    totalValidRevenue: asMetricNumber(metrics.total_valid_revenue as number | string | null),
+    invoicesWithMatchedOrder: asMetricNumber(metrics.invoices_with_matched_order as number | string | null),
+    invoicesWithOrderItems: asMetricNumber(metrics.invoices_with_order_items as number | string | null),
+    revenueWithOrderItems: asMetricNumber(metrics.revenue_with_order_items as number | string | null),
+    invoicesWithoutOrderItems: asMetricNumber(metrics.invoices_without_order_items as number | string | null),
+    revenueWithoutOrderItems: asMetricNumber(metrics.revenue_without_order_items as number | string | null),
+    orderLinkInvoicePct: asPercentNumber(coverage.order_link_invoice_pct),
+    orderItemsInvoicePct: asPercentNumber(coverage.order_items_invoice_pct),
+    orderItemsRevenuePct: asPercentNumber(coverage.order_items_revenue_pct),
+    missingOrderItemsRevenuePct: asPercentNumber(coverage.missing_order_items_revenue_pct),
+    distinctOrderItemSkus: asMetricNumber(payload.distinct_order_item_skus)
   };
 }
 
@@ -505,6 +574,9 @@ async function loadDashboard(filters: DashboardFilters) {
     billingMetrics,
     nfMetrics,
     fiscalMetrics,
+    fiscalDailyResponse,
+    fiscalChannelResponse,
+    fiscalCoverage,
     ruptureProducts
   ] = await Promise.all([
     dailyQuery,
@@ -529,10 +601,27 @@ async function loadDashboard(filters: DashboardFilters) {
     loadBillingWindowMetrics(supabase, filters),
     loadNfMetrics(supabase, filters),
     loadFiscalMetrics(supabase, filters),
+    supabase
+      .from("oraculo_fiscal_daily_revenue")
+      .select("issued_date, invoices_count, billed_revenue, average_invoice_value")
+      .gte("issued_date", filters.start)
+      .lte("issued_date", filters.end)
+      .order("issued_date", { ascending: false }),
+    supabase.rpc("oraculo_fiscal_channel_metrics", {
+      start_date: filters.start,
+      end_date: filters.end
+    }),
+    loadFiscalCoverage(supabase, filters),
     loadRuptureProducts(supabase)
   ]);
 
   const daily = (dailyResponse.data ?? []) as DailySale[];
+  const fiscalDaily = (fiscalDailyResponse.data ?? []) as FiscalDailyRevenue[];
+  const fiscalDailyChart = fiscalDaily.slice().reverse();
+  const maxFiscalDailyRevenue = Math.max(...fiscalDailyChart.map((row) => asMetricNumber(row.billed_revenue)), 1);
+  const fiscalChannels = ((fiscalChannelResponse.data ?? []) as FiscalChannelMetric[]).sort(
+    (left, right) => asMetricNumber(right.billed_revenue) - asMetricNumber(left.billed_revenue)
+  );
   const skuRows = ((skuSalesResponse.data ?? []) as SkuPeriodRank[]).map((sku) => ({
     source: sku.source,
     sku: sku.sku,
@@ -613,9 +702,13 @@ async function loadDashboard(filters: DashboardFilters) {
     latestDay,
     dailyChart,
     maxDailyRevenue,
+    fiscalDailyChart,
+    maxFiscalDailyRevenue,
+    fiscalChannels,
     monthEffective,
     nfMetrics,
     fiscalMetrics,
+    fiscalCoverage,
     monthOrders,
     monthUnits,
     monthTicket: monthOrders > 0 ? monthEffective / monthOrders : null,
@@ -686,10 +779,10 @@ export default async function HomePage({
       <main className="workspace">
         <header className="topbar">
           <div>
-            <h1>Analytics</h1>
+            <h1>Faturamento fiscal</h1>
             <p>
-              {formatCount(data.filteredOrderCount)} pedidos no período · {formatCount(data.productCount)} produtos Olist
-              {data.availableThrough ? ` · dados até ${formatDateShort(data.availableThrough)}` : ""}
+              Junho de 2026 por NF faturada válida · {formatCount(data.fiscalMetrics.invoicesCount)} NFs emitidas
+              {data.fiscalDailyChart.length > 0 ? ` · dados até ${formatDateShort(data.fiscalDailyChart.at(-1)?.issued_date)}` : ""}
             </p>
           </div>
           <form className="filter-row filter-form" method="get">
@@ -744,6 +837,43 @@ export default async function HomePage({
               <strong>{formatCount(data.fiscalMetrics.excludedDevolutionsCount)}</strong>
               <small>{formatCurrency(data.fiscalMetrics.excludedDevolutionsRevenue)} fora da receita</small>
             </Link>
+            <Link className="metric metric-link accent-blue" href="/skus">
+              <span className="label">SKU fiscal em processamento</span>
+              <strong>{formatDecimal(data.fiscalCoverage.orderItemsInvoicePct, 1)}%</strong>
+              <small>{formatCount(data.fiscalCoverage.invoicesWithOrderItems)} NFs com pedido + itens</small>
+            </Link>
+          </div>
+        </section>
+
+        <section className="panel coverage-panel">
+          <div className="section-head section-row">
+            <div>
+              <p className="eyebrow">Cobertura SKU</p>
+              <h2>SKU fiscal em processamento</h2>
+            </div>
+            <span className="pill danger-pill">Margem, ROI e ROAS bloqueados</span>
+          </div>
+          <div className="coverage-grid">
+            <article>
+              <span>NFs com pedido + itens</span>
+              <strong>{formatCount(data.fiscalCoverage.invoicesWithOrderItems)}</strong>
+              <small>{formatDecimal(data.fiscalCoverage.orderItemsInvoicePct, 1)}% das NFs válidas</small>
+            </article>
+            <article>
+              <span>Receita coberta</span>
+              <strong>{formatCurrency(data.fiscalCoverage.revenueWithOrderItems)}</strong>
+              <small>{formatDecimal(data.fiscalCoverage.orderItemsRevenuePct, 1)}% da receita faturada</small>
+            </article>
+            <article>
+              <span>Receita sem cobertura</span>
+              <strong>{formatCurrency(data.fiscalCoverage.revenueWithoutOrderItems)}</strong>
+              <small>{formatDecimal(data.fiscalCoverage.missingOrderItemsRevenuePct, 1)}% ainda em backfill</small>
+            </article>
+            <article>
+              <span>SKUs identificados</span>
+              <strong>{formatCount(data.fiscalCoverage.distinctOrderItemSkus)}</strong>
+              <small>Parcial, não é ranking definitivo</small>
+            </article>
           </div>
         </section>
 
@@ -754,12 +884,12 @@ export default async function HomePage({
           </div>
         <section className="metric-grid metric-grid-eight">
           <Link className="metric metric-link accent-yellow" href={`/pedidos${filterQuery}`}>
-            <span className="label">Receita operacional</span>
+            <span className="label">Receita de pedidos</span>
             <strong>{formatCurrency(data.nfMetrics.confirmedRevenue)}</strong>
-            <small>Pedidos válidos no período</small>
+            <small>Auxiliar, não é a receita oficial</small>
           </Link>
           <Link className="metric metric-link accent-blue" href={`/pedidos${filterQuery}`}>
-            <span className="label">Vendas confirmadas</span>
+            <span className="label">Pedidos confirmados</span>
             <strong>{formatCount(data.nfMetrics.emittedCount)}</strong>
             <small>Status não pendente/cancelado</small>
           </Link>
@@ -769,9 +899,9 @@ export default async function HomePage({
             <small>{formatCount(data.itemCount)} linhas de item na base</small>
           </Link>
           <Link className="metric metric-link accent-blue" href={`/pedidos${filterQuery}`}>
-            <span className="label">Ticket Médio</span>
+            <span className="label">Ticket médio de pedidos</span>
             <strong>{data.nfMetrics.emittedCount <= 0 ? "-" : formatCurrency(data.nfMetrics.confirmedRevenue / data.nfMetrics.emittedCount)}</strong>
-            <small>Receita operacional / vendas</small>
+            <small>Auxiliar, não fiscal</small>
           </Link>
           <Link className="metric metric-link accent-red" href={`/pedidos${filterQuery}`}>
             <span className="label">Canceladas</span>
@@ -840,23 +970,23 @@ export default async function HomePage({
           <Link className="panel panel-link chart-panel" href={`/pedidos${filterQuery}`}>
             <div className="section-head section-row">
               <div>
-                <p className="eyebrow">Receita por dia</p>
-                <h2>Curva do periodo</h2>
+                <p className="eyebrow">Receita faturada por dia</p>
+                <h2>Curva fiscal do período</h2>
               </div>
-              <span className="pill">Último dia: {formatDate(data.availableThrough)}</span>
+              <span className="pill">Fonte: NFs emitidas</span>
             </div>
 
-            <div className="bar-chart" aria-label="Receita por dia">
-              {data.dailyChart.map((row) => {
-                const effectiveRevenue = asNumber(row.effective_revenue);
-                const height = Math.max((effectiveRevenue / data.maxDailyRevenue) * 100, 3);
-                const tooltip = `${formatDate(row.order_date)}: ${formatCurrency(effectiveRevenue)} · ${formatCount(row.orders_count)} pedidos`;
+            <div className="bar-chart" aria-label="Receita faturada por dia">
+              {data.fiscalDailyChart.map((row) => {
+                const billedRevenue = asMetricNumber(row.billed_revenue);
+                const height = Math.max((billedRevenue / data.maxFiscalDailyRevenue) * 100, 3);
+                const tooltip = `${formatDate(row.issued_date)}: ${formatCurrency(billedRevenue)} · ${formatCount(asMetricNumber(row.invoices_count))} NFs`;
                 return (
-                  <div className="bar-item has-tooltip" key={row.order_date} title={tooltip} aria-label={tooltip} data-tooltip={tooltip}>
+                  <div className="bar-item has-tooltip" key={row.issued_date} title={tooltip} aria-label={tooltip} data-tooltip={tooltip}>
                     <div className="bar-track">
                       <span style={{ height: `${height}%` }} />
                     </div>
-                    <small>{formatDate(row.order_date)}</small>
+                    <small>{formatDate(row.issued_date)}</small>
                   </div>
                 );
               })}
@@ -865,23 +995,23 @@ export default async function HomePage({
 
           <Link className="panel panel-link funnel-panel" href={`/pedidos${filterQuery}`}>
             <div>
-              <p className="eyebrow">Canais</p>
-              <h2>Receita por canal e fonte</h2>
+              <p className="eyebrow">Fiscal por canal</p>
+              <h2>Receita faturada por canal</h2>
             </div>
 
             <div className="funnel-list">
-              {data.channels.length === 0 ? (
-                <p className="empty-state">Sem receita por canal no periodo selecionado.</p>
+              {data.fiscalChannels.length === 0 ? (
+                <p className="empty-state">Sem receita fiscal por canal no período selecionado.</p>
               ) : (
-                data.channels.slice(0, 9).map((channel) => {
-                  const max = Math.max(...data.channels.map((item) => asNumber(item.net_revenue)), 1);
-                  const width = Math.max((asNumber(channel.net_revenue) / max) * 100, 2);
+                data.fiscalChannels.slice(0, 9).map((channel) => {
+                  const max = Math.max(...data.fiscalChannels.map((item) => asMetricNumber(item.billed_revenue)), 1);
+                  const width = Math.max((asMetricNumber(channel.billed_revenue) / max) * 100, 2);
                   return (
-                    <div className="funnel-row" key={`${channel.source}-${channel.channel_name}`}>
-                      <span>{sourceLabel(channel.source)} · {channel.channel_name ?? "Sem canal"}</span>
+                    <div className="funnel-row" key={channel.channel_label ?? "Sem canal"}>
+                      <span>{channel.channel_label ?? "Sem canal"}</span>
                       <div><i style={{ width: `${width}%` }} /></div>
-                      <strong>{formatCount(channel.orders_count)}</strong>
-                      <em>{formatCurrency(channel.net_revenue)}</em>
+                      <strong>{formatCount(asMetricNumber(channel.invoices_count))}</strong>
+                      <em>{formatCurrency(asMetricNumber(channel.billed_revenue))}</em>
                     </div>
                   );
                 })
@@ -894,8 +1024,9 @@ export default async function HomePage({
           <div className="sku-toolbar">
             <div>
               <p className="eyebrow">Produtos</p>
-              <h2>SKUs por receita</h2>
+              <h2>SKUs por receita coberta</h2>
             </div>
+            <span className="pill danger-pill">Dados parciais em processamento</span>
           </div>
 
           <div className="table-wrap dense-table-wrap">
@@ -949,7 +1080,7 @@ export default async function HomePage({
         <section className="bottom-grid">
           <article className="panel">
             <p className="eyebrow">Top SKUs</p>
-            <h2>Ranking rápido</h2>
+            <h2>Ranking parcial coberto</h2>
             <div className="rank-list">
               {data.skus.length === 0 ? (
                 <p className="empty-state">Sem ranking para o periodo selecionado.</p>

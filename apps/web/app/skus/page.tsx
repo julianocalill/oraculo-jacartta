@@ -26,6 +26,15 @@ type SkuRow = {
   params_configured: boolean | null;
 };
 
+type FiscalCoverage = {
+  invoicesWithOrderItems: number;
+  revenueWithOrderItems: number;
+  revenueWithoutOrderItems: number;
+  orderItemsInvoicePct: number;
+  orderItemsRevenuePct: number;
+  missingOrderItemsRevenuePct: number;
+};
+
 function n(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
@@ -100,6 +109,40 @@ function asSource(value: string | undefined): SourceFilter {
   return "all";
 }
 
+function parseNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
+
+async function loadFiscalCoverage(supabase: ReturnType<typeof createSupabaseAdminClient>): Promise<FiscalCoverage> {
+  const { data, error } = await supabase.rpc("oraculo_fiscal_order_item_backfill_progress", {
+    p_start_date: "2026-06-01",
+    p_end_date: "2026-06-19"
+  });
+
+  if (error) throw error;
+
+  const payload = (data ?? {}) as {
+    metrics?: Record<string, unknown>;
+    coverage?: Record<string, unknown>;
+  };
+  const metrics = payload.metrics ?? {};
+  const coverageRow = payload.coverage ?? {};
+
+  return {
+    invoicesWithOrderItems: parseNumber(metrics.invoices_with_order_items),
+    revenueWithOrderItems: parseNumber(metrics.revenue_with_order_items),
+    revenueWithoutOrderItems: parseNumber(metrics.revenue_without_order_items),
+    orderItemsInvoicePct: parseNumber(coverageRow.order_items_invoice_pct),
+    orderItemsRevenuePct: parseNumber(coverageRow.order_items_revenue_pct),
+    missingOrderItemsRevenuePct: parseNumber(coverageRow.missing_order_items_revenue_pct)
+  };
+}
+
 async function loadSkus(selectedSku?: string, source: SourceFilter = "all") {
   const supabase = createSupabaseAdminClient();
 
@@ -129,11 +172,16 @@ async function loadSkus(selectedSku?: string, source: SourceFilter = "all") {
     return query;
   })();
 
-  const [rowsResponse, selectedResponse] = await Promise.all([rowsQuery, selectedQuery]);
+  const [rowsResponse, selectedResponse, fiscalCoverage] = await Promise.all([
+    rowsQuery,
+    selectedQuery,
+    loadFiscalCoverage(supabase)
+  ]);
 
   return {
     rows: (rowsResponse.data ?? []) as SkuRow[],
-    selected: ((selectedResponse.data ?? []) as SkuRow[])[0] ?? null
+    selected: ((selectedResponse.data ?? []) as SkuRow[])[0] ?? null,
+    fiscalCoverage
   };
 }
 
@@ -154,7 +202,7 @@ export default async function SkusPage({
         <div>
           <Link href="/" className="back-link">← Analytics</Link>
           <h1>SKUs</h1>
-          <p>{count(data.rows.length)} produtos carregados para análise</p>
+          <p>Dados parciais em processamento · não usar como ranking definitivo</p>
         </div>
         <form className="filter-row filter-form" method="get">
           <label>
@@ -169,17 +217,49 @@ export default async function SkusPage({
         </form>
       </header>
 
+      <section className="panel coverage-panel warning-panel">
+        <div className="section-head section-row">
+          <div>
+            <p className="eyebrow">Cobertura fiscal</p>
+            <h2>Dados parciais em processamento</h2>
+          </div>
+          <span className="pill danger-pill">Margem, ROI e ROAS bloqueados</span>
+        </div>
+        <div className="coverage-grid">
+          <article>
+            <span>NFs com pedido + itens</span>
+            <strong>{count(data.fiscalCoverage.invoicesWithOrderItems)}</strong>
+            <small>{data.fiscalCoverage.orderItemsInvoicePct.toFixed(1).replace(".", ",")}% das NFs válidas</small>
+          </article>
+          <article>
+            <span>Receita coberta</span>
+            <strong>{money(data.fiscalCoverage.revenueWithOrderItems)}</strong>
+            <small>{data.fiscalCoverage.orderItemsRevenuePct.toFixed(1).replace(".", ",")}% da receita fiscal</small>
+          </article>
+          <article>
+            <span>Receita sem cobertura</span>
+            <strong>{money(data.fiscalCoverage.revenueWithoutOrderItems)}</strong>
+            <small>{data.fiscalCoverage.missingOrderItemsRevenuePct.toFixed(1).replace(".", ",")}% ainda em backfill</small>
+          </article>
+          <article>
+            <span>Produtos carregados</span>
+            <strong>{count(data.rows.length)}</strong>
+            <small>Amostra coberta, não definitiva</small>
+          </article>
+        </div>
+      </section>
+
       <section className="detail-grid">
         <article className="panel product-panel">
           <div className="sku-toolbar">
             <div>
               <p className="eyebrow">Produtos</p>
-              <h2>Ranking operacional</h2>
+              <h2>Ranking parcial coberto</h2>
             </div>
             <div className="sku-actions">
               <span>Fonte</span>
-              <span>Margem</span>
-              <strong>Receita</strong>
+              <span>Parcial</span>
+              <strong>Receita coberta</strong>
             </div>
           </div>
 
@@ -221,11 +301,11 @@ export default async function SkusPage({
                     <td className="numeric">{money(row.revenue_30d)}</td>
                     <td className="numeric">{count(row.units_30d)}</td>
                     <td className="numeric">{money(n(row.revenue_30d) / Math.max(n(row.units_30d), 1))}</td>
-                    <td className="numeric">{percent(row.margin_rate_30d)}</td>
-                    <td className="numeric">{percent(row.roi_30d)}</td>
+                    <td className="numeric">Bloqueado</td>
+                    <td className="numeric">Bloqueado</td>
                     <td>
                       <span className={`status-pill ${marginSignalClass(row.margin_signal)}`}>
-                        {marginSignalLabel(row.margin_signal)}
+                        Em processamento
                       </span>
                     </td>
                     <td className="numeric trend-value">{percent(row.revenue_change_pct)}</td>
@@ -245,7 +325,7 @@ export default async function SkusPage({
 
           <div className="detail-metrics">
             <article>
-              <span>Receita 30d</span>
+              <span>Receita coberta</span>
               <strong>{money(selected?.revenue_30d)}</strong>
             </article>
             <article>
@@ -254,15 +334,15 @@ export default async function SkusPage({
             </article>
             <article>
               <span>Margem 30d</span>
-              <strong>{percent(selected?.margin_rate_30d)}</strong>
+              <strong>Bloqueado</strong>
             </article>
             <article>
               <span>ROI 30d</span>
-              <strong>{percent(selected?.roi_30d)}</strong>
+              <strong>Bloqueado</strong>
             </article>
             <article>
-              <span>Lucro estimado</span>
-              <strong>{selected?.margin_amount_30d == null ? "-" : money(selected.margin_amount_30d)}</strong>
+              <span>Lucro</span>
+              <strong>Bloqueado</strong>
             </article>
             <article>
               <span>Custo unit.</span>
@@ -287,15 +367,9 @@ export default async function SkusPage({
           </div>
 
           <div className={`margin-callout ${marginSignalClass(selected?.margin_signal)}`}>
-            <span>{marginSignalLabel(selected?.margin_signal)}</span>
+            <span>SKU fiscal em processamento</span>
             <p>
-              {selected?.margin_signal === "configurar_parametros"
-                ? "Faltam parâmetros de imposto, tarifa e meta para liberar margem/ROI confiável."
-                : selected?.margin_signal === "sem_custo"
-                  ? "Este SKU ainda não tem custo unitário validado."
-                  : selected?.margin_signal === "sem_venda"
-                    ? "Sem venda nos últimos 30 dias."
-                    : "Margem calculada com os parâmetros cadastrados no banco."}
+              Estes dados usam somente NFs que já possuem pedido e itens vinculados. Margem, ROI e ROAS permanecem bloqueados até a cobertura fiscal atingir o critério de qualidade.
             </p>
           </div>
         </aside>

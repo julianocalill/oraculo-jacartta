@@ -529,6 +529,12 @@ p {
   border-color: transparent;
 }
 
+.danger-pill {
+  background: rgba(255, 122, 157, 0.14);
+  border-color: rgba(255, 122, 157, 0.34);
+  color: #ffd5df;
+}
+
 .back-link {
   color: var(--amber);
   display: inline-flex;
@@ -555,6 +561,47 @@ p {
 .dashboard-section {
   display: grid;
   gap: 12px;
+}
+
+.coverage-panel {
+  border-color: rgba(255, 211, 77, 0.26);
+}
+
+.warning-panel {
+  border-color: rgba(255, 122, 157, 0.28);
+}
+
+.coverage-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.coverage-grid article {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(16, 12, 30, 0.58);
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+}
+
+.coverage-grid span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.coverage-grid strong {
+  font-size: clamp(1.25rem, 1.4vw, 1.75rem);
+  line-height: 1;
+}
+
+.coverage-grid small {
+  color: var(--faint);
+  line-height: 1.35;
 }
 
 .metric,
@@ -1185,6 +1232,7 @@ h2 {
   .bottom-grid,
   .settings-grid,
   .user-form,
+  .coverage-grid,
   .source-summary-grid {
     grid-template-columns: 1fr;
   }
