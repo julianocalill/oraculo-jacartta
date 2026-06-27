@@ -85,6 +85,18 @@ async function supabaseFetch(env, path, options = {}) {
   return null;
 }
 
+async function writeFiscalSnapshot(env, rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return;
+
+  await supabaseFetch(env, "/rest/v1/oraculo_fiscal_snapshots", {
+    method: "POST",
+    headers: {
+      Prefer: "return=minimal"
+    },
+    body: JSON.stringify(rows)
+  });
+}
+
 async function fetchAll(env, path, pageSize = 1000) {
   const rows = [];
   const separator = path.includes("?") ? "&" : "?";
@@ -386,6 +398,30 @@ async function main() {
 
   if (process.argv.includes("--json")) {
     console.log(JSON.stringify(report, null, 2));
+    if (process.argv.includes("--write-snapshot")) {
+      await writeFiscalSnapshot(env, [
+        {
+          snapshot_key: "sku_coverage",
+          snapshot_label: "SKU coverage snapshot",
+          period_start: start,
+          period_end: end,
+          payload: {
+            total_valid_invoices: report.metrics?.total_valid_invoices ?? 0,
+            total_valid_revenue: report.metrics?.total_valid_revenue ?? 0,
+            invoices_with_matched_order: report.metrics?.invoices_with_matched_order ?? 0,
+            invoices_with_order_items: report.metrics?.invoices_with_order_items ?? 0,
+            revenue_with_order_items: report.metrics?.revenue_with_order_items ?? 0,
+            invoices_without_order_items: report.metrics?.invoices_without_order_items ?? 0,
+            revenue_without_order_items: report.metrics?.revenue_without_order_items ?? 0,
+            order_link_invoice_pct: report.coverage?.order_link_invoice_pct ?? 0,
+            order_items_invoice_pct: report.coverage?.order_items_invoice_pct ?? 0,
+            order_items_revenue_pct: report.coverage?.order_items_revenue_pct ?? 0,
+            missing_order_items_revenue_pct: report.coverage?.missing_order_items_revenue_pct ?? 0,
+            distinct_order_item_skus: report.sku_counts?.distinct_order_item_skus ?? 0
+          }
+        }
+      ]);
+    }
     return;
   }
 
@@ -417,6 +453,31 @@ async function main() {
   }
   console.log("");
   console.log(`Recomendacao: ${rec}`);
+
+  if (process.argv.includes("--write-snapshot")) {
+    await writeFiscalSnapshot(env, [
+      {
+        snapshot_key: "sku_coverage",
+        snapshot_label: "SKU coverage snapshot",
+        period_start: start,
+        period_end: end,
+        payload: {
+          total_valid_invoices: metrics.total_valid_invoices ?? 0,
+          total_valid_revenue: metrics.total_valid_revenue ?? 0,
+          invoices_with_matched_order: metrics.invoices_with_matched_order ?? 0,
+          invoices_with_order_items: metrics.invoices_with_order_items ?? 0,
+          revenue_with_order_items: metrics.revenue_with_order_items ?? 0,
+          invoices_without_order_items: metrics.invoices_without_order_items ?? 0,
+          revenue_without_order_items: metrics.revenue_without_order_items ?? 0,
+          order_link_invoice_pct: coverage.order_link_invoice_pct ?? 0,
+          order_items_invoice_pct: coverage.order_items_invoice_pct ?? 0,
+          order_items_revenue_pct: coverage.order_items_revenue_pct ?? 0,
+          missing_order_items_revenue_pct: coverage.missing_order_items_revenue_pct ?? 0,
+          distinct_order_item_skus: skuCounts.distinct_order_item_skus ?? 0
+        }
+      }
+    ]);
+  }
 
   const outputPath = arg("write-doc", "");
   if (outputPath) {

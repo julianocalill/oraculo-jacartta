@@ -22,7 +22,7 @@ The current product direction is practical executive intelligence for the operat
 - `Obsidian` can store durable project memory, but repository docs are the source of truth.
 - `AI agents` assist architecture, coding, review and documentation, but repository files remain the source of truth.
 
-## Current state on 2026-06-25
+## Current state on 2026-06-27
 
 - Next.js web app exists in `apps/web`.
 - Supabase migrations and Edge Functions exist in `supabase`.
@@ -51,22 +51,26 @@ The current product direction is practical executive intelligence for the operat
 - `scripts/sync-olist-invoices.js` now performs incremental NF sync from endpoint `notas` with checkpoint/resume.
 - The `2026-06-01` to `2026-06-19` NF listing sync loaded `72.112` invoices. Stable SQL summary: status `6` = `71.908`, status `8` = `89`, status `6` revenue = `R$ 5.014.631,93`, order link coverage = `71.248`.
 - `scripts/sync-olist-invoice-items.js` hydrates invoice details through `notas/{id}` and populates `olist_invoice_items`; initial test saved `6` invoice item rows.
-- Official fiscal views/RPCs now exist: `oraculo_fiscal_invoices_valid`, `oraculo_fiscal_daily_revenue`, `oraculo_fiscal_channel_sales`, `oraculo_fiscal_metrics` and `oraculo_fiscal_channel_metrics`.
-- The dashboard now has a separate official fiscal section with NFs emitted, billed revenue, billed average ticket, canceled NFs and excluded returns. Operational order/SKU sections remain auxiliary.
-- Do not migrate SKUs, ROI, margin or ROAS until fiscal item coverage passes. `docs/fiscal-sku-items-coverage.md` shows that pure invoice items cover only `25` valid NFs (`0,04%`) and order-linked items currently cover `702` valid NFs (`0,99%`). The materialized NF-to-order bridge covers `71.191` NFs (`99,99%`) via `payload.ecommerce.numeroPedidoEcommerce`.
+- Official fiscal views/RPCs exist: `oraculo_fiscal_invoices_valid`, `oraculo_fiscal_daily_revenue`, `oraculo_fiscal_channel_sales`, `oraculo_fiscal_metrics` and `oraculo_fiscal_channel_metrics`.
+- Product priority changed on `2026-06-27`: the dashboard MVP must open quickly and show fiscal June 2026 revenue from valid NFs as the primary view. Operational order/SKU sections are secondary.
+- The production dashboard now uses `oraculo_fiscal_daily_revenue` for Receita faturada, NFs emitidas and Ticket médio faturado, plus `oraculo_fiscal_channel_metrics` for fiscal channel revenue.
+- `oraculo_fiscal_metrics` and `oraculo_fiscal_order_item_backfill_progress` must not run in the Next.js server render path. They caused Supabase `57014` statement timeouts in Vercel. Use `oraculo_fiscal_latest_snapshots` for request-time cards.
+- Request-time fiscal dashboard and SKU coverage cards now read from `oraculo_fiscal_latest_snapshots`, backed by `oraculo_fiscal_snapshots`.
+- The SKU coverage cards currently use the latest validated snapshot from `2026-06-27`: `30.987` NFs with linked order items (`43,52%`), `R$ 2.198.329,66` revenue covered (`41,92%`) and `R$ 3.045.386,10` revenue without coverage (`58,08%`).
+- Do not migrate SKUs, ROI, margin or ROAS until fiscal item coverage passes. The materialized NF-to-order bridge covers `71.191` NFs (`99,99%`) via `payload.ecommerce.numeroPedidoEcommerce`, but item-level coverage is still below the release gate.
 - `scripts/backfill-olist-order-items-for-valid-invoices.js` is implemented with bounded batches, checkpoint/resume, Olist retry/backoff, raw item payload preservation, per-order issue tracking, optional audit, controlled concurrency and batch item upsert.
-- Latest safe performance setting validated on `2026-06-26`: `--delay-ms=750 --concurrency=2`, with `1.000` processed orders, `0` errors, `0` `429`, `0` retries and throughput near `79,55` orders/minute.
+- Latest production-safe backfill setting used on `2026-06-27`: `--delay-ms=900 --concurrency=2 --limit=2000 --skip-audit`, with recoverable `429` events and `0` persisted order errors.
 - `oraculo_fiscal_invoice_order_links` materializes all valid fiscal invoices and their selected Olist order, including the seven unmatched invoices with `order_id = null`.
 - Another known limitation: some historical periods have Olist orders but not detailed `olist_order_items`; SKU/ranking metrics will be empty for those periods until item details are backfilled.
 
 ## Immediate priority
 
-Continue the existing controlled backfill run.
+Keep the fiscal MVP stable and continue the existing controlled backfill run in the background.
 
 Required behavior:
 
 - run with `--resume` for `2026-06-01` to `2026-06-19`;
-- keep batches bounded and use the tested delay/concurrency pair unless a new rate-limit test proves safer;
+- keep batches bounded and use `--delay-ms=900 --concurrency=2` unless a new rate-limit test proves safer;
 - monitor `olist_order_items_backfill_runs` and `olist_order_items_backfill_errors`;
 - run `scripts/audit-olist-invoice-items-coverage.js` after each batch.
 
@@ -76,6 +80,14 @@ Release gate:
 - less than `0,5%` of fiscal revenue without item coverage.
 
 Only after that gate may the candidate view `oraculo_fiscal_sku_sales_by_order_link` be created and audited. Margin, ROI and ROAS remain blocked.
+
+Immediate technical follow-up:
+
+- keep `oraculo_fiscal_snapshots` updated after each audit/backfill batch;
+- use `scripts/audit-oraculo-fiscal-metrics.js --write-snapshot` for dashboard exclusions;
+- use `scripts/audit-olist-invoice-items-coverage.js --write-snapshot` for SKU coverage;
+- keep the Next.js pages reading `oraculo_fiscal_latest_snapshots` instead of hardcoded values;
+- do not reintroduce heavy audit RPCs in server-rendered pages.
 
 ## Working rule
 

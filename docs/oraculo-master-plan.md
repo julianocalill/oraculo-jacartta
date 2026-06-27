@@ -14,19 +14,17 @@ O sistema desejado não é apenas um dashboard. Ele precisa:
 
 ---
 
-## Estado executivo em 2026-06-25
+## Estado executivo em 2026-06-27
 
-O projeto saiu da fase de prova isolada da Olist e entrou na fase de consolidação multi-canal, reconciliação de métricas e parametrização operacional.
+O projeto esta na fase de MVP fiscal em producao: a tela principal deve abrir rapido, mostrar faturamento real por NF valida e manter SKU/margem/ROI bloqueados ate a cobertura de itens passar no gate.
 
 O foco definido pelo usuário agora é:
 
-- entendimento rápido e prático de ROI por produto;
-- curva de saída e de não saída de produto;
-- margem por produto;
-- alertas de margem conforme parâmetros configuráveis no frontend;
-- visão confiável por SKU, canal, estoque, ruptura e dias sem venda;
-- dados da Olist e marketplaces cruzados no mesmo banco.
-- operação utilizável em desktop e mobile.
+- faturamento fiscal confiavel por NF valida;
+- acompanhamento de cobertura fiscal de SKU em processamento;
+- continuidade do backfill de itens de pedido;
+- manutencao de dados Olist/Shopee no mesmo banco;
+- operacao utilizavel em desktop e mobile.
 
 Decisão importante: antes de avançar em ROI/margem, o projeto precisa ter métricas auditáveis. Foi identificado que parte dos números do dashboard estava semanticamente incorreta: a tela chamava de `NFs emitidas` e `receita confirmada`, mas a métrica vinha de pedidos criados/status, não da camada fiscal completa de notas fiscais.
 
@@ -66,7 +64,9 @@ Leitura correta atual:
 
 - A auditoria fiscal bateu com a tela da Olist dentro da tolerancia aprovada.
 - A fonte oficial de venda e receita passa a ser `olist_invoices`, nao `olist_orders.payload.dataFaturamento`.
-- O dashboard recebeu uma secao fiscal oficial isolada, sem migrar a tela inteira de uma vez.
+- O dashboard fiscal virou o MVP principal para junho de 2026.
+- Cards fiscais e de cobertura SKU usam `oraculo_fiscal_latest_snapshots`, baseado em `oraculo_fiscal_snapshots`.
+- `oraculo_fiscal_metrics` e `oraculo_fiscal_order_item_backfill_progress` nao devem rodar durante render server-side.
 - ROI, margem, ROAS e SKU fiscal so devem migrar depois que `olist_invoice_items` tiver cobertura auditada.
 
 Regra fiscal oficial validada:
@@ -90,6 +90,8 @@ Objetos oficiais criados:
 - `oraculo_fiscal_channel_sales`;
 - `oraculo_fiscal_metrics`;
 - `oraculo_fiscal_channel_metrics`;
+- `oraculo_fiscal_snapshots`;
+- `oraculo_fiscal_latest_snapshots`;
 - [scripts/audit-oraculo-fiscal-metrics.js](/Users/julianocalil/oraculo/scripts/audit-oraculo-fiscal-metrics.js).
 
 Commit de referência:
@@ -113,11 +115,13 @@ Entregas mais recentes:
 - Sync incremental de NFs implementado em `scripts/sync-olist-invoices.js` e executado para `2026-06-01` a `2026-06-19`, carregando `72.112` NFs da API `notas`.
 - Sync incremental de itens fiscais implementado em `scripts/sync-olist-invoice-items.js`; teste inicial confirmou que `notas/{id}` traz `itens`.
 - Reconciliacao fiscal validada: a regra `status in (6,7)`, sem `tipo = E` e sem devolucao retorna `71.198` NFs e `R$ 5.243.715,76`, contra `71.197` e `R$ 5.243.629,96` na tela Olist.
-- Secao fiscal oficial adicionada ao dashboard com NFs emitidas, receita faturada, ticket medio faturado, canceladas e devolucoes excluidas.
+- Dashboard fiscal oficial publicado como MVP com NFs emitidas, receita faturada, ticket medio faturado, canceladas e devolucoes excluidas.
+- Fix de producao aplicado para remover RPCs pesadas do render server-side e usar snapshots leves.
 - `oraculo_fiscal_sku_sales` ainda nao foi criada porque apenas `25` NFs validas tinham itens hidratados contra `71.198` NFs fiscais validas no periodo auditado.
 - Auditoria de cobertura de itens fiscais criada em `scripts/audit-olist-invoice-items-coverage.js` e documentada em `docs/fiscal-sku-items-coverage.md`.
-- Resultado atualizado da cobertura de itens para `2026-06-01` a `2026-06-19`: item fiscal puro cobre `0,04%` das NFs; a ponte materializada NF-pedido cobre `99,99%`; pedidos com itens cobrem `0,99%` das NFs e `0,90%` da receita.
-- O backfill controlado de `olist_order_items` foi implementado e validado. A proxima etapa tecnica e continuar o run em lotes ate o gate; so depois criar a view candidata `oraculo_fiscal_sku_sales_by_order_link`.
+- Resultado atualizado da cobertura de itens para `2026-06-01` a `2026-06-19`: item fiscal puro cobre `0,04%` das NFs; a ponte materializada NF-pedido cobre `99,99%`; pedidos com itens cobrem `43,52%` das NFs e `41,92%` da receita.
+- O backfill controlado de `olist_order_items` foi implementado e validado. A configuracao operacional atual e `--limit=2000 --delay-ms=900 --max-runtime-minutes=60 --resume --skip-audit --concurrency=2`.
+- A proxima etapa tecnica e continuar o run em lotes, atualizar `oraculo_fiscal_snapshots` apos auditorias e criar a view candidata `oraculo_fiscal_sku_sales_by_order_link` somente depois do gate.
 
 ### Checkpoint atual
 
@@ -653,7 +657,9 @@ Mas não sustenta bem:
 
 Hoje temos o estado atual do estoque.
 
-Ainda falta guardar snapshots ao longo do tempo para:
+Snapshots de estoque ja existem em `public.olist_stock_snapshots`. Para o dashboard fiscal, os snapshots operacionais vivem em `public.oraculo_fiscal_snapshots`.
+
+Ainda falta evoluir snapshots historicos para:
 
 - ruptura
 - reentrada

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
+import { loadFiscalSkuCoverageSnapshot } from "../../lib/fiscal-snapshots";
 
 export const dynamic = "force-dynamic";
 
@@ -26,23 +27,7 @@ type SkuRow = {
   params_configured: boolean | null;
 };
 
-type FiscalCoverage = {
-  invoicesWithOrderItems: number;
-  revenueWithOrderItems: number;
-  revenueWithoutOrderItems: number;
-  orderItemsInvoicePct: number;
-  orderItemsRevenuePct: number;
-  missingOrderItemsRevenuePct: number;
-};
-
-const FISCAL_SKU_COVERAGE_SNAPSHOT: FiscalCoverage = {
-  invoicesWithOrderItems: 30987,
-  revenueWithOrderItems: 2198329.66,
-  revenueWithoutOrderItems: 3045386.10,
-  orderItemsInvoicePct: 43.52,
-  orderItemsRevenuePct: 41.92,
-  missingOrderItemsRevenuePct: 58.08
-};
+type FiscalCoverage = Awaited<ReturnType<typeof loadFiscalSkuCoverageSnapshot>>;
 
 function n(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -155,7 +140,7 @@ async function loadSkus(selectedSku?: string, source: SourceFilter = "all") {
   return {
     rows: (rowsResponse.data ?? []) as SkuRow[],
     selected: ((selectedResponse.data ?? []) as SkuRow[])[0] ?? null,
-    fiscalCoverage: FISCAL_SKU_COVERAGE_SNAPSHOT
+    fiscalCoverage: await loadFiscalSkuCoverageSnapshot(supabase)
   };
 }
 

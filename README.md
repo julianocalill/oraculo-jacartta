@@ -35,7 +35,7 @@ oraculo/
 2. [docs/engineering-playbook.md](docs/engineering-playbook.md)
 3. [docs/deployment-map.md](docs/deployment-map.md)
 4. [docs/oraculo-master-plan.md](docs/oraculo-master-plan.md)
-5. [docs/project-status-2026-06-25.md](docs/project-status-2026-06-25.md)
+5. [docs/project-status-2026-06-27.md](docs/project-status-2026-06-27.md)
 6. [docs/runbooks/resume-after-supabase-upgrade.md](docs/runbooks/resume-after-supabase-upgrade.md)
 7. [vault/00-home/index.md](vault/00-home/index.md)
 
@@ -48,7 +48,7 @@ oraculo/
 
 ## Current production state
 
-- State updated: `2026-06-25`
+- State updated: `2026-06-27`
 - Production URL: `https://oraculo.oliverhome.com.br`
 - Primary GitHub repository: `https://github.com/Grupo-Jacartta/oraculo.git`
 - Personal mirror: `https://github.com/julianocalill/oraculo-jacartta`
@@ -61,10 +61,11 @@ oraculo/
 
 Current product areas:
 
-- Analytics dashboard with date filters.
-- Official fiscal dashboard section based on issued/authorized outbound invoices.
+- MVP fiscal dashboard for June 2026.
+- Official fiscal dashboard based on issued/authorized outbound invoices.
 - Orders/channel metrics from cached Supabase views/tables.
-- SKU and margin foundation.
+- SKU coverage panel with explicit "in processing" status.
+- SKU and margin foundation, still blocked for official decisions.
 - Rupture/no-sale product watchlist.
 - Manual parameters by channel, SKU and UF.
 - Read-only Shopee Donacor data.
@@ -94,6 +95,13 @@ Official objects:
 - `oraculo_fiscal_metrics`
 - `oraculo_fiscal_channel_metrics`
 
+Runtime rule for the web app:
+
+- the dashboard may read `oraculo_fiscal_daily_revenue` and `oraculo_fiscal_channel_metrics`;
+- fiscal dashboard exclusions and SKU coverage cards must read `oraculo_fiscal_latest_snapshots`;
+- the dashboard must not call heavy audit/RPC functions during server render;
+- `oraculo_fiscal_metrics` and `oraculo_fiscal_order_item_backfill_progress` caused Supabase `57014` statement timeouts in Vercel and are not safe for the request path.
+
 ## Current blocker
 
 SKU fiscal, margin, ROI and ROAS remain blocked because item coverage is insufficient.
@@ -102,14 +110,17 @@ Latest audit:
 
 - NF to Olist order link: `71.191` invoices / `99,99%`;
 - link field: `olist_orders.payload.ecommerce.numeroPedidoEcommerce`;
-- invoices with order items: `702` / `0,99%`;
-- fiscal revenue covered by order items: `0,90%`.
+- invoices with order items: `30.987` / `43,52%`;
+- fiscal revenue covered by order items: `R$ 2.198.329,66` / `41,92%`;
+- fiscal revenue still without item coverage: `R$ 3.045.386,10` / `58,08%`.
 
-The controlled backfill is implemented in `scripts/backfill-olist-order-items-for-valid-invoices.js`, with persistent checkpoint, per-order errors, retry/backoff and automatic coverage audit.
+The controlled backfill is implemented in `scripts/backfill-olist-order-items-for-valid-invoices.js`, with persistent checkpoint, per-order errors, retry/backoff, controlled concurrency and batch item upsert.
 
-Latest validated commit:
+Recent production commits:
 
-- `c487925` - controlled fiscal backfill for `olist_order_items`
+- `c4b2766` - fiscal revenue dashboard MVP;
+- `a5f853f` - remove heavy SKU coverage RPC from render;
+- `ab536d5` - use fast fiscal daily metrics on dashboard.
 
 Continue the validated run with:
 
@@ -117,10 +128,12 @@ Continue the validated run with:
 node scripts/backfill-olist-order-items-for-valid-invoices.js \
   --start=2026-06-01 \
   --end=2026-06-19 \
-  --limit=100 \
-  --delay-ms=750 \
-  --max-runtime-minutes=15 \
-  --resume
+  --limit=2000 \
+  --delay-ms=900 \
+  --max-runtime-minutes=60 \
+  --resume \
+  --skip-audit \
+  --concurrency=2
 ```
 
 ## Active Supabase jobs

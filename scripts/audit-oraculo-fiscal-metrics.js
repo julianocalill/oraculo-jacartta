@@ -63,10 +63,23 @@ async function supabaseFetch(env, path, options = {}) {
   return text ? JSON.parse(text) : null;
 }
 
+async function writeFiscalSnapshot(env, rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return;
+
+  await supabaseFetch(env, "/rest/v1/oraculo_fiscal_snapshots", {
+    method: "POST",
+    headers: {
+      Prefer: "return=minimal"
+    },
+    body: JSON.stringify(rows)
+  });
+}
+
 async function main() {
   const env = loadEnv();
   const start = arg("start", "2026-06-01");
   const end = arg("end", "2026-06-19");
+  const writeSnapshot = process.argv.includes("--write-snapshot");
 
   const [metricsRows, channelRows] = await Promise.all([
     supabaseFetch(env, "/rest/v1/rpc/oraculo_fiscal_metrics", {
@@ -112,6 +125,23 @@ async function main() {
 
   if (process.argv.includes("--json")) {
     console.log(JSON.stringify(result, null, 2));
+    if (writeSnapshot) {
+      await writeFiscalSnapshot(env, [
+        {
+          snapshot_key: "fiscal_dashboard",
+          snapshot_label: "Fiscal dashboard exclusions",
+          period_start: start,
+          period_end: end,
+          payload: {
+            linked_orders_count: linkedOrders,
+            excluded_devolutions_count: excludedDevolutions,
+            excluded_devolutions_revenue: excludedDevolutionsRevenue,
+            canceled_count: canceled,
+            canceled_revenue: canceledRevenue
+          }
+        }
+      ]);
+    }
     return;
   }
 
@@ -130,6 +160,24 @@ async function main() {
   console.log("Top canais");
   for (const channel of result.top_channels) {
     console.log(`- ${channel.channel}: ${count(channel.invoices)} NFs / ${money(channel.revenue)}`);
+  }
+
+  if (writeSnapshot) {
+    await writeFiscalSnapshot(env, [
+      {
+        snapshot_key: "fiscal_dashboard",
+        snapshot_label: "Fiscal dashboard exclusions",
+        period_start: start,
+        period_end: end,
+        payload: {
+          linked_orders_count: linkedOrders,
+          excluded_devolutions_count: excludedDevolutions,
+          excluded_devolutions_revenue: excludedDevolutionsRevenue,
+          canceled_count: canceled,
+          canceled_revenue: canceledRevenue
+        }
+      }
+    ]);
   }
 }
 

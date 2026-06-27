@@ -1,6 +1,6 @@
 # Contrato de Metricas do Oraculo
 
-Data da versao: 2026-06-25
+Data da versao: 2026-06-27
 
 Este documento define a regra que o painel deve seguir antes de evoluirmos ROI, margem, curva de saida e ruptura. A prioridade agora e confiabilidade: cada numero precisa ter fonte, filtro de data e formula explicita.
 
@@ -48,6 +48,8 @@ Objetos oficiais criados:
 - `oraculo_fiscal_channel_sales`;
 - `oraculo_fiscal_metrics(start_date, end_date)`;
 - `oraculo_fiscal_channel_metrics(start_date, end_date)`.
+
+Para leitura em tempo de request no dashboard, os cards fiscais e de cobertura usam `oraculo_fiscal_latest_snapshots`, que lê a tabela historica `oraculo_fiscal_snapshots`.
 
 Para desempenho, `olist_invoices` tambem possui campos fiscais gerados:
 
@@ -295,6 +297,8 @@ Saida JSON:
 ```bash
 node scripts/audit-oraculo-metrics.js --start=2026-06-01 --end=2026-06-30 --json
 ```
+
+Quando precisar persistir o resultado de auditoria para o dashboard, use `--write-snapshot` com `scripts/audit-oraculo-fiscal-metrics.js` e `scripts/audit-olist-invoice-items-coverage.js`.
 
 ## Proxima implementacao
 

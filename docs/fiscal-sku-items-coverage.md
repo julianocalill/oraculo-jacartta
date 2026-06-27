@@ -112,26 +112,26 @@ Testes:
 - `limit=1000`, `delay-ms=500`, `concurrency=2`: `1000` pedidos, `0` erros, mas `16` eventos de `429`;
 - `limit=1000`, `delay-ms=750`, `concurrency=2`: `1000` pedidos, `1000` com itens, `0` erros, `0` `429`, `0` retries, throughput `79,55` pedidos/minuto.
 
-Configuracao operacional recomendada inicial:
+Configuracao operacional atual:
 
 ```bash
 node scripts/backfill-olist-order-items-for-valid-invoices.js \
   --start=2026-06-01 \
   --end=2026-06-19 \
   --limit=2000 \
-  --delay-ms=750 \
+  --delay-ms=900 \
   --max-runtime-minutes=60 \
   --resume \
   --skip-audit \
   --concurrency=2
 ```
 
-Estado apos a auditoria separada de cobertura em `2026-06-26`:
+Estado apos a auditoria separada de cobertura em `2026-06-27`:
 
-- NFs com pedido + itens: `8.980` (`12,61%`);
-- receita coberta via pedido + itens: `R$ 667.711,82` (`12,73%`);
-- receita sem cobertura via pedido + itens: `R$ 4.576.003,94` (`87,27%`);
-- SKUs via pedido distintos: `294`;
+- NFs com pedido + itens: `30.987` (`43,52%`);
+- receita coberta via pedido + itens: `R$ 2.198.329,66` (`41,92%`);
+- receita sem cobertura via pedido + itens: `R$ 3.045.386,10` (`58,08%`);
+- SKUs via pedido distintos: `376`;
 - gate de liberacao: ainda nao atingido.
 
 Preparar fila:
@@ -150,7 +150,7 @@ node scripts/backfill-olist-order-items-for-valid-invoices.js \
   --start=2026-06-01 \
   --end=2026-06-19 \
   --limit=2000 \
-  --delay-ms=750 \
+  --delay-ms=900 \
   --max-runtime-minutes=60 \
   --resume \
   --skip-audit \
@@ -217,6 +217,18 @@ O endpoint fiscal confirmado continua sendo `notas`. `notas-fiscais` retornou `4
 Nao liberar margem, ROI, ROAS, lucro ou SKU fiscal oficial ate a cobertura passar no criterio de aceite.
 
 Proxima acao recomendada: continuar o run de backfill em lotes controlados e repetir a auditoria ate a cobertura passar no criterio.
+
+## Snapshots operacionais
+
+Para manter o dashboard leve, os resultados mais recentes desta auditoria devem ser gravados em `oraculo_fiscal_snapshots`.
+
+Uso recomendado:
+
+```bash
+node scripts/audit-olist-invoice-items-coverage.js --start=2026-06-01 --end=2026-06-19 --write-snapshot
+```
+
+Os cards do dashboard e da pagina `/skus` leem `oraculo_fiscal_latest_snapshots`, nao a RPC pesada `oraculo_fiscal_order_item_backfill_progress`.
 
 ## Métodos de vínculo encontrados
 

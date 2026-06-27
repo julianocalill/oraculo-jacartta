@@ -32,7 +32,7 @@ The first canonical layer for Oraculo is:
 
 Official fiscal revenue is sourced from `olist_invoices`, not from `olist_orders.payload.dataFaturamento`.
 
-## Active sync - 2026-06-25
+## Active sync - 2026-06-27
 
 Scheduling is handled by Supabase `pg_cron`.
 
@@ -70,7 +70,8 @@ Scheduling is handled by Supabase `pg_cron`.
 - SKU/ranking metrics depend on item detail; those periods need controlled backfill.
 - Fiscal invoice headers are reconciled and official.
 - Valid fiscal rule: status `6,7`, exclude type `E`, exclude return origin, use emission date.
-- NF-to-order link is `payload.ecommerce.numeroPedidoEcommerce` and covers `99,77%` of valid NFs.
-- Linked order items cover only `0,87%` of official fiscal revenue.
-- The next required implementation is `scripts/backfill-olist-order-items-for-valid-invoices.js`.
+- NF-to-order link is `payload.ecommerce.numeroPedidoEcommerce` and covers `99,99%` of valid NFs.
+- Linked order items cover `41,92%` of official fiscal revenue.
+- Continue `scripts/backfill-olist-order-items-for-valid-invoices.js` with `--delay-ms=900 --concurrency=2 --limit=2000 --resume --skip-audit`.
+- Persist fiscal/dashboard coverage snapshots in `oraculo_fiscal_snapshots` after audits.
 - Do not create fiscal SKU, margin, ROI or ROAS metrics before the item coverage gate passes.

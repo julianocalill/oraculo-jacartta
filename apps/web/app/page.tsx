@@ -1,4 +1,9 @@
 import { createSupabaseAdminClient } from "../lib/supabase/admin";
+import {
+  loadFiscalDashboardSnapshot,
+  loadFiscalSkuCoverageSnapshot,
+  type FiscalDashboardSnapshot
+} from "../lib/fiscal-snapshots";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -118,12 +123,7 @@ type FiscalMetrics = {
   invoicesCount: number;
   billedRevenue: number;
   averageInvoiceValue: number;
-  linkedOrdersCount: number;
-  excludedDevolutionsCount: number;
-  excludedDevolutionsRevenue: number;
-  canceledCount: number;
-  canceledRevenue: number;
-};
+} & FiscalDashboardSnapshot;
 
 type FiscalMetricsRow = {
   invoices_count: number | string | null;
@@ -134,14 +134,6 @@ type FiscalMetricsRow = {
   excluded_devolutions_revenue: number | string | null;
   canceled_count: number | string | null;
   canceled_revenue: number | string | null;
-};
-
-const JUNE_FISCAL_EXCLUSIONS_SNAPSHOT = {
-  linkedOrdersCount: 71191,
-  excludedDevolutionsCount: 857,
-  excludedDevolutionsRevenue: 1816353.97,
-  canceledCount: 89,
-  canceledRevenue: 1750174.08
 };
 
 type FiscalDailyRevenue = {
@@ -158,35 +150,7 @@ type FiscalChannelMetric = {
   average_invoice_value: number | string | null;
 };
 
-type FiscalCoverage = {
-  totalValidInvoices: number;
-  totalValidRevenue: number;
-  invoicesWithMatchedOrder: number;
-  invoicesWithOrderItems: number;
-  revenueWithOrderItems: number;
-  invoicesWithoutOrderItems: number;
-  revenueWithoutOrderItems: number;
-  orderLinkInvoicePct: number;
-  orderItemsInvoicePct: number;
-  orderItemsRevenuePct: number;
-  missingOrderItemsRevenuePct: number;
-  distinctOrderItemSkus: number;
-};
-
-const FISCAL_SKU_COVERAGE_SNAPSHOT: FiscalCoverage = {
-  totalValidInvoices: 71198,
-  totalValidRevenue: 5243715.76,
-  invoicesWithMatchedOrder: 71191,
-  invoicesWithOrderItems: 30987,
-  revenueWithOrderItems: 2198329.66,
-  invoicesWithoutOrderItems: 40211,
-  revenueWithoutOrderItems: 3045386.10,
-  orderLinkInvoicePct: 99.99,
-  orderItemsInvoicePct: 43.52,
-  orderItemsRevenuePct: 41.92,
-  missingOrderItemsRevenuePct: 58.08,
-  distinctOrderItemSkus: 376
-};
+type FiscalCoverage = Awaited<ReturnType<typeof loadFiscalSkuCoverageSnapshot>>;
 
 function isIsoDate(value: string | undefined) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
@@ -392,11 +356,16 @@ async function loadFiscalMetrics(
   supabase: ReturnType<typeof createSupabaseAdminClient>,
   filters: DashboardFilters
 ): Promise<FiscalMetrics> {
-  const { data, error } = await supabase
-    .from("oraculo_fiscal_daily_revenue")
-    .select("invoices_count, billed_revenue")
-    .gte("issued_date", filters.start)
-    .lte("issued_date", filters.end);
+  const [dashboardSnapshot, dailyResponse] = await Promise.all([
+    loadFiscalDashboardSnapshot(supabase),
+    supabase
+      .from("oraculo_fiscal_daily_revenue")
+      .select("invoices_count, billed_revenue")
+      .gte("issued_date", filters.start)
+      .lte("issued_date", filters.end)
+  ]);
+
+  const { data, error } = dailyResponse;
 
   if (error) throw error;
 
@@ -408,11 +377,7 @@ async function loadFiscalMetrics(
     invoicesCount,
     billedRevenue,
     averageInvoiceValue: invoicesCount > 0 ? billedRevenue / invoicesCount : 0,
-    linkedOrdersCount: JUNE_FISCAL_EXCLUSIONS_SNAPSHOT.linkedOrdersCount,
-    excludedDevolutionsCount: JUNE_FISCAL_EXCLUSIONS_SNAPSHOT.excludedDevolutionsCount,
-    excludedDevolutionsRevenue: JUNE_FISCAL_EXCLUSIONS_SNAPSHOT.excludedDevolutionsRevenue,
-    canceledCount: JUNE_FISCAL_EXCLUSIONS_SNAPSHOT.canceledCount,
-    canceledRevenue: JUNE_FISCAL_EXCLUSIONS_SNAPSHOT.canceledRevenue
+    ...dashboardSnapshot
   };
 }
 
@@ -561,6 +526,7 @@ async function loadDashboard(filters: DashboardFilters) {
     fiscalMetrics,
     fiscalDailyResponse,
     fiscalChannelResponse,
+    fiscalCoverageResponse,
     ruptureProducts
   ] = await Promise.all([
     dailyQuery,
@@ -595,6 +561,7 @@ async function loadDashboard(filters: DashboardFilters) {
       start_date: filters.start,
       end_date: filters.end
     }),
+    loadFiscalSkuCoverageSnapshot(supabase),
     loadRuptureProducts(supabase)
   ]);
 
@@ -605,6 +572,7 @@ async function loadDashboard(filters: DashboardFilters) {
   const fiscalChannels = ((fiscalChannelResponse.data ?? []) as FiscalChannelMetric[]).sort(
     (left, right) => asMetricNumber(right.billed_revenue) - asMetricNumber(left.billed_revenue)
   );
+  const fiscalCoverage = fiscalCoverageResponse;
   const skuRows = ((skuSalesResponse.data ?? []) as SkuPeriodRank[]).map((sku) => ({
     source: sku.source,
     sku: sku.sku,
@@ -691,7 +659,7 @@ async function loadDashboard(filters: DashboardFilters) {
     monthEffective,
     nfMetrics,
     fiscalMetrics,
-    fiscalCoverage: FISCAL_SKU_COVERAGE_SNAPSHOT,
+    fiscalCoverage,
     monthOrders,
     monthUnits,
     monthTicket: monthOrders > 0 ? monthEffective / monthOrders : null,
