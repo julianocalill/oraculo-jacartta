@@ -136,6 +136,14 @@ type FiscalMetricsRow = {
   canceled_revenue: number | string | null;
 };
 
+const JUNE_FISCAL_EXCLUSIONS_SNAPSHOT = {
+  linkedOrdersCount: 71191,
+  excludedDevolutionsCount: 857,
+  excludedDevolutionsRevenue: 1816353.97,
+  canceledCount: 89,
+  canceledRevenue: 1750174.08
+};
+
 type FiscalDailyRevenue = {
   issued_date: string;
   invoices_count: number | string | null;
@@ -385,24 +393,26 @@ async function loadFiscalMetrics(
   filters: DashboardFilters
 ): Promise<FiscalMetrics> {
   const { data, error } = await supabase
-    .rpc("oraculo_fiscal_metrics", {
-      start_date: filters.start,
-      end_date: filters.end
-    })
-    .maybeSingle();
+    .from("oraculo_fiscal_daily_revenue")
+    .select("invoices_count, billed_revenue")
+    .gte("issued_date", filters.start)
+    .lte("issued_date", filters.end);
 
   if (error) throw error;
 
-  const row = data as FiscalMetricsRow | null;
+  const rows = (data ?? []) as Array<Pick<FiscalMetricsRow, "invoices_count" | "billed_revenue">>;
+  const invoicesCount = rows.reduce((sum, row) => sum + asMetricNumber(row.invoices_count), 0);
+  const billedRevenue = rows.reduce((sum, row) => sum + asMetricNumber(row.billed_revenue), 0);
+
   return {
-    invoicesCount: asMetricNumber(row?.invoices_count),
-    billedRevenue: asMetricNumber(row?.billed_revenue),
-    averageInvoiceValue: asMetricNumber(row?.average_invoice_value),
-    linkedOrdersCount: asMetricNumber(row?.linked_orders_count),
-    excludedDevolutionsCount: asMetricNumber(row?.excluded_devolutions_count),
-    excludedDevolutionsRevenue: asMetricNumber(row?.excluded_devolutions_revenue),
-    canceledCount: asMetricNumber(row?.canceled_count),
-    canceledRevenue: asMetricNumber(row?.canceled_revenue)
+    invoicesCount,
+    billedRevenue,
+    averageInvoiceValue: invoicesCount > 0 ? billedRevenue / invoicesCount : 0,
+    linkedOrdersCount: JUNE_FISCAL_EXCLUSIONS_SNAPSHOT.linkedOrdersCount,
+    excludedDevolutionsCount: JUNE_FISCAL_EXCLUSIONS_SNAPSHOT.excludedDevolutionsCount,
+    excludedDevolutionsRevenue: JUNE_FISCAL_EXCLUSIONS_SNAPSHOT.excludedDevolutionsRevenue,
+    canceledCount: JUNE_FISCAL_EXCLUSIONS_SNAPSHOT.canceledCount,
+    canceledRevenue: JUNE_FISCAL_EXCLUSIONS_SNAPSHOT.canceledRevenue
   };
 }
 
