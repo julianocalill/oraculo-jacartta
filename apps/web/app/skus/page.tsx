@@ -35,6 +35,15 @@ type FiscalCoverage = {
   missingOrderItemsRevenuePct: number;
 };
 
+const FISCAL_SKU_COVERAGE_SNAPSHOT: FiscalCoverage = {
+  invoicesWithOrderItems: 30987,
+  revenueWithOrderItems: 2198329.66,
+  revenueWithoutOrderItems: 3045386.10,
+  orderItemsInvoicePct: 43.52,
+  orderItemsRevenuePct: 41.92,
+  missingOrderItemsRevenuePct: 58.08
+};
+
 function n(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
@@ -109,40 +118,6 @@ function asSource(value: string | undefined): SourceFilter {
   return "all";
 }
 
-function parseNumber(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-  return 0;
-}
-
-async function loadFiscalCoverage(supabase: ReturnType<typeof createSupabaseAdminClient>): Promise<FiscalCoverage> {
-  const { data, error } = await supabase.rpc("oraculo_fiscal_order_item_backfill_progress", {
-    p_start_date: "2026-06-01",
-    p_end_date: "2026-06-19"
-  });
-
-  if (error) throw error;
-
-  const payload = (data ?? {}) as {
-    metrics?: Record<string, unknown>;
-    coverage?: Record<string, unknown>;
-  };
-  const metrics = payload.metrics ?? {};
-  const coverageRow = payload.coverage ?? {};
-
-  return {
-    invoicesWithOrderItems: parseNumber(metrics.invoices_with_order_items),
-    revenueWithOrderItems: parseNumber(metrics.revenue_with_order_items),
-    revenueWithoutOrderItems: parseNumber(metrics.revenue_without_order_items),
-    orderItemsInvoicePct: parseNumber(coverageRow.order_items_invoice_pct),
-    orderItemsRevenuePct: parseNumber(coverageRow.order_items_revenue_pct),
-    missingOrderItemsRevenuePct: parseNumber(coverageRow.missing_order_items_revenue_pct)
-  };
-}
-
 async function loadSkus(selectedSku?: string, source: SourceFilter = "all") {
   const supabase = createSupabaseAdminClient();
 
@@ -172,16 +147,15 @@ async function loadSkus(selectedSku?: string, source: SourceFilter = "all") {
     return query;
   })();
 
-  const [rowsResponse, selectedResponse, fiscalCoverage] = await Promise.all([
+  const [rowsResponse, selectedResponse] = await Promise.all([
     rowsQuery,
-    selectedQuery,
-    loadFiscalCoverage(supabase)
+    selectedQuery
   ]);
 
   return {
     rows: (rowsResponse.data ?? []) as SkuRow[],
     selected: ((selectedResponse.data ?? []) as SkuRow[])[0] ?? null,
-    fiscalCoverage
+    fiscalCoverage: FISCAL_SKU_COVERAGE_SNAPSHOT
   };
 }
 

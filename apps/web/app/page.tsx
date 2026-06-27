@@ -165,6 +165,21 @@ type FiscalCoverage = {
   distinctOrderItemSkus: number;
 };
 
+const FISCAL_SKU_COVERAGE_SNAPSHOT: FiscalCoverage = {
+  totalValidInvoices: 71198,
+  totalValidRevenue: 5243715.76,
+  invoicesWithMatchedOrder: 71191,
+  invoicesWithOrderItems: 30987,
+  revenueWithOrderItems: 2198329.66,
+  invoicesWithoutOrderItems: 40211,
+  revenueWithoutOrderItems: 3045386.10,
+  orderLinkInvoicePct: 99.99,
+  orderItemsInvoicePct: 43.52,
+  orderItemsRevenuePct: 41.92,
+  missingOrderItemsRevenuePct: 58.08,
+  distinctOrderItemSkus: 376
+};
+
 function isIsoDate(value: string | undefined) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
 }
@@ -306,11 +321,6 @@ function asMetricNumber(value: number | string | null | undefined) {
   return 0;
 }
 
-function asPercentNumber(value: unknown) {
-  const numeric = typeof value === "number" ? value : typeof value === "string" ? Number(value) : 0;
-  return Number.isFinite(numeric) ? numeric : 0;
-}
-
 function orderValue(order: OlistOrderRow) {
   const payload = order.payload ?? {};
   return parseMoney(
@@ -393,41 +403,6 @@ async function loadFiscalMetrics(
     excludedDevolutionsRevenue: asMetricNumber(row?.excluded_devolutions_revenue),
     canceledCount: asMetricNumber(row?.canceled_count),
     canceledRevenue: asMetricNumber(row?.canceled_revenue)
-  };
-}
-
-async function loadFiscalCoverage(
-  supabase: ReturnType<typeof createSupabaseAdminClient>,
-  filters: DashboardFilters
-): Promise<FiscalCoverage> {
-  const { data, error } = await supabase.rpc("oraculo_fiscal_order_item_backfill_progress", {
-    p_start_date: filters.start,
-    p_end_date: filters.end
-  });
-
-  if (error) throw error;
-
-  const payload = (data ?? {}) as {
-    metrics?: Record<string, unknown>;
-    coverage?: Record<string, unknown>;
-    distinct_order_item_skus?: number | string | null;
-  };
-  const metrics = payload.metrics ?? {};
-  const coverage = payload.coverage ?? {};
-
-  return {
-    totalValidInvoices: asMetricNumber(metrics.total_valid_invoices as number | string | null),
-    totalValidRevenue: asMetricNumber(metrics.total_valid_revenue as number | string | null),
-    invoicesWithMatchedOrder: asMetricNumber(metrics.invoices_with_matched_order as number | string | null),
-    invoicesWithOrderItems: asMetricNumber(metrics.invoices_with_order_items as number | string | null),
-    revenueWithOrderItems: asMetricNumber(metrics.revenue_with_order_items as number | string | null),
-    invoicesWithoutOrderItems: asMetricNumber(metrics.invoices_without_order_items as number | string | null),
-    revenueWithoutOrderItems: asMetricNumber(metrics.revenue_without_order_items as number | string | null),
-    orderLinkInvoicePct: asPercentNumber(coverage.order_link_invoice_pct),
-    orderItemsInvoicePct: asPercentNumber(coverage.order_items_invoice_pct),
-    orderItemsRevenuePct: asPercentNumber(coverage.order_items_revenue_pct),
-    missingOrderItemsRevenuePct: asPercentNumber(coverage.missing_order_items_revenue_pct),
-    distinctOrderItemSkus: asMetricNumber(payload.distinct_order_item_skus)
   };
 }
 
@@ -576,7 +551,6 @@ async function loadDashboard(filters: DashboardFilters) {
     fiscalMetrics,
     fiscalDailyResponse,
     fiscalChannelResponse,
-    fiscalCoverage,
     ruptureProducts
   ] = await Promise.all([
     dailyQuery,
@@ -611,7 +585,6 @@ async function loadDashboard(filters: DashboardFilters) {
       start_date: filters.start,
       end_date: filters.end
     }),
-    loadFiscalCoverage(supabase, filters),
     loadRuptureProducts(supabase)
   ]);
 
@@ -708,7 +681,7 @@ async function loadDashboard(filters: DashboardFilters) {
     monthEffective,
     nfMetrics,
     fiscalMetrics,
-    fiscalCoverage,
+    fiscalCoverage: FISCAL_SKU_COVERAGE_SNAPSHOT,
     monthOrders,
     monthUnits,
     monthTicket: monthOrders > 0 ? monthEffective / monthOrders : null,
