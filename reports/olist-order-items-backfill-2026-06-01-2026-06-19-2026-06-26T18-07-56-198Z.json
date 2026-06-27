@@ -1,0 +1,47 @@
+{
+  "ok": true,
+  "run_id": "4b462157-1705-4460-b688-c06cabb783ec",
+  "status": "partial",
+  "period": {
+    "start": "2026-06-01",
+    "end": "2026-06-19"
+  },
+  "candidates_total_at_start": 52186,
+  "processed_this_invocation": 2000,
+  "totals": {
+    "orders_processed": 20221,
+    "orders_with_items": 20221,
+    "orders_without_items": 0,
+    "orders_with_error": 0,
+    "items_upserted": 20687
+  },
+  "runtime": {
+    "rate_limit_events": 8,
+    "network_retries": 0,
+    "rate_limit_cooldown_until": 1782497162671,
+    "api_ms": 755595,
+    "parse_ms": 87,
+    "supabase_ms": 10544,
+    "queue_ms": 0,
+    "delay_ms": 2869846,
+    "total_candidate_ms": 3625633,
+    "candidates_timed": 2000
+  },
+  "performance": {
+    "elapsed_ms": 1833299,
+    "processed_per_minute": 65.46,
+    "avg_total_ms_per_order": 1812.82,
+    "avg_api_ms_per_order": 377.8,
+    "avg_supabase_ms_per_order": 5.27,
+    "avg_queue_ms_per_order": 0,
+    "avg_parse_ms_per_order": 0.04,
+    "avg_delay_ms_per_order": 1434.92,
+    "queue_pending_after_run": 50186,
+    "estimated_remaining_minutes": 766.72
+  },
+  "stopped_by_runtime": false,
+  "checkpoint_order_id": "361598313",
+  "coverage": null,
+  "release_gate_passed": false,
+  "next_action": "continuar_backfill_com_resume"
+}
