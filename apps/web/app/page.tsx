@@ -511,7 +511,14 @@ async function loadDashboard(filters: DashboardFilters) {
   ] = await Promise.all([
     dailyQuery,
     loadUnifiedChannelRows(supabase, filters),
-    Promise.resolve({ data: [], error: null }),
+    supabase
+      .from("oraculo_sku_current_unified")
+      .select("source, sku, product_name, revenue_30d, units_30d, revenue_change_pct, available_stock, stock_balance, days_until_stockout, last_sale_at")
+      .not("sku", "is", null)
+      .neq("sku", "")
+      .gt("revenue_30d", 0)
+      .order("revenue_30d", { ascending: false })
+      .limit(20),
     supabase
       .from("oraculo_stock_watchlist_unified")
       .select("source, sku, product_name, stock_signal, available_stock, days_until_stockout, last_sale_at")
@@ -547,13 +554,13 @@ async function loadDashboard(filters: DashboardFilters) {
     (left, right) => asMetricNumber(right.billed_revenue) - asMetricNumber(left.billed_revenue)
   );
   const fiscalCoverage = fiscalCoverageResponse;
-  const skuRows = ((skuSalesResponse.data ?? []) as SkuPeriodRank[]).map((sku) => ({
+  const skuRows = ((skuSalesResponse.data ?? []) as SkuCurrent[]).map((sku) => ({
     source: sku.source,
     sku: sku.sku,
     product_name: sku.product_name,
-    revenue_30d: asNumber(sku.effective_revenue),
-    units_30d: asNumber(sku.units),
-    revenue_change_pct: null,
+    revenue_30d: asNumber(sku.revenue_30d),
+    units_30d: asNumber(sku.units_30d),
+    revenue_change_pct: sku.revenue_change_pct,
     available_stock: sku.available_stock,
     stock_balance: sku.stock_balance,
     days_until_stockout: sku.days_until_stockout,
@@ -974,7 +981,7 @@ export default async function HomePage({
                 {data.skus.length === 0 ? (
                   <tr>
                     <td colSpan={10}>
-                      <p className="empty-state table-empty">Sem SKUs vendidos no periodo selecionado.</p>
+                      <p className="empty-state table-empty">Sem SKUs vendidos na janela cacheada.</p>
                     </td>
                   </tr>
                 ) : (
@@ -1008,7 +1015,7 @@ export default async function HomePage({
             <h2>Ranking parcial coberto</h2>
             <div className="rank-list">
               {data.skus.length === 0 ? (
-                <p className="empty-state">Sem ranking para o periodo selecionado.</p>
+                <p className="empty-state">Sem ranking na janela cacheada.</p>
               ) : (
                 data.skus.slice(0, 5).map((sku) => (
                   <Link href={`/skus?sku=${encodeURIComponent(sku.sku ?? "")}`} key={`rank-${sku.sku}`}>
