@@ -1,0 +1,12 @@
+.env
+.env.*
+tmp/
+logs/
+reports/
+backups/
+node_modules/
+.next/
+.turbo/
+coverage/
+*.tsbuildinfo
+.DS_Store

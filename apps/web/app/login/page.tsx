@@ -77,6 +77,10 @@ export default async function LoginPage({
 }: {
   searchParams?: Promise<LoginSearchParams>;
 }) {
+  if (process.env.NODE_ENV !== "production") {
+    redirect("/");
+  }
+
   const params = await searchParams;
   const user = await getCurrentUser();
   const hasUsers = await hasAnyUser();

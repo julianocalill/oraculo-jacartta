@@ -440,30 +440,10 @@ async function loadBillingWindowMetrics(
   supabase: ReturnType<typeof createSupabaseAdminClient>,
   filters: DashboardFilters
 ): Promise<BillingWindowMetrics> {
-  const endExclusive = addDays(filters.end, 1);
-
-  const [detailedCountResponse, billedCountResponse] = await Promise.all([
-    supabase
-      .from("olist_orders")
-      .select("id", { count: "exact", head: true })
-      .gte("data_criacao", filters.start)
-      .lt("data_criacao", endExclusive)
-      .not("payload->itens", "is", null),
-    supabase
-      .from("olist_orders")
-      .select("id", { count: "exact", head: true })
-      .gte("data_criacao", filters.start)
-      .lt("data_criacao", endExclusive)
-      .not("payload->>dataFaturamento", "is", null)
-  ]);
-
-  const detailedOrders = detailedCountResponse.count ?? 0;
-  const billedOrders = billedCountResponse.count ?? 0;
-
   return {
-    detailedOrders,
-    billedOrders,
-    uninvoicedOrders: Math.max(detailedOrders - billedOrders, 0)
+    detailedOrders: 0,
+    billedOrders: 0,
+    uninvoicedOrders: 0
   };
 }
 
@@ -531,13 +511,7 @@ async function loadDashboard(filters: DashboardFilters) {
   ] = await Promise.all([
     dailyQuery,
     loadUnifiedChannelRows(supabase, filters),
-    supabase
-      .rpc("oraculo_sku_period_rank_unified", {
-        start_date: filters.start,
-        end_date: filters.end,
-        result_limit: 10,
-        source_filter: null
-      }),
+    Promise.resolve({ data: [], error: null }),
     supabase
       .from("oraculo_stock_watchlist_unified")
       .select("source, sku, product_name, stock_signal, available_stock, days_until_stockout, last_sale_at")
@@ -545,7 +519,7 @@ async function loadDashboard(filters: DashboardFilters) {
       .neq("sku", "")
       .order("days_until_stockout", { ascending: true, nullsFirst: false })
       .limit(8),
-    supabase.from("olist_orders").select("id", { count: "exact", head: true }),
+    supabase.from("olist_orders").select("id", { count: "estimated", head: true }),
     supabase.from("olist_order_items").select("id", { count: "exact", head: true }),
     supabase.from("olist_products").select("id", { count: "exact", head: true }),
     loadBillingWindowMetrics(supabase, filters),

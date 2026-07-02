@@ -12,6 +12,7 @@ Current functions:
 - `olist-sync-orders`
 - `olist-derived-refresh`
 - `olist-sync-stock`
+- `olist-sync-invoices`
 - `olist-sync-health`
 
 ## Runtime model
@@ -26,6 +27,7 @@ Deploy commands:
 npx supabase functions deploy olist-sync-orders --no-verify-jwt
 npx supabase functions deploy olist-derived-refresh --no-verify-jwt
 npx supabase functions deploy olist-sync-stock --no-verify-jwt
+npx supabase functions deploy olist-sync-invoices --no-verify-jwt
 ```
 
 ## Current sync roles
@@ -33,6 +35,7 @@ npx supabase functions deploy olist-sync-stock --no-verify-jwt
 - `olist-sync-orders`: pulls recent Olist orders in small hourly batches and hydrates details only when needed.
 - `olist-derived-refresh`: builds order items, light dimensions, sales caches and unified channel cache in incremental mode.
 - `olist-sync-stock`: refreshes stock/products every 6 hours.
+- `olist-sync-invoices`: pulls fiscal invoices in checkpointed batches for recent days and current-month catch-up.
 - `olist-oauth-callback`: stores Olist refresh token after OAuth.
 - `olist-sync-health`: health/status endpoint.
 

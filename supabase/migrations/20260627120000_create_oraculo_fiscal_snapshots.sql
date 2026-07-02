@@ -26,9 +26,9 @@ order by snapshot_key, captured_at desc, id desc;
 alter table public.oraculo_fiscal_snapshots enable row level security;
 
 revoke all on table public.oraculo_fiscal_snapshots from public, anon, authenticated;
-revoke all on view public.oraculo_fiscal_latest_snapshots from public, anon, authenticated;
+revoke all on table public.oraculo_fiscal_latest_snapshots from public, anon, authenticated;
 grant all on table public.oraculo_fiscal_snapshots to service_role;
-grant select on view public.oraculo_fiscal_latest_snapshots to service_role;
+grant select on table public.oraculo_fiscal_latest_snapshots to service_role;
 
 insert into public.oraculo_fiscal_snapshots (
   snapshot_key,
