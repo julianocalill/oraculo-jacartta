@@ -35,9 +35,10 @@ oraculo/
 2. [docs/engineering-playbook.md](docs/engineering-playbook.md)
 3. [docs/deployment-map.md](docs/deployment-map.md)
 4. [docs/oraculo-master-plan.md](docs/oraculo-master-plan.md)
-5. [docs/project-status-2026-06-27.md](docs/project-status-2026-06-27.md)
-6. [docs/runbooks/resume-after-supabase-upgrade.md](docs/runbooks/resume-after-supabase-upgrade.md)
-7. [vault/00-home/index.md](vault/00-home/index.md)
+5. [docs/project-status-2026-07-03.md](docs/project-status-2026-07-03.md)
+6. [docs/project-status-2026-06-27.md](docs/project-status-2026-06-27.md)
+7. [docs/runbooks/resume-after-supabase-upgrade.md](docs/runbooks/resume-after-supabase-upgrade.md)
+8. [vault/00-home/index.md](vault/00-home/index.md)
 
 ## Tooling choices
 
@@ -48,7 +49,7 @@ oraculo/
 
 ## Current production state
 
-- State updated: `2026-06-27`
+- State updated: `2026-07-03`
 - Production URL: `https://oraculo.oliverhome.com.br`
 - Primary GitHub repository: `https://github.com/Grupo-Jacartta/oraculo.git`
 - Personal mirror: `https://github.com/julianocalill/oraculo-jacartta`
@@ -61,14 +62,23 @@ oraculo/
 
 Current product areas:
 
-- MVP fiscal dashboard for June 2026.
+- Fiscal dashboard for the current month by default.
 - Official fiscal dashboard based on issued/authorized outbound invoices.
 - Orders/channel metrics from cached Supabase views/tables.
+- Dashboard SKU ranking reads the cached `oraculo_sku_current_unified` table, not the heavy period ranking RPC.
 - SKU coverage panel with explicit "in processing" status.
 - SKU and margin foundation, still blocked for official decisions.
 - Rupture/no-sale product watchlist.
 - Manual parameters by channel, SKU and UF.
 - Read-only Shopee Donacor data.
+
+Production behavior on `2026-07-03`:
+
+- the dashboard default filter is the current month in `America/Sao_Paulo`;
+- legacy links carrying `start=2026-06-01&end=2026-06-30` are normalized to the current month;
+- the fiscal header text is derived from the active filter and must not be hardcoded to June;
+- July 2026 fiscal layer currently reports `7.186` valid NFs, `R$ 688.547,55` billed revenue and data through `2026-07-03`;
+- the `Sem canal` fiscal bucket means the Olist NF payload had no integration, marketplace, channel or ecommerce name; on July 2026 this bucket is dominated by NF `394638` for `R$ 178.500,00`, likely a direct/manual sale that needs business classification.
 
 ## Official fiscal contract
 
@@ -82,7 +92,7 @@ Validated rule:
 - fiscal date = invoice emission date;
 - official revenue = validated invoice amount.
 
-Validation for `2026-06-01` to `2026-06-19`:
+Historical validation for `2026-06-01` to `2026-06-19`:
 
 - Olist screen: `71.197` invoices / `R$ 5.243.629,96`;
 - Supabase official layer: `71.198` invoices / `R$ 5.243.715,76`.
@@ -99,6 +109,8 @@ Runtime rule for the web app:
 
 - the dashboard may read `oraculo_fiscal_daily_revenue` and `oraculo_fiscal_channel_metrics`;
 - fiscal dashboard exclusions and SKU coverage cards must read `oraculo_fiscal_latest_snapshots`;
+- the current-month filter is computed at request time in the Next.js pages using `America/Sao_Paulo`;
+- SKU ranking on the index must use the cached `oraculo_sku_current_unified` source;
 - the dashboard must not call heavy audit/RPC functions during server render;
 - `oraculo_fiscal_metrics` and `oraculo_fiscal_order_item_backfill_progress` caused Supabase `57014` statement timeouts in Vercel and are not safe for the request path.
 
@@ -121,6 +133,10 @@ Recent production commits:
 - `c4b2766` - fiscal revenue dashboard MVP;
 - `a5f853f` - remove heavy SKU coverage RPC from render;
 - `ab536d5` - use fast fiscal daily metrics on dashboard.
+- `f26b677` - automate fiscal invoice sync;
+- `ea003d5` - restore cached SKU ranking on dashboard;
+- `7aae605` - default dashboard filters to current month;
+- `8d4b730` - fix current fiscal period header.
 
 Continue the validated run with:
 
@@ -144,6 +160,8 @@ Scheduling is handled inside Supabase through `pg_cron`:
 - `oraculo-olist-derived-hourly`: hourly at minute `:25`, derived metrics/cache sync.
 - `oraculo-nf-cache-hourly`: hourly at minute `:35`, NF cache refresh inside Postgres.
 - `oraculo-olist-stock-6h`: every 6 hours, stock/product refresh.
+- `oraculo-olist-invoices-15m`: every 15 minutes, fiscal invoice sync for the recent window.
+- `oraculo-olist-invoices-monthly-deep`: daily at `06:20` UTC, fiscal invoice catch-up for the current month.
 
 The local macOS `launchd` job remains as historical/fallback documentation, not the primary sync owner.
 

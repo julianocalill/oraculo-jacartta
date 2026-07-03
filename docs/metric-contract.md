@@ -1,6 +1,6 @@
 # Contrato de Metricas do Oraculo
 
-Data da versao: 2026-06-27
+Data da versao: 2026-07-03
 
 Este documento define a regra que o painel deve seguir antes de evoluirmos ROI, margem, curva de saida e ruptura. A prioridade agora e confiabilidade: cada numero precisa ter fonte, filtro de data e formula explicita.
 
@@ -41,6 +41,12 @@ Resultado validado para `2026-06-01` a `2026-06-19`:
 - Supabase filtrado: `71.198` NFs e `R$ 5.243.715,76`;
 - diferenca: `+1` NF e `+R$ 85,80`, dentro da tolerancia aprovada.
 
+Resultado operacional atual para `2026-07-01` a `2026-07-31`, consultado em `2026-07-03`:
+
+- Supabase fiscal oficial: `7.186` NFs validas;
+- receita faturada: `R$ 688.547,55`;
+- dados ate: `2026-07-03`.
+
 Objetos oficiais criados:
 
 - `oraculo_fiscal_invoices_valid`;
@@ -59,6 +65,28 @@ Para desempenho, `olist_invoices` tambem possui campos fiscais gerados:
 - `fiscal_channel_label`.
 
 Esses campos sao derivados do payload e atualizados automaticamente pelo Postgres quando a NF e inserida/atualizada.
+
+### Canal fiscal
+
+O canal fiscal e calculado em `fiscal_channel_label` com a prioridade:
+
+1. `integration_name`
+2. `marketplace_name`
+3. `channel_name`
+4. `raw_json.ecommerce.nome`
+5. `Sem canal`
+
+`Sem canal` nao e um marketplace. Ele significa que a NF valida veio sem identificador de canal no payload da Olist. Em julho de 2026, esse bucket tem `18` NFs e `R$ 179.642,32`, com concentracao na NF `394638` de `R$ 178.500,00`. Essa NF deve ser classificada pelo negocio antes de qualquer redistribuicao automatica.
+
+### Filtro padrao do produto
+
+O dashboard e a pagina `/pedidos` usam o mes vigente como periodo padrao em `America/Sao_Paulo`. O texto do cabecalho fiscal deriva do filtro ativo. Links antigos com o range hardcoded `2026-06-01` a `2026-06-30` sao normalizados para o mes vigente.
+
+### Ranking parcial de SKUs no index
+
+O ranking parcial do index usa `oraculo_sku_current_unified`, que e cacheado e representa a janela operacional corrente de 30 dias. Ele nao e ranking fiscal oficial.
+
+Nao usar `oraculo_sku_period_rank_unified` no render server-side para periodos grandes. Uma validacao remota para junho de 2026 levou cerca de `27s`, o que e inadequado para a home em Vercel.
 
 ### O que ainda nao virou oficial
 

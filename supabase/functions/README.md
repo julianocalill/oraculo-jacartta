@@ -39,4 +39,9 @@ npx supabase functions deploy olist-sync-invoices --no-verify-jwt
 - `olist-oauth-callback`: stores Olist refresh token after OAuth.
 - `olist-sync-health`: health/status endpoint.
 
+`olist-sync-invoices` is scheduled by:
+
+- `oraculo-olist-invoices-15m`: recent three-day window, every 15 minutes.
+- `oraculo-olist-invoices-monthly-deep`: first day of current month through `current_date`, daily at `06:20` UTC.
+
 One-time or controlled backfill scripts still live in `scripts/`.

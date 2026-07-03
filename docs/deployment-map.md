@@ -39,6 +39,11 @@
   - Pulls Olist stock/products.
   - Runs less frequently because the current implementation scans products broadly.
   - JWT verification is disabled at deploy level for internal cron calls; protected by `x-sync-secret`.
+- `olist-sync-invoices`
+  - Pulls Olist fiscal invoices from endpoint `notas`.
+  - Uses checkpoint/resume in `olist_invoice_sync_runs`.
+  - Hydrates invoice detail/items in bounded batches.
+  - JWT verification is disabled at deploy level for internal cron calls; protected by `x-sync-secret`.
 - `olist-sync-health`
   - Health/status endpoint for sync operations.
 
@@ -57,6 +62,13 @@ Active jobs in `cron.job`:
   - Runs `refresh_oraculo_nf_daily_cache` directly in Postgres.
 - `oraculo-olist-stock-6h`: `15 */6 * * *`
   - Calls `olist-sync-stock`.
+- `oraculo-olist-invoices-15m`: `*/15 * * * *`
+  - Calls `olist-sync-invoices`.
+  - Payload: `lookbackDays=3`, `pageSize=50`, `maxPages=2`, `hydrateDetails=true`.
+- `oraculo-olist-invoices-monthly-deep`: `20 6 * * *`
+  - Calls `olist-sync-invoices`.
+  - Window: first day of current month through `current_date`.
+  - Payload: `pageSize=100`, `maxPages=25`, `hydrateDetails=true`.
 
 ## Manual Validation Commands
 

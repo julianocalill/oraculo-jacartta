@@ -28,6 +28,10 @@ The active sync is defined in migrations and Edge Functions in this repo.
 - Derived metrics/cache: `oraculo-olist-derived-hourly`, minute `:25`.
 - NF cache: `oraculo-nf-cache-hourly`, minute `:35`.
 - Stock/products: `oraculo-olist-stock-6h`, every 6 hours.
+- Fiscal invoices: `oraculo-olist-invoices-15m`, every 15 minutes.
+- Fiscal invoice current-month catch-up: `oraculo-olist-invoices-monthly-deep`, daily at `06:20` UTC.
+
+Fiscal invoice sync is now owned by the Edge Function `olist-sync-invoices`. It reads Olist `notas`, uses `olist_invoice_sync_runs` for checkpoint/resume, and upserts `olist_invoices` plus `olist_invoice_items` in bounded batches.
 
 Older Olist integration work outside this monorepo can still be used as reference:
 

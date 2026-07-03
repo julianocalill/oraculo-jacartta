@@ -2,6 +2,8 @@
 
 Data: `2026-06-27`
 
+> Historical status. For the current production state, read `docs/project-status-2026-07-03.md`.
+
 ## Producao
 
 - App: `https://oraculo.oliverhome.com.br`

@@ -32,7 +32,7 @@ The first canonical layer for Oraculo is:
 
 Official fiscal revenue is sourced from `olist_invoices`, not from `olist_orders.payload.dataFaturamento`.
 
-## Active sync - 2026-06-27
+## Active sync - 2026-07-03
 
 Scheduling is handled by Supabase `pg_cron`.
 
@@ -54,6 +54,14 @@ Scheduling is handled by Supabase `pg_cron`.
   - Function: `olist-sync-stock`
   - Purpose: refresh stock/products.
   - Reason for 6h cadence: current implementation scans products broadly and is not safely incremental.
+- `oraculo-olist-invoices-15m`
+  - Schedule: `*/15 * * * *`
+  - Function: `olist-sync-invoices`
+  - Purpose: sync recent fiscal invoices and invoice items in short checkpointed batches.
+- `oraculo-olist-invoices-monthly-deep`
+  - Schedule: `20 6 * * *`
+  - Function: `olist-sync-invoices`
+  - Purpose: current-month fiscal catch-up from first day of month through `current_date`.
 
 ## Rate-limit strategy
 
@@ -69,7 +77,9 @@ Scheduling is handled by Supabase `pg_cron`.
 - Some historical periods have `olist_orders` but no corresponding `olist_order_items`.
 - SKU/ranking metrics depend on item detail; those periods need controlled backfill.
 - Fiscal invoice headers are reconciled and official.
+- Fiscal invoice sync is automatic in Supabase; it no longer requires Codex/local terminal to keep running.
 - Valid fiscal rule: status `6,7`, exclude type `E`, exclude return origin, use emission date.
+- `Sem canal` fiscal records are valid NFs where Olist did not send integration, marketplace, channel or ecommerce name. July 2026 is dominated by NF `394638` for `R$ 178.500,00`.
 - NF-to-order link is `payload.ecommerce.numeroPedidoEcommerce` and covers `99,99%` of valid NFs.
 - Linked order items cover `41,92%` of official fiscal revenue.
 - Continue `scripts/backfill-olist-order-items-for-valid-invoices.js` with `--delay-ms=900 --concurrency=2 --limit=2000 --resume --skip-audit`.

@@ -22,7 +22,24 @@ The current product direction is practical executive intelligence for the operat
 - `Obsidian` can store durable project memory, but repository docs are the source of truth.
 - `AI agents` assist architecture, coding, review and documentation, but repository files remain the source of truth.
 
-## Current state on 2026-06-27
+## Current state on 2026-07-03
+
+- Production remains at `https://oraculo.oliverhome.com.br`.
+- The dashboard is fiscal-first and defaults to the current month in `America/Sao_Paulo`.
+- Legacy dashboard URLs with `start=2026-06-01&end=2026-06-30` are normalized to the current month so old links do not pin the index to June.
+- The fiscal header text is generated from the active filter; it must not be hardcoded to "Junho de 2026".
+- July 2026 validation on `2026-07-03` returned `7.186` valid NFs, `R$ 688.547,55` billed revenue and data through `2026-07-03`.
+- `olist-sync-invoices` is deployed as a Supabase Edge Function and protected by `x-sync-secret`.
+- Fiscal invoice sync now runs in Supabase through `pg_cron`:
+  - `oraculo-olist-invoices-15m`: recent-window NF sync every 15 minutes;
+  - `oraculo-olist-invoices-monthly-deep`: current-month catch-up daily at `06:20` UTC.
+- Manual July import completed fiscal invoices (`5.856` notes and `5.965` items) and Olist orders (`6.473` orders for the July window). Order detail hydration was stopped after about `800` orders and is not complete.
+- The index SKU ranking uses `oraculo_sku_current_unified`, a cached source. Do not put `oraculo_sku_period_rank_unified` back in the dashboard request path for large periods; June 2026 took roughly `27s` in a remote validation.
+- `Sem canal` in fiscal channel revenue means the Olist invoice payload had no integration, marketplace, channel or ecommerce name. For July 2026 it currently has `18` NFs and `R$ 179.642,32`, dominated by NF `394638` for `R$ 178.500,00`.
+- The UI theme is now a light/white layout.
+- Local development bypasses auth with a fake local admin only outside production; production remains protected by Supabase Auth.
+
+## Historical state on 2026-06-27
 
 - Next.js web app exists in `apps/web`.
 - Supabase migrations and Edge Functions exist in `supabase`.
