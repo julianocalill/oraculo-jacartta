@@ -81,8 +81,18 @@ function getCurrentMonthRange(): Pick<PedidosFilters, "start" | "end"> {
   };
 }
 
+function isLegacyDefaultRange(params: PedidosSearchParams | undefined) {
+  return params?.start === "2026-06-01" && params?.end === "2026-06-30";
+}
+
 function getFilters(params: PedidosSearchParams | undefined): PedidosFilters {
   const currentMonth = getCurrentMonthRange();
+  if (isLegacyDefaultRange(params)) {
+    return {
+      ...currentMonth,
+      source: asSource(params?.source)
+    };
+  }
 
   return {
     start: isIsoDate(params?.start) ? params!.start! : currentMonth.start,

@@ -172,13 +172,28 @@ function getCurrentMonthRange(): DashboardFilters {
   };
 }
 
+function isLegacyDefaultRange(params: DashboardSearchParams | undefined) {
+  return params?.start === "2026-06-01" && params?.end === "2026-06-30";
+}
+
 function getDashboardFilters(params: DashboardSearchParams | undefined): DashboardFilters {
   const currentMonth = getCurrentMonthRange();
+  if (isLegacyDefaultRange(params)) return currentMonth;
 
   return {
     start: isIsoDate(params?.start) ? params!.start! : currentMonth.start,
     end: isIsoDate(params?.end) ? params!.end! : currentMonth.end
   };
+}
+
+function formatMonthYearFromDate(value: string) {
+  const label = new Intl.DateTimeFormat("pt-BR", {
+    month: "long",
+    year: "numeric",
+    timeZone: "America/Sao_Paulo"
+  }).format(toDisplayDate(value));
+
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 function asNumber(value: number | null | undefined) {
@@ -731,7 +746,7 @@ export default async function HomePage({
           <div>
             <h1>Faturamento fiscal</h1>
             <p>
-              Junho de 2026 por NF faturada válida · {formatCount(data.fiscalMetrics.invoicesCount)} NFs emitidas
+              {formatMonthYearFromDate(filters.start)} por NF faturada válida · {formatCount(data.fiscalMetrics.invoicesCount)} NFs emitidas
               {data.fiscalDailyChart.length > 0 ? ` · dados até ${formatDateShort(data.fiscalDailyChart.at(-1)?.issued_date)}` : ""}
             </p>
           </div>
