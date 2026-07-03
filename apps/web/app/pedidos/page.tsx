@@ -65,10 +65,28 @@ function asSource(value: string | undefined): SourceFilter {
   return "all";
 }
 
-function getFilters(params: PedidosSearchParams | undefined): PedidosFilters {
+function getCurrentMonthRange(): Pick<PedidosFilters, "start" | "end"> {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit"
+  }).formatToParts(new Date());
+  const year = Number(parts.find((part) => part.type === "year")?.value);
+  const month = Number(parts.find((part) => part.type === "month")?.value);
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+
   return {
-    start: isIsoDate(params?.start) ? params!.start! : "2026-06-01",
-    end: isIsoDate(params?.end) ? params!.end! : "2026-06-30",
+    start: `${year}-${String(month).padStart(2, "0")}-01`,
+    end: `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`
+  };
+}
+
+function getFilters(params: PedidosSearchParams | undefined): PedidosFilters {
+  const currentMonth = getCurrentMonthRange();
+
+  return {
+    start: isIsoDate(params?.start) ? params!.start! : currentMonth.start,
+    end: isIsoDate(params?.end) ? params!.end! : currentMonth.end,
     source: asSource(params?.source)
   };
 }
