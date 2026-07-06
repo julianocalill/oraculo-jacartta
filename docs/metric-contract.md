@@ -178,6 +178,40 @@ Filtro de data: `olist_order_items.order_data_criacao` para Olist e `shopee_orde
 
 Metricas obrigatorias por dia: receita, quantidade de pedidos, quantidade de unidades e quantidade de linhas de item.
 
+### Curva de venda de estoque
+
+Tela: `/curva-de-venda`.
+
+Objetivo: classificar todos os itens com estoque disponivel por tempo desde a ultima saida, para identificar giro rapido, atencao e estoque parado.
+
+Fonte atual:
+
+- produtos e estoque: `olist_products`;
+- ultima venda: `olist_order_items.order_data_criacao` por `produto_id`.
+
+Filtro:
+
+- `olist_products.disponivel > 0`;
+- `olist_products.tipo <> 'K'`, mantendo somente produtos simples;
+- produto nao precisa ter venda nos ultimos 30 dias para aparecer;
+- a maior `order_data_criacao` encontrada em `olist_order_items` define a data da ultima saida.
+
+Classificacao:
+
+- Curva A: ate `90` dias sem saida;
+- Curva B: de `91` a `180` dias sem saida;
+- Curva C: mais de `180` dias sem saida ou sem venda registrada.
+
+Metricas exibidas:
+
+- quantidade de itens por curva;
+- grafico de linhas horizontais com a quantidade de produtos nas curvas A, B e C;
+- tabela com quatro colunas: nome do produto, data da ultima venda, quantidade em estoque e curva de venda.
+- filtro por curva via query string `curva=A`, `curva=B`, `curva=C` ou `curva=all`.
+- exportacao CSV da curva selecionada por `/curva-de-venda/export`.
+
+Observacao: esta tela e uma visao operacional de estoque/giro. Ela nao libera margem, ROI ou ROAS fiscal, que continuam bloqueados ate a cobertura fiscal de itens atingir o gate documentado.
+
 ### Ranking rapido de produtos
 
 Fonte: itens vendidos unificados.

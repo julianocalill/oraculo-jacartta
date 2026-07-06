@@ -721,6 +721,7 @@ export default async function HomePage({
           <Link href={`/pedidos${filterQuery}`}>Pedidos</Link>
           <Link href="/skus">SKUs</Link>
           <Link href="/skus">Análise SKU</Link>
+          <Link href="/curva-de-venda">Curva de Venda</Link>
           <Link href="/alertas">Alertas <b>{formatCount(data.actionableWatchlist.length)}</b></Link>
           <Link href="/pedidos">Performance</Link>
           <Link href="/alertas">Ruptura</Link>

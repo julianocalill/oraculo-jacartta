@@ -648,6 +648,9 @@ p {
 .metric.accent-yellow::before { background: var(--amber); }
 .metric.accent-blue::before { background: var(--blue); }
 .metric.accent-red::before { background: var(--red); }
+.metric.curve-a::before { background: var(--green); }
+.metric.curve-b::before { background: var(--amber); }
+.metric.curve-c::before { background: var(--red); }
 
 .metric strong {
   font-size: clamp(1.3rem, 1.5vw, 1.8rem);
@@ -809,6 +812,86 @@ h2 {
   color: var(--muted);
   font-style: normal;
   text-align: right;
+}
+
+.curve-panel {
+  display: grid;
+  gap: 4px;
+}
+
+.horizontal-curve-chart {
+  display: grid;
+  gap: 16px;
+}
+
+.horizontal-curve-row {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr) 160px;
+  gap: 14px;
+  align-items: center;
+}
+
+.horizontal-curve-label {
+  display: grid;
+  gap: 4px;
+}
+
+.horizontal-curve-label strong,
+.horizontal-curve-values strong {
+  font-size: 14px;
+}
+
+.horizontal-curve-label span,
+.horizontal-curve-values span,
+.horizontal-curve-values small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.horizontal-curve-track {
+  height: 22px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #edf1f6;
+  overflow: hidden;
+}
+
+.horizontal-curve-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.horizontal-curve-row.curve-a .horizontal-curve-track i,
+.curve-badge.curve-a {
+  background: var(--green);
+}
+
+.horizontal-curve-row.curve-b .horizontal-curve-track i,
+.curve-badge.curve-b {
+  background: var(--amber);
+}
+
+.horizontal-curve-row.curve-c .horizontal-curve-track i,
+.curve-badge.curve-c {
+  background: var(--red);
+}
+
+.horizontal-curve-values {
+  display: grid;
+  gap: 3px;
+  justify-items: end;
+}
+
+.curve-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: #ffffff;
+  display: inline-grid;
+  font-size: 12px;
+  font-weight: 900;
+  place-items: center;
 }
 
 .empty-state {
@@ -1382,6 +1465,15 @@ h2 {
 
   .funnel-row em {
     text-align: right;
+  }
+
+  .horizontal-curve-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .horizontal-curve-values {
+    justify-items: start;
   }
 
   .dense-table-wrap {

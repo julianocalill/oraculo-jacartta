@@ -35,6 +35,7 @@ The current product direction is practical executive intelligence for the operat
   - `oraculo-olist-invoices-monthly-deep`: current-month catch-up daily at `06:20` UTC.
 - Manual July import completed fiscal invoices (`5.856` notes and `5.965` items) and Olist orders (`6.473` orders for the July window). Order detail hydration was stopped after about `800` orders and is not complete.
 - The index SKU ranking uses `oraculo_sku_current_unified`, a cached source. Do not put `oraculo_sku_period_rank_unified` back in the dashboard request path for large periods; June 2026 took roughly `27s` in a remote validation.
+- On `2026-07-06`, the product gained `/curva-de-venda`, a sales curve page for stocked simple Olist products. It reads `olist_products` with `disponivel > 0` and `tipo <> 'K'`, intentionally does not use `active = true` because stocked products currently have `active = false`, and calculates the last sale from `olist_order_items.order_data_criacao` by `produto_id`. Products are grouped into A/B/C by days since the last sale: A up to `90` days, B from `91` to `180` days, C over `180` days or no sale registered. The table exposes product name, last sale date, stock quantity and sales curve; the horizontal chart counts products per curve. The page supports `curva=A`, `curva=B`, `curva=C` and `curva=all` filters plus CSV export.
 - `Sem canal` in fiscal channel revenue means the Olist invoice payload had no integration, marketplace, channel or ecommerce name. For July 2026 it currently has `18` NFs and `R$ 179.642,32`, dominated by NF `394638` for `R$ 178.500,00`.
 - The UI theme is now a light/white layout.
 - Local development bypasses auth with a fake local admin only outside production; production remains protected by Supabase Auth.
@@ -105,6 +106,7 @@ Immediate technical follow-up:
 - use `scripts/audit-olist-invoice-items-coverage.js --write-snapshot` for SKU coverage;
 - keep the Next.js pages reading `oraculo_fiscal_latest_snapshots` instead of hardcoded values;
 - do not reintroduce heavy audit RPCs in server-rendered pages.
+- keep `/curva-de-venda` operational and explicitly labeled as an inventory movement view, not an official fiscal margin/ROI view.
 
 ## Working rule
 

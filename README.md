@@ -68,6 +68,7 @@ Current product areas:
 - Dashboard SKU ranking reads the cached `oraculo_sku_current_unified` table, not the heavy period ranking RPC.
 - SKU coverage panel with explicit "in processing" status.
 - SKU and margin foundation, still blocked for official decisions.
+- Sales curve page at `/curva-de-venda`, listing simple stocked Olist products and classifying them into A/B/C by days since last sale.
 - Rupture/no-sale product watchlist.
 - Manual parameters by channel, SKU and UF.
 - Read-only Shopee Donacor data.
@@ -111,6 +112,7 @@ Runtime rule for the web app:
 - fiscal dashboard exclusions and SKU coverage cards must read `oraculo_fiscal_latest_snapshots`;
 - the current-month filter is computed at request time in the Next.js pages using `America/Sao_Paulo`;
 - SKU ranking on the index must use the cached `oraculo_sku_current_unified` source;
+- `/curva-de-venda` reads stocked simple products from `olist_products` with `disponivel > 0` and `tipo <> 'K'`, then calculates the last sale from `olist_order_items.order_data_criacao` by `produto_id`;
 - the dashboard must not call heavy audit/RPC functions during server render;
 - `oraculo_fiscal_metrics` and `oraculo_fiscal_order_item_backfill_progress` caused Supabase `57014` statement timeouts in Vercel and are not safe for the request path.
 

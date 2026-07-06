@@ -99,3 +99,75 @@ Continuam fora de commit por serem pendencias separadas:
 
 - `supabase/migrations/20260701120000_create_product_cost_snapshots.sql`
 - `tmp/`
+
+## Atualizacao 2026-07-06
+
+- Nova rota `/curva-de-venda` criada no app web.
+- Link `Curva de Venda` adicionado ao menu principal do Analytics.
+- A tela classifica todos os itens com estoque disponivel em:
+  - Curva A: ate `90` dias sem saida;
+  - Curva B: de `91` a `180` dias sem saida;
+  - Curva C: mais de `180` dias sem saida ou sem venda registrada.
+- Fonte final: `olist_products` com `disponivel > 0` e `tipo <> K`; ultima venda calculada por `olist_order_items.order_data_criacao` via `produto_id`.
+- A tela mostra cards por curva, grafico horizontal A/B/C por quantidade de produtos e tabela com quatro colunas: nome do produto, data da ultima venda, quantidade em estoque e curva de venda.
+- Validacao local: `npx pnpm --filter web typecheck` e `npx pnpm --filter web build`.
+- Deploy de producao executado via Vercel CLI em `2026-07-06`.
+- Deployment: `dpl_CEayv5fyiMhW5Tah3uy8fXx4KuUE`.
+- URL gerada: `https://oraculo-jacartta-1nzsksucw-grupo-jacartta.vercel.app`.
+- Alias de producao confirmado: `https://oraculo.oliverhome.com.br`.
+- Validacao HTTP: `/curva-de-venda` retorna `307` para `/login?next=%2Fcurva-de-venda`, comportamento esperado para rota protegida.
+
+## Atualizacao 2026-07-06 - recriacao Curva de Venda
+
+- Aba `/curva-de-venda` recriada para seguir o formato operacional pedido:
+  - listar somente produtos com estoque disponivel maior que zero;
+  - colunas exibidas: nome do produto, data da ultima venda, quantidade em estoque e curva de venda;
+  - grafico horizontal A/B/C baseado na quantidade de produtos em cada curva, nao em unidades de estoque.
+- Validacao local: `npx pnpm --filter web build` e `npx pnpm --filter web typecheck`.
+- Novo deploy de producao via Vercel CLI: `dpl_59HFv6maeWXKC815jo2ta3irJuiW`.
+- URL gerada: `https://oraculo-jacartta-99ak8c7m6-grupo-jacartta.vercel.app`.
+- Alias de producao confirmado: `https://oraculo.oliverhome.com.br`.
+- Validacao HTTP: `/curva-de-venda` retorna `307` para `/login?next=%2Fcurva-de-venda`, comportamento esperado para rota protegida.
+
+## Atualizacao 2026-07-06 - filtro Curva de Venda
+
+- Aba `/curva-de-venda` passou a aceitar filtro por curva:
+  - todas: `/curva-de-venda`;
+  - curva A: `/curva-de-venda?curva=A`;
+  - curva B: `/curva-de-venda?curva=B`;
+  - curva C: `/curva-de-venda?curva=C`.
+- A tabela respeita o filtro selecionado e continua exibindo somente produtos simples com estoque disponivel maior que zero.
+- O grafico horizontal permanece como resumo A/B/C do estoque classificado.
+- Botao `Exportar` adicionado para baixar CSV da curva selecionada.
+- Rota de exportacao: `/curva-de-venda/export?curva=A|B|C`.
+- Validacao local: `npx pnpm --filter web typecheck` e `npx pnpm --filter web build`.
+- Deploy de producao: `dpl_ApXuqS96FrJr26D9H8i42mYZ4Lsu`.
+- URL gerada: `https://oraculo-jacartta-grldo46bz-grupo-jacartta.vercel.app`.
+- Alias de producao confirmado: `https://oraculo.oliverhome.com.br`.
+- Validacao HTTP: `/curva-de-venda?curva=A` e `/curva-de-venda/export?curva=A` retornam `307` para login, comportamento esperado para rotas protegidas.
+
+## Atualizacao 2026-07-06 - produtos simples na Curva de Venda
+
+- Aba `/curva-de-venda` ajustada para excluir kits explicitamente.
+- Fonte da lista alterada para `olist_products`, com filtros:
+  - `disponivel > 0`;
+  - `tipo` diferente de `K`.
+- O filtro `active = true` nao deve ser usado nessa tela no estado atual, porque os produtos com estoque positivo estao com `active = false` na tabela local.
+- Data da ultima venda passou a ser buscada em `olist_order_items.order_data_criacao` por `produto_id`.
+- Exportacao CSV usa a mesma regra da tela.
+- Validacao local: `npx pnpm --filter web build` e `npx pnpm --filter web typecheck`.
+- Deploy de producao: `dpl_AKWzMhPTPwJdtBQQAB2UVhSthmu8`.
+- URL gerada: `https://oraculo-jacartta-iu63ubsfb-grupo-jacartta.vercel.app`.
+- Alias de producao confirmado: `https://oraculo.oliverhome.com.br`.
+- Validacao HTTP: `/curva-de-venda?curva=C` e `/curva-de-venda/export?curva=C` retornam `307` para login, comportamento esperado para rotas protegidas.
+
+## Atualizacao 2026-07-06 - hotfix Curva de Venda vazia
+
+- Problema encontrado: a tela ficou vazia porque `olist_products.active = true` retornava `0` produtos, embora existissem `959` produtos com `disponivel > 0`.
+- Correção: remover o filtro `active = true` da tela e da exportacao.
+- Regra final da lista: `disponivel > 0` e `tipo <> K`.
+- Contagem de validacao antes do deploy: `446` produtos simples com estoque disponivel.
+- Validacao local: `npx pnpm --filter web build` e `npx pnpm --filter web typecheck`.
+- Deploy de producao: `dpl_GtdRkV2axaUTQekJ1bB4X8LhJuDB`.
+- URL gerada: `https://oraculo-jacartta-a7iyxajpo-grupo-jacartta.vercel.app`.
+- Alias de producao confirmado: `https://oraculo.oliverhome.com.br`.

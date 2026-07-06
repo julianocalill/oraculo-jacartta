@@ -52,6 +52,7 @@ Required blocks:
 
 - SKU table
 - ABC / XYZ classification
+- sales curve by stocked SKU, classifying A/B/C by days since last sale
 - revenue, units, ticket
 - last sale date
 - stock, stock value, rupture
@@ -144,7 +145,8 @@ This allows us to model more later without reimporting the source.
 5. daily aggregations - active
 6. product intelligence views - foundation active
 7. parameter UI - active for channel, SKU and UF fiscal rules
-8. alert generation - next milestone
+8. sales curve by stocked SKU - active at `/curva-de-venda`
+9. alert generation - next milestone
 
 ## Product rule
 
