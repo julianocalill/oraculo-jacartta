@@ -58,10 +58,12 @@ Scheduling is handled by Supabase `pg_cron`.
   - Schedule: `*/15 * * * *`
   - Function: `olist-sync-invoices`
   - Purpose: sync recent fiscal invoices and invoice items in short checkpointed batches.
-- `oraculo-olist-invoices-monthly-deep`
-  - Schedule: `20 6 * * *`
+- `oraculo-olist-invoices-monthly-headers-hourly`
+  - Schedule: `45 * * * *`
   - Function: `olist-sync-invoices`
-  - Purpose: current-month fiscal catch-up from first day of month through `current_date`.
+  - Purpose: current-month fiscal header catch-up from first day of month through `current_date`.
+  - Payload: `pageSize=100`, `maxPages=300`, `hydrateDetails=false`.
+  - Reason: keep NF counts/revenue aligned with Olist before item hydration finishes.
 
 ## Rate-limit strategy
 
@@ -78,6 +80,7 @@ Scheduling is handled by Supabase `pg_cron`.
 - SKU/ranking metrics depend on item detail; those periods need controlled backfill.
 - Fiscal invoice headers are reconciled and official.
 - Fiscal invoice sync is automatic in Supabase; it no longer requires Codex/local terminal to keep running.
+- July 2026 headers were resynced on `2026-07-07` after the old daily deep cron missed volume above `20k` NFs.
 - Valid fiscal rule: status `6,7`, exclude type `E`, exclude return origin, use emission date.
 - `Sem canal` fiscal records are valid NFs where Olist did not send integration, marketplace, channel or ecommerce name. July 2026 is dominated by NF `394638` for `R$ 178.500,00`.
 - NF-to-order link is `payload.ecommerce.numeroPedidoEcommerce` and covers `99,99%` of valid NFs.

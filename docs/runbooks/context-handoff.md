@@ -65,7 +65,8 @@ Known technical caveats:
 - Stock sync is not hourly because the current Olist stock flow scans products broadly.
 - Fiscal invoice sync is automatic in Supabase:
   - `oraculo-olist-invoices-15m`;
-  - `oraculo-olist-invoices-monthly-deep`.
+  - `oraculo-olist-invoices-monthly-headers-hourly`.
+- The monthly fiscal header sync exists because one daily deep run with `maxPages=25` was not enough for July 2026 volume above `20k` NFs.
 - Current production deploys:
   - `f26b677 Automate fiscal invoice sync`;
   - `ea003d5 Restore cached SKU ranking on dashboard`;
@@ -73,6 +74,13 @@ Known technical caveats:
   - `8d4b730 Fix current fiscal period header`;
   - `d03dd66 Add sales curve inventory view`;
   - `dpl_ARv9uGp7C6sF2z6ode69r6cYxyGf` Vercel production deploy for curve caches, middleware and home performance.
+
+Latest fiscal sync correction:
+
+- On `2026-07-07`, July fiscal headers were manually resynced: `22.698` NFs fetched/upserted.
+- Fiscal dashboard snapshot after resync: `21.676` valid NFs and `R$ 1.781.726,64`.
+- Edge Function `olist-sync-invoices` was redeployed with `maxPages` cap raised to `300`.
+- Supabase cron now runs `oraculo-olist-invoices-monthly-headers-hourly` hourly for fast fiscal header coverage; item/detail hydration remains on `oraculo-olist-invoices-15m`.
 
 Recommended next work:
 

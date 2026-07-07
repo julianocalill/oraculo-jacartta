@@ -38,7 +38,8 @@ Build an operational intelligence system where Supabase is the canonical backend
 - Fiscal reconciliation is accepted historically: `71.198` valid NFs and `R$ 5.243.715,76` for `2026-06-01` to `2026-06-19`.
 - July current-month validation on `2026-07-03`: `7.186` valid NFs, `R$ 688.547,55`, data through `2026-07-03`.
 - Dashboard and `/pedidos` default to the current month in `America/Sao_Paulo`.
-- Fiscal invoice sync is automatic through Supabase Edge Function `olist-sync-invoices` and crons `oraculo-olist-invoices-15m` / `oraculo-olist-invoices-monthly-deep`.
+- Fiscal invoice sync is automatic through Supabase Edge Function `olist-sync-invoices` and crons `oraculo-olist-invoices-15m` / `oraculo-olist-invoices-monthly-headers-hourly`.
+- July fiscal headers were resynced on `2026-07-07`: `22.698` NFs fetched/upserted; dashboard snapshot after resync has `21.676` valid NFs and `R$ 1.781.726,64`.
 - Index SKU ranking uses cached `oraculo_sku_current_unified`.
 - Sales curve page `/curva-de-venda` is live in code. It lists simple Olist products with `disponivel > 0` and `tipo <> K`, excludes kits, shows product name, last sale date, stock quantity and curve, groups products into A/B/C by days since last sale, supports curve filters and exports CSV.
 - Stock curve page `/curva-de-estoque` is live in code. It classifies products with `disponivel > 0` by estimated months of stock coverage, not last-sale recency, supports curve filters and exports CSV.

@@ -176,7 +176,7 @@ Scheduling is handled inside Supabase through `pg_cron`:
 - `oraculo-nf-cache-hourly`: hourly at minute `:35`, NF cache refresh inside Postgres.
 - `oraculo-olist-stock-6h`: every 6 hours, stock/product refresh.
 - `oraculo-olist-invoices-15m`: every 15 minutes, fiscal invoice sync for the recent window.
-- `oraculo-olist-invoices-monthly-deep`: daily at `06:20` UTC, fiscal invoice catch-up for the current month.
+- `oraculo-olist-invoices-monthly-headers-hourly`: hourly at minute `:45`, fiscal invoice header catch-up for the current month without item hydration.
 
 The local macOS `launchd` job remains as historical/fallback documentation, not the primary sync owner.
 

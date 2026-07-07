@@ -26,7 +26,7 @@ Data: `2026-07-03`
 - Edge Function `olist-sync-invoices` criada e publicada.
 - Cron fiscal automatizado no Supabase:
   - `oraculo-olist-invoices-15m`;
-  - `oraculo-olist-invoices-monthly-deep`.
+  - `oraculo-olist-invoices-monthly-headers-hourly`.
 - Ranking de SKUs do index religado usando a fonte cacheada `oraculo_sku_current_unified`.
 - Filtro padrao do dashboard e da pagina `/pedidos` agora usa o mes vigente em `America/Sao_Paulo`.
 - URLs legadas com `start=2026-06-01&end=2026-06-30` sao normalizadas para o mes vigente.
@@ -84,7 +84,7 @@ Motivo: esses caminhos ja causaram timeout Supabase `57014` ou latencia inaceita
 - `oraculo-nf-cache-hourly`: cache de NFs no Postgres.
 - `oraculo-olist-stock-6h`: estoque/produtos.
 - `oraculo-olist-invoices-15m`: NFs recentes, lotes curtos com checkpoint.
-- `oraculo-olist-invoices-monthly-deep`: catch-up fiscal diario do mes vigente.
+- `oraculo-olist-invoices-monthly-headers-hourly`: catch-up horario dos cabeçalhos fiscais do mes vigente.
 
 ## Commits Recentes
 
@@ -255,3 +255,18 @@ Continuam fora de commit por serem pendencias separadas:
 - URL gerada: `https://oraculo-jacartta-n4vbsg3td-grupo-jacartta.vercel.app`.
 - Alias de producao confirmado: `https://oraculo.oliverhome.com.br`.
 - Validacao HTTP em producao: `/`, `/curva-de-estoque?curva=A` e `/curva-de-venda?curva=A` retornam `307` para login, comportamento esperado para rotas protegidas sem sessao.
+
+## Atualizacao 2026-07-07 - sync fiscal de NFs de julho
+
+- Problema reportado por comparacao visual com a tela Olist `Notas Fiscais`: Oraculo mostrava `16.428` NFs e `R$ 1.393.548`, enquanto a Olist mostrava cerca de `21.589` NFs emitidas e `R$ 1.775.583,37`.
+- Diagnostico: `olist_invoices` estava incompleta para julho; o cron mensal antigo rodava uma vez por dia com limite de `25` paginas e hidratava detalhes, insuficiente para meses com mais de `20k` NFs.
+- Correcao operacional aplicada:
+  - sync manual de julho `2026-07-01` a `2026-07-31` por `scripts/sync-olist-invoices.js` sem hidratacao de detalhes;
+  - `22.698` NFs percorridas/upsertadas no run `a3d3b39c-c618-464f-b59d-58be932e94eb`;
+  - snapshot fiscal regravado com `21.676` NFs validas e `R$ 1.781.726,64`;
+  - `refresh_oraculo_fiscal_invoice_order_links` executado por dia para evitar timeout `57014`, inserindo `21.676` vinculos de julho;
+  - snapshot de cobertura SKU regravado com `21.676` NFs validas, `14.158` NFs com pedido encontrado e `11.610` NFs com pedido + itens.
+- Correcao permanente:
+  - Edge Function `olist-sync-invoices` agora aceita ate `300` paginas por execucao;
+  - novo cron `oraculo-olist-invoices-monthly-headers-hourly`, horario `45 * * * *`, sincroniza cabeçalhos do mes vigente com `hydrateDetails=false`;
+  - cron incremental `oraculo-olist-invoices-15m` continua hidratando detalhes recentes.

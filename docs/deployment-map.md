@@ -67,10 +67,11 @@ Active jobs in `cron.job`:
 - `oraculo-olist-invoices-15m`: `*/15 * * * *`
   - Calls `olist-sync-invoices`.
   - Payload: `lookbackDays=3`, `pageSize=50`, `maxPages=2`, `hydrateDetails=true`.
-- `oraculo-olist-invoices-monthly-deep`: `20 6 * * *`
+- `oraculo-olist-invoices-monthly-headers-hourly`: `45 * * * *`
   - Calls `olist-sync-invoices`.
   - Window: first day of current month through `current_date`.
-  - Payload: `pageSize=100`, `maxPages=25`, `hydrateDetails=true`.
+  - Payload: `pageSize=100`, `maxPages=300`, `hydrateDetails=false`, `delayMs=100`.
+  - Keeps NF headers/counts aligned with Olist before item hydration finishes.
 
 ## Cached Analytics Sources
 

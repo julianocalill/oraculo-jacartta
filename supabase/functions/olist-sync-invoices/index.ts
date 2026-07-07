@@ -427,7 +427,7 @@ Deno.serve(async (req) => {
     const startDate = typeof body.startDate === 'string' ? body.startDate : daysAgoIso(lookbackDays);
     const endDate = typeof body.endDate === 'string' ? body.endDate : todayIso();
     const pageSize = clampPositiveInt(body.pageSize ?? body.limit, 50, 100);
-    const maxPages = clampPositiveInt(body.maxPages, 2, 25);
+    const maxPages = clampPositiveInt(body.maxPages, 2, 300);
     const delayMs = clampPositiveInt(body.delayMs, 1000, 10000);
     const detailDelayMs = clampPositiveInt(body.detailDelayMs, 400, 10000);
     const hydrateDetails = body.hydrateDetails !== false;
