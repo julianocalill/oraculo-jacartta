@@ -7,7 +7,7 @@
 - Framework: `Next.js`
 - Data access: server-side Supabase client using `SUPABASE_SERVICE_ROLE_KEY`
 - Production domain: `https://oraculo.oliverhome.com.br`
-- Latest documented production deploy: `dpl_ARv9uGp7C6sF2z6ode69r6cYxyGf`
+- Latest documented production deploy: `dpl_AKM7ayoqYWc9uHGV38ZyUjhpJYVo`
 - Primary GitHub repository: `https://github.com/Grupo-Jacartta/oraculo.git`
 - Personal mirror: `https://github.com/julianocalill/oraculo-jacartta`
 - Current deployment mode: production deploys through Vercel CLI/GitHub integration.

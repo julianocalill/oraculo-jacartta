@@ -16,7 +16,7 @@ Estado atual: dashboard em produção com filtros de data, métricas por canal/f
 
 Produto e tratado como ativo: giro, ruptura, curva, reentrada, ultima venda, custo, impacto visual e performance.
 
-Estado atual: fundação de SKU/margem existe. Curva de Venda e Curva de Estoque estão em produção com filtros A/B/C e exportação CSV. Margem/ROI seguem bloqueados até completar cobertura fiscal por item.
+Estado atual: fundação de SKU/margem existe. Curva de Venda e Curva de Estoque estão em produção com filtros A/B/C e exportação CSV. Margem/ROI operacionais estão liberados em `/skus`; margem/ROI fiscal oficial segue condicionada à cobertura fiscal por item.
 
 ## Automacao backend
 

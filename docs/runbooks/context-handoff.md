@@ -17,7 +17,7 @@ Production:
 - Latest documented Vercel deploy: `dpl_ARv9uGp7C6sF2z6ode69r6cYxyGf`
 - Primary repo: `https://github.com/Grupo-Jacartta/oraculo.git`
 - Personal mirror: `https://github.com/julianocalill/oraculo-jacartta`
-- Latest documented focus: keep the production app fast by serving dashboard and curve pages from cached Supabase sources. Fiscal dashboard remains the official revenue layer; ROI/margin/product intelligence remains blocked until SKU fiscal item coverage passes.
+- Latest documented focus: keep the production app fast by serving dashboard and curve pages from cached Supabase sources. Fiscal dashboard remains the official revenue layer. Operational margin/ROI is visible in `/skus`; official fiscal margin/ROI remains gated by SKU fiscal item coverage.
 
 Implemented recently:
 
@@ -61,7 +61,7 @@ Known technical caveats:
 - Backfill candidates are now materialized in `olist_order_item_backfill_queue`; do not use the old recalculating candidate RPC for long batches.
 - Latest backfill implementation includes the queue migrations from `20260625203050`, `20260625203602` and `20260626095120`.
 - Latest backfill script supports controlled concurrency and batch item upsert. Current production setting: `--limit=2000 --delay-ms=900 --max-runtime-minutes=60 --resume --skip-audit --concurrency=2`.
-- UF tax parameters exist but are not yet applied in ROI/margin formulas.
+- UF tax parameters and DIFAL rule exist. Current `/skus` margin/ROI is operational and based on `oraculo_sku_margin_30d`; official fiscal margin/ROI still waits for the audited NF + item view.
 - Stock sync is not hourly because the current Olist stock flow scans products broadly.
 - Fiscal invoice sync is automatic in Supabase:
   - `oraculo-olist-invoices-15m`;
@@ -81,6 +81,7 @@ Latest fiscal sync correction:
 - Fiscal dashboard snapshot after resync: `21.676` valid NFs and `R$ 1.781.726,64`.
 - Edge Function `olist-sync-invoices` was redeployed with `maxPages` cap raised to `300`.
 - Supabase cron now runs `oraculo-olist-invoices-monthly-headers-hourly` hourly for fast fiscal header coverage; item/detail hydration remains on `oraculo-olist-invoices-15m`.
+- DIFAL parameters were corrected on `2026-07-07`: `interstate_icms_rate` was added, `difal_rate` is computed as `max(destination internal ICMS - interstate ICMS, 0)`, and `effective_tax_rate` is computed as `interstate ICMS + DIFAL + FCP`.
 
 Recommended next work:
 
@@ -89,7 +90,7 @@ Recommended next work:
 3. Run `scripts/audit-olist-invoice-items-coverage.js` separately after batches.
 4. Keep `oraculo_fiscal_snapshots` current after audits/backfill batches. Use `scripts/audit-oraculo-fiscal-metrics.js --write-snapshot` and `scripts/audit-olist-invoice-items-coverage.js --write-snapshot`.
 5. Create `oraculo_fiscal_sku_sales_by_order_link` only after coverage reaches `98%` of NFs or leaves less than `0,5%` of revenue uncovered.
-6. Keep margin, ROI and ROAS blocked until the candidate SKU view is audited.
+6. Keep official fiscal margin, ROI and ROAS gated until the candidate SKU view is audited; keep the operational `/skus` margin/ROI clearly labeled as partial.
 
 Relevant runbooks:
 

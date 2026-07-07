@@ -161,7 +161,7 @@ export default async function SkusPage({
         <div>
           <Link href="/" className="back-link">← Analytics</Link>
           <h1>SKUs</h1>
-          <p>Dados parciais em processamento · não usar como ranking definitivo</p>
+          <p>Margem e ROI operacionais · leitura parcial até fechar a cobertura fiscal por item</p>
         </div>
         <form className="filter-row filter-form" method="get">
           <label>
@@ -180,9 +180,9 @@ export default async function SkusPage({
         <div className="section-head section-row">
           <div>
             <p className="eyebrow">Cobertura fiscal</p>
-            <h2>Dados parciais em processamento</h2>
+            <h2>Margem e ROI operacionais liberados</h2>
           </div>
-          <span className="pill danger-pill">Margem, ROI e ROAS bloqueados</span>
+          <span className="pill warning-pill">Parcial, não fiscal definitivo</span>
         </div>
         <div className="coverage-grid">
           <article>
@@ -213,12 +213,12 @@ export default async function SkusPage({
           <div className="sku-toolbar">
             <div>
               <p className="eyebrow">Produtos</p>
-              <h2>Ranking parcial coberto</h2>
+              <h2>Ranking operacional com margem</h2>
             </div>
             <div className="sku-actions">
               <span>Fonte</span>
               <span>Parcial</span>
-              <strong>Receita coberta</strong>
+              <strong>Margem/ROI</strong>
             </div>
           </div>
 
@@ -260,11 +260,11 @@ export default async function SkusPage({
                     <td className="numeric">{money(row.revenue_30d)}</td>
                     <td className="numeric">{count(row.units_30d)}</td>
                     <td className="numeric">{money(n(row.revenue_30d) / Math.max(n(row.units_30d), 1))}</td>
-                    <td className="numeric">Bloqueado</td>
-                    <td className="numeric">Bloqueado</td>
+                    <td className="numeric">{percent(row.margin_rate_30d)}</td>
+                    <td className="numeric">{percent(row.roi_30d)}</td>
                     <td>
                       <span className={`status-pill ${marginSignalClass(row.margin_signal)}`}>
-                        Em processamento
+                        {marginSignalLabel(row.margin_signal)}
                       </span>
                     </td>
                     <td className="numeric trend-value">{percent(row.revenue_change_pct)}</td>
@@ -293,15 +293,15 @@ export default async function SkusPage({
             </article>
             <article>
               <span>Margem 30d</span>
-              <strong>Bloqueado</strong>
+              <strong>{percent(selected?.margin_rate_30d)}</strong>
             </article>
             <article>
               <span>ROI 30d</span>
-              <strong>Bloqueado</strong>
+              <strong>{percent(selected?.roi_30d)}</strong>
             </article>
             <article>
               <span>Lucro</span>
-              <strong>Bloqueado</strong>
+              <strong>{selected?.margin_amount_30d == null ? "-" : money(selected.margin_amount_30d)}</strong>
             </article>
             <article>
               <span>Custo unit.</span>
@@ -326,9 +326,9 @@ export default async function SkusPage({
           </div>
 
           <div className={`margin-callout ${marginSignalClass(selected?.margin_signal)}`}>
-            <span>SKU fiscal em processamento</span>
+            <span>{marginSignalLabel(selected?.margin_signal)}</span>
             <p>
-              Estes dados usam somente NFs que já possuem pedido e itens vinculados. Margem, ROI e ROAS permanecem bloqueados até a cobertura fiscal atingir o critério de qualidade.
+              Margem e ROI estão liberados como leitura operacional parcial. A versão fiscal definitiva continua dependendo da cobertura completa de NFs com itens e da validação final dos parâmetros.
             </p>
           </div>
         </aside>

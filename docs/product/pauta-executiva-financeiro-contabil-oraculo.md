@@ -60,10 +60,11 @@ Conclusao: faturamento fiscal esta reconciliado. O proximo passo e definir corre
 
 ### Por UF e operacao
 
-- ICMS;
+- ICMS interno do destino;
+- ICMS interestadual;
 - FCP;
-- DIFAL;
-- taxa efetiva, se aplicavel;
+- DIFAL calculado;
+- taxa efetiva calculada;
 - vigencia da regra;
 - observacoes ou excecoes.
 

@@ -25,7 +25,8 @@ Build an operational intelligence system where Supabase is the canonical backend
 - Parameters now cover:
   - channel rates and margin targets;
   - SKU cost/margin overrides;
-  - state/UF tax rules for ICMS, FCP, DIFAL and effective tax rate.
+  - state/UF tax rules for destination internal ICMS, interstate ICMS, FCP, computed DIFAL and computed effective tax rate.
+- DIFAL rule: `max(destination internal ICMS - interstate ICMS, 0)`. Effective tax: `interstate ICMS + DIFAL + FCP`.
 - Olist sync is Supabase-first:
   - orders hourly;
   - derived metrics hourly;
@@ -48,7 +49,7 @@ Build an operational intelligence system where Supabase is the canonical backend
 - Home performance pass is live: no request-time channel cache refresh, rupture reuses `oraculo_stock_watchlist_unified`, order count uses estimated count, and middleware avoids calling Supabase Auth on every request with a still-valid JWT.
 - `Sem canal` in fiscal channel revenue means the NF payload has no channel/integration/marketplace/ecommerce name; July is dominated by NF `394638` for `R$ 178.500,00`.
 - NF-to-order linking reaches `99,99%` through `payload.ecommerce.numeroPedidoEcommerce`.
-- Fiscal SKU/ROI/margin remain blocked because linked order items cover `41,92%` of fiscal revenue, below the release gate.
+- Operational margin/ROI is visible in `/skus` as partial product intelligence. Official fiscal SKU/ROI/margin remains gated until linked order item coverage passes the release gate.
 - Dashboard fiscal and SKU coverage cards read `oraculo_fiscal_latest_snapshots`.
 
 ## Immediate next work
@@ -61,4 +62,4 @@ Build an operational intelligence system where Supabase is the canonical backend
 - Keep `--delay-ms=900 --concurrency=2 --limit=2000 --skip-audit` unless a new rate-limit test proves safer.
 - Re-run the fiscal item coverage audit after each batch and write snapshots.
 - Create `oraculo_fiscal_sku_sales_by_order_link` only after the coverage gate passes.
-- Keep margin, ROI and ROAS disabled until the SKU candidate view is audited.
+- Keep official fiscal margin, ROI and ROAS gated until the SKU candidate view is audited. Operational `/skus` margin/ROI can stay visible with partial-label copy.

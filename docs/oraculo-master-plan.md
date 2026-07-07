@@ -106,7 +106,8 @@ Entregas mais recentes:
 - Cache `oraculo_channel_sales_unified_cache` recalculado sob demanda por janela/dia quando o período selecionado ainda não existe no cache.
 - Função `oraculo_sku_period_rank_unified` otimizada para ler itens vendidos do período em vez de depender de views pesadas.
 - Tela `/parametros` consolidada para entrada manual de parâmetros por canal, SKU e UF.
-- Tabela `oraculo_state_tax_params` criada para ICMS/FCP/DIFAL/taxa efetiva por estado, fonte, operação e vigência.
+- Tabela `oraculo_state_tax_params` criada para aliquota interna de ICMS do destino, ICMS interestadual, FCP, DIFAL calculado, taxa efetiva calculada por estado, fonte, operação e vigência.
+- Regra atual de DIFAL: `max(ICMS interno destino - ICMS interestadual, 0)`. Taxa efetiva: `ICMS interestadual + DIFAL + FCP`.
 - Sincronização Olist transferida para Supabase `pg_cron`, com ciclos horários incrementais.
 - Edge Functions de Olist ajustadas para reduzir chamadas desnecessárias de detalhe e lidar melhor com limite `429`.
 - Layout mobile-friendly publicado: navegação horizontal no topo, cards em uma coluna, tabelas com rolagem controlada, formulários responsivos.

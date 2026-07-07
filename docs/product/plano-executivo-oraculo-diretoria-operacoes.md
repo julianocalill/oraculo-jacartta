@@ -145,11 +145,11 @@ Ja existe uma area em `/parametros` para cadastrar:
 
 - taxas e metas por canal;
 - custo e excecoes por SKU;
-- ICMS, FCP, DIFAL e taxa efetiva por UF;
+- ICMS interno do destino, ICMS interestadual, FCP, DIFAL calculado e taxa efetiva calculada por UF;
 - vigencia da regra fiscal;
 - status pendente ou validado.
 
-Regra importante: as aliquotas por UF foram criadas como pendentes. Elas so devem ser marcadas como validadas depois de conferencia com contador/fiscal.
+Regra importante: as aliquotas por UF foram criadas como pendentes. Elas so devem ser marcadas como validadas depois de conferencia com contador/fiscal. O DIFAL nao deve ser digitado como taxa independente: deve ser calculado por `max(ICMS interno destino - ICMS interestadual, 0)`.
 
 ## Plano de execucao
 

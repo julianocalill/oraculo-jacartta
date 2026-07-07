@@ -51,7 +51,7 @@ oraculo/
 
 - State updated: `2026-07-07`
 - Production URL: `https://oraculo.oliverhome.com.br`
-- Latest documented Vercel deploy: `dpl_ARv9uGp7C6sF2z6ode69r6cYxyGf`
+- Latest documented Vercel deploy: `dpl_AKM7ayoqYWc9uHGV38ZyUjhpJYVo`
 - Primary GitHub repository: `https://github.com/Grupo-Jacartta/oraculo.git`
 - Personal mirror: `https://github.com/julianocalill/oraculo-jacartta`
 - Web app: `apps/web`
@@ -60,6 +60,7 @@ oraculo/
 - User management: `/usuarios`
 - Manual parameters: `/parametros`
 - Mobile responsive layout: enabled for dashboard, forms and tables
+- DIFAL parameter rule: `difal_rate = max(destination internal ICMS - interstate ICMS, 0)` and `effective_tax_rate = interstate ICMS + DIFAL + FCP`.
 
 Current product areas:
 
@@ -68,7 +69,7 @@ Current product areas:
 - Orders/channel metrics from cached Supabase views/tables.
 - Dashboard SKU ranking reads the cached `oraculo_sku_current_unified` table, not the heavy period ranking RPC.
 - SKU coverage panel with explicit "in processing" status.
-- SKU and margin foundation, still blocked for official decisions.
+- SKU and margin foundation; operational margin/ROI is visible in `/skus`, while official fiscal decisions remain gated.
 - Sales curve page at `/curva-de-venda`, listing simple stocked Olist products and classifying them into A/B/C by days since last sale.
 - Stock curve page at `/curva-de-estoque`, classifying stocked products by estimated months of coverage based on average historical sales.
 - Both curve pages read cached Supabase RPCs instead of scanning raw order-item history during Next.js render.
@@ -124,7 +125,7 @@ Runtime rule for the web app:
 
 ## Current blocker
 
-SKU fiscal, margin, ROI and ROAS remain blocked because item coverage is insufficient.
+Operational margin/ROI is visible in `/skus` through `oraculo_sku_margin_30d`. Official fiscal SKU margin, ROI and ROAS remain gated because item coverage is still insufficient.
 
 Latest audit:
 

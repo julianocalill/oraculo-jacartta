@@ -288,7 +288,9 @@ Objetos criados:
 - `oraculo_state_tax_params`
 - `oraculo_sku_margin_30d`
 
-O objetivo e separar o que ja existe daquilo que ainda precisa de configuracao. A view pode calcular margem quando existe custo unitario, mas o status fica `configurar_parametros` enquanto impostos, tarifas, frete subsidiado, embalagem e metas nao forem validados.
+O objetivo e separar o que ja existe daquilo que ainda precisa de configuracao. A view calcula margem/ROI operacional quando existe custo unitario e parametros minimos. O status fica `configurar_parametros` enquanto impostos, tarifas, frete subsidiado, embalagem e metas nao forem validados.
+
+Em `2026-07-07`, a tela `/skus` foi liberada para exibir margem, lucro e ROI 30d como leitura operacional parcial. Esses numeros podem orientar analise interna de produto, mas nao substituem a margem/ROI fiscal oficial enquanto a cobertura de NFs com itens nao passar no gate de qualidade.
 
 Para ROI confiavel, ainda precisamos cadastrar ou importar:
 
@@ -304,7 +306,7 @@ Formula inicial proposta:
 
 `roi_produto = margem_bruta / custo_produto`
 
-Enquanto esses campos nao existirem, o painel pode mostrar receita e quantidade, mas nao deve chamar nenhum numero de margem ou ROI.
+Quando esses campos estiverem ausentes ou pendentes, a tela deve sinalizar `configurar_parametros` ou `sem_custo`. Quando existirem, a tela pode mostrar margem/ROI operacional. A margem/ROI fiscal oficial continua dependente da view auditada por NF + item.
 
 Status de margem:
 
@@ -387,7 +389,7 @@ Limites conhecidos:
 - períodos históricos podem ter `olist_orders` sem `olist_order_items`; nesses casos, rankings de SKU ficam vazios até backfill de itens;
 - `dataFaturamento` em `olist_orders` segue incompleta e não deve ser usada como fonte fiscal;
 - KPIs oficiais de venda e receita usam `oraculo_fiscal_invoices_valid`;
-- SKU fiscal, margem, ROI e ROAS continuam bloqueados até o backfill de itens vinculados passar no gate de cobertura;
+- SKU fiscal oficial, margem fiscal oficial, ROI fiscal oficial e ROAS continuam bloqueados até o backfill de itens vinculados passar no gate de cobertura;
 - estoque/produtos ainda dependem de varredura ampla e não devem rodar hora a hora.
 
 ## Auditoria executavel

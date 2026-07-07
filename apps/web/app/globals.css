@@ -532,6 +532,12 @@ p {
   color: var(--red);
 }
 
+.warning-pill {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #b45309;
+}
+
 .back-link {
   color: var(--amber);
   display: inline-flex;

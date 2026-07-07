@@ -700,9 +700,9 @@ export default async function HomePage({
           <div className="section-head section-row">
             <div>
               <p className="eyebrow">Cobertura SKU</p>
-              <h2>SKU fiscal em processamento</h2>
+              <h2>Margem e ROI operacionais</h2>
             </div>
-            <span className="pill danger-pill">Margem, ROI e ROAS bloqueados</span>
+            <span className="pill warning-pill">Leitura parcial liberada</span>
           </div>
           <div className="coverage-grid">
             <article>

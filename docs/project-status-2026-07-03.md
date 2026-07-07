@@ -285,3 +285,14 @@ Continuam fora de commit por serem pendencias separadas:
 - Validacao local: `npx pnpm --filter web build` e `npx pnpm --filter web typecheck`.
 - Deploy de producao: `dpl_6NKpACATF1hWoNtbErpX42UrPQss`.
 - Alias de producao confirmado: `https://oraculo.oliverhome.com.br`.
+
+## Atualizacao 2026-07-07 - margem/ROI operacional
+
+- Tela `/skus` liberada para exibir margem 30d, ROI 30d e lucro operacional calculados por `oraculo_sku_margin_30d`.
+- Rotulos antigos de `Bloqueado` foram removidos da tabela e do painel lateral.
+- A cobertura fiscal continua visivel no topo da pagina para deixar claro que a leitura e parcial.
+- Regra de comunicacao: margem/ROI operacional pode ser usada para analise interna; margem/ROI fiscal oficial continua condicionada a view auditada de NF + item.
+- Validacao local: `npx pnpm --filter web build` e `npx pnpm --filter web typecheck`.
+- Deploy de producao: `dpl_AKM7ayoqYWc9uHGV38ZyUjhpJYVo`.
+- URL gerada: `https://oraculo-jacartta-kzmd0txzs-grupo-jacartta.vercel.app`.
+- Alias de producao confirmado: `https://oraculo.oliverhome.com.br`.

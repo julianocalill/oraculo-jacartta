@@ -99,7 +99,9 @@ Release gate:
 - at least `98%` of valid fiscal invoices covered by linked order items; or
 - less than `0,5%` of fiscal revenue without item coverage.
 
-Only after that gate may the candidate view `oraculo_fiscal_sku_sales_by_order_link` be created and audited. Margin, ROI and ROAS remain blocked.
+Only after that gate may the candidate view `oraculo_fiscal_sku_sales_by_order_link` be created and audited for official fiscal margin/ROI/ROAS.
+
+Operational margin/ROI was released on `/skus` on `2026-07-07` using `oraculo_sku_margin_30d`. Treat it as partial product intelligence, not as the official fiscal result.
 
 Immediate technical follow-up:
 
