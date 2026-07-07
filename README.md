@@ -49,8 +49,9 @@ oraculo/
 
 ## Current production state
 
-- State updated: `2026-07-03`
+- State updated: `2026-07-07`
 - Production URL: `https://oraculo.oliverhome.com.br`
+- Latest documented Vercel deploy: `dpl_ARv9uGp7C6sF2z6ode69r6cYxyGf`
 - Primary GitHub repository: `https://github.com/Grupo-Jacartta/oraculo.git`
 - Personal mirror: `https://github.com/julianocalill/oraculo-jacartta`
 - Web app: `apps/web`
@@ -69,6 +70,8 @@ Current product areas:
 - SKU coverage panel with explicit "in processing" status.
 - SKU and margin foundation, still blocked for official decisions.
 - Sales curve page at `/curva-de-venda`, listing simple stocked Olist products and classifying them into A/B/C by days since last sale.
+- Stock curve page at `/curva-de-estoque`, classifying stocked products by estimated months of coverage based on average historical sales.
+- Both curve pages read cached Supabase RPCs instead of scanning raw order-item history during Next.js render.
 - Rupture/no-sale product watchlist.
 - Manual parameters by channel, SKU and UF.
 - Read-only Shopee Donacor data.
@@ -112,7 +115,10 @@ Runtime rule for the web app:
 - fiscal dashboard exclusions and SKU coverage cards must read `oraculo_fiscal_latest_snapshots`;
 - the current-month filter is computed at request time in the Next.js pages using `America/Sao_Paulo`;
 - SKU ranking on the index must use the cached `oraculo_sku_current_unified` source;
-- `/curva-de-venda` reads stocked simple products from `olist_products` with `disponivel > 0` and `tipo <> 'K'`, then calculates the last sale from `olist_order_items.order_data_criacao` by `produto_id`;
+- `/curva-de-venda` reads cached RPC `oraculo_sales_curve()`, backed by `oraculo_sales_curve_cache`; it includes only simple stocked products from `olist_products` with `disponivel > 0` and `tipo <> 'K'`;
+- `/curva-de-estoque` reads cached RPC `oraculo_stock_coverage_curve()`, backed by `oraculo_stock_coverage_curve_cache`; it includes products with `disponivel > 0`, derives average daily sales, monthly average and months of stock coverage, and classifies A/B/C by coverage;
+- Supabase cache refresh helpers for the curves are `refresh_oraculo_sales_curve_cache()` and `refresh_oraculo_stock_coverage_curve_cache()`;
+- production middleware must not call Supabase Auth on every request when the local JWT is still valid; it should refresh only near expiration;
 - the dashboard must not call heavy audit/RPC functions during server render;
 - `oraculo_fiscal_metrics` and `oraculo_fiscal_order_item_backfill_progress` caused Supabase `57014` statement timeouts in Vercel and are not safe for the request path.
 
@@ -139,6 +145,13 @@ Recent production commits:
 - `ea003d5` - restore cached SKU ranking on dashboard;
 - `7aae605` - default dashboard filters to current month;
 - `8d4b730` - fix current fiscal period header.
+- `d03dd66` - add sales curve inventory view.
+
+Recent production deployment notes:
+
+- `2026-07-06`: `/curva-de-estoque` added with filter/export CSV and stock coverage A/B/C rules.
+- `2026-07-06`: `/curva-de-venda` and `/curva-de-estoque` moved to cached Supabase RPCs.
+- `2026-07-07`: general performance pass deployed as `dpl_ARv9uGp7C6sF2z6ode69r6cYxyGf`; home no longer recalculates channel cache at request time, rupture reuses `oraculo_stock_watchlist_unified`, order counts use estimated count, and middleware avoids per-navigation Auth calls.
 
 Continue the validated run with:
 

@@ -73,15 +73,6 @@ type StockSignal = {
   last_sale_at: string | null;
 };
 
-type RuptureProduct = {
-  id: string;
-  sku: string | null;
-  product_name: string | null;
-  available_stock: number | null;
-  days_without_sale: number | null;
-  last_sale_at: string | null;
-};
-
 type OlistOrderRow = {
   id: string;
   situacao: string | null;
@@ -286,32 +277,6 @@ function formatDateShort(value: string | null | undefined) {
   }).format(toDisplayDate(value));
 }
 
-function daysSince(value: string | null | undefined) {
-  if (!value) return null;
-  const today = new Date();
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return Math.max(Math.floor((today.getTime() - date.getTime()) / 86_400_000), 0);
-}
-
-function addDays(value: string, days: number) {
-  const date = new Date(`${value}T00:00:00.000Z`);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
-function dateRange(start: string, end: string, maxDays = 45) {
-  const dates: string[] = [];
-  let cursor = start;
-
-  while (cursor <= end && dates.length < maxDays) {
-    dates.push(cursor);
-    cursor = addDays(cursor, 1);
-  }
-
-  return dates;
-}
-
 function parseMoney(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value !== "string") return 0;
@@ -414,61 +379,6 @@ async function loadFiscalMetrics(
   };
 }
 
-async function loadRuptureProducts(
-  supabase: ReturnType<typeof createSupabaseAdminClient>
-): Promise<RuptureProduct[]> {
-  const { data: products, error } = await supabase
-    .from("olist_products")
-    .select("id, sku, nome, disponivel")
-    .eq("active", true)
-    .neq("tipo", "K")
-    .lte("disponivel", 0)
-    .order("disponivel", { ascending: true })
-    .limit(20);
-
-  if (error) throw error;
-
-  const productRows = (products ?? []) as Array<{
-    id: string;
-    sku: string | null;
-    nome: string | null;
-    disponivel: number | null;
-  }>;
-  const productIds = productRows.map((product) => product.id);
-
-  if (productIds.length === 0) return [];
-
-  const { data: salesRows, error: salesError } = await supabase
-    .from("olist_order_items")
-    .select("produto_id, order_data_criacao")
-    .in("produto_id", productIds)
-    .order("order_data_criacao", { ascending: false })
-    .limit(5000);
-
-  if (salesError) throw salesError;
-
-  const lastSaleByProduct = new Map<string, string>();
-  for (const sale of (salesRows ?? []) as Array<{ produto_id: string | null; order_data_criacao: string | null }>) {
-    if (!sale.produto_id || !sale.order_data_criacao || lastSaleByProduct.has(sale.produto_id)) continue;
-    lastSaleByProduct.set(sale.produto_id, sale.order_data_criacao);
-  }
-
-  return productRows
-    .map((product) => {
-      const lastSale = lastSaleByProduct.get(product.id) ?? null;
-      return {
-        id: product.id,
-        sku: product.sku,
-        product_name: product.nome,
-        available_stock: product.disponivel,
-        days_without_sale: daysSince(lastSale),
-        last_sale_at: lastSale
-      };
-    })
-    .sort((left, right) => asNumber(right.days_without_sale) - asNumber(left.days_without_sale))
-    .slice(0, 8);
-}
-
 async function loadBillingWindowMetrics(
   supabase: ReturnType<typeof createSupabaseAdminClient>,
   filters: DashboardFilters
@@ -493,27 +403,7 @@ async function loadUnifiedChannelRows(
       .order("order_date", { ascending: false })
       .limit(240);
 
-  let response = await fetchRows();
-
-  if (!response.error && (response.data ?? []).length === 0) {
-    const dates = dateRange(filters.start, filters.end);
-
-    for (let index = 0; index < dates.length; index += 5) {
-      const batch = dates.slice(index, index + 5);
-      await Promise.all(
-        batch.map((date) =>
-          supabase.rpc("refresh_oraculo_channel_sales_unified_cache", {
-            p_start_date: date,
-            p_end_date: date
-          })
-        )
-      );
-    }
-
-    response = await fetchRows();
-  }
-
-  return response;
+  return fetchRows();
 }
 
 async function loadDashboard(filters: DashboardFilters) {
@@ -531,16 +421,13 @@ async function loadDashboard(filters: DashboardFilters) {
     channelsResponse,
     skuSalesResponse,
     stockWatchlistResponse,
-    orderCount,
     itemCount,
-    productCount,
     billingMetrics,
     nfMetrics,
     fiscalMetrics,
     fiscalDailyResponse,
     fiscalChannelResponse,
     fiscalCoverageResponse,
-    ruptureProducts
   ] = await Promise.all([
     dailyQuery,
     loadUnifiedChannelRows(supabase, filters),
@@ -559,9 +446,7 @@ async function loadDashboard(filters: DashboardFilters) {
       .neq("sku", "")
       .order("days_until_stockout", { ascending: true, nullsFirst: false })
       .limit(8),
-    supabase.from("olist_orders").select("id", { count: "estimated", head: true }),
-    supabase.from("olist_order_items").select("id", { count: "exact", head: true }),
-    supabase.from("olist_products").select("id", { count: "exact", head: true }),
+    supabase.from("olist_order_items").select("id", { count: "estimated", head: true }),
     loadBillingWindowMetrics(supabase, filters),
     loadNfMetrics(supabase, filters),
     loadFiscalMetrics(supabase, filters),
@@ -575,8 +460,7 @@ async function loadDashboard(filters: DashboardFilters) {
       start_date: filters.start,
       end_date: filters.end
     }),
-    loadFiscalSkuCoverageSnapshot(supabase),
-    loadRuptureProducts(supabase)
+    loadFiscalSkuCoverageSnapshot(supabase)
   ]);
 
   const daily = (dailyResponse.data ?? []) as DailySale[];
@@ -605,9 +489,11 @@ async function loadDashboard(filters: DashboardFilters) {
   const latestDay = daily[0] ?? null;
   const dailyChart = daily.slice().reverse();
   const maxDailyRevenue = Math.max(...dailyChart.map((row) => asNumber(row.effective_revenue)), 1);
-  const actionableWatchlist = ((stockWatchlistResponse.data ?? []) as StockSignal[]).filter(
+  const stockWatchlist = (stockWatchlistResponse.data ?? []) as StockSignal[];
+  const actionableWatchlist = stockWatchlist.filter(
     (row) => row.stock_signal === "ruptura" || row.stock_signal === "ruptura_iminente"
   );
+  const ruptureProducts = stockWatchlist.filter((row) => row.stock_signal === "ruptura").slice(0, 8);
   const unifiedRows = (channelsResponse.data ?? []) as UnifiedChannelSale[];
   const sourceMap = new Map<string, SourceSummary>();
   const channelMap = new Map<string, UnifiedChannelSale>();
@@ -684,14 +570,12 @@ async function loadDashboard(filters: DashboardFilters) {
     totalUnifiedRevenue,
     totalUnifiedCanceled,
     skus: skuRows,
-    stockWatchlist: (stockWatchlistResponse.data ?? []) as StockSignal[],
+    stockWatchlist,
     ruptureProducts,
     actionableWatchlist,
     filteredOrderCount: totalUnifiedOrders,
     availableThrough: latestUnifiedDay,
-    orderCount: orderCount.count ?? 0,
     itemCount: itemCount.count ?? 0,
-    productCount: productCount.count ?? 0
   };
 }
 
@@ -722,6 +606,7 @@ export default async function HomePage({
           <Link href="/skus">SKUs</Link>
           <Link href="/skus">Análise SKU</Link>
           <Link href="/curva-de-venda">Curva de Venda</Link>
+          <Link href="/curva-de-estoque">Curva de Estoque</Link>
           <Link href="/alertas">Alertas <b>{formatCount(data.actionableWatchlist.length)}</b></Link>
           <Link href="/pedidos">Performance</Link>
           <Link href="/alertas">Ruptura</Link>
@@ -1072,7 +957,7 @@ export default async function HomePage({
                 <p className="empty-state">Nenhum produto simples em ruptura encontrado.</p>
               ) : (
                 data.ruptureProducts.map((item) => (
-                  <Link href={`/skus?sku=${encodeURIComponent(item.sku ?? "")}`} key={`${item.id}-${item.sku}`}>
+                  <Link href={`/skus?sku=${encodeURIComponent(item.sku ?? "")}`} key={`${item.source ?? "olist"}-${item.sku ?? item.product_name}`}>
                     <div>
                       <strong>{item.product_name ?? "Sem nome"}</strong>
                       <span>{item.sku || "-"}</span>
@@ -1080,7 +965,7 @@ export default async function HomePage({
                     <div className="watch-meta">
                       <span className="badge ruptura">Ruptura</span>
                       <small>
-                        {formatCount(item.days_without_sale)} dias sem venda · {stockLabel(item.available_stock)}
+                        {formatDateShort(item.last_sale_at)} · {stockLabel(item.available_stock)}
                       </small>
                     </div>
                   </Link>

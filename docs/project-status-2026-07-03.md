@@ -171,3 +171,87 @@ Continuam fora de commit por serem pendencias separadas:
 - Deploy de producao: `dpl_GtdRkV2axaUTQekJ1bB4X8LhJuDB`.
 - URL gerada: `https://oraculo-jacartta-a7iyxajpo-grupo-jacartta.vercel.app`.
 - Alias de producao confirmado: `https://oraculo.oliverhome.com.br`.
+
+## Atualizacao 2026-07-06 - Curva de Estoque
+
+- Nova rota `/curva-de-estoque` criada no app web.
+- Link `Curva de Estoque` adicionado ao menu principal do Analytics.
+- Objetivo: classificar produtos por meses de cobertura de estoque, nao por data da ultima venda.
+- Fonte:
+  - estoque atual em `olist_products.disponivel`;
+  - vendas historicas em `olist_order_items.quantidade` e `olist_order_items.order_data_criacao`.
+- Filtro: produtos com `disponivel > 0`.
+- Formula:
+  - media diaria = total historico vendido / dias desde a primeira venda registrada;
+  - media mensal = media diaria * `30`;
+  - meses de cobertura = estoque atual / media mensal.
+- Classificacao:
+  - Curva A: ate `3` meses de cobertura;
+  - Curva B: mais de `3` e ate `6` meses de cobertura;
+  - Curva C: mais de `6` meses de cobertura;
+  - `Sem venda`: produtos sem media de venda.
+- Tela inclui cards A/B/C/total, grafico horizontal de quantidade de produtos por curva, grafico horizontal de estoque por curva e tabela com produto, estoque atual, media diaria, media mensal, meses de cobertura e curva.
+- Filtro por curva adicionado:
+  - todas: `/curva-de-estoque`;
+  - curva A: `/curva-de-estoque?curva=A`;
+  - curva B: `/curva-de-estoque?curva=B`;
+  - curva C: `/curva-de-estoque?curva=C`.
+- Botao `Exportar` adicionado para baixar CSV da curva selecionada.
+- Rota de exportacao: `/curva-de-estoque/export?curva=A|B|C`.
+- Validacao local: `npx pnpm --filter web build` e `npx pnpm --filter web typecheck`.
+- Validacao de dados: `959` produtos com `disponivel > 0` antes do deploy.
+- Deploy de producao: `dpl_7rTd398X9LwQt7hS1ftTVwH977k8`.
+- URL gerada: `https://oraculo-jacartta-24pvamadm-grupo-jacartta.vercel.app`.
+- Alias de producao confirmado: `https://oraculo.oliverhome.com.br`.
+- Validacao HTTP: `/curva-de-estoque` retorna `307` para `/login?next=%2Fcurva-de-estoque`, comportamento esperado para rota protegida.
+
+## Atualizacao 2026-07-06 - filtro/export Curva de Estoque
+
+- Aba `/curva-de-estoque` passou a aceitar filtro por curva:
+  - todas: `/curva-de-estoque`;
+  - curva A: `/curva-de-estoque?curva=A`;
+  - curva B: `/curva-de-estoque?curva=B`;
+  - curva C: `/curva-de-estoque?curva=C`.
+- Botao `Exportar` adicionado para baixar CSV da curva selecionada.
+- Rota de exportacao: `/curva-de-estoque/export?curva=A|B|C`.
+- Validacao local: `npx pnpm --filter web build` e `npx pnpm --filter web typecheck`.
+- Deploy de producao: `dpl_ECh3famL4hPTvzwc7upUB1tGRQoE`.
+- URL gerada: `https://oraculo-jacartta-4cdyqs3d7-grupo-jacartta.vercel.app`.
+- Alias de producao confirmado: `https://oraculo.oliverhome.com.br`.
+- Validacao HTTP: `/curva-de-estoque?curva=A` e `/curva-de-estoque/export?curva=A` retornam `307` para login, comportamento esperado para rotas protegidas.
+
+## Atualizacao 2026-07-06 - performance Curva de Estoque
+
+- Problema: a primeira implementacao da Curva de Estoque calculava historico no render da pagina, buscando produtos e `olist_order_items` em lotes no Next.js.
+- Correcao: criada RPC `oraculo_stock_coverage_curve()` no Supabase.
+- A RPC le o cache materializado `oraculo_stock_coverage_curve_cache`.
+- Funcao de refresh criada: `refresh_oraculo_stock_coverage_curve_cache()`.
+- App e exportacao passaram a chamar apenas a RPC, removendo processamento de historico do render server-side.
+- Validacao remota em `2026-07-06`: RPC retornou `959` produtos em cerca de `363ms`; a agregacao direta anterior levou cerca de `4s`.
+- Curva de Venda tambem foi otimizada com cache materializado `oraculo_sales_curve_cache` e RPC `oraculo_sales_curve()`.
+- Validacao remota apos otimizar as duas curvas:
+  - `oraculo_stock_coverage_curve`: `959` produtos em cerca de `850ms`;
+  - `oraculo_sales_curve`: `446` produtos em cerca de `117ms`.
+- Validacao local: `npx pnpm --filter web build` e `npx pnpm --filter web typecheck`.
+- Deploy de producao: `dpl_7ZfDGJiXm1cirNhj9B1JW82E5n6i`.
+- URL gerada: `https://oraculo-jacartta-jvv4oqtmf-grupo-jacartta.vercel.app`.
+- Alias de producao confirmado: `https://oraculo.oliverhome.com.br`.
+- Validacao HTTP: `/curva-de-estoque?curva=A` e `/curva-de-estoque/export?curva=A` retornam `307` para login, comportamento esperado para rotas protegidas.
+- Deploy de producao com Curva de Venda e Curva de Estoque lendo caches materializados: `dpl_DmXnkiE7DxqZB6T3FNRrfpzZmKu2`.
+- URL gerada: `https://oraculo-jacartta-bzlo23qdy-grupo-jacartta.vercel.app`.
+
+## Atualizacao 2026-07-07 - performance geral
+
+- Middleware de producao deixou de chamar `auth/v1/user` em toda navegacao.
+- Novo comportamento do middleware:
+  - decodifica o `exp` do JWT localmente;
+  - se o token ainda esta valido por mais de `60s`, segue sem chamada externa;
+  - so chama Supabase Auth quando precisa renovar com refresh token.
+- Home deixou de recalcular cache de canais em request-time quando o cache esta vazio.
+- Home deixou de consultar `olist_products` + ate `5000` linhas de `olist_order_items` para ruptura; agora reaproveita `oraculo_stock_watchlist_unified`.
+- Contagem de `olist_order_items` na home deixou de ser `exact` e passou para `estimated`.
+- Validacao local: `npx pnpm --filter web build` e `npx pnpm --filter web typecheck`.
+- Deploy de producao: `dpl_ARv9uGp7C6sF2z6ode69r6cYxyGf`.
+- URL gerada: `https://oraculo-jacartta-n4vbsg3td-grupo-jacartta.vercel.app`.
+- Alias de producao confirmado: `https://oraculo.oliverhome.com.br`.
+- Validacao HTTP em producao: `/`, `/curva-de-estoque?curva=A` e `/curva-de-venda?curva=A` retornam `307` para login, comportamento esperado para rotas protegidas sem sessao.

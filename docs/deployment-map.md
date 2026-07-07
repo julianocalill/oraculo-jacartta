@@ -7,10 +7,12 @@
 - Framework: `Next.js`
 - Data access: server-side Supabase client using `SUPABASE_SERVICE_ROLE_KEY`
 - Production domain: `https://oraculo.oliverhome.com.br`
+- Latest documented production deploy: `dpl_ARv9uGp7C6sF2z6ode69r6cYxyGf`
 - Primary GitHub repository: `https://github.com/Grupo-Jacartta/oraculo.git`
 - Personal mirror: `https://github.com/julianocalill/oraculo-jacartta`
 - Current deployment mode: production deploys through Vercel CLI/GitHub integration.
 - Auth: Supabase Auth protects `/`, `/parametros`, `/skus`, `/pedidos`, `/usuarios` and other app routes. `/login` is public.
+- Middleware rule: when a local JWT is still valid, do not call Supabase Auth on every request; refresh only near token expiration to keep navigation light.
 
 ## Backend
 
@@ -69,6 +71,22 @@ Active jobs in `cron.job`:
   - Calls `olist-sync-invoices`.
   - Window: first day of current month through `current_date`.
   - Payload: `pageSize=100`, `maxPages=25`, `hydrateDetails=true`.
+
+## Cached Analytics Sources
+
+The web request path must prefer cached tables/RPCs:
+
+- `/curva-de-venda`: `oraculo_sales_curve()` backed by `oraculo_sales_curve_cache`.
+- `/curva-de-estoque`: `oraculo_stock_coverage_curve()` backed by `oraculo_stock_coverage_curve_cache`.
+- Home rupture card: `oraculo_stock_watchlist_unified`.
+- Home SKU ranking: `oraculo_sku_current_unified`.
+
+Refresh curve caches manually after large stock/sales reloads:
+
+```sql
+select public.refresh_oraculo_sales_curve_cache();
+select public.refresh_oraculo_stock_coverage_curve_cache();
+```
 
 ## Manual Validation Commands
 

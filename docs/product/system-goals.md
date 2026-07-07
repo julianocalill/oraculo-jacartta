@@ -10,13 +10,13 @@ Estado atual: Olist e Shopee Donacor já entram no Supabase. Shopee permanece so
 
 O produto precisa servir decisao diaria, nao apenas historico.
 
-Estado atual: dashboard em produção com filtros de data, métricas por canal/fonte, ranking de SKU, ruptura e layout mobile.
+Estado atual: dashboard em produção com filtros de data, métricas por canal/fonte, ranking de SKU, ruptura, layout mobile e leitura de fontes cacheadas para manter carregamento leve.
 
 ## Inteligencia por produto
 
 Produto e tratado como ativo: giro, ruptura, curva, reentrada, ultima venda, custo, impacto visual e performance.
 
-Estado atual: fundação de SKU/margem existe. O próximo passo é completar itens históricos, parâmetros fiscais e alertas.
+Estado atual: fundação de SKU/margem existe. Curva de Venda e Curva de Estoque estão em produção com filtros A/B/C e exportação CSV. Margem/ROI seguem bloqueados até completar cobertura fiscal por item.
 
 ## Automacao backend
 
@@ -28,6 +28,11 @@ Estado atual: sincronização principal roda no Supabase `pg_cron`:
 - derivados/cache hora a hora;
 - NF cache hora a hora;
 - estoque/produtos a cada 6 horas.
+
+Curvas operacionais usam caches no Supabase:
+
+- `oraculo_sales_curve_cache`
+- `oraculo_stock_coverage_curve_cache`
 
 Alertas ainda são próximos passos.
 

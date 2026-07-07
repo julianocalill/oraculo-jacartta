@@ -212,6 +212,55 @@ Metricas exibidas:
 
 Observacao: esta tela e uma visao operacional de estoque/giro. Ela nao libera margem, ROI ou ROAS fiscal, que continuam bloqueados ate a cobertura fiscal de itens atingir o gate documentado.
 
+### Curva de estoque por cobertura
+
+Tela: `/curva-de-estoque`.
+
+Objetivo: classificar produtos pelo tempo estimado de cobertura do estoque, considerando o ritmo medio de vendas. Esta curva nao deve usar apenas a data da ultima venda.
+
+Fonte atual:
+
+- estoque: `olist_products.disponivel`;
+- vendas historicas: `olist_order_items.quantidade` e `olist_order_items.order_data_criacao`, agregadas por `produto_id`.
+- leitura da aplicação: RPC `oraculo_stock_coverage_curve()`, que lê o cache materializado `oraculo_stock_coverage_curve_cache`.
+
+Filtro:
+
+- `olist_products.disponivel > 0`;
+- produtos com estoque igual a `0` nao entram na lista.
+
+Calculo:
+
+- unidades vendidas historicas = soma de `olist_order_items.quantidade` por produto;
+- dias de historico = dias entre a primeira venda registrada e a data atual, com minimo de `1`;
+- media diaria = unidades vendidas historicas / dias de historico;
+- media mensal = media diaria * `30`;
+- meses de cobertura = estoque atual / media mensal.
+
+Quando a media diaria for `0`, exibir `Sem venda` em media, cobertura e curva operacional.
+
+Classificacao:
+
+- Curva A: `meses_de_cobertura <= 3`;
+- Curva B: `3 < meses_de_cobertura <= 6`;
+- Curva C: `meses_de_cobertura > 6`.
+
+Metricas exibidas:
+
+- cards de quantidade de produtos Curva A, B, C e total analisado;
+- grafico horizontal de quantidade de produtos por curva;
+- grafico horizontal de soma de estoque por curva;
+- tabela com produto, estoque atual, media diaria, media mensal, meses de cobertura e curva.
+- filtro por curva via query string `curva=A`, `curva=B`, `curva=C` ou `curva=all`;
+- exportacao CSV da curva selecionada por `/curva-de-estoque/export`.
+
+Performance:
+
+- a agregacao historica nao deve rodar no render do Next.js;
+- atualizar o cache com `select public.refresh_oraculo_stock_coverage_curve_cache();` quando estoque/vendas forem recarregados;
+- validacao em `2026-07-06`: RPC materializada retornou `959` produtos em cerca de `363ms`, contra cerca de `4s` na agregacao direta.
+- a Curva de Venda tambem usa cache materializado: `oraculo_sales_curve_cache`, lido por `oraculo_sales_curve()`.
+
 ### Ranking rapido de produtos
 
 Fonte: itens vendidos unificados.
