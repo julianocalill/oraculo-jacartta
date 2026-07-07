@@ -81,7 +81,7 @@ Current blocks:
 
 - channel parameters: tax, marketplace fee, payment fee, freight subsidy, packaging, target/minimum margin;
 - SKU overrides: unit cost, target/minimum margin;
-- state tax parameters: ICMS, FCP, DIFAL, effective tax rate, source, operation and validity.
+- state tax parameters: destination internal ICMS, interstate ICMS, FCP, computed DIFAL, effective tax rate, source, operation and validity.
 
 ### 4. Operational feed
 

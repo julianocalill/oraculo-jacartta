@@ -351,7 +351,8 @@ Campos por UF/estado:
 - UF;
 - fonte aplicavel: todas, Olist ou Shopee;
 - tipo de operação;
-- ICMS;
+- ICMS interno do estado de destino;
+- ICMS interestadual da operação;
 - FCP;
 - DIFAL;
 - taxa efetiva;
@@ -365,6 +366,8 @@ Regra:
 - custos e exceções que não vierem por API entram em `oraculo_margin_sku_params`;
 - taxas/impostos/metas por canal entram em `oraculo_margin_channel_params`;
 - impostos por UF entram em `oraculo_state_tax_params`;
+- DIFAL deve ser calculado como `max(ICMS interno destino - ICMS interestadual, 0)`;
+- taxa efetiva por UF deve ser calculada como `ICMS interestadual + DIFAL + FCP`;
 - Shopee é somente leitura: estes parâmetros são internos do Oraculo e não alteram nada na Shopee.
 - as 27 UFs foram criadas como pendentes, sem alíquota preenchida automaticamente;
 - alíquotas fiscais só devem ser marcadas como validadas depois de conferência com contador/fiscal.

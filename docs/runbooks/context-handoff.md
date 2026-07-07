@@ -23,7 +23,7 @@ Implemented recently:
 
 - Supabase Auth login and `/usuarios` user management.
 - `/parametros` with manual channel, SKU and UF fiscal parameters.
-- `oraculo_state_tax_params` for ICMS/FCP/DIFAL/effective tax by UF/source/operation/vigency.
+- `oraculo_state_tax_params` for destination internal ICMS, interstate ICMS, FCP, computed DIFAL and computed effective tax by UF/source/operation/vigency.
 - Olist hourly incremental sync via Supabase `pg_cron`.
 - Derived metrics/cache sync via Supabase `pg_cron`.
 - NF cache moved to direct Postgres cron.

@@ -67,3 +67,4 @@ Products are treated as durable operational assets, not just catalog rows.
 - Historical Olist orders may lack item detail; SKU metrics require `olist_order_items`.
 - Curve pages must use cached RPCs instead of scanning `olist_order_items` during Next.js render.
 - State tax parameters exist, but are not yet applied to margin/ROI until destination UF rules are connected and validated.
+- DIFAL in `oraculo_state_tax_params` is derived from `max(destination internal ICMS - interstate ICMS, 0)`. Effective tax is `interstate ICMS + DIFAL + FCP`.

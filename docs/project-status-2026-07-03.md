@@ -270,3 +270,18 @@ Continuam fora de commit por serem pendencias separadas:
   - Edge Function `olist-sync-invoices` agora aceita ate `300` paginas por execucao;
   - novo cron `oraculo-olist-invoices-monthly-headers-hourly`, horario `45 * * * *`, sincroniza cabeçalhos do mes vigente com `hydrateDetails=false`;
   - cron incremental `oraculo-olist-invoices-15m` continua hidratando detalhes recentes.
+
+## Atualizacao 2026-07-07 - regra de DIFAL
+
+- DIFAL deixou de ser tratado como campo manual independente na tela de parametros.
+- `oraculo_state_tax_params` recebeu `interstate_icms_rate`.
+- Regra implementada:
+  - `difal_rate = max(icms_rate - interstate_icms_rate, 0)`;
+  - `effective_tax_rate = interstate_icms_rate + difal_rate + fcp_rate`.
+- Nesta regra, `icms_rate` representa a aliquota interna do estado de destino.
+- A aplicacao em margem/ROI fiscal oficial continua bloqueada ate a cobertura por item passar no gate fiscal.
+- Migração aplicada em produção: `20260707172000_calculate_difal_from_icms_rates.sql`.
+- Validacao SQL em transacao com rollback: SP `18%` interno, `12%` interestadual e `2%` FCP calculou `6%` DIFAL e `20%` taxa efetiva.
+- Validacao local: `npx pnpm --filter web build` e `npx pnpm --filter web typecheck`.
+- Deploy de producao: `dpl_6NKpACATF1hWoNtbErpX42UrPQss`.
+- Alias de producao confirmado: `https://oraculo.oliverhome.com.br`.
