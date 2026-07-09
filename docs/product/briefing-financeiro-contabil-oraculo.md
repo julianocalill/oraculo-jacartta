@@ -104,8 +104,9 @@ Tambem precisamos definir a frequencia de atualizacao:
 Precisamos validar como tratar:
 
 - ICMS;
+- ICMS interestadual;
 - FCP;
-- DIFAL;
+- DIFAL calculado;
 - PIS/COFINS, se entrar na leitura desejada;
 - substituicao tributaria, se aplicavel;
 - diferenca de tributacao por estado;
@@ -178,10 +179,11 @@ O frontend do Oraculo ja tem base para cadastro manual de parametros. O que prec
 
 - UF;
 - tipo de operacao;
-- ICMS;
+- ICMS interno do destino;
+- ICMS interestadual;
 - FCP;
-- DIFAL;
-- taxa efetiva, se a empresa preferir trabalhar com taxa consolidada;
+- DIFAL calculado por `max(ICMS interno destino - ICMS interestadual, 0)`;
+- taxa efetiva calculada por `ICMS interestadual + DIFAL + FCP`;
 - vigencia da regra.
 
 ## Perguntas objetivas para a reuniao

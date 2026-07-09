@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
+import { createSupabaseUserClient } from "../../lib/supabase/user";
+import { requireCurrentUser } from "../../lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +36,7 @@ type StateTaxParam = {
   uf: string;
   operation_type: string;
   icms_rate: number | null;
+  interstate_icms_rate: number | null;
   fcp_rate: number | null;
   difal_rate: number | null;
   effective_tax_rate: number | null;
@@ -173,17 +176,19 @@ async function saveStateTaxParam(formData: FormData) {
   "use server";
 
   const icmsRate = parseRate(formData.get("icms_rate")) ?? 0;
+  const interstateIcmsRate = parseRate(formData.get("interstate_icms_rate")) ?? 0;
   const fcpRate = parseRate(formData.get("fcp_rate")) ?? 0;
-  const difalRate = parseRate(formData.get("difal_rate")) ?? 0;
+  const difalRate = Math.max(icmsRate - interstateIcmsRate, 0);
 
   const row = {
     uf: String(formData.get("uf") ?? "").trim().toUpperCase(),
     operation_type: String(formData.get("operation_type") || "venda_consumidor").trim() || "venda_consumidor",
     applies_to_source: String(formData.get("applies_to_source") || "*").trim().toLowerCase() || "*",
     icms_rate: icmsRate,
+    interstate_icms_rate: interstateIcmsRate,
     fcp_rate: fcpRate,
     difal_rate: difalRate,
-    effective_tax_rate: parseRate(formData.get("effective_tax_rate")) ?? icmsRate + fcpRate + difalRate,
+    effective_tax_rate: interstateIcmsRate + difalRate + fcpRate,
     params_configured: parseBoolean(formData.get("params_configured"), false),
     valid_from: parseDateValue(formData.get("valid_from")) ?? new Date().toISOString().slice(0, 10),
     valid_to: parseDateValue(formData.get("valid_to")),
@@ -205,7 +210,7 @@ async function saveStateTaxParam(formData: FormData) {
 }
 
 async function loadParametros() {
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseUserClient();
 
   const [channelsResponse, skuResponse, stateTaxResponse, marginResponse] = await Promise.all([
     supabase
@@ -257,6 +262,7 @@ async function loadParametros() {
 }
 
 export default async function ParametrosPage() {
+  await requireCurrentUser();
   const data = await loadParametros();
 
   return (
@@ -392,20 +398,16 @@ export default async function ParametrosPage() {
               <input name="operation_type" defaultValue="venda_consumidor" />
             </label>
             <label>
-              <span>ICMS</span>
+              <span>ICMS interno destino</span>
               <input name="icms_rate" inputMode="decimal" placeholder="18%" />
+            </label>
+            <label>
+              <span>ICMS interestadual</span>
+              <input name="interstate_icms_rate" inputMode="decimal" placeholder="12%" />
             </label>
             <label>
               <span>FCP</span>
               <input name="fcp_rate" inputMode="decimal" placeholder="2%" />
-            </label>
-            <label>
-              <span>DIFAL</span>
-              <input name="difal_rate" inputMode="decimal" placeholder="0%" />
-            </label>
-            <label>
-              <span>Taxa efetiva</span>
-              <input name="effective_tax_rate" inputMode="decimal" placeholder="deixe vazio para somar" />
             </label>
             <label>
               <span>Vigência início</span>
@@ -496,7 +498,8 @@ export default async function ParametrosPage() {
                 <th>UF</th>
                 <th>Fonte</th>
                 <th>Operação</th>
-                <th className="numeric">ICMS</th>
+                <th className="numeric">ICMS interno</th>
+                <th className="numeric">ICMS interest.</th>
                 <th className="numeric">FCP</th>
                 <th className="numeric">DIFAL</th>
                 <th className="numeric">Efetiva</th>
@@ -512,6 +515,7 @@ export default async function ParametrosPage() {
                   <td>{row.applies_to_source === "*" ? "Todas" : row.applies_to_source}</td>
                   <td>{row.operation_type}</td>
                   <td className="numeric">{percent(row.icms_rate)}</td>
+                  <td className="numeric">{percent(row.interstate_icms_rate)}</td>
                   <td className="numeric">{percent(row.fcp_rate)}</td>
                   <td className="numeric">{percent(row.difal_rate)}</td>
                   <td className="numeric">{percent(row.effective_tax_rate)}</td>

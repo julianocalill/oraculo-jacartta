@@ -212,6 +212,55 @@ Metricas exibidas:
 
 Observacao: esta tela e uma visao operacional de estoque/giro. Ela nao libera margem, ROI ou ROAS fiscal, que continuam bloqueados ate a cobertura fiscal de itens atingir o gate documentado.
 
+### Curva de estoque por cobertura
+
+Tela: `/curva-de-estoque`.
+
+Objetivo: classificar produtos pelo tempo estimado de cobertura do estoque, considerando o ritmo medio de vendas. Esta curva nao deve usar apenas a data da ultima venda.
+
+Fonte atual:
+
+- estoque: `olist_products.disponivel`;
+- vendas historicas: `olist_order_items.quantidade` e `olist_order_items.order_data_criacao`, agregadas por `produto_id`.
+- leitura da aplicação: RPC `oraculo_stock_coverage_curve()`, que lê o cache materializado `oraculo_stock_coverage_curve_cache`.
+
+Filtro:
+
+- `olist_products.disponivel > 0`;
+- produtos com estoque igual a `0` nao entram na lista.
+
+Calculo:
+
+- unidades vendidas historicas = soma de `olist_order_items.quantidade` por produto;
+- dias de historico = dias entre a primeira venda registrada e a data atual, com minimo de `1`;
+- media diaria = unidades vendidas historicas / dias de historico;
+- media mensal = media diaria * `30`;
+- meses de cobertura = estoque atual / media mensal.
+
+Quando a media diaria for `0`, exibir `Sem venda` em media, cobertura e curva operacional.
+
+Classificacao:
+
+- Curva A: `meses_de_cobertura <= 3`;
+- Curva B: `3 < meses_de_cobertura <= 6`;
+- Curva C: `meses_de_cobertura > 6`.
+
+Metricas exibidas:
+
+- cards de quantidade de produtos Curva A, B, C e total analisado;
+- grafico horizontal de quantidade de produtos por curva;
+- grafico horizontal de soma de estoque por curva;
+- tabela com produto, estoque atual, media diaria, media mensal, meses de cobertura e curva.
+- filtro por curva via query string `curva=A`, `curva=B`, `curva=C` ou `curva=all`;
+- exportacao CSV da curva selecionada por `/curva-de-estoque/export`.
+
+Performance:
+
+- a agregacao historica nao deve rodar no render do Next.js;
+- atualizar o cache com `select public.refresh_oraculo_stock_coverage_curve_cache();` quando estoque/vendas forem recarregados;
+- validacao em `2026-07-06`: RPC materializada retornou `959` produtos em cerca de `363ms`, contra cerca de `4s` na agregacao direta.
+- a Curva de Venda tambem usa cache materializado: `oraculo_sales_curve_cache`, lido por `oraculo_sales_curve()`.
+
 ### Ranking rapido de produtos
 
 Fonte: itens vendidos unificados.
@@ -239,7 +288,9 @@ Objetos criados:
 - `oraculo_state_tax_params`
 - `oraculo_sku_margin_30d`
 
-O objetivo e separar o que ja existe daquilo que ainda precisa de configuracao. A view pode calcular margem quando existe custo unitario, mas o status fica `configurar_parametros` enquanto impostos, tarifas, frete subsidiado, embalagem e metas nao forem validados.
+O objetivo e separar o que ja existe daquilo que ainda precisa de configuracao. A view calcula margem/ROI operacional quando existe custo unitario e parametros minimos. O status fica `configurar_parametros` enquanto impostos, tarifas, frete subsidiado, embalagem e metas nao forem validados.
+
+Em `2026-07-07`, a tela `/skus` foi liberada para exibir margem, lucro e ROI 30d como leitura operacional parcial. Esses numeros podem orientar analise interna de produto, mas nao substituem a margem/ROI fiscal oficial enquanto a cobertura de NFs com itens nao passar no gate de qualidade.
 
 Para ROI confiavel, ainda precisamos cadastrar ou importar:
 
@@ -255,7 +306,7 @@ Formula inicial proposta:
 
 `roi_produto = margem_bruta / custo_produto`
 
-Enquanto esses campos nao existirem, o painel pode mostrar receita e quantidade, mas nao deve chamar nenhum numero de margem ou ROI.
+Quando esses campos estiverem ausentes ou pendentes, a tela deve sinalizar `configurar_parametros` ou `sem_custo`. Quando existirem, a tela pode mostrar margem/ROI operacional. A margem/ROI fiscal oficial continua dependente da view auditada por NF + item.
 
 Status de margem:
 
@@ -302,7 +353,8 @@ Campos por UF/estado:
 - UF;
 - fonte aplicavel: todas, Olist ou Shopee;
 - tipo de operação;
-- ICMS;
+- ICMS interno do estado de destino;
+- ICMS interestadual da operação;
 - FCP;
 - DIFAL;
 - taxa efetiva;
@@ -316,6 +368,8 @@ Regra:
 - custos e exceções que não vierem por API entram em `oraculo_margin_sku_params`;
 - taxas/impostos/metas por canal entram em `oraculo_margin_channel_params`;
 - impostos por UF entram em `oraculo_state_tax_params`;
+- DIFAL deve ser calculado como `max(ICMS interno destino - ICMS interestadual, 0)`;
+- taxa efetiva por UF deve ser calculada como `ICMS interestadual + DIFAL + FCP`;
 - Shopee é somente leitura: estes parâmetros são internos do Oraculo e não alteram nada na Shopee.
 - as 27 UFs foram criadas como pendentes, sem alíquota preenchida automaticamente;
 - alíquotas fiscais só devem ser marcadas como validadas depois de conferência com contador/fiscal.
@@ -335,7 +389,7 @@ Limites conhecidos:
 - períodos históricos podem ter `olist_orders` sem `olist_order_items`; nesses casos, rankings de SKU ficam vazios até backfill de itens;
 - `dataFaturamento` em `olist_orders` segue incompleta e não deve ser usada como fonte fiscal;
 - KPIs oficiais de venda e receita usam `oraculo_fiscal_invoices_valid`;
-- SKU fiscal, margem, ROI e ROAS continuam bloqueados até o backfill de itens vinculados passar no gate de cobertura;
+- SKU fiscal oficial, margem fiscal oficial, ROI fiscal oficial e ROAS continuam bloqueados até o backfill de itens vinculados passar no gate de cobertura;
 - estoque/produtos ainda dependem de varredura ampla e não devem rodar hora a hora.
 
 ## Auditoria executavel

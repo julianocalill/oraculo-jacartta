@@ -22,7 +22,7 @@ The current product direction is practical executive intelligence for the operat
 - `Obsidian` can store durable project memory, but repository docs are the source of truth.
 - `AI agents` assist architecture, coding, review and documentation, but repository files remain the source of truth.
 
-## Current state on 2026-07-03
+## Current state on 2026-07-07
 
 - Production remains at `https://oraculo.oliverhome.com.br`.
 - The dashboard is fiscal-first and defaults to the current month in `America/Sao_Paulo`.
@@ -32,10 +32,12 @@ The current product direction is practical executive intelligence for the operat
 - `olist-sync-invoices` is deployed as a Supabase Edge Function and protected by `x-sync-secret`.
 - Fiscal invoice sync now runs in Supabase through `pg_cron`:
   - `oraculo-olist-invoices-15m`: recent-window NF sync every 15 minutes;
-  - `oraculo-olist-invoices-monthly-deep`: current-month catch-up daily at `06:20` UTC.
+  - `oraculo-olist-invoices-monthly-headers-hourly`: current-month header catch-up hourly at minute `45`, without item hydration.
+- On `2026-07-07`, July fiscal headers were resynced after the Olist comparison showed the old cron was incomplete for a month above `20k` NFs. The corrected snapshot has `21.676` valid NFs and `R$ 1.781.726,64`.
 - Manual July import completed fiscal invoices (`5.856` notes and `5.965` items) and Olist orders (`6.473` orders for the July window). Order detail hydration was stopped after about `800` orders and is not complete.
 - The index SKU ranking uses `oraculo_sku_current_unified`, a cached source. Do not put `oraculo_sku_period_rank_unified` back in the dashboard request path for large periods; June 2026 took roughly `27s` in a remote validation.
-- On `2026-07-06`, the product gained `/curva-de-venda`, a sales curve page for stocked simple Olist products. It reads `olist_products` with `disponivel > 0` and `tipo <> 'K'`, intentionally does not use `active = true` because stocked products currently have `active = false`, and calculates the last sale from `olist_order_items.order_data_criacao` by `produto_id`. Products are grouped into A/B/C by days since the last sale: A up to `90` days, B from `91` to `180` days, C over `180` days or no sale registered. The table exposes product name, last sale date, stock quantity and sales curve; the horizontal chart counts products per curve. The page supports `curva=A`, `curva=B`, `curva=C` and `curva=all` filters plus CSV export.
+- On `2026-07-06`, the product gained `/curva-de-venda`, a sales curve page for stocked simple Olist products. It reads RPC `oraculo_sales_curve()`, backed by `oraculo_sales_curve_cache`, for products with `disponivel > 0` and `tipo <> 'K'`. Products are grouped into A/B/C by days since the last sale: A up to `90` days, B from `91` to `180` days, C over `180` days or no sale registered. The table exposes product name, last sale date, stock quantity and sales curve; the horizontal chart counts products per curve. The page supports `curva=A`, `curva=B`, `curva=C` and `curva=all` filters plus CSV export.
+- On `2026-07-06`, `/curva-de-estoque` was added as a separate stock coverage view. It must not use last-sale recency for classification. It reads products with `disponivel > 0`, calculates average daily sales from all available `olist_order_items` history by `produto_id`, multiplies by `30` for monthly average, then computes `coverage_months = current_stock / average_monthly_sales`. Curves are A for `<= 3` months, B for `> 3` and `<= 6` months, C for `> 6` months. Products with zero sales average are shown as `Sem venda`. The page supports `curva=A`, `curva=B`, `curva=C` and `curva=all` filters plus CSV export. For performance, the app reads RPC `oraculo_stock_coverage_curve()`, backed by the materialized cache `oraculo_stock_coverage_curve_cache`; direct historical aggregation must stay out of the Next.js render path.
 - `Sem canal` in fiscal channel revenue means the Olist invoice payload had no integration, marketplace, channel or ecommerce name. For July 2026 it currently has `18` NFs and `R$ 179.642,32`, dominated by NF `394638` for `R$ 178.500,00`.
 - The UI theme is now a light/white layout.
 - Local development bypasses auth with a fake local admin only outside production; production remains protected by Supabase Auth.
@@ -57,7 +59,7 @@ The current product direction is practical executive intelligence for the operat
 - Vercel production is aliased at `https://oraculo.oliverhome.com.br`.
 - The dashboard has responsive/mobile breakpoints for navigation, cards, charts, forms and tables.
 - The `/parametros` area now stores manual channel, SKU and state/UF fiscal parameters.
-- `oraculo_state_tax_params` stores ICMS/FCP/DIFAL/effective tax rate by UF, source, operation and validity.
+- `oraculo_state_tax_params` stores destination internal ICMS, interstate ICMS, FCP, computed DIFAL and computed effective tax rate by UF, source, operation and validity. DIFAL is `max(destination internal ICMS - interstate ICMS, 0)`, and effective tax is `interstate ICMS + DIFAL + FCP`.
 - Olist sync now runs in Supabase using `pg_cron`:
   - orders hourly at minute `:05`, incremental one-day window, max 100 orders per run;
   - derived metrics hourly at minute `:25`, two-day window, without heavy global refresh;
@@ -97,7 +99,13 @@ Release gate:
 - at least `98%` of valid fiscal invoices covered by linked order items; or
 - less than `0,5%` of fiscal revenue without item coverage.
 
-Only after that gate may the candidate view `oraculo_fiscal_sku_sales_by_order_link` be created and audited. Margin, ROI and ROAS remain blocked.
+Only after that gate may the candidate view `oraculo_fiscal_sku_sales_by_order_link` be created and audited for official fiscal margin/ROI/ROAS.
+
+Operational margin/ROI was released on `/skus` on `2026-07-07` using `oraculo_sku_margin_30d`. Treat it as partial product intelligence, not as the official fiscal result.
+
+On `2026-07-09`, the fiscal order-item backfill queue was changed to prioritize pending invoices/orders by highest revenue first. A pilot processed `400` additional June orders with no persisted errors, moving coverage from `31.029` NFs / `R$ 2.200.833,10` (`41,97%` revenue) to `31.429` NFs / `R$ 2.349.173,17` (`44,80%` revenue). A larger `--limit=1000 --delay-ms=900 --concurrency=2` run triggered Olist `429`, so the safe assisted setting is `--limit=200 --delay-ms=900 --max-runtime-minutes=10 --resume --skip-audit --concurrency=2` with cooldown between invocations until a new rate-limit test proves otherwise.
+
+Also on `2026-07-09`, the backfill automation was moved fully online to Supabase. Edge Function `olist-backfill-order-items` is deployed and cron `oraculo-olist-order-items-backfill-hourly` runs every hour at minute `50` with payload `{"startDate":"2026-06-01","endDate":"2026-06-19","limit":50,"delayMs":1500,"maxRuntimeMs":180000}`. A manual online validation with `limit=2` processed `2` orders, `2` with items, `0` errors and `0` rate-limit events. Local `cron` automation was removed; this backfill does not depend on the Mac being on.
 
 Immediate technical follow-up:
 
@@ -107,6 +115,11 @@ Immediate technical follow-up:
 - keep the Next.js pages reading `oraculo_fiscal_latest_snapshots` instead of hardcoded values;
 - do not reintroduce heavy audit RPCs in server-rendered pages.
 - keep `/curva-de-venda` operational and explicitly labeled as an inventory movement view, not an official fiscal margin/ROI view.
+- keep `/curva-de-estoque` based on stock coverage from average sales, not on last sale date.
+- keep `/curva-de-estoque` reading the cached RPC, not raw `olist_order_items` rows in application code.
+- keep `/curva-de-venda` reading `oraculo_sales_curve()`, not raw `olist_order_items` rows in application code.
+- middleware must not call Supabase Auth on every request when the local JWT is still valid; only refresh near expiration.
+- the dashboard request path must not refresh caches or scan raw order-item/product tables.
 
 ## Working rule
 

@@ -5,12 +5,16 @@
 - Platform: `Vercel`
 - App path: `apps/web`
 - Framework: `Next.js`
-- Data access: server-side Supabase client using `SUPABASE_SERVICE_ROLE_KEY`
+- Data access: business-data reads use an authenticated server client (anon key + user JWT) under RLS via `createSupabaseUserClient()`; the `SUPABASE_SERVICE_ROLE_KEY` client is reserved for writes, `/usuarios` (auth.admin) and `/status` (sensitive tokens). See migration `20260710092000_rls_authenticated_read.sql`.
 - Production domain: `https://oraculo.oliverhome.com.br`
+- Latest documented production deploy: `dpl_AKM7ayoqYWc9uHGV38ZyUjhpJYVo`
 - Primary GitHub repository: `https://github.com/Grupo-Jacartta/oraculo.git`
 - Personal mirror: `https://github.com/julianocalill/oraculo-jacartta`
 - Current deployment mode: production deploys through Vercel CLI/GitHub integration.
-- Auth: Supabase Auth protects `/`, `/parametros`, `/skus`, `/pedidos`, `/usuarios` and other app routes. `/login` is public.
+- Auth: Supabase Auth protects `/`, `/parametros`, `/skus`, `/pedidos`, `/alertas`, `/curva-de-venda`, `/curva-de-estoque`, `/status`, `/usuarios` and other app routes. `/login` is public.
+- Defense in depth: besides the middleware, every protected page now calls `requireCurrentUser()` at the top of its server component, and the CSV export routes (`/curva-de-venda/export`, `/curva-de-estoque/export`) return `401` when there is no authenticated user. Pages use the service-role client, so this page-level check is the second barrier if the middleware is ever bypassed.
+- Middleware rule: when a local JWT is still valid, do not call Supabase Auth on every request; refresh only near token expiration to keep navigation light.
+- Sync health page: `/status` reads the latest `*_sync_runs`/`olist_order_items_backfill_runs` rows and the Olist token directly (service-role) and surfaces the same alerts as `olist-sync-health`.
 
 ## Backend
 
@@ -44,6 +48,11 @@
   - Uses checkpoint/resume in `olist_invoice_sync_runs`.
   - Hydrates invoice detail/items in bounded batches.
   - JWT verification is disabled at deploy level for internal cron calls; protected by `x-sync-secret`.
+- `olist-backfill-order-items`
+  - Backfills missing `olist_order_items` for valid fiscal invoices linked to Olist orders.
+  - Reads the revenue-prioritized `olist_order_item_backfill_queue`.
+  - Writes progress to `olist_order_items_backfill_runs` and per-order issues to `olist_order_items_backfill_errors`.
+  - JWT verification is disabled at deploy level for internal cron calls; protected by `x-sync-secret`.
 - `olist-sync-health`
   - Health/status endpoint for sync operations.
 
@@ -65,10 +74,35 @@ Active jobs in `cron.job`:
 - `oraculo-olist-invoices-15m`: `*/15 * * * *`
   - Calls `olist-sync-invoices`.
   - Payload: `lookbackDays=3`, `pageSize=50`, `maxPages=2`, `hydrateDetails=true`.
-- `oraculo-olist-invoices-monthly-deep`: `20 6 * * *`
+- `oraculo-olist-invoices-monthly-headers-hourly`: `45 * * * *`
   - Calls `olist-sync-invoices`.
   - Window: first day of current month through `current_date`.
-  - Payload: `pageSize=100`, `maxPages=25`, `hydrateDetails=true`.
+  - Payload: `pageSize=100`, `maxPages=300`, `hydrateDetails=false`, `delayMs=100`.
+  - Keeps NF headers/counts aligned with Olist before item hydration finishes.
+- `oraculo-olist-order-items-backfill-overnight`: `50 3-8 * * *` (UTC = 00h-05h `America/Sao_Paulo`)
+  - Calls `olist-backfill-order-items`.
+  - Window: `2026-06-01` through `2026-06-19` while the fiscal SKU coverage gate is still open.
+  - Payload: `limit=100`, `delayMs=1500`, `maxRuntimeMs=180000`.
+  - Runs only in the overnight low-traffic window to reduce Olist `429` during business hours.
+  - Replaced the previous hourly job `oraculo-olist-order-items-backfill-hourly` (migration `20260710090000`).
+  - Processes online in Supabase and does not depend on a local terminal or Mac being on.
+- Sync health is surfaced through the `/status` page (pull-based). There is no push notification channel; Telegram alerting was intentionally not adopted for this project.
+
+## Cached Analytics Sources
+
+The web request path must prefer cached tables/RPCs:
+
+- `/curva-de-venda`: `oraculo_sales_curve()` backed by `oraculo_sales_curve_cache`.
+- `/curva-de-estoque`: `oraculo_stock_coverage_curve()` backed by `oraculo_stock_coverage_curve_cache`.
+- Home rupture card: `oraculo_stock_watchlist_unified`.
+- Home SKU ranking: `oraculo_sku_current_unified`.
+
+Refresh curve caches manually after large stock/sales reloads:
+
+```sql
+select public.refresh_oraculo_sales_curve_cache();
+select public.refresh_oraculo_stock_coverage_curve_cache();
+```
 
 ## Manual Validation Commands
 

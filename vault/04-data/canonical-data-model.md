@@ -49,6 +49,15 @@ Products are treated as durable operational assets, not just catalog rows.
   - `oraculo_channel_sales_unified_cache`
   - `oraculo_sku_margin_30d`
   - `oraculo_stock_watchlist_unified`
+  - `oraculo_sales_curve_cache`
+  - `oraculo_stock_coverage_curve_cache`
+
+## Current analytics RPCs
+
+- `oraculo_sales_curve()`
+- `oraculo_stock_coverage_curve()`
+- `refresh_oraculo_sales_curve_cache()`
+- `refresh_oraculo_stock_coverage_curve_cache()`
 
 ## Current data caveats
 
@@ -56,4 +65,6 @@ Products are treated as durable operational assets, not just catalog rows.
 - Fiscal invoice headers are reconciled; fiscal/order-linked item coverage is still insufficient.
 - NF-to-order matching uses `olist_orders.payload.ecommerce.numeroPedidoEcommerce`.
 - Historical Olist orders may lack item detail; SKU metrics require `olist_order_items`.
-- State tax parameters exist, but are not yet applied to margin/ROI until destination UF rules are connected and validated.
+- Curve pages must use cached RPCs instead of scanning `olist_order_items` during Next.js render.
+- State tax parameters exist with the corrected DIFAL rule. `/skus` exposes operational margin/ROI through `oraculo_sku_margin_30d`; official fiscal margin/ROI still depends on the audited NF + item layer.
+- DIFAL in `oraculo_state_tax_params` is derived from `max(destination internal ICMS - interstate ICMS, 0)`. Effective tax is `interstate ICMS + DIFAL + FCP`.

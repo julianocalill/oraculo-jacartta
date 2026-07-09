@@ -532,6 +532,12 @@ p {
   color: var(--red);
 }
 
+.warning-pill {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #b45309;
+}
+
 .back-link {
   color: var(--amber);
   display: inline-flex;
@@ -1553,4 +1559,21 @@ h2 {
   .data-table {
     min-width: 700px;
   }
+}
+
+/* Status do sync — alertas */
+.status-alerts {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.status-alert {
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #f3c2c2;
+  background: #fdecec;
+  color: #8f1d1d;
+  font-size: 14px;
+  font-weight: 500;
 }

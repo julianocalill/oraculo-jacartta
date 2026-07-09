@@ -5,14 +5,14 @@
 Build the operational analytics layer for Oraculo from Olist and marketplace data.
 The product must answer daily decision questions, not just store history.
 
-As of `2026-06-21`, the first analytics foundation is live in production and the next step is making ROI/margin/product alerts reliable.
+As of `2026-07-07`, the analytics foundation is live in production with fiscal dashboard, cached SKU ranking, rupture watchlist, Curva de Venda and Curva de Estoque. The next step is making ROI/margin/product alerts reliable after fiscal item coverage passes.
 
 ## Visual direction
 
 The reference system shown in the screenshots has these traits:
 
 - dense operational dashboard
-- dark theme
+- current production light theme
 - strong KPI strip at the top
 - period filters and projection controls
 - channel comparison
@@ -41,6 +41,13 @@ Required blocks:
 - top SKUs by revenue and quantity
 - stock rupture/no-sale watchlist
 
+Runtime requirement:
+
+- keep request-time reads on cached sources;
+- do not aggregate raw historical `olist_order_items` in server render;
+- use `oraculo_sales_curve()` for Curva de Venda;
+- use `oraculo_stock_coverage_curve()` for Curva de Estoque.
+
 ### 2. Product intelligence
 
 Purpose:
@@ -53,6 +60,9 @@ Required blocks:
 - SKU table
 - ABC / XYZ classification
 - sales curve by stocked SKU, classifying A/B/C by days since last sale
+- stock coverage curve by stocked product, classifying A/B/C by months of coverage from average sales
+- filters for curve A, B and C separately
+- CSV export for the selected curve
 - revenue, units, ticket
 - last sale date
 - stock, stock value, rupture
@@ -71,7 +81,7 @@ Current blocks:
 
 - channel parameters: tax, marketplace fee, payment fee, freight subsidy, packaging, target/minimum margin;
 - SKU overrides: unit cost, target/minimum margin;
-- state tax parameters: ICMS, FCP, DIFAL, effective tax rate, source, operation and validity.
+- state tax parameters: destination internal ICMS, interstate ICMS, FCP, computed DIFAL, effective tax rate, source, operation and validity.
 
 ### 4. Operational feed
 
@@ -146,7 +156,8 @@ This allows us to model more later without reimporting the source.
 6. product intelligence views - foundation active
 7. parameter UI - active for channel, SKU and UF fiscal rules
 8. sales curve by stocked SKU - active at `/curva-de-venda`
-9. alert generation - next milestone
+9. stock coverage curve - active at `/curva-de-estoque`
+10. alert generation - next milestone
 
 ## Product rule
 

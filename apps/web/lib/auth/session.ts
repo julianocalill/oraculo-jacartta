@@ -29,14 +29,14 @@ function readFallbackEnv() {
   }
 }
 
-function getSupabaseUrl() {
+export function getSupabaseUrl() {
   const fallbackEnv = readFallbackEnv();
   const url = process.env.SUPABASE_URL ?? fallbackEnv.SUPABASE_URL;
   if (!url) throw new Error("SUPABASE_URL is not set.");
   return url;
 }
 
-function getSupabaseAnonKey() {
+export function getSupabaseAnonKey() {
   const fallbackEnv = readFallbackEnv();
   const key = process.env.SUPABASE_ANON_KEY ?? fallbackEnv.SUPABASE_ANON_KEY;
   if (!key) throw new Error("SUPABASE_ANON_KEY is not set.");
