@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { createSupabaseAdminClient } from "../../lib/supabase/admin";
+import { createSupabaseUserClient } from "../../lib/supabase/user";
+import { requireCurrentUser } from "../../lib/auth/session";
+import { formatBrDate } from "../../lib/date";
 
 export const dynamic = "force-dynamic";
 
@@ -39,11 +41,7 @@ function stock(value: number | null | undefined) {
 }
 
 function date(value: string | null | undefined) {
-  if (!value) return "-";
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeZone: "America/Sao_Paulo"
-  }).format(new Date(value));
+  return formatBrDate(value);
 }
 
 function curveLabel(curve: Curve) {
@@ -64,7 +62,7 @@ function asCurveFilter(value: string | undefined): CurveFilter {
 }
 
 async function loadSalesCurve() {
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseUserClient();
   const { data, error } = await supabase.rpc("oraculo_sales_curve");
   if (error) throw error;
   const items = (data ?? []) as CurveItem[];
@@ -95,6 +93,7 @@ export default async function CurvaDeVendaPage({
 }: {
   searchParams?: Promise<{ curva?: string }>;
 }) {
+  await requireCurrentUser();
   const params = await searchParams;
   const selectedCurve = asCurveFilter(params?.curva);
   const data = await loadSalesCurve();

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { createSupabaseAdminClient } from "../../lib/supabase/admin";
+import { createSupabaseUserClient } from "../../lib/supabase/user";
+import { requireCurrentUser } from "../../lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +72,7 @@ function coverageLabel(value: number | null) {
 }
 
 async function loadStockCurve() {
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseUserClient();
   const { data, error } = await supabase.rpc("oraculo_stock_coverage_curve");
   if (error) throw error;
   const items = (data ?? []) as StockCurveItem[];
@@ -103,6 +104,7 @@ export default async function CurvaDeEstoquePage({
 }: {
   searchParams?: Promise<{ curva?: string }>;
 }) {
+  await requireCurrentUser();
   const params = await searchParams;
   const selectedCurve = asCurveFilter(params?.curva);
   const data = await loadStockCurve();

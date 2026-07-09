@@ -1,4 +1,6 @@
-import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
+import { createSupabaseUserClient } from "../../../lib/supabase/user";
+import { getCurrentUser } from "../../../lib/auth/session";
+import { formatBrDate } from "../../../lib/date";
 
 type Curve = "A" | "B" | "C";
 type CurveFilter = "all" | Curve;
@@ -20,21 +22,13 @@ function n(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return "";
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeZone: "America/Sao_Paulo"
-  }).format(new Date(value));
-}
-
 function csvCell(value: string | number | null | undefined) {
   const text = String(value ?? "");
   return `"${text.replace(/"/g, '""')}"`;
 }
 
 async function loadItems(curveFilter: CurveFilter) {
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseUserClient();
   const { data, error } = await supabase.rpc("oraculo_sales_curve");
   if (error) throw error;
   const items = (data ?? []) as CurveItem[];
@@ -44,6 +38,9 @@ async function loadItems(curveFilter: CurveFilter) {
 }
 
 export async function GET(request: Request) {
+  const user = await getCurrentUser();
+  if (!user) return new Response("Unauthorized", { status: 401 });
+
   const url = new URL(request.url);
   const curveFilter = asCurveFilter(url.searchParams.get("curva"));
   const items = await loadItems(curveFilter);
@@ -55,7 +52,7 @@ export async function GET(request: Request) {
   ];
   const rows = items.map((item) => [
     item.product_name ?? "Sem nome",
-    formatDate(item.last_sale_at),
+    formatBrDate(item.last_sale_at, ""),
     n(item.available_stock),
     item.curve
   ]);

@@ -103,6 +103,10 @@ Only after that gate may the candidate view `oraculo_fiscal_sku_sales_by_order_l
 
 Operational margin/ROI was released on `/skus` on `2026-07-07` using `oraculo_sku_margin_30d`. Treat it as partial product intelligence, not as the official fiscal result.
 
+On `2026-07-09`, the fiscal order-item backfill queue was changed to prioritize pending invoices/orders by highest revenue first. A pilot processed `400` additional June orders with no persisted errors, moving coverage from `31.029` NFs / `R$ 2.200.833,10` (`41,97%` revenue) to `31.429` NFs / `R$ 2.349.173,17` (`44,80%` revenue). A larger `--limit=1000 --delay-ms=900 --concurrency=2` run triggered Olist `429`, so the safe assisted setting is `--limit=200 --delay-ms=900 --max-runtime-minutes=10 --resume --skip-audit --concurrency=2` with cooldown between invocations until a new rate-limit test proves otherwise.
+
+Also on `2026-07-09`, the backfill automation was moved fully online to Supabase. Edge Function `olist-backfill-order-items` is deployed and cron `oraculo-olist-order-items-backfill-hourly` runs every hour at minute `50` with payload `{"startDate":"2026-06-01","endDate":"2026-06-19","limit":50,"delayMs":1500,"maxRuntimeMs":180000}`. A manual online validation with `limit=2` processed `2` orders, `2` with items, `0` errors and `0` rate-limit events. Local `cron` automation was removed; this backfill does not depend on the Mac being on.
+
 Immediate technical follow-up:
 
 - keep `oraculo_fiscal_snapshots` updated after each audit/backfill batch;

@@ -1,4 +1,5 @@
-import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
+import { createSupabaseUserClient } from "../../../lib/supabase/user";
+import { getCurrentUser } from "../../../lib/auth/session";
 
 type StockCurve = "A" | "B" | "C" | "sem_venda";
 type StockCurveFilter = "all" | Exclude<StockCurve, "sem_venda">;
@@ -36,7 +37,7 @@ function csvCell(value: string | number | null | undefined) {
 }
 
 async function loadItems(curveFilter: StockCurveFilter) {
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseUserClient();
   const { data, error } = await supabase.rpc("oraculo_stock_coverage_curve");
   if (error) throw error;
   const items = (data ?? []) as StockCurveItem[];
@@ -49,6 +50,9 @@ async function loadItems(curveFilter: StockCurveFilter) {
 }
 
 export async function GET(request: Request) {
+  const user = await getCurrentUser();
+  if (!user) return new Response("Unauthorized", { status: 401 });
+
   const url = new URL(request.url);
   const curveFilter = asCurveFilter(url.searchParams.get("curva"));
   const items = await loadItems(curveFilter);

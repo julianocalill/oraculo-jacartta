@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
+import { createSupabaseUserClient } from "../../lib/supabase/user";
+import { requireCurrentUser } from "../../lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
@@ -192,7 +194,7 @@ async function loadBillingWindowMetrics(
 }
 
 async function loadPedidos(filters: PedidosFilters) {
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseUserClient();
   let unifiedQuery = supabase
     .from("oraculo_channel_sales_unified_cache")
     .select("*")
@@ -293,6 +295,7 @@ export default async function PedidosPage({
 }: {
   searchParams?: Promise<PedidosSearchParams>;
 }) {
+  await requireCurrentUser();
   const filters = getFilters(await searchParams);
   const data = await loadPedidos(filters);
   const chart = data.daily.slice(-20);

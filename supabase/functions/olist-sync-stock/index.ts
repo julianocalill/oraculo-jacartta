@@ -24,7 +24,7 @@ const env = {
   olistApiClientId: Deno.env.get('OLIST_API_CLIENT_ID') ?? '',
   olistApiClientSecret: Deno.env.get('OLIST_API_CLIENT_SECRET') ?? '',
   olistApiRefreshToken: Deno.env.get('OLIST_API_REFRESH_TOKEN') ?? '',
-  olistStockEndpoint: Deno.env.get('OLIST_STOCK_ENDPOINT') ?? 'estoque',
+  olistApiBearerToken: Deno.env.get('OLIST_API_BEARER_TOKEN') ?? '',
   olistApiAuthHeader: Deno.env.get('OLIST_API_AUTH_HEADER') ?? 'Authorization',
   olistApiAuthPrefix: Deno.env.get('OLIST_API_AUTH_PREFIX') ?? 'Bearer',
   olistSyncJobSecret: Deno.env.get('OLIST_SYNC_JOB_SECRET') ?? ''
@@ -177,6 +177,10 @@ async function getStoredRefreshToken(supabase: ReturnType<typeof createClient>) 
 }
 
 async function getAccessToken(supabase: ReturnType<typeof createClient>) {
+  if (env.olistApiBearerToken) {
+    return env.olistApiBearerToken;
+  }
+
   requireValue('OLIST_API_TOKEN_URL', env.olistApiTokenUrl);
   requireValue('OLIST_API_CLIENT_ID', env.olistApiClientId);
   requireValue('OLIST_API_CLIENT_SECRET', env.olistApiClientSecret);

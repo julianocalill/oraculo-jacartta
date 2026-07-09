@@ -5,6 +5,8 @@ import {
   type FiscalDashboardSnapshot
 } from "../lib/fiscal-snapshots";
 import Link from "next/link";
+import { requireCurrentUser } from "../lib/auth/session";
+import { createSupabaseUserClient } from "../lib/supabase/user";
 
 export const dynamic = "force-dynamic";
 
@@ -379,9 +381,14 @@ async function loadFiscalMetrics(
   };
 }
 
+// Stub intencional. As contagens de janela de faturamento exigem `count: "exact"`
+// sobre `olist_orders` filtrando JSON (payload->itens / payload->>dataFaturamento),
+// o que é caro demais para o caminho crítico do dashboard. A versão real roda em
+// /pedidos (loadBillingWindowMetrics de app/pedidos/page.tsx). Aqui retornamos zeros
+// de propósito para manter a home rápida; os cards que dependem disso ficam ocultos.
 async function loadBillingWindowMetrics(
-  supabase: ReturnType<typeof createSupabaseAdminClient>,
-  filters: DashboardFilters
+  _supabase: ReturnType<typeof createSupabaseAdminClient>,
+  _filters: DashboardFilters
 ): Promise<BillingWindowMetrics> {
   return {
     detailedOrders: 0,
@@ -407,7 +414,7 @@ async function loadUnifiedChannelRows(
 }
 
 async function loadDashboard(filters: DashboardFilters) {
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseUserClient();
   let dailyQuery = supabase
     .from("oraculo_daily_sales")
     .select("*")
@@ -584,6 +591,7 @@ export default async function HomePage({
 }: {
   searchParams?: Promise<DashboardSearchParams>;
 }) {
+  await requireCurrentUser();
   const filters = getDashboardFilters(await searchParams);
   const data = await loadDashboard(filters);
   const filterQuery = `?start=${encodeURIComponent(filters.start)}&end=${encodeURIComponent(filters.end)}`;
@@ -604,19 +612,16 @@ export default async function HomePage({
           <Link href="/" className="nav-active">Analytics</Link>
           <Link href={`/pedidos${filterQuery}`}>Pedidos</Link>
           <Link href="/skus">SKUs</Link>
-          <Link href="/skus">Análise SKU</Link>
           <Link href="/curva-de-venda">Curva de Venda</Link>
           <Link href="/curva-de-estoque">Curva de Estoque</Link>
           <Link href="/alertas">Alertas <b>{formatCount(data.actionableWatchlist.length)}</b></Link>
-          <Link href="/pedidos">Performance</Link>
-          <Link href="/alertas">Ruptura</Link>
           <Link href="/parametros">Parâmetros</Link>
         </nav>
 
         <nav className="nav-group nav-admin" aria-label="Admin">
           <span>Admin</span>
           <Link href="/usuarios">Usuários</Link>
-          <Link href="/">Logs</Link>
+          <Link href="/status">Status sync</Link>
           <Link href="/parametros">Config</Link>
         </nav>
 

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
+import { createSupabaseUserClient } from "../../lib/supabase/user";
+import { requireCurrentUser } from "../../lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
@@ -208,7 +210,7 @@ async function saveStateTaxParam(formData: FormData) {
 }
 
 async function loadParametros() {
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseUserClient();
 
   const [channelsResponse, skuResponse, stateTaxResponse, marginResponse] = await Promise.all([
     supabase
@@ -260,6 +262,7 @@ async function loadParametros() {
 }
 
 export default async function ParametrosPage() {
+  await requireCurrentUser();
   const data = await loadParametros();
 
   return (

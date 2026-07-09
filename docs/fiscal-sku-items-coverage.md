@@ -134,6 +134,29 @@ Estado apos a auditoria separada de cobertura em `2026-06-27`:
 - SKUs via pedido distintos: `376`;
 - gate de liberacao: ainda nao atingido.
 
+Atualizacao em `2026-07-09`:
+
+- gargalo confirmado: a fila de junho tinha `68.462` pedidos, com `28.318` concluidos e `40.144` pendentes antes da rodada;
+- a selecao de candidatos foi alterada para priorizar maior `total_amount`/`billed_revenue` pendente antes da ordem cronologica;
+- migrações aplicadas diretamente no Supabase:
+  - `20260709172000_prioritize_order_item_backfill_by_revenue.sql`;
+  - `20260709173500_optimize_revenue_prioritized_backfill_candidates.sql`;
+- lote piloto seguro: `200` pedidos, `0` erros, `0` rate limit, throughput aproximado de `65,52` pedidos/minuto;
+- apos o piloto, a cobertura subiu para `31.229` NFs (`43,86%`) e `R$ 2.282.985,99` (`43,54%`) de receita coberta;
+- tentativa de escalar para `1.000` pedidos consecutivos com `delay-ms=900` e `concurrency=2` gerou `429`, entao nao deve ser tratada como configuracao segura para execucao continua;
+- a execucao foi interrompida apos mais `200` pedidos e marcada como `partial`, sem erros persistidos;
+- estado final auditado da rodada:
+  - NFs com pedido + itens: `31.429` (`44,14%`);
+  - receita coberta via pedido + itens: `R$ 2.349.173,17` (`44,80%`);
+  - receita sem cobertura via pedido + itens: `R$ 2.894.542,59` (`55,20%`);
+  - SKUs via pedido distintos: `388`;
+  - fila: `28.718` concluidos, `39.744` pendentes, `0` erros;
+  - receita pendente na fila: `R$ 2.602.184,46`;
+  - gate de liberacao: ainda nao atingido.
+- lote adicional de `200` pedidos com a mesma configuracao concluiu com `0` erros persistidos e `200` pedidos com itens, mas registrou `6` eventos de `429`;
+- apos esse lote adicional, a fila ficou em `28.918` concluidos, `39.544` pendentes e `R$ 2.552.024,12` de receita pendente;
+- conclusao operacional: a Olist aplica limite cumulativo por janela; mesmo lotes de `200` precisam de cooldown maior quando executados em sequencia.
+
 Preparar fila:
 
 ```bash
@@ -149,13 +172,26 @@ Comando de continuidade:
 node scripts/backfill-olist-order-items-for-valid-invoices.js \
   --start=2026-06-01 \
   --end=2026-06-19 \
-  --limit=2000 \
+  --limit=200 \
   --delay-ms=900 \
-  --max-runtime-minutes=60 \
+  --max-runtime-minutes=10 \
   --resume \
   --skip-audit \
   --concurrency=2
 ```
+
+Para execucao assistida, aguardar cooldown longo entre lotes de `200`. Se houver `429`, pausar e retomar com `--concurrency=1` ou `--delay-ms` maior. Nao usar `--limit=1000` ou maior com `delay-ms=900` em execucao continua enquanto a Olist estiver retornando `429`.
+
+Automacao online ativa em `2026-07-09`:
+
+- Edge Function: `supabase/functions/olist-backfill-order-items`;
+- cron Supabase: `oraculo-olist-order-items-backfill-hourly`;
+- agenda: todo hora no minuto `50`;
+- payload: `{"startDate":"2026-06-01","endDate":"2026-06-19","limit":50,"delayMs":1500,"maxRuntimeMs":180000}`;
+- deploy validado com chamada manual online de `limit=2`: `2` pedidos processados, `2` com itens, `0` erros, `0` rate limit;
+- logs de execucao: `olist_order_items_backfill_runs`;
+- erros por pedido: `olist_order_items_backfill_errors`;
+- a automacao local por `cron` foi removida; o backfill nao depende do Mac ligado.
 
 View candidata futura:
 

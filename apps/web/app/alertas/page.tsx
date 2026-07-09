@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { createSupabaseAdminClient } from "../../lib/supabase/admin";
+import { createSupabaseUserClient } from "../../lib/supabase/user";
+import { requireCurrentUser } from "../../lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +65,7 @@ function label(signal: string | null | undefined) {
 }
 
 async function loadAlertas() {
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseUserClient();
 
   const response = await supabase
     .from("oraculo_stock_watchlist_unified")
@@ -85,6 +86,7 @@ async function loadAlertas() {
 }
 
 export default async function AlertasPage() {
+  await requireCurrentUser();
   const data = await loadAlertas();
 
   return (

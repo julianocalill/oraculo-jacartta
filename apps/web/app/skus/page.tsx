@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { createSupabaseAdminClient } from "../../lib/supabase/admin";
+import { createSupabaseUserClient } from "../../lib/supabase/user";
 import { loadFiscalSkuCoverageSnapshot } from "../../lib/fiscal-snapshots";
+import { requireCurrentUser } from "../../lib/auth/session";
+import { formatBrDate } from "../../lib/date";
 
 export const dynamic = "force-dynamic";
 
@@ -78,11 +80,7 @@ function marginSignalClass(value: string | null | undefined) {
 }
 
 function date(value: string | null | undefined) {
-  if (!value) return "-";
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeZone: "America/Sao_Paulo"
-  }).format(new Date(value));
+  return formatBrDate(value);
 }
 
 function coverage(value: number | null | undefined) {
@@ -104,7 +102,7 @@ function asSource(value: string | undefined): SourceFilter {
 }
 
 async function loadSkus(selectedSku?: string, source: SourceFilter = "all") {
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseUserClient();
 
   let rowsQuery = supabase
     .from("oraculo_sku_margin_30d")
@@ -149,6 +147,7 @@ export default async function SkusPage({
 }: {
   searchParams?: Promise<{ sku?: string; source?: string }>;
 }) {
+  await requireCurrentUser();
   const params = await searchParams;
   const selectedSku = params?.sku;
   const source = asSource(params?.source);
