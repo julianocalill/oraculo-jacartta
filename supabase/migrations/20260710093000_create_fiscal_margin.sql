@@ -10,7 +10,7 @@
 -- Regras aplicadas por item:
 --   base            = valor_total do item (receita do item)
 --   origem          = payload.origem = '1' -> importado, senão nacional
---   custo           = quantidade * (preco_custo_medio>0 ? preco_custo_medio : preco_custo)
+--   custo unitário  = oraculo_product_effective_cost (kits expandidos pelos componentes)
 --   ICMS (Jacarta)  = base * (uf=MG ? (importado?14:6) : 1.3)/100
 --   PIS/COFINS      = max(0, base*9,25% - custo*9,25%)   (crédito sobre custo)
 --   DIFAL           = base * max(0, icms_interno_destino - interestadual)/100
@@ -20,10 +20,41 @@
 --   * taxa de marketplace não entra aqui (Olist não usa faixa Shopee); fica 0.
 --   * a regra de custo líquido de importado por transferência (×0,8425) NÃO é
 --     aplicada automaticamente por falta da flag de transferência na base atual.
+--   * o `preco` de olist_products é placeholder para muitos SKUs; a sanidade de
+--     custo compara com o preço de venda REAL do item no pedido (valor_total/qtd).
 
 drop function if exists public.oraculo_fiscal_margin_summary(date, date);
 drop function if exists public.oraculo_fiscal_sku_margin(date, date, integer);
 drop function if exists public.oraculo_fiscal_margin_lines(date, date);
+
+-- Custo unitário efetivo por produto. Kits (tipo K) são expandidos pela composição
+-- em payload->'kit' (componente = produto.id + quantidade), somando o custo dos
+-- componentes; cost_complete indica se todos os componentes tinham custo.
+create or replace view public.oraculo_product_effective_cost
+with (security_invoker = false) as
+with kit_cost as (
+  select
+    k.id as kit_id,
+    sum((comp->>'quantidade')::numeric * coalesce(nullif(sp.preco_custo_medio, 0), sp.preco_custo, 0)) as unit_cost,
+    bool_and(coalesce(nullif(sp.preco_custo_medio, 0), sp.preco_custo, 0) > 0) as all_costed
+  from olist_products k
+  cross join lateral jsonb_array_elements(coalesce(k.payload->'kit', '[]'::jsonb)) comp
+  left join olist_products sp on sp.id = (comp->'produto'->>'id')
+  where k.tipo = 'K'
+  group by k.id
+)
+select
+  p.id as product_id,
+  p.sku,
+  p.tipo,
+  case when p.tipo = 'K' then kc.unit_cost
+       else coalesce(nullif(p.preco_custo_medio, 0), p.preco_custo, 0) end as unit_cost,
+  case when p.tipo = 'K' then coalesce(kc.all_costed, false) else true end as cost_complete,
+  case when p.tipo = 'K' then 'kit_components' else 'product' end as cost_source
+from olist_products p
+left join kit_cost kc on kc.kit_id = p.id;
+
+grant select on public.oraculo_product_effective_cost to authenticated;
 
 create or replace function public.oraculo_fiscal_margin_lines(p_start date, p_end date)
 returns table (
@@ -62,30 +93,31 @@ as $$
       case when (p.payload->>'origem') = '1' then 'importado' else 'nacional' end as origin,
       coalesce(oi.quantidade, 0)::numeric as quantity,
       coalesce(oi.valor_total, 0)::numeric as revenue,
-      p.tipo as product_type,
-      coalesce(nullif(p.preco_custo_medio, 0), p.preco_custo, 0)::numeric as raw_unit_cost,
+      coalesce(ec.unit_cost, 0)::numeric as raw_unit_cost,
+      coalesce(ec.cost_complete, false) as cost_complete,
       case when coalesce(oi.quantidade,0) > 0 then coalesce(oi.valor_total,0) / oi.quantidade else null end as unit_price
     from oraculo_fiscal_invoice_order_links l
     join olist_invoices inv on inv.id = l.invoice_id
     join olist_order_items oi on oi.order_id = l.order_id
     left join olist_products p on p.id = oi.produto_id
+    left join oraculo_product_effective_cost ec on ec.product_id = oi.produto_id
     where l.issued_date between p_start and p_end
       and l.order_id is not null
   ),
   base as (
-    -- Sanidade de custo: kits (tipo K) e custos implausíveis (> 3x o preço de
-    -- venda unitário) não têm custo confiável na Olist -> custo indisponível.
+    -- Custo indisponível quando: custo <= 0, kit sem custo completo dos
+    -- componentes, ou custo implausível (> 3x o preço de venda REAL do item).
     select
       invoice_id, uf, sku, produto_id, origin, quantity, revenue,
       case
-        when product_type = 'K' then null
         when raw_unit_cost <= 0 then null
+        when not cost_complete then null
         when unit_price is not null and raw_unit_cost > unit_price * 3 then null
         else quantity * raw_unit_cost
       end as cost,
       (
-        product_type = 'K'
-        or raw_unit_cost <= 0
+        raw_unit_cost <= 0
+        or not cost_complete
         or (unit_price is not null and raw_unit_cost > unit_price * 3)
       ) as cost_missing
     from raw
