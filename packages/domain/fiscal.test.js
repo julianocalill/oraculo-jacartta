@@ -7,7 +7,15 @@ import {
   isValidFiscalInvoice,
   isCanceledInvoice,
   calcSkuMargin,
-  marginSignal
+  marginSignal,
+  icmsRateForUf,
+  interstateIcmsRate,
+  calcDifal,
+  calcNetCost,
+  calcShopeeMarketplaceFee,
+  calcPisCofins,
+  calcFiscalOrder,
+  normalizeFiscalOrigin
 } from "./fiscal.js";
 
 const closeTo = (actual, expected, tol = 1e-9) =>
@@ -104,4 +112,102 @@ test("Sinal de margem segue a precedência da view", () => {
     marginSignal({ units: 5, paramsConfigured: true, unitCost: 10, marginRate: 0.30, minimumMarginRate: 0.12, targetMarginRate: 0.25 }),
     "saudavel"
   );
+});
+
+// --- Regras portadas do Financeiro ---
+
+test("Custo líquido: importado por transferência = valor NF × 0,8425 (exemplo real R$393.300)", () => {
+  const r = calcNetCost({ grossTotal: 393300, isImportedTransfer: true });
+  closeTo(r.total, 331355.25, 1e-6); // 393300 × (1 - 0.1575)
+  assert.equal(r.rule, "imported_transfer_4_icms_1175_pis_cofins");
+});
+
+test("Custo líquido: precedência (net explícito, gross-créditos, gross puro, missing)", () => {
+  assert.deepEqual(calcNetCost({ netTotal: 100, grossTotal: 200 }), { total: 100, rule: "explicit_net_cost" });
+  assert.deepEqual(calcNetCost({ grossTotal: 200, recoverableTaxes: 30 }), { total: 170, rule: "gross_minus_recoverable_taxes" });
+  assert.deepEqual(calcNetCost({ grossTotal: 200 }), { total: 200, rule: "gross_cost" });
+  assert.equal(calcNetCost({}).total, null);
+});
+
+test("Matriz ICMS Jacarta: MG 6% nacional / 14% importado; demais UFs 1,3%", () => {
+  assert.equal(icmsRateForUf({ profile: "jacarta", origin: "nacional", uf: "MG" }), 6);
+  assert.equal(icmsRateForUf({ profile: "jacarta", origin: "importado", uf: "MG" }), 14);
+  assert.equal(icmsRateForUf({ profile: "jacarta", origin: "nacional", uf: "SP" }), 1.3);
+  assert.equal(icmsRateForUf({ profile: "jacarta", origin: "importado", uf: "CE" }), 1.3);
+});
+
+test("Matriz ICMS Gira Casa: SP 18%; Sul/Sudeste 12%; demais 7% (nacional); importado 4%", () => {
+  assert.equal(icmsRateForUf({ profile: "gira-casa", origin: "nacional", uf: "SP" }), 18);
+  assert.equal(icmsRateForUf({ profile: "gira-casa", origin: "nacional", uf: "RJ" }), 12);
+  assert.equal(icmsRateForUf({ profile: "gira-casa", origin: "nacional", uf: "BA" }), 7);
+  assert.equal(icmsRateForUf({ profile: "gira-casa", origin: "importado", uf: "BA" }), 4);
+});
+
+test("Alíquota interestadual: intraestadual 0, importado 4, nacional 12 (Sul/Sudeste) vs 7", () => {
+  assert.equal(interstateIcmsRate("MG", "MG", "nacional"), 0);
+  assert.equal(interstateIcmsRate("MG", "CE", "importado"), 4);
+  assert.equal(interstateIcmsRate("MG", "SP", "nacional"), 12); // ambos Sul/Sudeste
+  assert.equal(interstateIcmsRate("MG", "CE", "nacional"), 7);  // destino fora
+});
+
+test("DIFAL = base × max(0, interna_destino − interestadual)", () => {
+  // CE interna 20, MG→CE nacional interestadual 7 → DIFAL 13%
+  const r = calcDifal({ base: 1000, destState: "CE", sourceState: "MG", origin: "nacional" });
+  closeTo(r.rate, 13);
+  closeTo(r.amount, 130);
+  // override por valor explícito
+  closeTo(calcDifal({ base: 1000, destState: "CE", explicitAmount: 50 }).amount, 50);
+});
+
+test("Taxa Shopee por faixa", () => {
+  const a = calcShopeeMarketplaceFee(49.9); // faixa 20% + 4
+  closeTo(a.total, 49.9 * 0.2 + 4, 1e-6);
+  const b = calcShopeeMarketplaceFee(150); // faixa 14% + 20
+  closeTo(b.total, 150 * 0.14 + 20, 1e-6);
+  const c = calcShopeeMarketplaceFee(800); // faixa 14% + 28
+  closeTo(c.total, 800 * 0.14 + 28, 1e-6);
+});
+
+test("PIS/COFINS líquido = débito(base) − crédito(custo), nunca negativo", () => {
+  closeTo(calcPisCofins({ base: 100, netCost: 50, rate: 9.25 }), (100 - 50) * 0.0925, 1e-9);
+  closeTo(calcPisCofins({ base: 100, netCost: 200, rate: 9.25 }), 0); // crédito > débito → 0
+  closeTo(calcPisCofins({ base: 100, netCost: 50, rate: 9.25, creditEnabled: false }), 9.25);
+});
+
+test("normalizeFiscalOrigin", () => {
+  assert.equal(normalizeFiscalOrigin("Importado"), "importado");
+  assert.equal(normalizeFiscalOrigin("NACIONAL"), "nacional");
+  assert.equal(normalizeFiscalOrigin("1"), "");
+});
+
+test("calcFiscalOrder: pedido nacional Jacarta destino SP (fim a fim)", () => {
+  const r = calcFiscalOrder({
+    gross: 100,
+    invoiceValue: 100,
+    grossCost: 40,
+    profile: "jacarta",
+    origin: "nacional",
+    destState: "SP",
+    sourceState: "MG",
+    marketplaceFee: 18
+  });
+  closeTo(r.icmsRate, 1.3);
+  closeTo(r.icms, 1.3);               // 100 × 1,3%
+  closeTo(r.pisCofins, (100 - 40) * 0.0925, 1e-9); // débito 9,25 − crédito 3,70
+  // DIFAL MG→SP nacional: interna SP 18, interestadual 12 → 6% → 6
+  closeTo(r.difal.amount, 6);
+  closeTo(r.taxesTotal, 1.3 + (100 - 40) * 0.0925 + 6, 1e-9);
+  // lucro = 100 − 18(fee) − 40(custo) − impostos
+  closeTo(r.profit, 100 - 18 - 40 - r.taxesTotal, 1e-9);
+  closeTo(r.margin, r.profit / 100, 1e-9);
+  closeTo(r.roi, r.profit / 40, 1e-9);
+});
+
+test("calcFiscalOrder: fica pendente quando falta custo ou UF/origem não resolve", () => {
+  const semCusto = calcFiscalOrder({ gross: 100, destState: "SP", profile: "jacarta", origin: "nacional" });
+  assert.equal(semCusto.costMissing, true);
+  assert.equal(semCusto.profit, null);
+  const semUf = calcFiscalOrder({ gross: 100, grossCost: 40, profile: "jacarta", origin: "nacional", destState: null });
+  assert.equal(semUf.fiscalPending, true);
+  assert.equal(semUf.profit, null);
 });
