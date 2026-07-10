@@ -413,6 +413,47 @@ async function loadUnifiedChannelRows(
   return fetchRows();
 }
 
+type FiscalMarginSummary = {
+  revenueWithCost: number;
+  totalCost: number;
+  totalTaxes: number;
+  totalProfit: number;
+  marginRate: number | null;
+  roi: number | null;
+  coverageCostRevenuePct: number;
+  officialRevenue: number;
+};
+
+async function loadFiscalMargin(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  filters: DashboardFilters
+): Promise<FiscalMarginSummary> {
+  const { data } = await supabase.rpc("oraculo_fiscal_margin_summary", {
+    p_start: filters.start,
+    p_end: filters.end
+  });
+  const row = (Array.isArray(data) ? data[0] : data) as {
+    revenue_with_cost?: number | string | null;
+    total_cost?: number | string | null;
+    total_taxes?: number | string | null;
+    total_profit?: number | string | null;
+    margin_rate?: number | string | null;
+    roi?: number | string | null;
+    coverage_cost_revenue_pct?: number | string | null;
+    official_valid_revenue?: number | string | null;
+  } | undefined;
+  return {
+    revenueWithCost: asMetricNumber(row?.revenue_with_cost),
+    totalCost: asMetricNumber(row?.total_cost),
+    totalTaxes: asMetricNumber(row?.total_taxes),
+    totalProfit: asMetricNumber(row?.total_profit),
+    marginRate: row?.margin_rate == null ? null : Number(row.margin_rate),
+    roi: row?.roi == null ? null : Number(row.roi),
+    coverageCostRevenuePct: asMetricNumber(row?.coverage_cost_revenue_pct),
+    officialRevenue: asMetricNumber(row?.official_valid_revenue)
+  };
+}
+
 async function loadDashboard(filters: DashboardFilters) {
   const supabase = await createSupabaseUserClient();
   let dailyQuery = supabase
@@ -435,6 +476,7 @@ async function loadDashboard(filters: DashboardFilters) {
     fiscalDailyResponse,
     fiscalChannelResponse,
     fiscalCoverageResponse,
+    fiscalMargin,
   ] = await Promise.all([
     dailyQuery,
     loadUnifiedChannelRows(supabase, filters),
@@ -467,7 +509,8 @@ async function loadDashboard(filters: DashboardFilters) {
       start_date: filters.start,
       end_date: filters.end
     }),
-    loadFiscalSkuCoverageSnapshot(supabase)
+    loadFiscalSkuCoverageSnapshot(supabase),
+    loadFiscalMargin(supabase, filters)
   ]);
 
   const daily = (dailyResponse.data ?? []) as DailySale[];
@@ -567,6 +610,7 @@ async function loadDashboard(filters: DashboardFilters) {
     nfMetrics,
     fiscalMetrics,
     fiscalCoverage,
+    fiscalMargin,
     monthOrders,
     monthUnits,
     monthTicket: monthOrders > 0 ? monthEffective / monthOrders : null,
@@ -731,6 +775,56 @@ export default async function HomePage({
               <small>Parcial, não é ranking definitivo</small>
             </article>
           </div>
+        </section>
+
+        <section className="dashboard-section">
+          <div className="section-head section-row">
+            <div>
+              <p className="eyebrow">Fiscal · regras do Financeiro</p>
+              <h2>Margem e ROI fiscais</h2>
+            </div>
+            <span className="pill warning-pill">
+              Cobertura {formatDecimal(data.fiscalMargin.coverageCostRevenuePct, 1)}% da receita · parcial
+            </span>
+          </div>
+          <div className="metric-grid metric-grid-eight">
+            <div className="metric accent-yellow">
+              <span className="label">Receita com custo</span>
+              <strong>{formatCurrency(data.fiscalMargin.revenueWithCost)}</strong>
+              <small>Base fiscal com custo confiável</small>
+            </div>
+            <div className="metric accent-blue">
+              <span className="label">Custo do produto</span>
+              <strong>{formatCurrency(data.fiscalMargin.totalCost)}</strong>
+              <small>Kits expandidos por componente</small>
+            </div>
+            <div className="metric accent-red">
+              <span className="label">Impostos</span>
+              <strong>{formatCurrency(data.fiscalMargin.totalTaxes)}</strong>
+              <small>ICMS + PIS/COFINS + DIFAL</small>
+            </div>
+            <div className="metric accent-white">
+              <span className="label">Lucro fiscal</span>
+              <strong>{formatCurrency(data.fiscalMargin.totalProfit)}</strong>
+              <small>Receita − custo − impostos</small>
+            </div>
+            <div className="metric accent-yellow">
+              <span className="label">Margem fiscal</span>
+              <strong>{data.fiscalMargin.marginRate == null ? "-" : `${formatDecimal(data.fiscalMargin.marginRate * 100, 1)}%`}</strong>
+              <small>Lucro / receita coberta</small>
+            </div>
+            <div className="metric accent-blue">
+              <span className="label">ROI fiscal</span>
+              <strong>{data.fiscalMargin.roi == null ? "-" : `${formatDecimal(data.fiscalMargin.roi * 100, 1)}%`}</strong>
+              <small>Lucro / custo</small>
+            </div>
+          </div>
+          <p className="fiscal-note">
+            Regras do Financeiro (Lucro Real com RET · perfil Jacarta): custo líquido, ICMS por UF/origem,
+            PIS/COFINS 9,25% com crédito e DIFAL. <strong>Não inclui</strong> comissão de marketplace, frete ou ads,
+            e cobre {formatDecimal(data.fiscalMargin.coverageCostRevenuePct, 1)}% da receita fiscal do período
+            (o restante ainda sem item/custo).
+          </p>
         </section>
 
         <section className="dashboard-section">
