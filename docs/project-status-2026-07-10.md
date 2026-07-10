@@ -105,7 +105,9 @@ NÃO `db push` (reaplicaria migrations não idempotentes). Projeto linkado: ref
 
 ## Próximos passos
 
-- [ ] Expor margem fiscal por SKU em `/skus` (`oraculo_fiscal_sku_margin` já pronta).
+- [x] Expor margem fiscal por SKU em `/skus` (colunas Margem/ROI fiscal na tabela +
+      bloco de decomposição fiscal — ICMS, PIS/COFINS, DIFAL, lucro — no detalhe do
+      SKU; janela = mês corrente São Paulo, só linhas Olist).
 - [ ] Materializar/cachear a camada fiscal se o cálculo on-the-fly ficar pesado.
 - [ ] Cadastrar comissão de marketplace/frete por canal para margem líquida (não só
       fiscal).

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
 import { loadFiscalSkuCoverageSnapshot } from "../../lib/fiscal-snapshots";
 import { requireCurrentUser } from "../../lib/auth/session";
-import { formatBrDate } from "../../lib/date";
+import { formatBrDate, getSaoPauloMonthRange } from "../../lib/date";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +30,32 @@ type SkuRow = {
 };
 
 type FiscalCoverage = Awaited<ReturnType<typeof loadFiscalSkuCoverageSnapshot>>;
+
+type FiscalSkuMargin = {
+  sku: string;
+  units: number;
+  revenue: number;
+  cost: number;
+  icms: number;
+  pisCofins: number;
+  difal: number;
+  taxesTotal: number;
+  profit: number;
+  marginRate: number | null;
+  roi: number | null;
+};
+
+function toNum(value: number | string | null | undefined) {
+  if (value == null) return 0;
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function toNumOrNull(value: number | string | null | undefined) {
+  if (value == null) return null;
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
 function n(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -101,8 +127,40 @@ function asSource(value: string | undefined): SourceFilter {
   return "all";
 }
 
+async function loadFiscalSkuMargins(
+  supabase: Awaited<ReturnType<typeof createSupabaseUserClient>>,
+  period: { start: string; end: string }
+): Promise<Map<string, FiscalSkuMargin>> {
+  const { data } = await supabase.rpc("oraculo_fiscal_sku_margin", {
+    p_start: period.start,
+    p_end: period.end,
+    p_limit: 500
+  });
+
+  const map = new Map<string, FiscalSkuMargin>();
+  for (const raw of (Array.isArray(data) ? data : []) as Array<Record<string, unknown>>) {
+    const sku = raw.sku == null ? null : String(raw.sku);
+    if (!sku) continue;
+    map.set(sku, {
+      sku,
+      units: toNum(raw.units as number | string | null),
+      revenue: toNum(raw.revenue as number | string | null),
+      cost: toNum(raw.cost as number | string | null),
+      icms: toNum(raw.icms as number | string | null),
+      pisCofins: toNum(raw.pis_cofins as number | string | null),
+      difal: toNum(raw.difal as number | string | null),
+      taxesTotal: toNum(raw.taxes_total as number | string | null),
+      profit: toNum(raw.profit as number | string | null),
+      marginRate: toNumOrNull(raw.margin_rate as number | string | null),
+      roi: toNumOrNull(raw.roi as number | string | null)
+    });
+  }
+  return map;
+}
+
 async function loadSkus(selectedSku?: string, source: SourceFilter = "all") {
   const supabase = await createSupabaseUserClient();
+  const fiscalPeriod = getSaoPauloMonthRange();
 
   let rowsQuery = supabase
     .from("oraculo_sku_margin_30d")
@@ -130,16 +188,30 @@ async function loadSkus(selectedSku?: string, source: SourceFilter = "all") {
     return query;
   })();
 
-  const [rowsResponse, selectedResponse] = await Promise.all([
+  const [rowsResponse, selectedResponse, fiscalCoverage, fiscalMargins] = await Promise.all([
     rowsQuery,
-    selectedQuery
+    selectedQuery,
+    loadFiscalSkuCoverageSnapshot(supabase),
+    loadFiscalSkuMargins(supabase, fiscalPeriod)
   ]);
 
   return {
     rows: (rowsResponse.data ?? []) as SkuRow[],
     selected: ((selectedResponse.data ?? []) as SkuRow[])[0] ?? null,
-    fiscalCoverage: await loadFiscalSkuCoverageSnapshot(supabase)
+    fiscalCoverage,
+    fiscalMargins,
+    fiscalPeriod
   };
+}
+
+// A margem fiscal só é válida para linhas Olist (derivada de NF vinculada a pedido).
+// Shopee compartilha SKUs no catálogo, mas não passa pela cadeia fiscal do Olist.
+function fiscalFor(
+  fiscalMargins: Map<string, FiscalSkuMargin>,
+  row: Pick<SkuRow, "source" | "sku">
+): FiscalSkuMargin | null {
+  if (row.source !== "olist" || !row.sku) return null;
+  return fiscalMargins.get(row.sku) ?? null;
 }
 
 export default async function SkusPage({
@@ -153,6 +225,8 @@ export default async function SkusPage({
   const source = asSource(params?.source);
   const data = await loadSkus(selectedSku, source);
   const selected = data.selected ?? data.rows[0] ?? null;
+  const selectedFiscal = selected ? fiscalFor(data.fiscalMargins, selected) : null;
+  const fiscalPeriodLabel = `${date(data.fiscalPeriod.start)} – ${date(data.fiscalPeriod.end)}`;
 
   return (
     <main className="workspace single-workspace">
@@ -160,7 +234,7 @@ export default async function SkusPage({
         <div>
           <Link href="/" className="back-link">← Analytics</Link>
           <h1>SKUs</h1>
-          <p>Margem e ROI operacionais · leitura parcial até fechar a cobertura fiscal por item</p>
+          <p>Margem operacional (30d) + margem fiscal por SKU (mês) · leitura parcial até fechar a cobertura fiscal por item</p>
         </div>
         <form className="filter-row filter-form" method="get">
           <label>
@@ -235,6 +309,8 @@ export default async function SkusPage({
                   <th className="numeric">Ticket</th>
                   <th className="numeric">Margem</th>
                   <th className="numeric">ROI</th>
+                  <th className="numeric">Margem fiscal</th>
+                  <th className="numeric">ROI fiscal</th>
                   <th>Status margem</th>
                   <th className="numeric">Var.</th>
                   <th className="numeric">Estoque</th>
@@ -242,7 +318,9 @@ export default async function SkusPage({
                 </tr>
               </thead>
               <tbody>
-                {data.rows.map((row, index) => (
+                {data.rows.map((row, index) => {
+                  const fiscal = fiscalFor(data.fiscalMargins, row);
+                  return (
                   <tr key={`${row.source}-${row.sku ?? row.product_name}`}>
                     <td>{index + 1}</td>
                     <td>{sourceLabel(row.source)}</td>
@@ -261,6 +339,8 @@ export default async function SkusPage({
                     <td className="numeric">{money(n(row.revenue_30d) / Math.max(n(row.units_30d), 1))}</td>
                     <td className="numeric">{percent(row.margin_rate_30d)}</td>
                     <td className="numeric">{percent(row.roi_30d)}</td>
+                    <td className="numeric">{fiscal ? percent(fiscal.marginRate) : "-"}</td>
+                    <td className="numeric">{fiscal ? percent(fiscal.roi) : "-"}</td>
                     <td>
                       <span className={`status-pill ${marginSignalClass(row.margin_signal)}`}>
                         {marginSignalLabel(row.margin_signal)}
@@ -270,7 +350,8 @@ export default async function SkusPage({
                     <td className="numeric">{stock(row.available_stock)}</td>
                     <td className="numeric">{coverage(row.days_until_stockout)}</td>
                   </tr>
-                ))}
+                );
+                })}
               </tbody>
             </table>
           </div>
@@ -322,6 +403,65 @@ export default async function SkusPage({
               <span>Última venda</span>
               <strong>{date(selected?.last_sale_at)}</strong>
             </article>
+          </div>
+
+          <div className="fiscal-detail">
+            <div className="section-head section-row">
+              <p className="eyebrow">Margem fiscal · {fiscalPeriodLabel}</p>
+              <span className="pill warning-pill">Parcial</span>
+            </div>
+            {selectedFiscal ? (
+              <>
+                <div className="detail-metrics">
+                  <article>
+                    <span>Receita fiscal</span>
+                    <strong>{money(selectedFiscal.revenue)}</strong>
+                  </article>
+                  <article>
+                    <span>Custo</span>
+                    <strong>{money(selectedFiscal.cost)}</strong>
+                  </article>
+                  <article>
+                    <span>ICMS</span>
+                    <strong>{money(selectedFiscal.icms)}</strong>
+                  </article>
+                  <article>
+                    <span>PIS/COFINS</span>
+                    <strong>{money(selectedFiscal.pisCofins)}</strong>
+                  </article>
+                  <article>
+                    <span>DIFAL</span>
+                    <strong>{money(selectedFiscal.difal)}</strong>
+                  </article>
+                  <article>
+                    <span>Impostos</span>
+                    <strong>{money(selectedFiscal.taxesTotal)}</strong>
+                  </article>
+                  <article>
+                    <span>Lucro fiscal</span>
+                    <strong>{money(selectedFiscal.profit)}</strong>
+                  </article>
+                  <article>
+                    <span>Margem fiscal</span>
+                    <strong>{percent(selectedFiscal.marginRate)}</strong>
+                  </article>
+                  <article>
+                    <span>ROI fiscal</span>
+                    <strong>{percent(selectedFiscal.roi)}</strong>
+                  </article>
+                </div>
+                <p className="fiscal-note">
+                  Receita − custo − ICMS − PIS/COFINS − DIFAL (regras Jacarta, Lucro Real).
+                  Não inclui comissão de marketplace, frete ou ads.
+                </p>
+              </>
+            ) : (
+              <p className="fiscal-note">
+                {selected?.source === "olist"
+                  ? "Sem cobertura fiscal no período: falta NF com itens vinculada ao pedido ou custo confiável para este SKU."
+                  : "Margem fiscal disponível apenas para SKUs Olist (derivada da cadeia de NFs)."}
+              </p>
+            )}
           </div>
 
           <div className={`margin-callout ${marginSignalClass(selected?.margin_signal)}`}>
