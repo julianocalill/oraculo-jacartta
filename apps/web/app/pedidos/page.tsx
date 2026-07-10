@@ -2,6 +2,7 @@ import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
 import { requireCurrentUser } from "../../lib/auth/session";
 import { AppShell } from "../components/app-shell";
+import { loadActionableAlertCount } from "../../lib/alert-count";
 
 export const dynamic = "force-dynamic";
 
@@ -296,13 +297,14 @@ export default async function PedidosPage({
   searchParams?: Promise<PedidosSearchParams>;
 }) {
   await requireCurrentUser();
+  const alertCount = await loadActionableAlertCount();
   const filters = getFilters(await searchParams);
   const data = await loadPedidos(filters);
   const chart = data.daily.slice(-20);
   const max = Math.max(...chart.map((row) => n(row.orders_count)), 1);
 
   return (
-    <AppShell>
+    <AppShell alertCount={alertCount}>
       <header className="topbar">
         <div>
           <h1>Pedidos</h1>
@@ -370,6 +372,11 @@ export default async function PedidosPage({
           </article>
         )) : null}
       </section>
+
+      <p className="fiscal-note">
+        Visão operacional auxiliar baseada em <strong>pedidos</strong> (data do pedido) — não é a receita
+        oficial. A receita fiscal por NF emitida está no Analytics.
+      </p>
 
       <section className="control-grid">
         <article className="panel">

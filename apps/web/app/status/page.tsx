@@ -1,6 +1,7 @@
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { requireCurrentUser } from "../../lib/auth/session";
 import { AppShell } from "../components/app-shell";
+import { loadActionableAlertCount } from "../../lib/alert-count";
 
 export const dynamic = "force-dynamic";
 
@@ -142,10 +143,11 @@ function runBadge(run: SyncRun | null) {
 
 export default async function StatusPage() {
   await requireCurrentUser();
+  const alertCount = await loadActionableAlertCount();
   const data = await loadStatus();
 
   return (
-    <AppShell>
+    <AppShell alertCount={alertCount}>
       <header className="topbar">
         <div>
           <h1>Status do sync</h1>

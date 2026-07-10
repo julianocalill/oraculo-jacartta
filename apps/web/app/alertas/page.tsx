@@ -65,24 +65,49 @@ function label(signal: string | null | undefined) {
   return labels[signal ?? ""] ?? "Atenção";
 }
 
+// Contagens exatas via `count` (head) — a tabela mostra os 120 mais urgentes,
+// mas os cards e o título refletem a base inteira, não a página exibida.
+function countBySignal(
+  supabase: Awaited<ReturnType<typeof createSupabaseUserClient>>,
+  signals?: string[]
+) {
+  let query = supabase
+    .from("oraculo_stock_watchlist_unified")
+    .select("sku", { count: "exact", head: true })
+    .not("sku", "is", null)
+    .neq("sku", "");
+  if (signals) query = query.in("stock_signal", signals);
+  return query;
+}
+
 async function loadAlertas() {
   const supabase = await createSupabaseUserClient();
 
-  const response = await supabase
-    .from("oraculo_stock_watchlist_unified")
-    .select("source, sku, product_name, status_label, stock_signal, available_stock, stock_balance, units_30d, revenue_30d, days_until_stockout, last_sale_at")
-    .not("sku", "is", null)
-    .neq("sku", "")
-    .order("days_until_stockout", { ascending: true, nullsFirst: false })
-    .limit(120);
+  const [rowsResponse, totalRes, ruptureRes, imminentRes, stoppedRes] = await Promise.all([
+    supabase
+      .from("oraculo_stock_watchlist_unified")
+      .select("source, sku, product_name, status_label, stock_signal, available_stock, stock_balance, units_30d, revenue_30d, days_until_stockout, last_sale_at")
+      .not("sku", "is", null)
+      .neq("sku", "")
+      .order("days_until_stockout", { ascending: true, nullsFirst: false })
+      .limit(120),
+    countBySignal(supabase),
+    countBySignal(supabase, ["ruptura"]),
+    countBySignal(supabase, ["ruptura_iminente"]),
+    countBySignal(supabase, ["parado", "sem_venda"])
+  ]);
 
-  const rows = (response.data ?? []) as StockSignal[];
+  const rows = (rowsResponse.data ?? []) as StockSignal[];
+  const rupture = ruptureRes.count ?? 0;
+  const imminent = imminentRes.count ?? 0;
 
   return {
     rows,
-    rupture: rows.filter((row) => row.stock_signal === "ruptura").length,
-    imminent: rows.filter((row) => row.stock_signal === "ruptura_iminente").length,
-    stopped: rows.filter((row) => row.stock_signal === "parado" || row.stock_signal === "sem_venda").length
+    total: totalRes.count ?? 0,
+    rupture,
+    imminent,
+    actionable: rupture + imminent,
+    stopped: stoppedRes.count ?? 0
   };
 }
 
@@ -91,11 +116,13 @@ export default async function AlertasPage() {
   const data = await loadAlertas();
 
   return (
-    <AppShell>
+    <AppShell alertCount={data.actionable}>
       <header className="topbar">
         <div>
           <h1>Alertas</h1>
-          <p>{count(data.rows.length)} produtos exigem atenção operacional</p>
+          <p>
+            {count(data.actionable)} acionáveis (ruptura + iminente) · {count(data.total)} produtos monitorados
+          </p>
         </div>
         <div className="filter-row">
           <strong>Ruptura</strong>
@@ -127,6 +154,9 @@ export default async function AlertasPage() {
           <div>
             <p className="eyebrow">Watchlist</p>
             <h2>Prioridade de ação</h2>
+            <p className="table-note">
+              Mostrando os {count(data.rows.length)} mais urgentes de {count(data.total)} monitorados
+            </p>
           </div>
           <div className="sku-actions">
             <strong>Mais urgente</strong>

@@ -11,6 +11,7 @@ import { requireCurrentUser } from "../lib/auth/session";
 import { createSupabaseUserClient } from "../lib/supabase/user";
 import { TaxDonut, MarginGauge, RevenueArea } from "./components/fiscal-charts";
 import { AppShell } from "./components/app-shell";
+import { loadActionableAlertCount } from "../lib/alert-count";
 
 export const dynamic = "force-dynamic";
 
@@ -464,31 +465,101 @@ const UNAVAILABLE_FISCAL_MARGIN: FiscalMarginSummary = {
   officialRevenue: 0
 };
 
+type FiscalMarginSummaryRpcRow = {
+  revenue_with_cost: number | string | null;
+  total_cost: number | string | null;
+  total_taxes: number | string | null;
+  total_icms: number | string | null;
+  total_pis_cofins: number | string | null;
+  total_difal: number | string | null;
+  total_profit: number | string | null;
+  margin_rate: number | string | null;
+  roi: number | string | null;
+  coverage_cost_revenue_pct: number | string | null;
+  official_valid_revenue: number | string | null;
+};
+
+function isCurrentMonthWindow(filters: DashboardFilters) {
+  const month = getCurrentMonthRange();
+  return filters.start === month.start && filters.end === month.end;
+}
+
+// Híbrido: no mês corrente (o default) lê o snapshot pré-computado (refresh
+// horário via pg_cron) — instantâneo e sem risco de timeout. Em janela
+// customizada calcula ao vivo via RPC, protegido por try/catch: janelas curtas
+// são rápidas; se estourar o statement_timeout, degrada para "indisponível"
+// em vez de mostrar silenciosamente o mês errado.
 async function loadFiscalMargin(
-  supabase: ReturnType<typeof createSupabaseAdminClient>
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  filters: DashboardFilters
 ): Promise<FiscalMarginSummary> {
-  // Lê o snapshot pré-computado (refresh noturno via pg_cron) em vez de calcular a
-  // cadeia fiscal on-the-fly, que era pesada demais e estourava o statement_timeout
-  // (erro 57014 -> 500). O snapshot é sempre do mês corrente.
   try {
-    const snap = await loadFiscalMarginSummarySnapshot(supabase);
+    if (isCurrentMonthWindow(filters)) {
+      const snap = await loadFiscalMarginSummarySnapshot(supabase);
+      return {
+        available: snap.available,
+        revenueWithCost: snap.revenueWithCost,
+        totalCost: snap.totalCost,
+        totalTaxes: snap.totalTaxes,
+        totalIcms: snap.totalIcms,
+        totalPisCofins: snap.totalPisCofins,
+        totalDifal: snap.totalDifal,
+        totalProfit: snap.totalProfit,
+        marginRate: snap.marginRate,
+        roi: snap.roi,
+        coverageCostRevenuePct: snap.coverageCostRevenuePct,
+        officialRevenue: snap.officialRevenue
+      };
+    }
+
+    const { data, error } = await supabase
+      .rpc("oraculo_fiscal_margin_summary", { p_start: filters.start, p_end: filters.end })
+      .maybeSingle();
+    if (error) throw error;
+    const row = data as FiscalMarginSummaryRpcRow | null;
+    if (!row) return UNAVAILABLE_FISCAL_MARGIN;
+    const rateOrNull = (value: number | string | null) => {
+      const parsed = asMetricNumber(value);
+      return value == null ? null : parsed;
+    };
     return {
-      available: snap.available,
-      revenueWithCost: snap.revenueWithCost,
-      totalCost: snap.totalCost,
-      totalTaxes: snap.totalTaxes,
-      totalIcms: snap.totalIcms,
-      totalPisCofins: snap.totalPisCofins,
-      totalDifal: snap.totalDifal,
-      totalProfit: snap.totalProfit,
-      marginRate: snap.marginRate,
-      roi: snap.roi,
-      coverageCostRevenuePct: snap.coverageCostRevenuePct,
-      officialRevenue: snap.officialRevenue
+      available: true,
+      revenueWithCost: asMetricNumber(row.revenue_with_cost),
+      totalCost: asMetricNumber(row.total_cost),
+      totalTaxes: asMetricNumber(row.total_taxes),
+      totalIcms: asMetricNumber(row.total_icms),
+      totalPisCofins: asMetricNumber(row.total_pis_cofins),
+      totalDifal: asMetricNumber(row.total_difal),
+      totalProfit: asMetricNumber(row.total_profit),
+      marginRate: rateOrNull(row.margin_rate),
+      roi: rateOrNull(row.roi),
+      coverageCostRevenuePct: asMetricNumber(row.coverage_cost_revenue_pct),
+      officialRevenue: asMetricNumber(row.official_valid_revenue)
     };
   } catch (err) {
-    console.error("loadFiscalMargin snapshot failed; degrading fiscal section", err);
+    console.error("loadFiscalMargin failed; degrading fiscal section", err);
     return UNAVAILABLE_FISCAL_MARGIN;
+  }
+}
+
+// Mesmo racional híbrido para a receita fiscal por canal.
+async function loadFiscalChannels(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  filters: DashboardFilters
+): Promise<FiscalChannelMetric[]> {
+  try {
+    if (isCurrentMonthWindow(filters)) {
+      return (await loadFiscalChannelMetricsSnapshot(supabase)) as FiscalChannelMetric[];
+    }
+    const { data, error } = await supabase.rpc("oraculo_fiscal_channel_metrics", {
+      start_date: filters.start,
+      end_date: filters.end
+    });
+    if (error) throw error;
+    return (data ?? []) as FiscalChannelMetric[];
+  } catch (err) {
+    console.error("loadFiscalChannels failed; degrading channel panel", err);
+    return [];
   }
 }
 
@@ -543,9 +614,9 @@ async function loadDashboard(filters: DashboardFilters) {
       .gte("issued_date", filters.start)
       .lte("issued_date", filters.end)
       .order("issued_date", { ascending: false }),
-    loadFiscalChannelMetricsSnapshot(supabase),
+    loadFiscalChannels(supabase, filters),
     loadFiscalSkuCoverageSnapshot(supabase),
-    loadFiscalMargin(supabase)
+    loadFiscalMargin(supabase, filters)
   ]);
 
   const daily = (dailyResponse.data ?? []) as DailySale[];
@@ -672,12 +743,12 @@ export default async function HomePage({
 }) {
   await requireCurrentUser();
   const filters = getDashboardFilters(await searchParams);
-  const data = await loadDashboard(filters);
+  const [data, alertCount] = await Promise.all([loadDashboard(filters), loadActionableAlertCount()]);
   const filterQuery = `?start=${encodeURIComponent(filters.start)}&end=${encodeURIComponent(filters.end)}`;
 
   return (
     <AppShell
-      alertCount={data.actionableWatchlist.length}
+      alertCount={alertCount}
       footer={
         <>
           <span className="sync-dot">•••••</span>

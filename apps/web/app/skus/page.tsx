@@ -8,6 +8,7 @@ import { requireCurrentUser } from "../../lib/auth/session";
 import { formatBrDate, getSaoPauloMonthRange } from "../../lib/date";
 import { SkuTable, type SkuTableRow } from "./sku-table";
 import { AppShell } from "../components/app-shell";
+import { loadActionableAlertCount } from "../../lib/alert-count";
 
 export const dynamic = "force-dynamic";
 
@@ -194,6 +195,7 @@ export default async function SkusPage({
   searchParams?: Promise<{ sku?: string; source?: string }>;
 }) {
   await requireCurrentUser();
+  const alertCount = await loadActionableAlertCount();
   const params = await searchParams;
   const selectedSku = params?.sku;
   const source = asSource(params?.source);
@@ -223,7 +225,7 @@ export default async function SkusPage({
   });
 
   return (
-    <AppShell>
+    <AppShell alertCount={alertCount}>
       <header className="topbar">
         <div>
           <h1>SKUs</h1>

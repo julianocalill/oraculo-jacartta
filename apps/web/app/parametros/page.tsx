@@ -4,6 +4,7 @@ import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
 import { requireCurrentUser } from "../../lib/auth/session";
 import { AppShell } from "../components/app-shell";
+import { loadActionableAlertCount } from "../../lib/alert-count";
 
 export const dynamic = "force-dynamic";
 
@@ -264,10 +265,11 @@ async function loadParametros() {
 
 export default async function ParametrosPage() {
   await requireCurrentUser();
+  const alertCount = await loadActionableAlertCount();
   const data = await loadParametros();
 
   return (
-    <AppShell>
+    <AppShell alertCount={alertCount}>
       <header className="topbar">
         <div>
           <h1>Parâmetros</h1>

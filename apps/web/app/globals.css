@@ -1988,3 +1988,10 @@ h2 {
 @media (prefers-reduced-motion: reduce) {
   .skeleton { animation: none; }
 }
+
+/* Nota de truncamento/contexto sob títulos de tabela */
+.table-note {
+  margin-top: 4px;
+  color: var(--faint);
+  font-size: 12px;
+}

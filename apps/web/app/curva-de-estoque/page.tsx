@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
 import { requireCurrentUser } from "../../lib/auth/session";
 import { AppShell } from "../components/app-shell";
+import { loadActionableAlertCount } from "../../lib/alert-count";
 import { SortableTable } from "../components/sortable-table";
 
 export const dynamic = "force-dynamic";
@@ -107,6 +108,7 @@ export default async function CurvaDeEstoquePage({
   searchParams?: Promise<{ curva?: string }>;
 }) {
   await requireCurrentUser();
+  const alertCount = await loadActionableAlertCount();
   const params = await searchParams;
   const selectedCurve = asCurveFilter(params?.curva);
   const data = await loadStockCurve();
@@ -121,7 +123,7 @@ export default async function CurvaDeEstoquePage({
     : `/curva-de-estoque/export?curva=${selectedCurve}`;
 
   return (
-    <AppShell>
+    <AppShell alertCount={alertCount}>
       <header className="topbar">
         <div>
           <h1>Curva de Estoque</h1>

@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { isAdmin, requireCurrentUser } from "../../lib/auth/session";
 import { AppShell } from "../components/app-shell";
+import { loadActionableAlertCount } from "../../lib/alert-count";
 
 export const dynamic = "force-dynamic";
 
@@ -93,12 +94,13 @@ async function updateUser(formData: FormData) {
 
 export default async function UsuariosPage() {
   const currentUser = await requireCurrentUser();
+  const alertCount = await loadActionableAlertCount();
   const allowed = isAdmin(currentUser);
   const users = allowed ? await loadUsers() : [];
 
   if (!allowed) {
     return (
-      <AppShell>
+      <AppShell alertCount={alertCount}>
         <header className="topbar">
           <div>
             <h1>Usuários</h1>
@@ -110,7 +112,7 @@ export default async function UsuariosPage() {
   }
 
   return (
-    <AppShell>
+    <AppShell alertCount={alertCount}>
       <header className="topbar">
         <div>
           <h1>Usuários</h1>
