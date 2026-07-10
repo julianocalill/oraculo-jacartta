@@ -1,24 +1,51 @@
 :root {
-  --bg: #eef1f7;
-  --bg-grad: radial-gradient(1200px 600px at 100% -10%, #e7ecfb 0%, rgba(238, 241, 247, 0) 55%), radial-gradient(900px 500px at -10% 0%, #fbf3e0 0%, rgba(238, 241, 247, 0) 45%);
-  --sidebar: #ffffff;
-  --panel: #ffffff;
-  --panel-soft: #f6f8fc;
-  --line: #e6eaf1;
-  --line-strong: #cfd8e6;
-  --text: #131b2e;
-  --muted: #5c6a7e;
-  --faint: #8b97a9;
-  --amber: #f5b82e;
-  --amber-strong: #e79c12;
-  --green: #14a06f;
-  --red: #e0455a;
-  --blue: #3f7bf7;
-  --radius: 16px;
-  --radius-sm: 12px;
-  --shadow-sm: 0 1px 2px rgba(19, 27, 46, 0.04), 0 2px 8px rgba(19, 27, 46, 0.04);
-  --shadow: 0 1px 2px rgba(19, 27, 46, 0.04), 0 12px 30px rgba(19, 27, 46, 0.07);
-  --shadow-lg: 0 2px 4px rgba(19, 27, 46, 0.05), 0 22px 48px rgba(19, 27, 46, 0.12);
+  /* Tema dark — console de dados do Oráculo.
+     Tinta fria quase-preta + ouro como assinatura de marca (mantém o nome
+     --amber por compatibilidade) + paleta joia para data-viz. */
+  --bg: #0b0e15;
+  --bg-grad: radial-gradient(900px 480px at 100% -8%, rgba(109, 139, 255, 0.10), transparent 60%), radial-gradient(760px 420px at -6% -4%, rgba(246, 196, 83, 0.06), transparent 55%);
+  --sidebar: #0e131c;
+  --panel: #141a26;
+  --panel-soft: #1a2130;
+  --field: #10151f;
+  --line: #232c3d;
+  --line-strong: #33405a;
+  --text: #eef1f8;
+  --muted: #93a0b7;
+  --faint: #5d6980;
+
+  /* Assinatura (ouro) — usada com parcimônia. --amber = alias histórico. */
+  --gold: #f6c453;
+  --amber: #f6c453;
+  --amber-strong: #e3a93a;
+
+  /* Paleta joia — data-viz e acentos por métrica. */
+  --indigo: #6d8bff;
+  --violet: #a97bff;
+  --cyan: #3ecfd6;
+  --emerald: #34d399;
+  --rose: #fb6f84;
+  --blue: #6d8bff;
+  --green: #34d399;
+  --red: #fb6f84;
+
+  /* Status semântico — tints suaves para fundo no dark. */
+  --warn-text: #f0a93b;
+  --good-soft: rgba(52, 211, 153, 0.12);
+  --good-line: rgba(52, 211, 153, 0.30);
+  --warn-soft: rgba(240, 169, 59, 0.12);
+  --warn-line: rgba(240, 169, 59, 0.32);
+  --crit-soft: rgba(251, 111, 132, 0.12);
+  --crit-line: rgba(251, 111, 132, 0.32);
+  --info-soft: rgba(109, 139, 255, 0.12);
+  --neutral-soft: #1a2130;
+
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", "Roboto Mono", monospace;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.30), 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.30), 0 12px 30px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.35), 0 22px 48px rgba(0, 0, 0, 0.50);
 }
 
 * {
@@ -91,7 +118,7 @@ body {
   min-height: 40px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--field);
   color: var(--text);
   font: inherit;
   padding: 0 12px;
@@ -111,9 +138,9 @@ body {
 }
 
 .form-error {
-  border: 1px solid #f0b8c0;
+  border: 1px solid var(--crit-line);
   border-radius: 8px;
-  background: #fff1f3;
+  background: var(--crit-soft);
   color: var(--red);
   font-size: 13px;
   padding: 10px 12px;
@@ -209,22 +236,22 @@ p {
 }
 
 .nav-group a:hover {
-  background: #f1f4f8;
+  background: var(--panel);
   color: var(--text);
 }
 
 .nav-group .nav-active {
-  color: #4a3600;
+  color: var(--text);
   font-weight: 750;
-  background: linear-gradient(180deg, #fff6d8, #ffeeb8);
-  box-shadow: inset 0 0 0 1px #f0d277, 0 4px 10px rgba(231, 156, 18, 0.16);
+  background: linear-gradient(90deg, rgba(246, 196, 83, 0.16), rgba(246, 196, 83, 0.03));
+  box-shadow: inset 0 0 0 1px rgba(246, 196, 83, 0.24);
 }
 
 .nav-group em,
 .nav-group b {
   margin-left: auto;
   border-radius: 999px;
-  background: #eef4ff;
+  background: var(--info-soft);
   color: var(--green);
   font-size: 10px;
   font-style: normal;
@@ -232,7 +259,7 @@ p {
 }
 
 .nav-group b {
-  background: #fff1f3;
+  background: var(--crit-soft);
   color: var(--red);
 }
 
@@ -318,7 +345,7 @@ p {
   min-height: 34px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--field);
   color: var(--text);
   font: inherit;
   font-size: 13px;
@@ -408,7 +435,7 @@ p {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--field);
   color: var(--text);
   font: inherit;
   font-size: 13px;
@@ -474,7 +501,7 @@ p {
   min-height: 34px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--field);
   color: var(--text);
   font: inherit;
   font-size: 13px;
@@ -532,7 +559,7 @@ p {
   min-height: 34px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--field);
   color: var(--muted);
   display: inline-flex;
   align-items: center;
@@ -548,15 +575,15 @@ p {
 }
 
 .danger-pill {
-  background: #fff1f3;
-  border-color: #f0b8c0;
+  background: var(--crit-soft);
+  border-color: var(--crit-line);
   color: var(--red);
 }
 
 .warning-pill {
-  background: #fffbeb;
-  border-color: #fde68a;
-  color: #b45309;
+  background: var(--warn-soft);
+  border-color: var(--warn-line);
+  color: var(--warn-text);
 }
 
 .back-link {
@@ -588,11 +615,11 @@ p {
 }
 
 .coverage-panel {
-  border-color: #f1d681;
+  border-color: var(--warn-line);
 }
 
 .warning-panel {
-  border-color: #f0b8c0;
+  border-color: var(--crit-line);
 }
 
 .coverage-grid {
@@ -678,10 +705,10 @@ p {
   inset: 0;
   pointer-events: none;
   opacity: 0.5;
-  background: radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 45%);
+  background: radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 45%);
 }
 
-.metric.accent-white::before { background: linear-gradient(180deg, #dfe7e3, #cdd8d2); }
+.metric.accent-white::before { background: linear-gradient(180deg, #aab6cc, #7f8ea8); }
 .metric.accent-yellow::before { background: linear-gradient(180deg, var(--amber), var(--amber-strong)); }
 .metric.accent-blue::before { background: linear-gradient(180deg, #6a97fb, var(--blue)); }
 .metric.accent-red::before { background: linear-gradient(180deg, #ec6d7e, var(--red)); }
@@ -804,7 +831,7 @@ h2 {
 .bar-track {
   height: 178px;
   border: 1px solid var(--line);
-  background: linear-gradient(180deg, #eef2f8, #f6f8fc);
+  background: linear-gradient(180deg, #10151f, #0d1119);
   border-radius: 8px;
   display: flex;
   align-items: flex-end;
@@ -850,7 +877,7 @@ h2 {
 .funnel-row div {
   height: 10px;
   border-radius: 999px;
-  background: #edf1f6;
+  background: var(--panel-soft);
   overflow: hidden;
 }
 
@@ -906,7 +933,7 @@ h2 {
   height: 22px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: #edf1f6;
+  background: var(--panel-soft);
   overflow: hidden;
 }
 
@@ -1078,12 +1105,12 @@ h2 {
 }
 
 .grade.green {
-  background: #e8f7f1;
+  background: var(--good-soft);
   color: var(--green);
 }
 
 .grade.yellow {
-  background: #fff5d6;
+  background: var(--warn-soft);
   color: var(--amber);
 }
 
@@ -1104,25 +1131,25 @@ h2 {
 }
 
 .signal-good {
-  background: #e8f7f1;
-  border-color: #bfe8d8;
+  background: var(--good-soft);
+  border-color: var(--good-line);
   color: var(--green);
 }
 
 .signal-warning {
-  background: #fff5d6;
-  border-color: #f1d681;
+  background: var(--warn-soft);
+  border-color: var(--warn-line);
   color: var(--amber);
 }
 
 .signal-danger {
-  background: #fff1f3;
-  border-color: #f0b8c0;
+  background: var(--crit-soft);
+  border-color: var(--crit-line);
   color: var(--red);
 }
 
 .signal-muted {
-  background: #f2f5f9;
+  background: var(--neutral-soft);
   border-color: var(--line);
   color: var(--muted);
 }
@@ -1213,17 +1240,17 @@ h2 {
 }
 
 .badge.ruptura {
-  background: #fff1f3;
-  border-color: #f0b8c0;
+  background: var(--crit-soft);
+  border-color: var(--crit-line);
 }
 
 .badge.ruptura_iminente {
-  background: #fff5d6;
+  background: var(--warn-soft);
 }
 
 .badge.parado,
 .badge.sem_venda {
-  background: #f2f5f9;
+  background: var(--neutral-soft);
   border-color: var(--line);
 }
 
@@ -1632,9 +1659,9 @@ h2 {
 .status-alert {
   padding: 12px 16px;
   border-radius: 10px;
-  border: 1px solid #f3c2c2;
-  background: #fdecec;
-  color: #8f1d1d;
+  border: 1px solid var(--crit-line);
+  background: var(--crit-soft);
+  color: var(--red);
   font-size: 14px;
   font-weight: 500;
 }
@@ -1650,4 +1677,15 @@ h2 {
   color: var(--muted);
   font-size: 12.5px;
   line-height: 1.5;
+}
+
+/* Números em fonte mono tabular — o "readout" do painel (direção dark) */
+.metric strong,
+.numeric,
+.source-summary-stats strong,
+.coverage-grid strong,
+.detail-metrics strong {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
