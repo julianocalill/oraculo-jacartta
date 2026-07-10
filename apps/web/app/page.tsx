@@ -8,6 +8,7 @@ import {
 import Link from "next/link";
 import { requireCurrentUser } from "../lib/auth/session";
 import { createSupabaseUserClient } from "../lib/supabase/user";
+import { TaxDonut, MarginGauge, RevenueArea } from "./components/fiscal-charts";
 
 export const dynamic = "force-dynamic";
 
@@ -419,6 +420,9 @@ type FiscalMarginSummary = {
   revenueWithCost: number;
   totalCost: number;
   totalTaxes: number;
+  totalIcms: number;
+  totalPisCofins: number;
+  totalDifal: number;
   totalProfit: number;
   marginRate: number | null;
   roi: number | null;
@@ -431,6 +435,9 @@ const UNAVAILABLE_FISCAL_MARGIN: FiscalMarginSummary = {
   revenueWithCost: 0,
   totalCost: 0,
   totalTaxes: 0,
+  totalIcms: 0,
+  totalPisCofins: 0,
+  totalDifal: 0,
   totalProfit: 0,
   marginRate: null,
   roi: null,
@@ -451,6 +458,9 @@ async function loadFiscalMargin(
       revenueWithCost: snap.revenueWithCost,
       totalCost: snap.totalCost,
       totalTaxes: snap.totalTaxes,
+      totalIcms: snap.totalIcms,
+      totalPisCofins: snap.totalPisCofins,
+      totalDifal: snap.totalDifal,
       totalProfit: snap.totalProfit,
       marginRate: snap.marginRate,
       roi: snap.roi,
@@ -837,6 +847,45 @@ export default async function HomePage({
               <small>Lucro / custo</small>
             </div>
           </div>
+          <div className="fiscal-viz-row">
+            <div className="viz-card">
+              <div className="viz-head">
+                <div>
+                  <p className="eyebrow">Composição de impostos</p>
+                  <h3>Carga tributária do mês</h3>
+                </div>
+              </div>
+              <TaxDonut
+                slices={[
+                  { label: "DIFAL", value: data.fiscalMargin.totalDifal, color: "var(--rose)" },
+                  { label: "PIS/COFINS", value: data.fiscalMargin.totalPisCofins, color: "var(--cyan)" },
+                  { label: "ICMS", value: data.fiscalMargin.totalIcms, color: "var(--violet)" }
+                ]}
+              />
+            </div>
+            <div className="viz-card">
+              <div className="viz-head">
+                <div>
+                  <p className="eyebrow">Saúde fiscal</p>
+                  <h3>Margem e ROI</h3>
+                </div>
+              </div>
+              <div className="gauge-row">
+                <MarginGauge
+                  fraction={data.fiscalMargin.marginRate ?? 0}
+                  display={data.fiscalMargin.marginRate == null ? "-" : `${formatDecimal(data.fiscalMargin.marginRate * 100, 0)}%`}
+                  label="Margem"
+                  color="var(--emerald)"
+                />
+                <MarginGauge
+                  fraction={data.fiscalMargin.roi == null ? 0 : Math.min(data.fiscalMargin.roi / 2, 1)}
+                  display={data.fiscalMargin.roi == null ? "-" : `${formatDecimal(data.fiscalMargin.roi * 100, 0)}%`}
+                  label="ROI"
+                  color="var(--violet)"
+                />
+              </div>
+            </div>
+          </div>
           <p className="fiscal-note">
             Regras do Financeiro (Lucro Real com RET · perfil Jacarta): custo líquido, ICMS por UF/origem,
             PIS/COFINS 9,25% com crédito e DIFAL. <strong>Não inclui</strong> comissão de marketplace, frete ou ads,
@@ -946,21 +995,12 @@ export default async function HomePage({
               <span className="pill">Fonte: NFs emitidas</span>
             </div>
 
-            <div className="bar-chart" aria-label="Receita faturada por dia">
-              {data.fiscalDailyChart.map((row) => {
-                const billedRevenue = asMetricNumber(row.billed_revenue);
-                const height = Math.max((billedRevenue / data.maxFiscalDailyRevenue) * 100, 3);
-                const tooltip = `${formatDate(row.issued_date)}: ${formatCurrency(billedRevenue)} · ${formatCount(asMetricNumber(row.invoices_count))} NFs`;
-                return (
-                  <div className="bar-item has-tooltip" key={row.issued_date} title={tooltip} aria-label={tooltip} data-tooltip={tooltip}>
-                    <div className="bar-track">
-                      <span style={{ height: `${height}%` }} />
-                    </div>
-                    <small>{formatDate(row.issued_date)}</small>
-                  </div>
-                );
-              })}
-            </div>
+            <RevenueArea
+              points={data.fiscalDailyChart.map((row) => ({
+                label: formatDate(row.issued_date),
+                value: asMetricNumber(row.billed_revenue)
+              }))}
+            />
           </Link>
 
           <Link className="panel panel-link funnel-panel" href={`/pedidos${filterQuery}`}>

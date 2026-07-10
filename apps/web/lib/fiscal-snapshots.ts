@@ -44,6 +44,9 @@ export type FiscalMarginSummarySnapshot = {
   revenueWithCost: number;
   totalCost: number;
   totalTaxes: number;
+  totalIcms: number;
+  totalPisCofins: number;
+  totalDifal: number;
   totalProfit: number;
   marginRate: number | null;
   roi: number | null;
@@ -169,6 +172,9 @@ export async function loadFiscalMarginSummarySnapshot(
       revenueWithCost: 0,
       totalCost: 0,
       totalTaxes: 0,
+      totalIcms: 0,
+      totalPisCofins: 0,
+      totalDifal: 0,
       totalProfit: 0,
       marginRate: null,
       roi: null,
@@ -184,6 +190,9 @@ export async function loadFiscalMarginSummarySnapshot(
     revenueWithCost: asNumber(payload.revenue_with_cost),
     totalCost: asNumber(payload.total_cost),
     totalTaxes: asNumber(payload.total_taxes),
+    totalIcms: asNumber(payload.total_icms),
+    totalPisCofins: asNumber(payload.total_pis_cofins),
+    totalDifal: asNumber(payload.total_difal),
     totalProfit: asNumber(payload.total_profit),
     marginRate: asNumberOrNull(payload.margin_rate),
     roi: asNumberOrNull(payload.roi),
