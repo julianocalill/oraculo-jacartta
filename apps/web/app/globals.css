@@ -685,36 +685,43 @@ p {
 .panel-link:hover,
 .rank-list a:hover,
 .watchlist a:hover {
-  border-color: var(--line-strong);
+  border-color: color-mix(in srgb, var(--accent, var(--line-strong)) 55%, var(--line));
   transform: translateY(-3px);
   box-shadow: var(--shadow-lg);
 }
 
+/* Trilho de acento no topo do card (direção "4 levels") */
 .metric::before {
   content: "";
   position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
-  border-radius: 0 4px 4px 0;
-  background: var(--line-strong);
+  inset: 0 0 auto 0;
+  height: 2px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--accent, var(--line-strong));
 }
 
+/* Brilho sutil da cor do acento, ancorado no topo */
 .metric::after {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: 0 0 auto 0;
+  height: 70%;
   pointer-events: none;
-  opacity: 0.5;
-  background: radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 45%);
+  opacity: 0.6;
+  background: radial-gradient(120% 120% at 12% -20%, color-mix(in srgb, var(--accent, #ffffff) 16%, transparent) 0%, transparent 60%);
 }
 
-.metric.accent-white::before { background: linear-gradient(180deg, #aab6cc, #7f8ea8); }
-.metric.accent-yellow::before { background: linear-gradient(180deg, var(--amber), var(--amber-strong)); }
-.metric.accent-blue::before { background: linear-gradient(180deg, #6a97fb, var(--blue)); }
-.metric.accent-red::before { background: linear-gradient(180deg, #ec6d7e, var(--red)); }
-.metric.curve-a::before { background: linear-gradient(180deg, #3cc094, var(--green)); }
-.metric.curve-b::before { background: linear-gradient(180deg, var(--amber), var(--amber-strong)); }
-.metric.curve-c::before { background: linear-gradient(180deg, #ec6d7e, var(--red)); }
+.metric.accent-white   { --accent: #9aa8c0; }
+.metric.accent-yellow  { --accent: var(--gold); }
+.metric.accent-blue    { --accent: var(--indigo); }
+.metric.accent-red     { --accent: var(--rose); }
+.metric.accent-violet  { --accent: var(--violet); }
+.metric.accent-cyan    { --accent: var(--cyan); }
+.metric.accent-emerald,
+.metric.accent-green   { --accent: var(--emerald); }
+.metric.curve-a        { --accent: var(--emerald); }
+.metric.curve-b        { --accent: var(--gold); }
+.metric.curve-c        { --accent: var(--rose); }
 
 .metric strong {
   font-size: clamp(1.55rem, 1.9vw, 2.1rem);

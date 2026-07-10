@@ -726,12 +726,12 @@ export default async function HomePage({
               <strong>{formatCount(data.fiscalMetrics.invoicesCount)}</strong>
               <small>NFs fiscais válidas no período</small>
             </Link>
-            <Link className="metric metric-link accent-blue" href={`/pedidos${filterQuery}`}>
+            <Link className="metric metric-link accent-violet" href={`/pedidos${filterQuery}`}>
               <span className="label">Ticket médio faturado</span>
               <strong>{data.fiscalMetrics.invoicesCount <= 0 ? "-" : formatCurrency(data.fiscalMetrics.averageInvoiceValue)}</strong>
               <small>Receita faturada / NFs emitidas</small>
             </Link>
-            <Link className="metric metric-link accent-white" href={`/pedidos${filterQuery}`}>
+            <Link className="metric metric-link accent-cyan" href={`/pedidos${filterQuery}`}>
               <span className="label">NFs com pedido</span>
               <strong>{formatCount(data.fiscalMetrics.linkedOrdersCount)}</strong>
               <small>Cobertura de vínculo pedido/NF</small>
@@ -746,7 +746,7 @@ export default async function HomePage({
               <strong>{formatCount(data.fiscalMetrics.excludedDevolutionsCount)}</strong>
               <small>{formatCurrency(data.fiscalMetrics.excludedDevolutionsRevenue)} fora da receita</small>
             </Link>
-            <Link className="metric metric-link accent-blue" href="/skus">
+            <Link className="metric metric-link accent-emerald" href="/skus">
               <span className="label">SKU fiscal em processamento</span>
               <strong>{formatDecimal(data.fiscalCoverage.orderItemsInvoicePct, 1)}%</strong>
               <small>{formatCount(data.fiscalCoverage.invoicesWithOrderItems)} NFs com pedido + itens</small>
@@ -806,12 +806,12 @@ export default async function HomePage({
           ) : (
           <>
           <div className="metric-grid metric-grid-eight">
-            <div className="metric accent-yellow">
+            <div className="metric accent-blue">
               <span className="label">Receita com custo</span>
               <strong>{formatCurrency(data.fiscalMargin.revenueWithCost)}</strong>
               <small>Base fiscal com custo confiável</small>
             </div>
-            <div className="metric accent-blue">
+            <div className="metric accent-cyan">
               <span className="label">Custo do produto</span>
               <strong>{formatCurrency(data.fiscalMargin.totalCost)}</strong>
               <small>Kits expandidos por componente</small>
@@ -821,7 +821,7 @@ export default async function HomePage({
               <strong>{formatCurrency(data.fiscalMargin.totalTaxes)}</strong>
               <small>ICMS + PIS/COFINS + DIFAL</small>
             </div>
-            <div className="metric accent-white">
+            <div className="metric accent-emerald">
               <span className="label">Lucro fiscal</span>
               <strong>{formatCurrency(data.fiscalMargin.totalProfit)}</strong>
               <small>Receita − custo − impostos</small>
@@ -831,7 +831,7 @@ export default async function HomePage({
               <strong>{data.fiscalMargin.marginRate == null ? "-" : `${formatDecimal(data.fiscalMargin.marginRate * 100, 1)}%`}</strong>
               <small>Lucro / receita coberta</small>
             </div>
-            <div className="metric accent-blue">
+            <div className="metric accent-violet">
               <span className="label">ROI fiscal</span>
               <strong>{data.fiscalMargin.roi == null ? "-" : `${formatDecimal(data.fiscalMargin.roi * 100, 1)}%`}</strong>
               <small>Lucro / custo</small>
@@ -863,12 +863,12 @@ export default async function HomePage({
             <strong>{formatCount(data.nfMetrics.emittedCount)}</strong>
             <small>Status não pendente/cancelado</small>
           </Link>
-          <Link className="metric metric-link accent-yellow" href="/skus">
+          <Link className="metric metric-link accent-cyan" href="/skus">
             <span className="label">Itens vendidos</span>
             <strong>{formatCount(data.monthUnits)}</strong>
             <small>{formatCount(data.itemCount)} linhas de item na base</small>
           </Link>
-          <Link className="metric metric-link accent-blue" href={`/pedidos${filterQuery}`}>
+          <Link className="metric metric-link accent-violet" href={`/pedidos${filterQuery}`}>
             <span className="label">Ticket médio de pedidos</span>
             <strong>{data.nfMetrics.emittedCount <= 0 ? "-" : formatCurrency(data.nfMetrics.confirmedRevenue / data.nfMetrics.emittedCount)}</strong>
             <small>Auxiliar, não fiscal</small>
