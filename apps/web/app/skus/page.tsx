@@ -131,11 +131,22 @@ async function loadFiscalSkuMargins(
   supabase: Awaited<ReturnType<typeof createSupabaseUserClient>>,
   period: { start: string; end: string }
 ): Promise<Map<string, FiscalSkuMargin>> {
-  const { data } = await supabase.rpc("oraculo_fiscal_sku_margin", {
-    p_start: period.start,
-    p_end: period.end,
-    p_limit: 500
-  });
+  // Calculada on-the-fly sobre a cadeia fiscal; pode exceder o statement_timeout
+  // em meses grandes. Se falhar, devolvemos um mapa vazio (colunas mostram "-")
+  // em vez de derrubar a página.
+  let data: unknown = null;
+  try {
+    const response = await supabase.rpc("oraculo_fiscal_sku_margin", {
+      p_start: period.start,
+      p_end: period.end,
+      p_limit: 500
+    });
+    if (response.error) throw response.error;
+    data = response.data;
+  } catch (err) {
+    console.error("loadFiscalSkuMargins failed; degrading fiscal columns", err);
+    return new Map<string, FiscalSkuMargin>();
+  }
 
   const map = new Map<string, FiscalSkuMargin>();
   for (const raw of (Array.isArray(data) ? data : []) as Array<Record<string, unknown>>) {

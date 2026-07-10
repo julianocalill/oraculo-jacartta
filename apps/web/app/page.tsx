@@ -414,6 +414,7 @@ async function loadUnifiedChannelRows(
 }
 
 type FiscalMarginSummary = {
+  available: boolean;
   revenueWithCost: number;
   totalCost: number;
   totalTaxes: number;
@@ -424,34 +425,56 @@ type FiscalMarginSummary = {
   officialRevenue: number;
 };
 
+const UNAVAILABLE_FISCAL_MARGIN: FiscalMarginSummary = {
+  available: false,
+  revenueWithCost: 0,
+  totalCost: 0,
+  totalTaxes: 0,
+  totalProfit: 0,
+  marginRate: null,
+  roi: null,
+  coverageCostRevenuePct: 0,
+  officialRevenue: 0
+};
+
 async function loadFiscalMargin(
   supabase: ReturnType<typeof createSupabaseAdminClient>,
   filters: DashboardFilters
 ): Promise<FiscalMarginSummary> {
-  const { data } = await supabase.rpc("oraculo_fiscal_margin_summary", {
-    p_start: filters.start,
-    p_end: filters.end
-  });
-  const row = (Array.isArray(data) ? data[0] : data) as {
-    revenue_with_cost?: number | string | null;
-    total_cost?: number | string | null;
-    total_taxes?: number | string | null;
-    total_profit?: number | string | null;
-    margin_rate?: number | string | null;
-    roi?: number | string | null;
-    coverage_cost_revenue_pct?: number | string | null;
-    official_valid_revenue?: number | string | null;
-  } | undefined;
-  return {
-    revenueWithCost: asMetricNumber(row?.revenue_with_cost),
-    totalCost: asMetricNumber(row?.total_cost),
-    totalTaxes: asMetricNumber(row?.total_taxes),
-    totalProfit: asMetricNumber(row?.total_profit),
-    marginRate: row?.margin_rate == null ? null : Number(row.margin_rate),
-    roi: row?.roi == null ? null : Number(row.roi),
-    coverageCostRevenuePct: asMetricNumber(row?.coverage_cost_revenue_pct),
-    officialRevenue: asMetricNumber(row?.official_valid_revenue)
-  };
+  // A camada fiscal é calculada on-the-fly e pode exceder o statement_timeout do
+  // Postgres em meses grandes. Se falhar, degradamos a seção fiscal em vez de
+  // derrubar o dashboard inteiro (erro 57014 -> 500).
+  try {
+    const { data, error } = await supabase.rpc("oraculo_fiscal_margin_summary", {
+      p_start: filters.start,
+      p_end: filters.end
+    });
+    if (error) throw error;
+    const row = (Array.isArray(data) ? data[0] : data) as {
+      revenue_with_cost?: number | string | null;
+      total_cost?: number | string | null;
+      total_taxes?: number | string | null;
+      total_profit?: number | string | null;
+      margin_rate?: number | string | null;
+      roi?: number | string | null;
+      coverage_cost_revenue_pct?: number | string | null;
+      official_valid_revenue?: number | string | null;
+    } | undefined;
+    return {
+      available: true,
+      revenueWithCost: asMetricNumber(row?.revenue_with_cost),
+      totalCost: asMetricNumber(row?.total_cost),
+      totalTaxes: asMetricNumber(row?.total_taxes),
+      totalProfit: asMetricNumber(row?.total_profit),
+      marginRate: row?.margin_rate == null ? null : Number(row.margin_rate),
+      roi: row?.roi == null ? null : Number(row.roi),
+      coverageCostRevenuePct: asMetricNumber(row?.coverage_cost_revenue_pct),
+      officialRevenue: asMetricNumber(row?.official_valid_revenue)
+    };
+  } catch (err) {
+    console.error("loadFiscalMargin failed; degrading fiscal section", err);
+    return UNAVAILABLE_FISCAL_MARGIN;
+  }
 }
 
 async function loadDashboard(filters: DashboardFilters) {
@@ -784,9 +807,18 @@ export default async function HomePage({
               <h2>Margem e ROI fiscais</h2>
             </div>
             <span className="pill warning-pill">
-              Cobertura {formatDecimal(data.fiscalMargin.coverageCostRevenuePct, 1)}% da receita · parcial
+              {data.fiscalMargin.available
+                ? `Cobertura ${formatDecimal(data.fiscalMargin.coverageCostRevenuePct, 1)}% da receita · parcial`
+                : "Indisponível no momento"}
             </span>
           </div>
+          {!data.fiscalMargin.available ? (
+            <p className="fiscal-note">
+              O cálculo fiscal do período está temporariamente indisponível (consulta pesada
+              excedeu o tempo limite). O restante do dashboard segue atualizado.
+            </p>
+          ) : (
+          <>
           <div className="metric-grid metric-grid-eight">
             <div className="metric accent-yellow">
               <span className="label">Receita com custo</span>
@@ -825,6 +857,8 @@ export default async function HomePage({
             e cobre {formatDecimal(data.fiscalMargin.coverageCostRevenuePct, 1)}% da receita fiscal do período
             (o restante ainda sem item/custo).
           </p>
+          </>
+          )}
         </section>
 
         <section className="dashboard-section">
