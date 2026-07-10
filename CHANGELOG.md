@@ -2,6 +2,20 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-10 noite] — Consistência de dados entre páginas
+
+**Badge de alertas verdadeiro e global:** o badge da sidebar mostrava no máximo 8 (derivado das 8 linhas que o dashboard buscava) e só aparecia no dashboard; o /alertas contava as 120 linhas da página. Agora `loadActionableAlertCount()` faz contagem exata (~1,9k acionáveis) e toda página passa ao AppShell; cards do /alertas usam contagens exatas da base inteira e a tabela declara "mostrando os 120 mais urgentes de N".
+
+**Painéis fiscais respeitam o filtro:** margem/donut/gauges/canais liam snapshot fixo do mês corrente e ignoravam o filtro de data. Modo híbrido: mês corrente → snapshot; janela custom → RPC ao vivo com try/catch (timeout degrada pra "indisponível" em vez de mostrar o mês errado).
+
+**Snapshot de hora em hora:** captura fiscal passou de 1×/dia (06:20) para horária (migration `20260710190000`, retenção 14 dias) — defasagem intradia cai de até ~18h para ≤1h.
+
+**Nota auxiliar no /pedidos:** deixa explícito que a visão é por pedidos (data do pedido), não a receita fiscal oficial.
+
+**Commit:** `b42ba8d`. **Deploy:** `3j06vr7kk`.
+
+---
+
 ## [2026-07-10 tarde] — Sidebar global + correções de cálculo + melhorias gerais
 
 **Shell global:**
