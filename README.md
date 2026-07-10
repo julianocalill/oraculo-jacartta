@@ -34,11 +34,12 @@ oraculo/
 1. [docs/project-context.md](docs/project-context.md)
 2. [docs/engineering-playbook.md](docs/engineering-playbook.md)
 3. [docs/deployment-map.md](docs/deployment-map.md)
-4. [docs/oraculo-master-plan.md](docs/oraculo-master-plan.md)
-5. [docs/project-status-2026-07-03.md](docs/project-status-2026-07-03.md)
-6. [docs/project-status-2026-06-27.md](docs/project-status-2026-06-27.md)
-7. [docs/runbooks/resume-after-supabase-upgrade.md](docs/runbooks/resume-after-supabase-upgrade.md)
-8. [vault/00-home/index.md](vault/00-home/index.md)
+4. [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md)
+5. [docs/fiscal-financeiro-port.md](docs/fiscal-financeiro-port.md)
+6. [docs/metric-contract.md](docs/metric-contract.md)
+7. [docs/oraculo-master-plan.md](docs/oraculo-master-plan.md)
+8. [docs/runbooks/resume-after-supabase-upgrade.md](docs/runbooks/resume-after-supabase-upgrade.md)
+9. [vault/00-home/index.md](vault/00-home/index.md)
 
 ## Tooling choices
 
@@ -49,9 +50,16 @@ oraculo/
 
 ## Current production state
 
-- State updated: `2026-07-07`
+- State updated: `2026-07-10` (see `docs/project-status-2026-07-10.md`)
 - Production URL: `https://oraculo.oliverhome.com.br`
-- Latest documented Vercel deploy: `dpl_AKM7ayoqYWc9uHGV38ZyUjhpJYVo`
+- Latest documented Vercel deploy: `dpl_g3ptrlc3f` (2026-07-10)
+- Business-data reads run under RLS via an authenticated client (anon key + user
+  JWT); service-role is reserved for writes, `/usuarios` and `/status`. Migrations
+  `20260710092000` and `20260710094000`.
+- Fiscal margin/ROI layer (Financeiro rules) live: `oraculo_fiscal_margin_*` +
+  `oraculo_product_effective_cost` (kit costs expanded by components). See
+  `docs/fiscal-financeiro-port.md`. Shown on the dashboard with explicit coverage.
+- Sync health page at `/status`.
 - Primary GitHub repository: `https://github.com/Grupo-Jacartta/oraculo.git`
 - Personal mirror: `https://github.com/julianocalill/oraculo-jacartta`
 - Web app: `apps/web`

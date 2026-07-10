@@ -59,6 +59,19 @@ Products are treated as durable operational assets, not just catalog rows.
 - `refresh_oraculo_sales_curve_cache()`
 - `refresh_oraculo_stock_coverage_curve_cache()`
 
+## Fiscal margin layer (2026-07-10)
+
+Applies the Financeiro fiscal rules (perfil Jacarta). See
+`docs/fiscal-financeiro-port.md`.
+
+- `oraculo_product_effective_cost` (view) — effective unit cost; expands kit cost by
+  components from `olist_products.payload->'kit'`.
+- `oraculo_fiscal_margin_lines(start,end)` / `oraculo_fiscal_sku_margin(start,end,limit)`
+  / `oraculo_fiscal_margin_summary(start,end)` — per item / per SKU / totals + coverage.
+- Reads run under RLS as `authenticated`; the fiscal chain
+  (`olist_invoices`, `olist_invoice_items`, `olist_products`,
+  `oraculo_fiscal_invoice_order_links`) has select policy + grant for `authenticated`.
+
 ## Current data caveats
 
 - `dataFaturamento` in orders is not a fiscal source. Official revenue comes from valid invoices.

@@ -104,7 +104,43 @@ select public.refresh_oraculo_sales_curve_cache();
 select public.refresh_oraculo_stock_coverage_curve_cache();
 ```
 
+## Fiscal margin layer (Financeiro rules)
+
+Migration `20260710093000_create_fiscal_margin.sql`. Applies the Financeiro fiscal
+rules (perfil Jacarta, Lucro Real com RET — see `docs/fiscal-financeiro-port.md`)
+over valid NF + linked order items:
+
+- `oraculo_fiscal_margin_lines(start,end)` — per item: ICMS, PIS/COFINS, DIFAL, profit.
+- `oraculo_fiscal_sku_margin(start,end,limit)` — per SKU.
+- `oraculo_fiscal_margin_summary(start,end)` — totals + coverage (item vs cost).
+- `oraculo_product_effective_cost` (view) — effective unit cost; **expands kit
+  (tipo K) cost by components** from `payload->'kit'`.
+
+Dashboard shows a "Margem e ROI fiscais" section reading the summary, with the
+coverage % explicit. Margin is fiscal-partial (no marketplace fee/freight/ads).
+
+## RLS authenticated read — fiscal chain fix
+
+Migration `20260710092000` moved business reads to the authenticated client but its
+table list omitted the fiscal chain, which zeroed the dashboard fiscal cards.
+Fixed in `20260710094000_fix_fiscal_rls_read.sql`: grant + RLS policy for
+`authenticated` on `olist_invoices`, `olist_invoice_items`, `olist_products`,
+`oraculo_fiscal_invoice_order_links`, and `security definer` + grant on
+`oraculo_fiscal_invoices_valid` / `oraculo_fiscal_channel_sales`. Rule of thumb: a
+`security definer` view is not enough when the base table has RLS without a policy
+for `authenticated` — grant + policy the base tables.
+
 ## Manual Validation Commands
+
+Verify a page's data path as the authenticated role before deploying RLS changes:
+
+```sql
+set role authenticated;
+select coalesce(round(sum(billed_revenue)),0)
+from oraculo_fiscal_daily_revenue where issued_date >= date_trunc('month', current_date);
+```
+
+
 
 ```bash
 npx supabase db query --linked --output json "select jobname, schedule, active from cron.job where jobname like 'oraculo-%' order by jobname"

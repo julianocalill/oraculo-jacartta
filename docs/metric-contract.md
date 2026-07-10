@@ -423,3 +423,23 @@ Quando precisar persistir o resultado de auditoria para o dashboard, use `--writ
 3. Reexecutar a auditoria após cada lote até atingir `98%` das NFs ou menos de `0,5%` da receita sem cobertura.
 4. Criar e auditar `oraculo_fiscal_sku_sales_by_order_link`.
 5. Só depois aplicar parâmetros fiscais por UF e evoluir margem/ROI/ROAS oficiais.
+
+## Camada de margem fiscal — 2026-07-10
+
+Implementada a margem/ROI fiscal aplicando as regras do app Financeiro (perfil
+Jacarta, Lucro Real com RET). Fórmulas em `docs/fiscal-financeiro-port.md`; domínio
+testado em `packages/domain/fiscal.js`; SQL em
+`supabase/migrations/20260710093000_create_fiscal_margin.sql`
+(`oraculo_fiscal_margin_lines/sku_margin/summary` + `oraculo_product_effective_cost`).
+
+Decisões:
+
+- Custo unitário via `oraculo_product_effective_cost`, que expande kits pela
+  composição (`payload->'kit'`). Sanidade compara custo com o preço de venda real do
+  item (`valor_total/quantidade`), pois `olist_products.preco` é placeholder.
+- A margem é **fiscal-parcial**: receita − custo − (ICMS + PIS/COFINS + DIFAL). Não
+  inclui comissão de marketplace, frete ou ads.
+- Cobertura exibida explicitamente: `revenue_with_item` vs `revenue_with_cost`. Com
+  kits expandidos, cobertura de custo subiu para ~61,5% da receita fiscal (junho).
+- Não substitui o gate de cobertura de itens para o ranking fiscal oficial por SKU;
+  é a leitura de margem fiscal sobre a fatia com custo confiável.

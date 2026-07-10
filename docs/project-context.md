@@ -22,6 +22,23 @@ The current product direction is practical executive intelligence for the operat
 - `Obsidian` can store durable project memory, but repository docs are the source of truth.
 - `AI agents` assist architecture, coding, review and documentation, but repository files remain the source of truth.
 
+## Current state on 2026-07-10
+
+See `docs/project-status-2026-07-10.md` for the full write-up. Highlights:
+
+- Business-data reads run under RLS as the authenticated user (anon key + JWT);
+  service-role is reserved for writes, `/usuarios` and `/status`. A missing grant on
+  the fiscal chain briefly zeroed the dashboard fiscal cards and was fixed in
+  migration `20260710094000`.
+- Fiscal margin/ROI layer live (Financeiro rules): `oraculo_fiscal_margin_*` +
+  `oraculo_product_effective_cost` (kit costs expanded by components). Shown on the
+  dashboard as fiscal-partial with explicit coverage. See
+  `docs/fiscal-financeiro-port.md`.
+- New `/status` page; dashboard visual modernized; date/timezone bug fixed; fiscal
+  domain unit tests in `packages/domain`.
+- Sync Olist → Oráculo of fiscal invoices verified healthy (July: ~36k valid NFs /
+  R$ 2.74M, matching Olist).
+
 ## Current state on 2026-07-07
 
 - Production remains at `https://oraculo.oliverhome.com.br`.
