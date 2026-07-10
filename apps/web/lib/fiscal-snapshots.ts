@@ -4,6 +4,7 @@ export const FISCAL_DASHBOARD_SNAPSHOT_KEY = "fiscal_dashboard";
 export const FISCAL_SKU_COVERAGE_SNAPSHOT_KEY = "sku_coverage";
 export const FISCAL_MARGIN_SUMMARY_SNAPSHOT_KEY = "fiscal_margin_summary";
 export const FISCAL_SKU_MARGIN_SNAPSHOT_KEY = "fiscal_sku_margin";
+export const FISCAL_CHANNEL_METRICS_SNAPSHOT_KEY = "fiscal_channel_metrics";
 
 type FiscalSnapshotRow = {
   snapshot_key: string;
@@ -73,6 +74,13 @@ export type FiscalSkuMarginSnapshot = {
   periodStart: string | null;
   periodEnd: string | null;
   rows: FiscalSkuMarginRow[];
+};
+
+export type FiscalChannelMetricRow = {
+  channel_label: string | null;
+  invoices_count: number | string | null;
+  billed_revenue: number | string | null;
+  average_invoice_value: number | string | null;
 };
 
 function asNumber(value: unknown) {
@@ -232,4 +240,15 @@ export async function loadFiscalSkuMarginSnapshot(
     periodEnd: row.period_end,
     rows
   };
+}
+
+export async function loadFiscalChannelMetricsSnapshot(
+  supabase: ReturnType<typeof createSupabaseAdminClient>
+): Promise<FiscalChannelMetricRow[]> {
+  const snapshots = await loadLatestFiscalSnapshots(supabase, [FISCAL_CHANNEL_METRICS_SNAPSHOT_KEY]);
+  const row = snapshots.get(FISCAL_CHANNEL_METRICS_SNAPSHOT_KEY);
+  if (!row) return [];
+  const payload = readSnapshotPayload(row);
+  const raw = Array.isArray(payload.channels) ? (payload.channels as FiscalChannelMetricRow[]) : [];
+  return raw;
 }

@@ -3,6 +3,7 @@ import {
   loadFiscalDashboardSnapshot,
   loadFiscalSkuCoverageSnapshot,
   loadFiscalMarginSummarySnapshot,
+  loadFiscalChannelMetricsSnapshot,
   type FiscalDashboardSnapshot
 } from "../lib/fiscal-snapshots";
 import Link from "next/link";
@@ -336,16 +337,22 @@ async function loadNfMetrics(
   supabase: ReturnType<typeof createSupabaseAdminClient>,
   filters: DashboardFilters
 ): Promise<NfMetrics> {
-  const { data, error } = await supabase
-    .rpc("oraculo_nf_metrics", {
-      start_date: filters.start,
-      end_date: filters.end
-    })
-    .maybeSingle();
+  // Última RPC calculada on-the-fly no dashboard. Se falhar/estourar o
+  // statement_timeout, degradamos para zeros em vez de derrubar a página.
+  let row: NfMetricsRow | null = null;
+  try {
+    const { data, error } = await supabase
+      .rpc("oraculo_nf_metrics", {
+        start_date: filters.start,
+        end_date: filters.end
+      })
+      .maybeSingle();
+    if (error) throw error;
+    row = data as NfMetricsRow | null;
+  } catch (err) {
+    console.error("loadNfMetrics failed; degrading to zeros", err);
+  }
 
-  if (error) throw error;
-
-  const row = data as NfMetricsRow | null;
   return {
     confirmedRevenue: asMetricNumber(row?.confirmed_revenue),
     emittedCount: asMetricNumber(row?.emitted_count),
@@ -524,10 +531,7 @@ async function loadDashboard(filters: DashboardFilters) {
       .gte("issued_date", filters.start)
       .lte("issued_date", filters.end)
       .order("issued_date", { ascending: false }),
-    supabase.rpc("oraculo_fiscal_channel_metrics", {
-      start_date: filters.start,
-      end_date: filters.end
-    }),
+    loadFiscalChannelMetricsSnapshot(supabase),
     loadFiscalSkuCoverageSnapshot(supabase),
     loadFiscalMargin(supabase)
   ]);
@@ -536,7 +540,7 @@ async function loadDashboard(filters: DashboardFilters) {
   const fiscalDaily = (fiscalDailyResponse.data ?? []) as FiscalDailyRevenue[];
   const fiscalDailyChart = fiscalDaily.slice().reverse();
   const maxFiscalDailyRevenue = Math.max(...fiscalDailyChart.map((row) => asMetricNumber(row.billed_revenue)), 1);
-  const fiscalChannels = ((fiscalChannelResponse.data ?? []) as FiscalChannelMetric[]).sort(
+  const fiscalChannels = (fiscalChannelResponse as FiscalChannelMetric[]).slice().sort(
     (left, right) => asMetricNumber(right.billed_revenue) - asMetricNumber(left.billed_revenue)
   );
   const fiscalCoverage = fiscalCoverageResponse;
