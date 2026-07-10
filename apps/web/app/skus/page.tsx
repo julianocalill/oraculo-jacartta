@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
-import { loadFiscalSkuCoverageSnapshot } from "../../lib/fiscal-snapshots";
+import {
+  loadFiscalSkuCoverageSnapshot,
+  loadFiscalSkuMarginSnapshot,
+  type FiscalSkuMarginRow
+} from "../../lib/fiscal-snapshots";
 import { requireCurrentUser } from "../../lib/auth/session";
 import { formatBrDate, getSaoPauloMonthRange } from "../../lib/date";
 
@@ -31,31 +35,7 @@ type SkuRow = {
 
 type FiscalCoverage = Awaited<ReturnType<typeof loadFiscalSkuCoverageSnapshot>>;
 
-type FiscalSkuMargin = {
-  sku: string;
-  units: number;
-  revenue: number;
-  cost: number;
-  icms: number;
-  pisCofins: number;
-  difal: number;
-  taxesTotal: number;
-  profit: number;
-  marginRate: number | null;
-  roi: number | null;
-};
-
-function toNum(value: number | string | null | undefined) {
-  if (value == null) return 0;
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function toNumOrNull(value: number | string | null | undefined) {
-  if (value == null) return null;
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
+type FiscalSkuMargin = FiscalSkuMarginRow;
 
 function n(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -127,51 +107,33 @@ function asSource(value: string | undefined): SourceFilter {
   return "all";
 }
 
+// A margem fiscal vem de um snapshot pré-computado (refresh noturno via pg_cron),
+// não do cálculo on-the-fly, que era pesado demais e estourava o statement_timeout.
 async function loadFiscalSkuMargins(
-  supabase: Awaited<ReturnType<typeof createSupabaseUserClient>>,
-  period: { start: string; end: string }
-): Promise<Map<string, FiscalSkuMargin>> {
-  // Calculada on-the-fly sobre a cadeia fiscal; pode exceder o statement_timeout
-  // em meses grandes. Se falhar, devolvemos um mapa vazio (colunas mostram "-")
-  // em vez de derrubar a página.
-  let data: unknown = null;
+  supabase: Awaited<ReturnType<typeof createSupabaseUserClient>>
+): Promise<{ margins: Map<string, FiscalSkuMargin>; period: { start: string; end: string } }> {
+  const fallback = getSaoPauloMonthRange();
   try {
-    const response = await supabase.rpc("oraculo_fiscal_sku_margin", {
-      p_start: period.start,
-      p_end: period.end,
-      p_limit: 500
-    });
-    if (response.error) throw response.error;
-    data = response.data;
+    const snapshot = await loadFiscalSkuMarginSnapshot(supabase);
+    const margins = new Map<string, FiscalSkuMargin>();
+    for (const row of snapshot.rows) {
+      margins.set(row.sku, row);
+    }
+    return {
+      margins,
+      period: {
+        start: snapshot.periodStart ?? fallback.start,
+        end: snapshot.periodEnd ?? fallback.end
+      }
+    };
   } catch (err) {
-    console.error("loadFiscalSkuMargins failed; degrading fiscal columns", err);
-    return new Map<string, FiscalSkuMargin>();
+    console.error("loadFiscalSkuMargins snapshot failed; degrading fiscal columns", err);
+    return { margins: new Map<string, FiscalSkuMargin>(), period: fallback };
   }
-
-  const map = new Map<string, FiscalSkuMargin>();
-  for (const raw of (Array.isArray(data) ? data : []) as Array<Record<string, unknown>>) {
-    const sku = raw.sku == null ? null : String(raw.sku);
-    if (!sku) continue;
-    map.set(sku, {
-      sku,
-      units: toNum(raw.units as number | string | null),
-      revenue: toNum(raw.revenue as number | string | null),
-      cost: toNum(raw.cost as number | string | null),
-      icms: toNum(raw.icms as number | string | null),
-      pisCofins: toNum(raw.pis_cofins as number | string | null),
-      difal: toNum(raw.difal as number | string | null),
-      taxesTotal: toNum(raw.taxes_total as number | string | null),
-      profit: toNum(raw.profit as number | string | null),
-      marginRate: toNumOrNull(raw.margin_rate as number | string | null),
-      roi: toNumOrNull(raw.roi as number | string | null)
-    });
-  }
-  return map;
 }
 
 async function loadSkus(selectedSku?: string, source: SourceFilter = "all") {
   const supabase = await createSupabaseUserClient();
-  const fiscalPeriod = getSaoPauloMonthRange();
 
   let rowsQuery = supabase
     .from("oraculo_sku_margin_30d")
@@ -199,19 +161,19 @@ async function loadSkus(selectedSku?: string, source: SourceFilter = "all") {
     return query;
   })();
 
-  const [rowsResponse, selectedResponse, fiscalCoverage, fiscalMargins] = await Promise.all([
+  const [rowsResponse, selectedResponse, fiscalCoverage, fiscal] = await Promise.all([
     rowsQuery,
     selectedQuery,
     loadFiscalSkuCoverageSnapshot(supabase),
-    loadFiscalSkuMargins(supabase, fiscalPeriod)
+    loadFiscalSkuMargins(supabase)
   ]);
 
   return {
     rows: (rowsResponse.data ?? []) as SkuRow[],
     selected: ((selectedResponse.data ?? []) as SkuRow[])[0] ?? null,
     fiscalCoverage,
-    fiscalMargins,
-    fiscalPeriod
+    fiscalMargins: fiscal.margins,
+    fiscalPeriod: fiscal.period
   };
 }
 

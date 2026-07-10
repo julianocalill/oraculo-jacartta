@@ -2,6 +2,8 @@ import { createSupabaseAdminClient } from "./supabase/admin";
 
 export const FISCAL_DASHBOARD_SNAPSHOT_KEY = "fiscal_dashboard";
 export const FISCAL_SKU_COVERAGE_SNAPSHOT_KEY = "sku_coverage";
+export const FISCAL_MARGIN_SUMMARY_SNAPSHOT_KEY = "fiscal_margin_summary";
+export const FISCAL_SKU_MARGIN_SNAPSHOT_KEY = "fiscal_sku_margin";
 
 type FiscalSnapshotRow = {
   snapshot_key: string;
@@ -35,6 +37,41 @@ export type FiscalSkuCoverageSnapshot = {
   distinctOrderItemSkus: number;
 };
 
+export type FiscalMarginSummarySnapshot = {
+  available: boolean;
+  periodStart: string | null;
+  periodEnd: string | null;
+  revenueWithCost: number;
+  totalCost: number;
+  totalTaxes: number;
+  totalProfit: number;
+  marginRate: number | null;
+  roi: number | null;
+  coverageCostRevenuePct: number;
+  officialRevenue: number;
+};
+
+export type FiscalSkuMarginRow = {
+  sku: string;
+  units: number;
+  revenue: number;
+  cost: number;
+  icms: number;
+  pisCofins: number;
+  difal: number;
+  taxesTotal: number;
+  profit: number;
+  marginRate: number | null;
+  roi: number | null;
+};
+
+export type FiscalSkuMarginSnapshot = {
+  available: boolean;
+  periodStart: string | null;
+  periodEnd: string | null;
+  rows: FiscalSkuMarginRow[];
+};
+
 function asNumber(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string") {
@@ -43,6 +80,12 @@ function asNumber(value: unknown) {
     return Number.isFinite(parsed) ? parsed : 0;
   }
   return 0;
+}
+
+function asNumberOrNull(value: unknown) {
+  if (value == null) return null;
+  const parsed = asNumber(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 async function loadLatestFiscalSnapshots(
@@ -110,5 +153,74 @@ export async function loadFiscalSkuCoverageSnapshot(
     orderItemsRevenuePct: asNumber(payload.order_items_revenue_pct),
     missingOrderItemsRevenuePct: asNumber(payload.missing_order_items_revenue_pct),
     distinctOrderItemSkus: asNumber(payload.distinct_order_item_skus)
+  };
+}
+
+export async function loadFiscalMarginSummarySnapshot(
+  supabase: ReturnType<typeof createSupabaseAdminClient>
+): Promise<FiscalMarginSummarySnapshot> {
+  const snapshots = await loadLatestFiscalSnapshots(supabase, [FISCAL_MARGIN_SUMMARY_SNAPSHOT_KEY]);
+  const row = snapshots.get(FISCAL_MARGIN_SUMMARY_SNAPSHOT_KEY);
+  if (!row) {
+    return {
+      available: false,
+      periodStart: null,
+      periodEnd: null,
+      revenueWithCost: 0,
+      totalCost: 0,
+      totalTaxes: 0,
+      totalProfit: 0,
+      marginRate: null,
+      roi: null,
+      coverageCostRevenuePct: 0,
+      officialRevenue: 0
+    };
+  }
+  const payload = readSnapshotPayload(row);
+  return {
+    available: true,
+    periodStart: row.period_start,
+    periodEnd: row.period_end,
+    revenueWithCost: asNumber(payload.revenue_with_cost),
+    totalCost: asNumber(payload.total_cost),
+    totalTaxes: asNumber(payload.total_taxes),
+    totalProfit: asNumber(payload.total_profit),
+    marginRate: asNumberOrNull(payload.margin_rate),
+    roi: asNumberOrNull(payload.roi),
+    coverageCostRevenuePct: asNumber(payload.coverage_cost_revenue_pct),
+    officialRevenue: asNumber(payload.official_valid_revenue)
+  };
+}
+
+export async function loadFiscalSkuMarginSnapshot(
+  supabase: ReturnType<typeof createSupabaseAdminClient>
+): Promise<FiscalSkuMarginSnapshot> {
+  const snapshots = await loadLatestFiscalSnapshots(supabase, [FISCAL_SKU_MARGIN_SNAPSHOT_KEY]);
+  const row = snapshots.get(FISCAL_SKU_MARGIN_SNAPSHOT_KEY);
+  if (!row) {
+    return { available: false, periodStart: null, periodEnd: null, rows: [] };
+  }
+  const payload = readSnapshotPayload(row);
+  const rawRows = Array.isArray(payload.skus) ? (payload.skus as Array<Record<string, unknown>>) : [];
+  const rows: FiscalSkuMarginRow[] = rawRows
+    .map((raw) => ({
+      sku: raw.sku == null ? "" : String(raw.sku),
+      units: asNumber(raw.units),
+      revenue: asNumber(raw.revenue),
+      cost: asNumber(raw.cost),
+      icms: asNumber(raw.icms),
+      pisCofins: asNumber(raw.pis_cofins),
+      difal: asNumber(raw.difal),
+      taxesTotal: asNumber(raw.taxes_total),
+      profit: asNumber(raw.profit),
+      marginRate: asNumberOrNull(raw.margin_rate),
+      roi: asNumberOrNull(raw.roi)
+    }))
+    .filter((r) => r.sku);
+  return {
+    available: true,
+    periodStart: row.period_start,
+    periodEnd: row.period_end,
+    rows
   };
 }

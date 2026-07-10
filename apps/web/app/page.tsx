@@ -2,6 +2,7 @@ import { createSupabaseAdminClient } from "../lib/supabase/admin";
 import {
   loadFiscalDashboardSnapshot,
   loadFiscalSkuCoverageSnapshot,
+  loadFiscalMarginSummarySnapshot,
   type FiscalDashboardSnapshot
 } from "../lib/fiscal-snapshots";
 import Link from "next/link";
@@ -438,41 +439,26 @@ const UNAVAILABLE_FISCAL_MARGIN: FiscalMarginSummary = {
 };
 
 async function loadFiscalMargin(
-  supabase: ReturnType<typeof createSupabaseAdminClient>,
-  filters: DashboardFilters
+  supabase: ReturnType<typeof createSupabaseAdminClient>
 ): Promise<FiscalMarginSummary> {
-  // A camada fiscal é calculada on-the-fly e pode exceder o statement_timeout do
-  // Postgres em meses grandes. Se falhar, degradamos a seção fiscal em vez de
-  // derrubar o dashboard inteiro (erro 57014 -> 500).
+  // Lê o snapshot pré-computado (refresh noturno via pg_cron) em vez de calcular a
+  // cadeia fiscal on-the-fly, que era pesada demais e estourava o statement_timeout
+  // (erro 57014 -> 500). O snapshot é sempre do mês corrente.
   try {
-    const { data, error } = await supabase.rpc("oraculo_fiscal_margin_summary", {
-      p_start: filters.start,
-      p_end: filters.end
-    });
-    if (error) throw error;
-    const row = (Array.isArray(data) ? data[0] : data) as {
-      revenue_with_cost?: number | string | null;
-      total_cost?: number | string | null;
-      total_taxes?: number | string | null;
-      total_profit?: number | string | null;
-      margin_rate?: number | string | null;
-      roi?: number | string | null;
-      coverage_cost_revenue_pct?: number | string | null;
-      official_valid_revenue?: number | string | null;
-    } | undefined;
+    const snap = await loadFiscalMarginSummarySnapshot(supabase);
     return {
-      available: true,
-      revenueWithCost: asMetricNumber(row?.revenue_with_cost),
-      totalCost: asMetricNumber(row?.total_cost),
-      totalTaxes: asMetricNumber(row?.total_taxes),
-      totalProfit: asMetricNumber(row?.total_profit),
-      marginRate: row?.margin_rate == null ? null : Number(row.margin_rate),
-      roi: row?.roi == null ? null : Number(row.roi),
-      coverageCostRevenuePct: asMetricNumber(row?.coverage_cost_revenue_pct),
-      officialRevenue: asMetricNumber(row?.official_valid_revenue)
+      available: snap.available,
+      revenueWithCost: snap.revenueWithCost,
+      totalCost: snap.totalCost,
+      totalTaxes: snap.totalTaxes,
+      totalProfit: snap.totalProfit,
+      marginRate: snap.marginRate,
+      roi: snap.roi,
+      coverageCostRevenuePct: snap.coverageCostRevenuePct,
+      officialRevenue: snap.officialRevenue
     };
   } catch (err) {
-    console.error("loadFiscalMargin failed; degrading fiscal section", err);
+    console.error("loadFiscalMargin snapshot failed; degrading fiscal section", err);
     return UNAVAILABLE_FISCAL_MARGIN;
   }
 }
@@ -533,7 +519,7 @@ async function loadDashboard(filters: DashboardFilters) {
       end_date: filters.end
     }),
     loadFiscalSkuCoverageSnapshot(supabase),
-    loadFiscalMargin(supabase, filters)
+    loadFiscalMargin(supabase)
   ]);
 
   const daily = (dailyResponse.data ?? []) as DailySale[];

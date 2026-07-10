@@ -108,7 +108,12 @@ NÃO `db push` (reaplicaria migrations não idempotentes). Projeto linkado: ref
 - [x] Expor margem fiscal por SKU em `/skus` (colunas Margem/ROI fiscal na tabela +
       bloco de decomposição fiscal — ICMS, PIS/COFINS, DIFAL, lucro — no detalhe do
       SKU; janela = mês corrente São Paulo, só linhas Olist).
-- [ ] Materializar/cachear a camada fiscal se o cálculo on-the-fly ficar pesado.
+- [x] Materializar/cachear a camada fiscal (o cálculo on-the-fly ~7s estourava o
+      statement_timeout do role `authenticated` → 57014 → 500 no dashboard e /skus).
+      Snapshots `fiscal_margin_summary` e `fiscal_sku_margin` pré-computados via
+      `oraculo_capture_fiscal_margin_snapshots()`, refresh diário por pg_cron
+      (`20 9 * * *` UTC, pós-backfill). Páginas leem o snapshot (instantâneo) e
+      degradam gracioso se ausente. Migration `20260710150000`.
 - [ ] Cadastrar comissão de marketplace/frete por canal para margem líquida (não só
       fiscal).
 - [ ] Fonte de custo curada para os SKUs simples sem custo (complementar a expansão
