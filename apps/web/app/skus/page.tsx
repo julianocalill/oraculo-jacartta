@@ -7,6 +7,7 @@ import {
 } from "../../lib/fiscal-snapshots";
 import { requireCurrentUser } from "../../lib/auth/session";
 import { formatBrDate, getSaoPauloMonthRange } from "../../lib/date";
+import { SkuTable, type SkuTableRow } from "./sku-table";
 
 export const dynamic = "force-dynamic";
 
@@ -201,6 +202,26 @@ export default async function SkusPage({
   const selectedFiscal = selected ? fiscalFor(data.fiscalMargins, selected) : null;
   const fiscalPeriodLabel = `${date(data.fiscalPeriod.start)} – ${date(data.fiscalPeriod.end)}`;
 
+  const tableRows: SkuTableRow[] = data.rows.map((row) => {
+    const fiscal = fiscalFor(data.fiscalMargins, row);
+    return {
+      source: row.source,
+      sku: row.sku,
+      product_name: row.product_name,
+      status_label: row.status_label,
+      units_30d: row.units_30d,
+      revenue_30d: row.revenue_30d,
+      revenue_change_pct: row.revenue_change_pct,
+      available_stock: row.available_stock,
+      days_until_stockout: row.days_until_stockout,
+      margin_rate_30d: row.margin_rate_30d,
+      roi_30d: row.roi_30d,
+      margin_signal: row.margin_signal,
+      fiscalMarginRate: fiscal?.marginRate ?? null,
+      fiscalRoi: fiscal?.roi ?? null
+    };
+  });
+
   return (
     <main className="workspace single-workspace">
       <header className="topbar">
@@ -268,66 +289,7 @@ export default async function SkusPage({
             </div>
           </div>
 
-          <div className="table-wrap dense-table-wrap">
-            <table className="data-table dense-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Fonte</th>
-                  <th>SKU</th>
-                  <th>Produto</th>
-                  <th>Status</th>
-                  <th className="numeric">Receita</th>
-                  <th className="numeric">Un.</th>
-                  <th className="numeric">Ticket</th>
-                  <th className="numeric">Margem</th>
-                  <th className="numeric">ROI</th>
-                  <th className="numeric">Margem fiscal</th>
-                  <th className="numeric">ROI fiscal</th>
-                  <th>Status margem</th>
-                  <th className="numeric">Var.</th>
-                  <th className="numeric">Estoque</th>
-                  <th className="numeric">Cobertura</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.rows.map((row, index) => {
-                  const fiscal = fiscalFor(data.fiscalMargins, row);
-                  return (
-                  <tr key={`${row.source}-${row.sku ?? row.product_name}`}>
-                    <td>{index + 1}</td>
-                    <td>{sourceLabel(row.source)}</td>
-                    <td>{row.sku || "-"}</td>
-                    <td>
-                      <Link
-                        className="row-link"
-                        href={`/skus?source=${encodeURIComponent(source)}&sku=${encodeURIComponent(row.sku ?? "")}`}
-                      >
-                        {row.product_name ?? "Sem nome"}
-                      </Link>
-                    </td>
-                    <td>{row.status_label ?? "-"}</td>
-                    <td className="numeric">{money(row.revenue_30d)}</td>
-                    <td className="numeric">{count(row.units_30d)}</td>
-                    <td className="numeric">{money(n(row.revenue_30d) / Math.max(n(row.units_30d), 1))}</td>
-                    <td className="numeric">{percent(row.margin_rate_30d)}</td>
-                    <td className="numeric">{percent(row.roi_30d)}</td>
-                    <td className="numeric">{fiscal ? percent(fiscal.marginRate) : "-"}</td>
-                    <td className="numeric">{fiscal ? percent(fiscal.roi) : "-"}</td>
-                    <td>
-                      <span className={`status-pill ${marginSignalClass(row.margin_signal)}`}>
-                        {marginSignalLabel(row.margin_signal)}
-                      </span>
-                    </td>
-                    <td className="numeric trend-value">{percent(row.revenue_change_pct)}</td>
-                    <td className="numeric">{stock(row.available_stock)}</td>
-                    <td className="numeric">{coverage(row.days_until_stockout)}</td>
-                  </tr>
-                );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <SkuTable rows={tableRows} source={source} />
         </article>
 
         <aside className="panel sku-detail">

@@ -664,11 +664,11 @@ p {
 }
 
 .metric {
-  min-height: 138px;
-  padding: 20px;
+  min-height: 132px;
+  padding: 16px 18px;
   display: grid;
   align-content: flex-end;
-  gap: 8px;
+  gap: 7px;
   position: relative;
   overflow: hidden;
 }
@@ -724,11 +724,15 @@ p {
 .metric.curve-c        { --accent: var(--rose); }
 
 .metric strong {
-  font-size: clamp(1.55rem, 1.9vw, 2.1rem);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1;
+  font-size: clamp(1.1rem, 1.35vw, 1.5rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .metric small {
@@ -1775,7 +1779,8 @@ h2 {
 .donut-wrap {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 20px;
+  max-width: 440px;
 }
 
 .donut-center {
@@ -1888,4 +1893,46 @@ h2 {
   .fiscal-viz-row {
     grid-template-columns: 1fr;
   }
+}
+
+/* Cabeçalhos de tabela ordenáveis */
+.data-table th .th-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 140ms ease;
+}
+.data-table th .th-sort:hover {
+  color: var(--text);
+}
+.data-table th .th-sort.is-active {
+  color: var(--gold);
+}
+.data-table th .th-sort:focus-visible {
+  outline: 2px solid var(--indigo);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.th-caret {
+  font-size: 9px;
+  opacity: 0.55;
+}
+.th-sort.is-active .th-caret {
+  opacity: 1;
+}
+.data-table td.rank-cell {
+  color: var(--faint);
+  font-family: var(--mono);
 }
