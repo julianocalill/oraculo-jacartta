@@ -2,6 +2,25 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-10 tarde] — Sidebar global + correções de cálculo + melhorias gerais
+
+**Shell global:**
+- Sidebar presente em **todas** as páginas autenticadas (antes só no dashboard) via `AppShell` + `SidebarNav` (link ativo automático por pathname). Back-links "← Analytics" removidos.
+- `app/loading.tsx`: skeleton shimmer com a sidebar sólida — navegação com feedback instantâneo.
+
+**Correção de cálculo (bug real):**
+- `parseMoney`/`asNumber` assumiam pt-BR e inflavam strings `"123.45"` em **100×** (removiam o ponto decimal como se fosse milhar). Parser agora detecta o formato (vírgula → pt-BR; vários pontos → milhar; ponto único → decimal).
+- Ticket médio com 0 unidades mostrava a receita inteira como ticket; agora mostra "-".
+
+**Gráficos:**
+- Área de receita: linha de média tracejada (ouro), marcador do último dia, eixo x com datas (primeiro/meio/último).
+- Donut de impostos: valores R$ na legenda além dos percentuais.
+
+**Tabelas:**
+- `SortableTable` genérico (células serializáveis) aplicado em `/alertas`, `/curva-de-venda`, `/curva-de-estoque` — **todas** as tabelas do app agora ordenam por clique.
+
+**Commit:** `43d418e`. **Deploy:** `d8bxw0g71`.
+
 ## [2026-07-10] — Dark theme + fiscal snapshots + sortable tables
 
 **Theme & visual redesign:**
