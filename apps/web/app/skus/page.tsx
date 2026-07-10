@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
 import {
   loadFiscalSkuCoverageSnapshot,
@@ -8,6 +7,7 @@ import {
 import { requireCurrentUser } from "../../lib/auth/session";
 import { formatBrDate, getSaoPauloMonthRange } from "../../lib/date";
 import { SkuTable, type SkuTableRow } from "./sku-table";
+import { AppShell } from "../components/app-shell";
 
 export const dynamic = "force-dynamic";
 
@@ -223,10 +223,9 @@ export default async function SkusPage({
   });
 
   return (
-    <main className="workspace single-workspace">
+    <AppShell>
       <header className="topbar">
         <div>
-          <Link href="/" className="back-link">← Analytics</Link>
           <h1>SKUs</h1>
           <p>Margem operacional (30d) + margem fiscal por SKU (mês) · leitura parcial até fechar a cobertura fiscal por item</p>
         </div>
@@ -407,6 +406,6 @@ export default async function SkusPage({
           </div>
         </aside>
       </section>
-    </main>
+    </AppShell>
   );
 }

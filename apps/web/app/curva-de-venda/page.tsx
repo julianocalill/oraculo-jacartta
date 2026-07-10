@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
 import { requireCurrentUser } from "../../lib/auth/session";
 import { formatBrDate } from "../../lib/date";
+import { AppShell } from "../components/app-shell";
+import { SortableTable } from "../components/sortable-table";
 
 export const dynamic = "force-dynamic";
 
@@ -107,10 +109,9 @@ export default async function CurvaDeVendaPage({
     : `/curva-de-venda/export?curva=${selectedCurve}`;
 
   return (
-    <main className="workspace single-workspace">
+    <AppShell>
       <header className="topbar">
         <div>
-          <Link href="/" className="back-link">← Analytics</Link>
           <h1>Curva de Venda</h1>
           <p>Classificação ABC de estoque por tempo desde a última saída</p>
         </div>
@@ -196,43 +197,30 @@ export default async function CurvaDeVendaPage({
           </div>
         </div>
 
-        <div className="table-wrap dense-table-wrap">
-          <table className="data-table dense-table">
-            <thead>
-              <tr>
-                <th>Nome do produto</th>
-                <th className="numeric">Data da última venda</th>
-                <th className="numeric">Quantidade em estoque</th>
-                <th className="numeric">Curva de venda</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleItems.length === 0 ? (
-                <tr>
-                  <td colSpan={4}>
-                    <p className="empty-state table-empty">Nenhum item com estoque disponível encontrado.</p>
-                  </td>
-                </tr>
-              ) : (
-                visibleItems.map((item) => (
-                  <tr key={`${item.product_id}-${item.sku ?? item.product_name}`}>
-                    <td>
-                      <Link className="row-link" href={`/skus?source=${encodeURIComponent(item.source ?? "all")}&sku=${encodeURIComponent(item.sku ?? "")}`}>
-                        {item.product_name ?? "Sem nome"}
-                      </Link>
-                    </td>
-                    <td className="numeric">{date(item.last_sale_at)}</td>
-                    <td className="numeric">{stock(item.available_stock)}</td>
-                    <td className="numeric">
-                      <span className={`curve-badge curve-${item.curve.toLowerCase()}`}>{item.curve}</span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <SortableTable
+          columns={[
+            { label: "Nome do produto" },
+            { label: "Data da última venda", numeric: true },
+            { label: "Quantidade em estoque", numeric: true },
+            { label: "Curva de venda", numeric: true }
+          ]}
+          initialSort={3}
+          initialDir="asc"
+          rows={visibleItems.map((item) => [
+            {
+              text: item.product_name ?? "Sem nome",
+              sort: item.product_name ?? null,
+              href: `/skus?source=${encodeURIComponent(item.source ?? "all")}&sku=${encodeURIComponent(item.sku ?? "")}`
+            },
+            {
+              text: date(item.last_sale_at),
+              sort: item.last_sale_at ? Date.parse(item.last_sale_at) : null
+            },
+            { text: stock(item.available_stock), sort: item.available_stock ?? null },
+            { text: item.curve, sort: item.curve, badge: `curve-badge curve-${item.curve.toLowerCase()}` }
+          ])}
+        />
       </section>
-    </main>
+    </AppShell>
   );
 }

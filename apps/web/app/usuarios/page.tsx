@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { isAdmin, requireCurrentUser } from "../../lib/auth/session";
+import { AppShell } from "../components/app-shell";
 
 export const dynamic = "force-dynamic";
 
@@ -98,23 +98,21 @@ export default async function UsuariosPage() {
 
   if (!allowed) {
     return (
-      <main className="workspace single-workspace">
+      <AppShell>
         <header className="topbar">
           <div>
-            <Link href="/" className="back-link">← Analytics</Link>
             <h1>Usuários</h1>
             <p>Seu usuário não tem permissão de administrador.</p>
           </div>
         </header>
-      </main>
+      </AppShell>
     );
   }
 
   return (
-    <main className="workspace single-workspace">
+    <AppShell>
       <header className="topbar">
         <div>
-          <Link href="/" className="back-link">← Analytics</Link>
           <h1>Usuários</h1>
           <p>Crie, edite e bloqueie acessos ao Oraculo.</p>
         </div>
@@ -201,6 +199,6 @@ export default async function UsuariosPage() {
           ))}
         </div>
       </section>
-    </main>
+    </AppShell>
   );
 }

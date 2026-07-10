@@ -1,6 +1,7 @@
-import Link from "next/link";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
 import { requireCurrentUser } from "../../lib/auth/session";
+import { AppShell } from "../components/app-shell";
+import { SortableTable } from "../components/sortable-table";
 
 export const dynamic = "force-dynamic";
 
@@ -90,10 +91,9 @@ export default async function AlertasPage() {
   const data = await loadAlertas();
 
   return (
-    <main className="workspace single-workspace">
+    <AppShell>
       <header className="topbar">
         <div>
-          <Link href="/" className="back-link">← Analytics</Link>
           <h1>Alertas</h1>
           <p>{count(data.rows.length)} produtos exigem atenção operacional</p>
         </div>
@@ -135,46 +135,36 @@ export default async function AlertasPage() {
           </div>
         </div>
 
-        <div className="table-wrap dense-table-wrap">
-          <table className="data-table dense-table">
-            <thead>
-              <tr>
-                <th>Alerta</th>
-                <th>Fonte</th>
-                <th>SKU</th>
-                <th>Produto</th>
-                <th className="numeric">Disponível</th>
-                <th className="numeric">Cobertura</th>
-                <th className="numeric">Un. 30d</th>
-                <th className="numeric">Receita 30d</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.rows.map((row) => (
-                <tr key={`${row.sku}-${row.product_name}`}>
-                  <td>
-                    <span className={`badge ${row.stock_signal ?? "atencao"}`}>
-                      {label(row.stock_signal)}
-                    </span>
-                  </td>
-                  <td>{sourceLabel(row.source)}</td>
-                  <td>{row.sku || "-"}</td>
-                  <td>
-                    <Link className="row-link" href={`/skus?source=${encodeURIComponent(row.source ?? "all")}&sku=${encodeURIComponent(row.sku ?? "")}`}>
-                      {row.product_name ?? "Sem nome"}
-                    </Link>
-                    <div className="row-subtitle">{row.status_label ?? "Sem status"}</div>
-                  </td>
-                  <td className="numeric">{stock(row.available_stock)}</td>
-                  <td className="numeric">{coverage(row.days_until_stockout)}</td>
-                  <td className="numeric">{count(row.units_30d)}</td>
-                  <td className="numeric">{money(row.revenue_30d)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <SortableTable
+          columns={[
+            { label: "Alerta" },
+            { label: "Fonte" },
+            { label: "SKU" },
+            { label: "Produto" },
+            { label: "Disponível", numeric: true },
+            { label: "Cobertura", numeric: true },
+            { label: "Un. 30d", numeric: true },
+            { label: "Receita 30d", numeric: true }
+          ]}
+          initialSort={5}
+          initialDir="asc"
+          rows={data.rows.map((row) => [
+            { text: label(row.stock_signal), sort: label(row.stock_signal), badge: `badge ${row.stock_signal ?? "atencao"}` },
+            { text: sourceLabel(row.source), sort: sourceLabel(row.source) },
+            { text: row.sku || "-", sort: row.sku ?? null },
+            {
+              text: row.product_name ?? "Sem nome",
+              sort: row.product_name ?? null,
+              href: `/skus?source=${encodeURIComponent(row.source ?? "all")}&sku=${encodeURIComponent(row.sku ?? "")}`,
+              subtitle: row.status_label ?? "Sem status"
+            },
+            { text: stock(row.available_stock), sort: row.available_stock ?? null },
+            { text: coverage(row.days_until_stockout), sort: row.days_until_stockout ?? null },
+            { text: count(row.units_30d), sort: row.units_30d ?? null },
+            { text: money(row.revenue_30d), sort: row.revenue_30d ?? null }
+          ])}
+        />
       </section>
-    </main>
+    </AppShell>
   );
 }

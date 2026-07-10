@@ -69,6 +69,7 @@ export function TaxDonut({
                 <span className="sw" style={{ background: s.color }} />
                 {s.label}
               </span>
+              <span className="val">{compactBRL(s.value)}</span>
               <span className="amt">{pct.toFixed(0)}%</span>
             </div>
           );
@@ -148,6 +149,8 @@ export function RevenueArea({ points }: { points: AreaPoint[] }) {
 
   const peakIdx = values.indexOf(Math.max(...values));
   const avg = values.reduce((s, v) => s + v, 0) / n;
+  const lastIdx = n - 1;
+  const midIdx = Math.floor((n - 1) / 2);
 
   return (
     <div className="area-chart">
@@ -162,15 +165,38 @@ export function RevenueArea({ points }: { points: AreaPoint[] }) {
           <line key={g} x1="0" y1={padTop + g * usableH} x2={W} y2={padTop + g * usableH} stroke="var(--line)" strokeWidth="1" />
         ))}
         <path d={areaPath} fill="url(#revArea)" />
+        {/* Linha de média tracejada — referência de leitura rápida */}
+        <line
+          x1="0"
+          y1={y(avg)}
+          x2={W}
+          y2={y(avg)}
+          stroke="var(--gold)"
+          strokeWidth="1.5"
+          strokeDasharray="6 5"
+          opacity="0.7"
+          vectorEffect="non-scaling-stroke"
+        />
         <path d={linePath} fill="none" stroke="var(--indigo)" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         <circle cx={x(peakIdx)} cy={y(values[peakIdx])} r="4" fill="var(--indigo)" stroke="var(--panel)" strokeWidth="2" />
+        {lastIdx !== peakIdx && (
+          <circle cx={x(lastIdx)} cy={y(values[lastIdx])} r="3.5" fill="var(--panel)" stroke="var(--indigo)" strokeWidth="2" />
+        )}
       </svg>
+      <div className="axis-row" aria-hidden="true">
+        <span>{points[0].label}</span>
+        {n > 2 ? <span>{points[midIdx].label}</span> : <span />}
+        <span>{points[lastIdx].label}</span>
+      </div>
       <div className="chart-legend">
         <span className="lg">
           <span className="sw" style={{ background: "var(--indigo)" }} /> Pico {points[peakIdx].label} · <b>{compactBRL(values[peakIdx])}</b>
         </span>
         <span className="lg">
-          <span className="sw" style={{ background: "var(--line-strong)" }} /> Média diária · <b>{compactBRL(avg)}</b>
+          <span className="sw sw-dash" style={{ borderColor: "var(--gold)" }} /> Média diária · <b>{compactBRL(avg)}</b>
+        </span>
+        <span className="lg">
+          <span className="sw sw-hollow" style={{ borderColor: "var(--indigo)" }} /> Último dia · <b>{compactBRL(values[lastIdx])}</b>
         </span>
       </div>
     </div>

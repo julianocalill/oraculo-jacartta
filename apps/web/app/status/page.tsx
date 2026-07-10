@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { requireCurrentUser } from "../../lib/auth/session";
+import { AppShell } from "../components/app-shell";
 
 export const dynamic = "force-dynamic";
 
@@ -145,10 +145,9 @@ export default async function StatusPage() {
   const data = await loadStatus();
 
   return (
-    <main className="workspace single-workspace">
+    <AppShell>
       <header className="topbar">
         <div>
-          <Link href="/" className="back-link">← Analytics</Link>
           <h1>Status do sync</h1>
           <p>Saúde das integrações Olist · referência {data.today} (America/Sao_Paulo)</p>
         </div>
@@ -226,6 +225,6 @@ export default async function StatusPage() {
           </table>
         </div>
       </section>
-    </main>
+    </AppShell>
   );
 }

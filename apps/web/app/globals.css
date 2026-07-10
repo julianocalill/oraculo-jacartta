@@ -1936,3 +1936,55 @@ h2 {
   color: var(--faint);
   font-family: var(--mono);
 }
+
+/* Eixo x do gráfico de área + swatches especiais da legenda */
+.axis-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 10.5px;
+}
+
+.chart-legend .lg .sw-dash {
+  background: transparent !important;
+  height: 0;
+  border-top: 2px dashed var(--gold);
+  border-radius: 0;
+}
+
+.chart-legend .lg .sw-hollow {
+  background: transparent !important;
+  border: 2px solid var(--indigo);
+  border-radius: 50%;
+}
+
+.donut-legend .dl .val {
+  margin-left: auto;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.donut-legend .dl .amt {
+  min-width: 38px;
+  text-align: right;
+}
+
+/* Skeleton de carregamento entre navegações */
+.skeleton {
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--panel-soft) 25%, var(--line) 50%, var(--panel-soft) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}

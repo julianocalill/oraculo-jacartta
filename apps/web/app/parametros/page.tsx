@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
 import { requireCurrentUser } from "../../lib/auth/session";
+import { AppShell } from "../components/app-shell";
 
 export const dynamic = "force-dynamic";
 
@@ -266,10 +267,9 @@ export default async function ParametrosPage() {
   const data = await loadParametros();
 
   return (
-    <main className="workspace single-workspace">
+    <AppShell>
       <header className="topbar">
         <div>
-          <Link href="/" className="back-link">← Analytics</Link>
           <h1>Parâmetros</h1>
           <p>Dados manuais que não vêm da Olist ou APIs dos marketplaces</p>
         </div>
@@ -632,6 +632,6 @@ export default async function ParametrosPage() {
           </table>
         </div>
       </section>
-    </main>
+    </AppShell>
   );
 }

@@ -66,8 +66,12 @@ function marginSignalClass(value: string | null | undefined) {
   return "signal-muted";
 }
 
-function ticket(row: SkuTableRow) {
-  return n(row.revenue_30d) / Math.max(n(row.units_30d), 1);
+// Ticket médio só existe com unidades vendidas; sem unidades seria a própria
+// receita disfarçada de ticket, então devolve null ("-", ordena por último).
+function ticket(row: SkuTableRow): number | null {
+  const units = n(row.units_30d);
+  if (units <= 0) return null;
+  return n(row.revenue_30d) / units;
 }
 
 type SortKey =
@@ -181,7 +185,7 @@ export function SkuTable({ rows, source }: { rows: SkuTableRow[]; source: string
               <td>{row.status_label ?? "-"}</td>
               <td className="numeric">{money(row.revenue_30d)}</td>
               <td className="numeric">{count(row.units_30d)}</td>
-              <td className="numeric">{money(ticket(row))}</td>
+              <td className="numeric">{ticket(row) == null ? "-" : money(ticket(row))}</td>
               <td className="numeric">{percent(row.margin_rate_30d)}</td>
               <td className="numeric">{percent(row.roi_30d)}</td>
               <td className="numeric">{row.fiscalMarginRate == null ? "-" : percent(row.fiscalMarginRate)}</td>

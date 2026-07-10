@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
 import { requireCurrentUser } from "../../lib/auth/session";
+import { AppShell } from "../components/app-shell";
 
 export const dynamic = "force-dynamic";
 
@@ -302,10 +302,9 @@ export default async function PedidosPage({
   const max = Math.max(...chart.map((row) => n(row.orders_count)), 1);
 
   return (
-    <main className="workspace single-workspace">
+    <AppShell>
       <header className="topbar">
         <div>
-          <Link href="/" className="back-link">← Analytics</Link>
           <h1>Pedidos</h1>
           <p>
             {count(data.windowOrders)} pedidos no período · {count(data.totalOrders)} na base
@@ -412,6 +411,6 @@ export default async function PedidosPage({
           </div>
         </article>
       </section>
-    </main>
+    </AppShell>
   );
 }

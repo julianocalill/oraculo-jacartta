@@ -86,7 +86,17 @@ export type FiscalChannelMetricRow = {
 function asNumber(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string") {
-    const normalized = value.replace(/\./g, "").replace(",", ".");
+    const trimmed = value.trim();
+    if (!trimmed) return 0;
+    // Vírgula presente = pt-BR (pontos são milhar); vários pontos idem.
+    // Um único ponto ("114009.73", numeric do Postgres) é decimal — tratar
+    // como milhar inflaria o valor em 100×.
+    const dots = (trimmed.match(/\./g) ?? []).length;
+    const normalized = trimmed.includes(",")
+      ? trimmed.replace(/\./g, "").replace(",", ".")
+      : dots > 1
+        ? trimmed.replace(/\./g, "")
+        : trimmed;
     const parsed = Number(normalized);
     return Number.isFinite(parsed) ? parsed : 0;
   }

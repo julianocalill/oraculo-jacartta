@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
 import { requireCurrentUser } from "../../lib/auth/session";
+import { AppShell } from "../components/app-shell";
+import { SortableTable } from "../components/sortable-table";
 
 export const dynamic = "force-dynamic";
 
@@ -119,10 +121,9 @@ export default async function CurvaDeEstoquePage({
     : `/curva-de-estoque/export?curva=${selectedCurve}`;
 
   return (
-    <main className="workspace single-workspace">
+    <AppShell>
       <header className="topbar">
         <div>
-          <Link href="/" className="back-link">← Analytics</Link>
           <h1>Curva de Estoque</h1>
           <p>Cobertura de estoque calculada por ritmo médio de vendas</p>
         </div>
@@ -244,51 +245,39 @@ export default async function CurvaDeEstoquePage({
           </div>
         </div>
 
-        <div className="table-wrap dense-table-wrap">
-          <table className="data-table dense-table">
-            <thead>
-              <tr>
-                <th>Produto</th>
-                <th className="numeric">Estoque Atual</th>
-                <th className="numeric">Média Diária</th>
-                <th className="numeric">Média Mensal</th>
-                <th className="numeric">Meses de Cobertura</th>
-                <th className="numeric">Curva</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleItems.length === 0 ? (
-                <tr>
-                  <td colSpan={6}>
-                    <p className="empty-state table-empty">Nenhum produto com estoque disponível encontrado.</p>
-                  </td>
-                </tr>
-              ) : (
-                visibleItems.map((item) => (
-                  <tr key={`${item.product_id}-${item.sku ?? item.product_name}`}>
-                    <td>
-                      <Link className="row-link" href={`/skus?source=olist&sku=${encodeURIComponent(item.sku ?? "")}`}>
-                        {item.product_name ?? "Sem nome"}
-                      </Link>
-                    </td>
-                    <td className="numeric">{stock(item.available_stock)}</td>
-                    <td className="numeric">{n(item.average_daily_sales) <= 0 ? "Sem venda" : decimal(item.average_daily_sales, 2)}</td>
-                    <td className="numeric">{n(item.average_monthly_sales) <= 0 ? "Sem venda" : decimal(item.average_monthly_sales, 2)}</td>
-                    <td className="numeric">{coverageLabel(item.coverage_months)}</td>
-                    <td className="numeric">
-                      {item.curve === "sem_venda" ? (
-                        <span className="status-pill signal-muted">Sem venda</span>
-                      ) : (
-                        <span className={`curve-badge curve-${item.curve.toLowerCase()}`}>{item.curve}</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <SortableTable
+          columns={[
+            { label: "Produto" },
+            { label: "Estoque Atual", numeric: true },
+            { label: "Média Diária", numeric: true },
+            { label: "Média Mensal", numeric: true },
+            { label: "Meses de Cobertura", numeric: true },
+            { label: "Curva", numeric: true }
+          ]}
+          initialSort={4}
+          initialDir="asc"
+          rows={visibleItems.map((item) => [
+            {
+              text: item.product_name ?? "Sem nome",
+              sort: item.product_name ?? null,
+              href: `/skus?source=olist&sku=${encodeURIComponent(item.sku ?? "")}`
+            },
+            { text: stock(item.available_stock), sort: item.available_stock ?? null },
+            {
+              text: n(item.average_daily_sales) <= 0 ? "Sem venda" : decimal(item.average_daily_sales, 2),
+              sort: n(item.average_daily_sales) <= 0 ? null : item.average_daily_sales
+            },
+            {
+              text: n(item.average_monthly_sales) <= 0 ? "Sem venda" : decimal(item.average_monthly_sales, 2),
+              sort: n(item.average_monthly_sales) <= 0 ? null : item.average_monthly_sales
+            },
+            { text: coverageLabel(item.coverage_months), sort: item.coverage_months ?? null },
+            item.curve === "sem_venda"
+              ? { text: "Sem venda", sort: "zz_sem_venda", badge: "status-pill signal-muted" }
+              : { text: item.curve, sort: item.curve, badge: `curve-badge curve-${item.curve.toLowerCase()}` }
+          ])}
+        />
       </section>
-    </main>
+    </AppShell>
   );
 }

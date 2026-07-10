@@ -10,6 +10,7 @@ import Link from "next/link";
 import { requireCurrentUser } from "../lib/auth/session";
 import { createSupabaseUserClient } from "../lib/supabase/user";
 import { TaxDonut, MarginGauge, RevenueArea } from "./components/fiscal-charts";
+import { AppShell } from "./components/app-shell";
 
 export const dynamic = "force-dynamic";
 
@@ -285,7 +286,18 @@ function formatDateShort(value: string | null | undefined) {
 function parseMoney(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value !== "string") return 0;
-  const normalized = value.replace(/\./g, "").replace(",", ".");
+  const trimmed = value.trim();
+  if (!trimmed) return 0;
+  // Com vírgula ("1.234,56") é pt-BR: pontos são milhar. Sem vírgula mas com
+  // vários pontos ("1.234.567") também. Um único ponto ("1234.56", formato do
+  // Postgres/APIs) é decimal — o parser antigo removia esse ponto e inflava
+  // o valor em 100×.
+  const dots = (trimmed.match(/\./g) ?? []).length;
+  const normalized = trimmed.includes(",")
+    ? trimmed.replace(/\./g, "").replace(",", ".")
+    : dots > 1
+      ? trimmed.replace(/\./g, "")
+      : trimmed;
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
 }
@@ -664,42 +676,16 @@ export default async function HomePage({
   const filterQuery = `?start=${encodeURIComponent(filters.start)}&end=${encodeURIComponent(filters.end)}`;
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <span className="brand-mark">O</span>
-          <div>
-            <strong>Oraculo</strong>
-            <small>Multi-channel BI</small>
-          </div>
-        </div>
-
-        <nav className="nav-group" aria-label="Principal">
-          <span>Principal</span>
-          <Link href="/" className="nav-active">Analytics</Link>
-          <Link href={`/pedidos${filterQuery}`}>Pedidos</Link>
-          <Link href="/skus">SKUs</Link>
-          <Link href="/curva-de-venda">Curva de Venda</Link>
-          <Link href="/curva-de-estoque">Curva de Estoque</Link>
-          <Link href="/alertas">Alertas <b>{formatCount(data.actionableWatchlist.length)}</b></Link>
-          <Link href="/parametros">Parâmetros</Link>
-        </nav>
-
-        <nav className="nav-group nav-admin" aria-label="Admin">
-          <span>Admin</span>
-          <Link href="/usuarios">Usuários</Link>
-          <Link href="/status">Status sync</Link>
-          <Link href="/parametros">Config</Link>
-        </nav>
-
-        <div className="sidebar-footer">
+    <AppShell
+      alertCount={data.actionableWatchlist.length}
+      footer={
+        <>
           <span className="sync-dot">•••••</span>
           <small>Período ativo</small>
           <strong>{filters.start} a {filters.end}</strong>
-        </div>
-      </aside>
-
-      <main className="workspace">
+        </>
+      }
+    >
         <header className="topbar">
           <div>
             <h1>Faturamento fiscal</h1>
@@ -1137,7 +1123,6 @@ export default async function HomePage({
             </div>
           </article>
         </section>
-      </main>
-    </div>
+    </AppShell>
   );
 }
