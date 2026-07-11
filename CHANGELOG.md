@@ -2,6 +2,16 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-11] — Calculadora de Precificação como feature do Oráculo
+
+Porte fiel da calculadora.oliverhome.com.br para dentro do Oráculo (`/calculadora`, novo item na sidebar). Mantém as regras **próprias** da calculadora (norte rápido de precificação): modos por markup e por preço, kits, taxas editáveis (ICMS MG, DIFAL, PIS/COFINS sobre valor agregado, ads, custo fixo, reembolso) e faixas de comissão editáveis com restauração de padrão. **Não usa nem altera o motor fiscal do Oráculo** — nota explícita na página. Status Rentável / Margem baixa (<10%) / Prejuízo.
+
+Validação: teste de paridade extraiu o `calculate()` do app.js original e comparou 7 casos (bordas de faixa, kit, modo preço, custo zero) — todos idênticos, incluindo o exemplo validado do vault (lucro R$ 12,94 / margem 10,35%).
+
+**Commit:** `ffa1edb`. **Deploy:** `dev40aeho`. O site original continua no ar na VPS, intocado.
+
+---
+
 ## [2026-07-10 noite] — Consistência de dados entre páginas
 
 **Badge de alertas verdadeiro e global:** o badge da sidebar mostrava no máximo 8 (derivado das 8 linhas que o dashboard buscava) e só aparecia no dashboard; o /alertas contava as 120 linhas da página. Agora `loadActionableAlertCount()` faz contagem exata (~1,9k acionáveis) e toda página passa ao AppShell; cards do /alertas usam contagens exatas da base inteira e a tabela declara "mostrando os 120 mais urgentes de N".
