@@ -9,6 +9,7 @@ const MAIN_LINKS = [
   { href: "/skus", label: "SKUs" },
   { href: "/curva-de-venda", label: "Curva de Venda" },
   { href: "/curva-de-estoque", label: "Curva de Estoque" },
+  { href: "/calculadora", label: "Calculadora" },
   { href: "/alertas", label: "Alertas" },
   { href: "/parametros", label: "Parâmetros" }
 ];
