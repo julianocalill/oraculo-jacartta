@@ -1,9 +1,32 @@
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+
+export const viewport: Viewport = {
+  themeColor: "#0b0e15"
+};
 
 export const metadata: Metadata = {
-  title: "Oraculo | Painel Operacional",
-  description: "Painel operacional do Oraculo com dados reais do Supabase"
+  title: {
+    default: "Oráculo · BI multicanal",
+    template: "%s · Oráculo"
+  },
+  description:
+    "Oráculo — plataforma de inteligência de vendas do Grupo Jacartta. Receita fiscal, margem, ROI e estoque multicanal em tempo real.",
+  applicationName: "Oráculo",
+  openGraph: {
+    title: "Oráculo · BI multicanal",
+    description:
+      "Inteligência de vendas do Grupo Jacartta: receita fiscal, margem, ROI e estoque multicanal.",
+    siteName: "Oráculo",
+    locale: "pt_BR",
+    type: "website",
+    images: [{ url: "/brand/oraculo-og.png", width: 1200, height: 630, alt: "Oráculo" }]
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Oráculo · BI multicanal",
+    images: ["/brand/oraculo-og.png"]
+  }
 };
 
 export default function RootLayout({

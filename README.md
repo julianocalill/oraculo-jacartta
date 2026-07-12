@@ -1,6 +1,8 @@
-# Oraculo
+# Oráculo
 
-Monorepo base for the Oraculo product.
+<img src="apps/web/public/brand/oraculo-logo-dark.svg" alt="Oráculo" height="52">
+
+Monorepo base for the Oráculo product. Visual identity: [docs/brand-oraculo.md](docs/brand-oraculo.md).
 
 ## Purpose
 

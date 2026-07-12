@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { SidebarNav } from "./sidebar-nav";
+import { BrandMark } from "./brand-mark";
 
 // Shell padrão das páginas autenticadas: sidebar fixa + área de trabalho.
 // O destaque do link ativo é resolvido no cliente via usePathname (SidebarNav).
@@ -16,10 +17,10 @@ export function AppShell({
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-mark">O</span>
+          <BrandMark />
           <div>
-            <strong>Oraculo</strong>
-            <small>Multi-channel BI</small>
+            <strong>Oráculo</strong>
+            <small>BI multicanal</small>
           </div>
         </div>
 

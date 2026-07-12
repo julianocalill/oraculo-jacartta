@@ -7,6 +7,8 @@ import {
   setAuthCookies
 } from "../../lib/auth/session";
 
+import { BrandMark } from "../components/brand-mark";
+
 export const dynamic = "force-dynamic";
 
 type LoginSearchParams = {
@@ -89,7 +91,7 @@ export default async function LoginPage({
     return (
       <main className="login-shell">
         <section className="login-card">
-          <span className="brand-mark">O</span>
+          <BrandMark size={44} />
           <h1>Você já está conectado</h1>
           <p>{user.email}</p>
           <form action={logout}>
@@ -103,8 +105,8 @@ export default async function LoginPage({
   return (
     <main className="login-shell">
       <section className="login-card">
-        <span className="brand-mark">O</span>
-        <h1>{hasUsers ? "Entrar no Oraculo" : "Criar primeiro administrador"}</h1>
+        <BrandMark size={44} />
+        <h1>{hasUsers ? "Entrar no Oráculo" : "Criar primeiro administrador"}</h1>
         <p>{hasUsers ? "Acesse o painel operacional." : "Nenhum usuário existe ainda. Crie o primeiro admin."}</p>
 
         {params?.error ? <strong className="form-error">{params.error}</strong> : null}

@@ -2,6 +2,21 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-12] — Identidade visual: logo, favicon e marca
+
+Nova identidade do Oráculo: logomark de **orbe/íris dourado com gema facetada (◆) no centro** — amarra ao motivo de losango dos acentos e da paleta joia. Legível de 16px a grandes formatos.
+
+- **Favicon** (`app/icon.svg` + `favicon.ico` 16/32/48/64 + `apple-icon.png` 180) — abas e atalhos passam a exibir a marca.
+- **Logomark no app** via componente `BrandMark` (SVG inline) — substitui o "O" na sidebar e no login; fonte única, idêntica ao favicon.
+- **Kit de marca** em `public/brand/`: mark isolado (SVG/PNG), logo horizontal dark e claro, e imagem social 1200×630 (`oraculo-og.png`) para preview de link.
+- **Metadata**: título "Oráculo · BI multicanal", descrição, Open Graph/Twitter com a imagem social, theme-color.
+- Nome padronizado para **Oráculo** (com acento) e subtítulo "BI multicanal".
+- Guia de identidade em `docs/brand-oraculo.md`.
+
+**Commit:** __COMMIT__. **Deploy:** __DEPLOY__.
+
+---
+
 ## [2026-07-12] — Dashboard com hero cards (layout aprovado)
 
 A produção agora abre com o layout do mockup aprovado: header "Visão geral" + pills (sync fiscal saudável, período, botão Exportar ouro) e **5 hero cards** — Receita fiscal, Lucro fiscal, Margem, ROI e Cobertura — com valor grande em mono, chip de variação (▲/▼) e sparkline. Tudo com dado real: variação da receita compara com o **mesmo trecho** do mês anterior (12 dias vs 12 dias); lucro/margem/ROI/cobertura usam o histórico de capturas horárias do snapshot (última de cada dia). Deltas somem com elegância sem base de comparação; em janela custom os históricos ficam ocultos. Nova rota `/export-fiscal` (CSV da receita diária). Migration `20260712100000` libera leitura do histórico de snapshots pro role authenticated. Seção de margem perdeu os cards duplicados (Lucro/Margem/ROI agora só no hero).

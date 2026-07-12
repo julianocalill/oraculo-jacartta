@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 232 56" role="img" aria-label="Oráculo">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e3a93a"/>
+      <stop offset="1" stop-color="#c8901f"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(4 4)">
+    <circle cx="24" cy="24" r="14.4" fill="none" stroke="url(#gold)" stroke-width="3.1"/>
+    <path d="M24 15 L32.6 24 L24 33 L15.4 24 Z" fill="url(#gold)"/>
+    <path d="M24 15 L32.6 24 L24 24 Z" fill="#7a5410" opacity="0.22"/>
+  </g>
+  <text x="64" y="30" font-family="'Aptos','Segoe UI',system-ui,-apple-system,sans-serif" font-size="27" font-weight="800" letter-spacing="-0.5" fill="#1f2a44">Oráculo</text>
+  <text x="65" y="46" font-family="'Aptos','Segoe UI',system-ui,-apple-system,sans-serif" font-size="9.5" font-weight="700" letter-spacing="2.6" fill="#5a6472">BI MULTICANAL</text>
+</svg>
