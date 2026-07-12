@@ -9,7 +9,7 @@ import {
 import Link from "next/link";
 import { requireCurrentUser } from "../lib/auth/session";
 import { createSupabaseUserClient } from "../lib/supabase/user";
-import { TaxDonut, MarginGauge, RevenueArea } from "./components/fiscal-charts";
+import { TaxDonut, MarginGauge, RevenueArea, Sparkline, compactNumberBR } from "./components/fiscal-charts";
 import { AppShell } from "./components/app-shell";
 import { loadActionableAlertCount } from "../lib/alert-count";
 
@@ -563,6 +563,81 @@ async function loadFiscalChannels(
   }
 }
 
+type MarginHistoryPoint = {
+  day: string;
+  profit: number;
+  marginRate: number | null;
+  roi: number | null;
+  coveragePct: number;
+};
+
+// Última captura de cada dia do snapshot de margem (refresh horário) — alimenta
+// o sparkline e a variação dos hero cards. Em erro, some o extra, não a página.
+async function loadMarginHistory(
+  supabase: ReturnType<typeof createSupabaseAdminClient>
+): Promise<MarginHistoryPoint[]> {
+  try {
+    const { data, error } = await supabase
+      .from("oraculo_fiscal_snapshots")
+      .select(
+        "captured_at, profit:payload->>total_profit, margin:payload->>margin_rate, roi:payload->>roi, coverage:payload->>coverage_cost_revenue_pct"
+      )
+      .eq("snapshot_key", "fiscal_margin_summary")
+      .order("captured_at", { ascending: true })
+      .limit(500);
+    if (error) throw error;
+
+    const byDay = new Map<string, MarginHistoryPoint>();
+    for (const row of (data ?? []) as Array<Record<string, string | null>>) {
+      const day = String(row.captured_at ?? "").slice(0, 10);
+      if (!day) continue;
+      byDay.set(day, {
+        day,
+        profit: asMetricNumber(row.profit),
+        marginRate: row.margin == null ? null : asMetricNumber(row.margin),
+        roi: row.roi == null ? null : asMetricNumber(row.roi),
+        coveragePct: asMetricNumber(row.coverage)
+      });
+    }
+    return [...byDay.values()];
+  } catch (err) {
+    console.error("loadMarginHistory failed; hiding hero sparklines", err);
+    return [];
+  }
+}
+
+// Receita fiscal do mês anterior CORTADA no mesmo dia do mês (comparação justa:
+// 12 dias de julho vs 12 dias de junho, não vs junho inteiro).
+async function loadPreviousMonthRevenue(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  filters: DashboardFilters,
+  cutDay: number
+): Promise<number | null> {
+  try {
+    const [year, month] = filters.start.split("-").map(Number);
+    const prevYear = month === 1 ? year - 1 : year;
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const lastDay = new Date(Date.UTC(prevYear, prevMonth, 0)).getUTCDate();
+    const endDay = Math.min(Math.max(cutDay, 1), lastDay);
+    const mm = String(prevMonth).padStart(2, "0");
+    const start = `${prevYear}-${mm}-01`;
+    const end = `${prevYear}-${mm}-${String(endDay).padStart(2, "0")}`;
+
+    const { data, error } = await supabase
+      .from("oraculo_fiscal_daily_revenue")
+      .select("billed_revenue")
+      .gte("issued_date", start)
+      .lte("issued_date", end);
+    if (error) throw error;
+    const rows = (data ?? []) as Array<{ billed_revenue: number | string | null }>;
+    if (rows.length === 0) return null;
+    return rows.reduce((sum, row) => sum + asMetricNumber(row.billed_revenue), 0);
+  } catch (err) {
+    console.error("loadPreviousMonthRevenue failed; hiding revenue delta", err);
+    return null;
+  }
+}
+
 async function loadDashboard(filters: DashboardFilters) {
   const supabase = await createSupabaseUserClient();
   let dailyQuery = supabase
@@ -586,6 +661,7 @@ async function loadDashboard(filters: DashboardFilters) {
     fiscalChannelResponse,
     fiscalCoverageResponse,
     fiscalMargin,
+    marginHistory,
   ] = await Promise.all([
     dailyQuery,
     loadUnifiedChannelRows(supabase, filters),
@@ -616,12 +692,18 @@ async function loadDashboard(filters: DashboardFilters) {
       .order("issued_date", { ascending: false }),
     loadFiscalChannels(supabase, filters),
     loadFiscalSkuCoverageSnapshot(supabase),
-    loadFiscalMargin(supabase, filters)
+    loadFiscalMargin(supabase, filters),
+    loadMarginHistory(supabase)
   ]);
 
   const daily = (dailyResponse.data ?? []) as DailySale[];
   const fiscalDaily = (fiscalDailyResponse.data ?? []) as FiscalDailyRevenue[];
   const fiscalDailyChart = fiscalDaily.slice().reverse();
+
+  // Variação da receita vs mesmo trecho do mês anterior (corte no último dia com dado).
+  const lastDataDay = fiscalDailyChart.at(-1)?.issued_date;
+  const cutDay = lastDataDay ? Number(lastDataDay.slice(8, 10)) : 31;
+  const previousMonthRevenue = await loadPreviousMonthRevenue(supabase, filters, cutDay);
   const maxFiscalDailyRevenue = Math.max(...fiscalDailyChart.map((row) => asMetricNumber(row.billed_revenue)), 1);
   const fiscalChannels = (fiscalChannelResponse as FiscalChannelMetric[]).slice().sort(
     (left, right) => asMetricNumber(right.billed_revenue) - asMetricNumber(left.billed_revenue)
@@ -717,6 +799,9 @@ async function loadDashboard(filters: DashboardFilters) {
     fiscalMetrics,
     fiscalCoverage,
     fiscalMargin,
+    marginHistory,
+    previousMonthRevenue,
+    lastDataDay,
     monthOrders,
     monthUnits,
     monthTicket: monthOrders > 0 ? monthEffective / monthOrders : null,
@@ -746,6 +831,111 @@ export default async function HomePage({
   const [data, alertCount] = await Promise.all([loadDashboard(filters), loadActionableAlertCount()]);
   const filterQuery = `?start=${encodeURIComponent(filters.start)}&end=${encodeURIComponent(filters.end)}`;
 
+  // ------- Hero cards (layout aprovado): valor grande + variação + sparkline -------
+  const todaySp = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+  const lastDataDate = data.lastDataDay ?? null;
+  const syncHealthy = lastDataDate === todaySp;
+
+  // Histórico de snapshots é sempre do mês corrente; em janela custom, esconde.
+  const history = isCurrentMonthWindow(filters) ? data.marginHistory : [];
+  const hFirst = history[0];
+  const hLast = history[history.length - 1];
+  const canHistoryDelta = history.length >= 2 && hFirst != null && hLast != null;
+  const historyTitle = hFirst ? `desde ${formatDateShort(hFirst.day)}` : "";
+
+  type HeroDelta = { direction: "up" | "down"; text: string; title: string } | null;
+
+  const relativeDelta = (current: number, previous: number | null, title: string): HeroDelta => {
+    if (previous == null || previous <= 0) return null;
+    const diff = (current - previous) / previous;
+    return {
+      direction: diff >= 0 ? "up" : "down",
+      text: `${formatDecimal(Math.abs(diff) * 100, 1)}%`,
+      title
+    };
+  };
+
+  const ppDelta = (current: number | null, previous: number | null, scale: number): HeroDelta => {
+    if (!canHistoryDelta || current == null || previous == null) return null;
+    const diff = (current - previous) * scale;
+    return {
+      direction: diff >= 0 ? "up" : "down",
+      text: `${formatDecimal(Math.abs(diff), 1)} p.p.`,
+      title: historyTitle
+    };
+  };
+
+  const fm = data.fiscalMargin;
+  const roiDelta: HeroDelta =
+    canHistoryDelta && hFirst.roi != null && hLast.roi != null
+      ? {
+          direction: hLast.roi >= hFirst.roi ? "up" : "down",
+          text: `${formatDecimal(Math.abs(hLast.roi - hFirst.roi), 2)}×`,
+          title: historyTitle
+        }
+      : null;
+
+  const heroCards: Array<{
+    label: string;
+    accentClass: string;
+    prefix?: string;
+    value: string;
+    suffix?: string;
+    delta: HeroDelta;
+    spark: number[];
+    sparkColor: string;
+  }> = [
+    {
+      label: "Receita fiscal",
+      accentClass: "accent-blue",
+      prefix: "R$",
+      value: compactNumberBR(data.fiscalMetrics.billedRevenue),
+      delta: relativeDelta(
+        data.fiscalMetrics.billedRevenue,
+        data.previousMonthRevenue,
+        "vs mesmo trecho do mês anterior"
+      ),
+      spark: data.fiscalDailyChart.map((row) => asMetricNumber(row.billed_revenue)),
+      sparkColor: "var(--indigo)"
+    },
+    {
+      label: "Lucro fiscal",
+      accentClass: "accent-emerald",
+      prefix: "R$",
+      value: compactNumberBR(fm.totalProfit),
+      delta: canHistoryDelta && hFirst.profit > 0 ? relativeDelta(hLast.profit, hFirst.profit, historyTitle) : null,
+      spark: history.map((point) => point.profit),
+      sparkColor: "var(--emerald)"
+    },
+    {
+      label: "Margem fiscal",
+      accentClass: "accent-yellow",
+      value: fm.marginRate == null ? "-" : formatDecimal(fm.marginRate * 100, 1),
+      suffix: fm.marginRate == null ? undefined : "%",
+      delta: ppDelta(hLast?.marginRate ?? null, hFirst?.marginRate ?? null, 100),
+      spark: history.map((point) => (point.marginRate ?? 0) * 100),
+      sparkColor: "var(--gold)"
+    },
+    {
+      label: "ROI fiscal",
+      accentClass: "accent-violet",
+      value: fm.roi == null ? "-" : formatDecimal(fm.roi, 2),
+      suffix: fm.roi == null ? undefined : "×",
+      delta: roiDelta,
+      spark: history.map((point) => point.roi ?? 0),
+      sparkColor: "var(--violet)"
+    },
+    {
+      label: "Cobertura c/ custo",
+      accentClass: "accent-cyan",
+      value: formatDecimal(fm.coverageCostRevenuePct, 1),
+      suffix: "%",
+      delta: ppDelta(hLast?.coveragePct ?? null, hFirst?.coveragePct ?? null, 1),
+      spark: history.map((point) => point.coveragePct),
+      sparkColor: "var(--cyan)"
+    }
+  ];
+
   return (
     <AppShell
       alertCount={alertCount}
@@ -759,11 +949,18 @@ export default async function HomePage({
     >
         <header className="topbar">
           <div>
-            <h1>Faturamento fiscal</h1>
-            <p>
-              {formatMonthYearFromDate(filters.start)} por NF faturada válida · {formatCount(data.fiscalMetrics.invoicesCount)} NFs emitidas
-              {data.fiscalDailyChart.length > 0 ? ` · dados até ${formatDateShort(data.fiscalDailyChart.at(-1)?.issued_date)}` : ""}
-            </p>
+            <h1>Visão geral</h1>
+            <p>Margem e ROI fiscais · {formatMonthYearFromDate(filters.start)} · regras Jacartta (Lucro Real com RET)</p>
+            <div className="pill-row">
+              <span className={`pill sync-pill ${syncHealthy ? "is-ok" : "is-warn"}`}>
+                <i aria-hidden="true" />
+                {syncHealthy ? "Sync fiscal saudável" : `Dados até ${formatDateShort(lastDataDate)}`}
+              </span>
+              <span className="pill">{formatMonthYearFromDate(filters.start)}</span>
+              <a className="pill pill-gold" href={`/export-fiscal?start=${filters.start}&end=${filters.end}`}>
+                Exportar
+              </a>
+            </div>
           </div>
           <form className="filter-row filter-form" method="get">
             <label>
@@ -777,6 +974,28 @@ export default async function HomePage({
             <button type="submit">Aplicar</button>
           </form>
         </header>
+
+        <section className="hero-grid">
+          {heroCards.map((card) => (
+            <article className={`hero-metric ${card.accentClass}`} key={card.label}>
+              <span className="hero-diamond" aria-hidden="true">◆</span>
+              <span className="label">{card.label}</span>
+              <strong>
+                {card.prefix ? <small>{card.prefix}</small> : null}
+                {card.value}
+                {card.suffix ? <small>{card.suffix}</small> : null}
+              </strong>
+              {card.delta ? (
+                <span className={`hero-delta ${card.delta.direction}`} title={card.delta.title}>
+                  {card.delta.direction === "up" ? "▲" : "▼"} {card.delta.text}
+                </span>
+              ) : (
+                <span className="hero-delta is-muted">—</span>
+              )}
+              {card.spark.length >= 2 ? <Sparkline values={card.spark} color={card.sparkColor} /> : null}
+            </article>
+          ))}
+        </section>
 
         <section className="dashboard-section">
           <div className="section-head section-row">
@@ -891,21 +1110,6 @@ export default async function HomePage({
               <span className="label">Impostos</span>
               <strong>{formatCurrency(data.fiscalMargin.totalTaxes)}</strong>
               <small>ICMS + PIS/COFINS + DIFAL</small>
-            </div>
-            <div className="metric accent-emerald">
-              <span className="label">Lucro fiscal</span>
-              <strong>{formatCurrency(data.fiscalMargin.totalProfit)}</strong>
-              <small>Receita − custo − impostos</small>
-            </div>
-            <div className="metric accent-yellow">
-              <span className="label">Margem fiscal</span>
-              <strong>{data.fiscalMargin.marginRate == null ? "-" : `${formatDecimal(data.fiscalMargin.marginRate * 100, 1)}%`}</strong>
-              <small>Lucro / receita coberta</small>
-            </div>
-            <div className="metric accent-violet">
-              <span className="label">ROI fiscal</span>
-              <strong>{data.fiscalMargin.roi == null ? "-" : `${formatDecimal(data.fiscalMargin.roi * 100, 1)}%`}</strong>
-              <small>Lucro / custo</small>
             </div>
           </div>
           <div className="fiscal-viz-row">

@@ -8,6 +8,43 @@ function compactBRL(value: number): string {
   return `R$ ${Math.round(value)}`;
 }
 
+// Versão sem prefixo, para os hero cards ("2,74M" / "399,9k").
+export function compactNumberBR(value: number): string {
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(2).replace(".", ",")}M`;
+  if (abs >= 1_000) return `${(value / 1_000).toFixed(1).replace(".", ",")}k`;
+  return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(value);
+}
+
+/* ---------------- Sparkline (hero cards) ---------------- */
+
+export function Sparkline({ values, color }: { values: number[]; color: string }) {
+  if (values.length < 2) return null;
+  const W = 120;
+  const H = 34;
+  const pad = 3;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const x = (i: number) => pad + (i / (values.length - 1)) * (W - pad * 2);
+  const y = (v: number) => pad + (1 - (v - min) / span) * (H - pad * 2);
+  const points = values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+
+  return (
+    <svg className="hero-spark" viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
+      <polyline
+        points={points}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
+
 /* ---------------- Donut de composição tributária ---------------- */
 
 type DonutSlice = { label: string; value: number; color: string };
