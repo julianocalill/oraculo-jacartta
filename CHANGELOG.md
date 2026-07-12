@@ -13,7 +13,7 @@ Nova identidade do Oráculo: logomark de **orbe/íris dourado com gema facetada 
 - Nome padronizado para **Oráculo** (com acento) e subtítulo "BI multicanal".
 - Guia de identidade em `docs/brand-oraculo.md`.
 
-**Commit:** `5bc3d28`. **Deploy:** `oraculo-jacartta-web`.
+**Commit:** `5bc3d28` (+ `9969492` middleware). **Deploy:** `dtky866qf`.
 
 ---
 
