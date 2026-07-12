@@ -9,7 +9,7 @@ import {
 import Link from "next/link";
 import { requireCurrentUser } from "../lib/auth/session";
 import { createSupabaseUserClient } from "../lib/supabase/user";
-import { TaxDonut, MarginGauge, RevenueArea, Sparkline, compactNumberBR } from "./components/fiscal-charts";
+import { TaxDonut, MarginGauge, RevenueArea, Sparkline } from "./components/fiscal-charts";
 import { AppShell } from "./components/app-shell";
 import { loadActionableAlertCount } from "../lib/alert-count";
 
@@ -569,6 +569,9 @@ type MarginHistoryPoint = {
   marginRate: number | null;
   roi: number | null;
   coveragePct: number;
+  revenueWithCost: number;
+  cost: number;
+  taxes: number;
 };
 
 // Última captura de cada dia do snapshot de margem (refresh horário) — alimenta
@@ -580,7 +583,7 @@ async function loadMarginHistory(
     const { data, error } = await supabase
       .from("oraculo_fiscal_snapshots")
       .select(
-        "captured_at, profit:payload->>total_profit, margin:payload->>margin_rate, roi:payload->>roi, coverage:payload->>coverage_cost_revenue_pct"
+        "captured_at, profit:payload->>total_profit, margin:payload->>margin_rate, roi:payload->>roi, coverage:payload->>coverage_cost_revenue_pct, revenueWithCost:payload->>revenue_with_cost, cost:payload->>total_cost, taxes:payload->>total_taxes"
       )
       .eq("snapshot_key", "fiscal_margin_summary")
       .order("captured_at", { ascending: true })
@@ -596,7 +599,10 @@ async function loadMarginHistory(
         profit: asMetricNumber(row.profit),
         marginRate: row.margin == null ? null : asMetricNumber(row.margin),
         roi: row.roi == null ? null : asMetricNumber(row.roi),
-        coveragePct: asMetricNumber(row.coverage)
+        coveragePct: asMetricNumber(row.coverage),
+        revenueWithCost: asMetricNumber(row.revenueWithCost),
+        cost: asMetricNumber(row.cost),
+        taxes: asMetricNumber(row.taxes)
       });
     }
     return [...byDay.values()];
@@ -606,13 +612,13 @@ async function loadMarginHistory(
   }
 }
 
-// Receita fiscal do mês anterior CORTADA no mesmo dia do mês (comparação justa:
+// Totais fiscais do mês anterior CORTADOS no mesmo dia do mês (comparação justa:
 // 12 dias de julho vs 12 dias de junho, não vs junho inteiro).
-async function loadPreviousMonthRevenue(
+async function loadPreviousMonthTotals(
   supabase: ReturnType<typeof createSupabaseAdminClient>,
   filters: DashboardFilters,
   cutDay: number
-): Promise<number | null> {
+): Promise<{ revenue: number; invoices: number } | null> {
   try {
     const [year, month] = filters.start.split("-").map(Number);
     const prevYear = month === 1 ? year - 1 : year;
@@ -625,17 +631,70 @@ async function loadPreviousMonthRevenue(
 
     const { data, error } = await supabase
       .from("oraculo_fiscal_daily_revenue")
-      .select("billed_revenue")
+      .select("billed_revenue, invoices_count")
       .gte("issued_date", start)
       .lte("issued_date", end);
     if (error) throw error;
-    const rows = (data ?? []) as Array<{ billed_revenue: number | string | null }>;
+    const rows = (data ?? []) as Array<{ billed_revenue: number | string | null; invoices_count: number | string | null }>;
     if (rows.length === 0) return null;
-    return rows.reduce((sum, row) => sum + asMetricNumber(row.billed_revenue), 0);
+    return {
+      revenue: rows.reduce((sum, row) => sum + asMetricNumber(row.billed_revenue), 0),
+      invoices: rows.reduce((sum, row) => sum + asMetricNumber(row.invoices_count), 0)
+    };
   } catch (err) {
-    console.error("loadPreviousMonthRevenue failed; hiding revenue delta", err);
+    console.error("loadPreviousMonthTotals failed; hiding deltas", err);
     return null;
   }
+}
+
+type MetricDelta = { direction: "up" | "down"; text: string; title: string; invert?: boolean } | null;
+
+// Card de métrica com o design aprovado: valor grande em mono, chip de variação
+// (▲/▼) e curva de crescimento (sparkline) quando há série real por trás.
+function MetricCard({
+  accent,
+  href,
+  label,
+  value,
+  caption,
+  delta,
+  spark,
+  sparkColor
+}: {
+  accent: string;
+  href?: string;
+  label: string;
+  value: React.ReactNode;
+  caption: React.ReactNode;
+  delta?: MetricDelta;
+  spark?: number[];
+  sparkColor?: string;
+}) {
+  const body = (
+    <>
+      <span className="label">{label}</span>
+      <strong>{value}</strong>
+      {delta ? (
+        <span
+          className={`metric-delta ${delta.direction}${delta.invert ? " invert" : ""}`}
+          title={delta.title}
+        >
+          {delta.direction === "up" ? "▲" : "▼"} {delta.text}
+        </span>
+      ) : null}
+      <small>{caption}</small>
+      {spark && spark.length >= 2 && sparkColor ? <Sparkline values={spark} color={sparkColor} /> : null}
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link className={`metric metric-link ${accent}`} href={href}>
+        {body}
+      </Link>
+    );
+  }
+  return <div className={`metric ${accent}`}>{body}</div>;
 }
 
 async function loadDashboard(filters: DashboardFilters) {
@@ -703,7 +762,7 @@ async function loadDashboard(filters: DashboardFilters) {
   // Variação da receita vs mesmo trecho do mês anterior (corte no último dia com dado).
   const lastDataDay = fiscalDailyChart.at(-1)?.issued_date;
   const cutDay = lastDataDay ? Number(lastDataDay.slice(8, 10)) : 31;
-  const previousMonthRevenue = await loadPreviousMonthRevenue(supabase, filters, cutDay);
+  const previousMonthTotals = await loadPreviousMonthTotals(supabase, filters, cutDay);
   const maxFiscalDailyRevenue = Math.max(...fiscalDailyChart.map((row) => asMetricNumber(row.billed_revenue)), 1);
   const fiscalChannels = (fiscalChannelResponse as FiscalChannelMetric[]).slice().sort(
     (left, right) => asMetricNumber(right.billed_revenue) - asMetricNumber(left.billed_revenue)
@@ -800,7 +859,7 @@ async function loadDashboard(filters: DashboardFilters) {
     fiscalCoverage,
     fiscalMargin,
     marginHistory,
-    previousMonthRevenue,
+    previousMonthTotals,
     lastDataDay,
     monthOrders,
     monthUnits,
@@ -843,7 +902,7 @@ export default async function HomePage({
   const canHistoryDelta = history.length >= 2 && hFirst != null && hLast != null;
   const historyTitle = hFirst ? `desde ${formatDateShort(hFirst.day)}` : "";
 
-  type HeroDelta = { direction: "up" | "down"; text: string; title: string } | null;
+  type HeroDelta = MetricDelta;
 
   const relativeDelta = (current: number, previous: number | null, title: string): HeroDelta => {
     if (previous == null || previous <= 0) return null;
@@ -866,6 +925,17 @@ export default async function HomePage({
   };
 
   const fm = data.fiscalMargin;
+  const totals = data.previousMonthTotals;
+  const prevTicket = totals && totals.invoices > 0 ? totals.revenue / totals.invoices : null;
+
+  // Extras (variação + curva) aplicados aos cards JÁ EXISTENTES do dashboard.
+  const vsPrev = "vs mesmo trecho do mês anterior";
+  const revenueDelta = relativeDelta(data.fiscalMetrics.billedRevenue, totals?.revenue ?? null, vsPrev);
+  const invoicesDelta = relativeDelta(data.fiscalMetrics.invoicesCount, totals?.invoices ?? null, vsPrev);
+  const ticketDelta = relativeDelta(data.fiscalMetrics.averageInvoiceValue, prevTicket, vsPrev);
+  const profitDelta =
+    canHistoryDelta && hFirst.profit > 0 ? relativeDelta(hLast.profit, hFirst.profit, historyTitle) : null;
+  const marginDelta = ppDelta(hLast?.marginRate ?? null, hFirst?.marginRate ?? null, 100);
   const roiDelta: HeroDelta =
     canHistoryDelta && hFirst.roi != null && hLast.roi != null
       ? {
@@ -874,67 +944,26 @@ export default async function HomePage({
           title: historyTitle
         }
       : null;
+  const revenueWithCostDelta =
+    canHistoryDelta && hFirst.revenueWithCost > 0
+      ? relativeDelta(hLast.revenueWithCost, hFirst.revenueWithCost, historyTitle)
+      : null;
+  const costDelta =
+    canHistoryDelta && hFirst.cost > 0
+      ? { ...relativeDelta(hLast.cost, hFirst.cost, historyTitle)!, invert: true }
+      : null;
+  const taxesDelta =
+    canHistoryDelta && hFirst.taxes > 0
+      ? { ...relativeDelta(hLast.taxes, hFirst.taxes, historyTitle)!, invert: true }
+      : null;
 
-  const heroCards: Array<{
-    label: string;
-    accentClass: string;
-    prefix?: string;
-    value: string;
-    suffix?: string;
-    delta: HeroDelta;
-    spark: number[];
-    sparkColor: string;
-  }> = [
-    {
-      label: "Receita fiscal",
-      accentClass: "accent-blue",
-      prefix: "R$",
-      value: compactNumberBR(data.fiscalMetrics.billedRevenue),
-      delta: relativeDelta(
-        data.fiscalMetrics.billedRevenue,
-        data.previousMonthRevenue,
-        "vs mesmo trecho do mês anterior"
-      ),
-      spark: data.fiscalDailyChart.map((row) => asMetricNumber(row.billed_revenue)),
-      sparkColor: "var(--indigo)"
-    },
-    {
-      label: "Lucro fiscal",
-      accentClass: "accent-emerald",
-      prefix: "R$",
-      value: compactNumberBR(fm.totalProfit),
-      delta: canHistoryDelta && hFirst.profit > 0 ? relativeDelta(hLast.profit, hFirst.profit, historyTitle) : null,
-      spark: history.map((point) => point.profit),
-      sparkColor: "var(--emerald)"
-    },
-    {
-      label: "Margem fiscal",
-      accentClass: "accent-yellow",
-      value: fm.marginRate == null ? "-" : formatDecimal(fm.marginRate * 100, 1),
-      suffix: fm.marginRate == null ? undefined : "%",
-      delta: ppDelta(hLast?.marginRate ?? null, hFirst?.marginRate ?? null, 100),
-      spark: history.map((point) => (point.marginRate ?? 0) * 100),
-      sparkColor: "var(--gold)"
-    },
-    {
-      label: "ROI fiscal",
-      accentClass: "accent-violet",
-      value: fm.roi == null ? "-" : formatDecimal(fm.roi, 2),
-      suffix: fm.roi == null ? undefined : "×",
-      delta: roiDelta,
-      spark: history.map((point) => point.roi ?? 0),
-      sparkColor: "var(--violet)"
-    },
-    {
-      label: "Cobertura c/ custo",
-      accentClass: "accent-cyan",
-      value: formatDecimal(fm.coverageCostRevenuePct, 1),
-      suffix: "%",
-      delta: ppDelta(hLast?.coveragePct ?? null, hFirst?.coveragePct ?? null, 1),
-      spark: history.map((point) => point.coveragePct),
-      sparkColor: "var(--cyan)"
-    }
-  ];
+  const revenueSpark = data.fiscalDailyChart.map((row) => asMetricNumber(row.billed_revenue));
+  const invoicesSpark = data.fiscalDailyChart.map((row) => asMetricNumber(row.invoices_count));
+  const ticketSpark = data.fiscalDailyChart.map((row) => asMetricNumber(row.average_invoice_value));
+  const ordersRevenueSpark = data.dailyChart.map((row) => asNumber(row.effective_revenue));
+  const ordersCountSpark = data.dailyChart.map((row) => asNumber(row.orders_count));
+  const unitsSpark = data.dailyChart.map((row) => asNumber(row.units));
+  const ordersTicketSpark = data.dailyChart.map((row) => asNumber(row.average_ticket));
 
   return (
     <AppShell
@@ -975,28 +1004,6 @@ export default async function HomePage({
           </form>
         </header>
 
-        <section className="hero-grid">
-          {heroCards.map((card) => (
-            <article className={`hero-metric ${card.accentClass}`} key={card.label}>
-              <span className="hero-diamond" aria-hidden="true">◆</span>
-              <span className="label">{card.label}</span>
-              <strong>
-                {card.prefix ? <small>{card.prefix}</small> : null}
-                {card.value}
-                {card.suffix ? <small>{card.suffix}</small> : null}
-              </strong>
-              {card.delta ? (
-                <span className={`hero-delta ${card.delta.direction}`} title={card.delta.title}>
-                  {card.delta.direction === "up" ? "▲" : "▼"} {card.delta.text}
-                </span>
-              ) : (
-                <span className="hero-delta is-muted">—</span>
-              )}
-              {card.spark.length >= 2 ? <Sparkline values={card.spark} color={card.sparkColor} /> : null}
-            </article>
-          ))}
-        </section>
-
         <section className="dashboard-section">
           <div className="section-head section-row">
             <div>
@@ -1006,41 +1013,64 @@ export default async function HomePage({
             <span className="pill">Regra: status 6/7 · saída · sem devolução</span>
           </div>
           <div className="metric-grid metric-grid-eight">
-            <Link className="metric metric-link accent-yellow" href={`/pedidos${filterQuery}`}>
-              <span className="label">Receita faturada</span>
-              <strong>{formatCurrency(data.fiscalMetrics.billedRevenue)}</strong>
-              <small>Valor total das NFs emitidas/autorizadas</small>
-            </Link>
-            <Link className="metric metric-link accent-blue" href={`/pedidos${filterQuery}`}>
-              <span className="label">NFs emitidas</span>
-              <strong>{formatCount(data.fiscalMetrics.invoicesCount)}</strong>
-              <small>NFs fiscais válidas no período</small>
-            </Link>
-            <Link className="metric metric-link accent-violet" href={`/pedidos${filterQuery}`}>
-              <span className="label">Ticket médio faturado</span>
-              <strong>{data.fiscalMetrics.invoicesCount <= 0 ? "-" : formatCurrency(data.fiscalMetrics.averageInvoiceValue)}</strong>
-              <small>Receita faturada / NFs emitidas</small>
-            </Link>
-            <Link className="metric metric-link accent-cyan" href={`/pedidos${filterQuery}`}>
-              <span className="label">NFs com pedido</span>
-              <strong>{formatCount(data.fiscalMetrics.linkedOrdersCount)}</strong>
-              <small>Cobertura de vínculo pedido/NF</small>
-            </Link>
-            <Link className="metric metric-link accent-red" href={`/pedidos${filterQuery}`}>
-              <span className="label">Canceladas</span>
-              <strong>{formatCount(data.fiscalMetrics.canceledCount)}</strong>
-              <small>{formatCurrency(data.fiscalMetrics.canceledRevenue)} fora da receita</small>
-            </Link>
-            <Link className="metric metric-link accent-red" href={`/pedidos${filterQuery}`}>
-              <span className="label">Devoluções excluídas</span>
-              <strong>{formatCount(data.fiscalMetrics.excludedDevolutionsCount)}</strong>
-              <small>{formatCurrency(data.fiscalMetrics.excludedDevolutionsRevenue)} fora da receita</small>
-            </Link>
-            <Link className="metric metric-link accent-emerald" href="/skus">
-              <span className="label">SKU fiscal em processamento</span>
-              <strong>{formatDecimal(data.fiscalCoverage.orderItemsInvoicePct, 1)}%</strong>
-              <small>{formatCount(data.fiscalCoverage.invoicesWithOrderItems)} NFs com pedido + itens</small>
-            </Link>
+            <MetricCard
+              accent="accent-yellow"
+              href={`/pedidos${filterQuery}`}
+              label="Receita faturada"
+              value={formatCurrency(data.fiscalMetrics.billedRevenue)}
+              caption="Valor total das NFs emitidas/autorizadas"
+              delta={revenueDelta}
+              spark={revenueSpark}
+              sparkColor="var(--gold)"
+            />
+            <MetricCard
+              accent="accent-blue"
+              href={`/pedidos${filterQuery}`}
+              label="NFs emitidas"
+              value={formatCount(data.fiscalMetrics.invoicesCount)}
+              caption="NFs fiscais válidas no período"
+              delta={invoicesDelta}
+              spark={invoicesSpark}
+              sparkColor="var(--indigo)"
+            />
+            <MetricCard
+              accent="accent-violet"
+              href={`/pedidos${filterQuery}`}
+              label="Ticket médio faturado"
+              value={data.fiscalMetrics.invoicesCount <= 0 ? "-" : formatCurrency(data.fiscalMetrics.averageInvoiceValue)}
+              caption="Receita faturada / NFs emitidas"
+              delta={ticketDelta}
+              spark={ticketSpark}
+              sparkColor="var(--violet)"
+            />
+            <MetricCard
+              accent="accent-cyan"
+              href={`/pedidos${filterQuery}`}
+              label="NFs com pedido"
+              value={formatCount(data.fiscalMetrics.linkedOrdersCount)}
+              caption="Cobertura de vínculo pedido/NF"
+            />
+            <MetricCard
+              accent="accent-red"
+              href={`/pedidos${filterQuery}`}
+              label="Canceladas"
+              value={formatCount(data.fiscalMetrics.canceledCount)}
+              caption={`${formatCurrency(data.fiscalMetrics.canceledRevenue)} fora da receita`}
+            />
+            <MetricCard
+              accent="accent-red"
+              href={`/pedidos${filterQuery}`}
+              label="Devoluções excluídas"
+              value={formatCount(data.fiscalMetrics.excludedDevolutionsCount)}
+              caption={`${formatCurrency(data.fiscalMetrics.excludedDevolutionsRevenue)} fora da receita`}
+            />
+            <MetricCard
+              accent="accent-emerald"
+              href="/skus"
+              label="SKU fiscal em processamento"
+              value={`${formatDecimal(data.fiscalCoverage.orderItemsInvoicePct, 1)}%`}
+              caption={`${formatCount(data.fiscalCoverage.invoicesWithOrderItems)} NFs com pedido + itens`}
+            />
           </div>
         </section>
 
@@ -1096,21 +1126,60 @@ export default async function HomePage({
           ) : (
           <>
           <div className="metric-grid metric-grid-eight">
-            <div className="metric accent-blue">
-              <span className="label">Receita com custo</span>
-              <strong>{formatCurrency(data.fiscalMargin.revenueWithCost)}</strong>
-              <small>Base fiscal com custo confiável</small>
-            </div>
-            <div className="metric accent-cyan">
-              <span className="label">Custo do produto</span>
-              <strong>{formatCurrency(data.fiscalMargin.totalCost)}</strong>
-              <small>Kits expandidos por componente</small>
-            </div>
-            <div className="metric accent-red">
-              <span className="label">Impostos</span>
-              <strong>{formatCurrency(data.fiscalMargin.totalTaxes)}</strong>
-              <small>ICMS + PIS/COFINS + DIFAL</small>
-            </div>
+            <MetricCard
+              accent="accent-blue"
+              label="Receita com custo"
+              value={formatCurrency(fm.revenueWithCost)}
+              caption="Base fiscal com custo confiável"
+              delta={revenueWithCostDelta}
+              spark={history.map((point) => point.revenueWithCost)}
+              sparkColor="var(--indigo)"
+            />
+            <MetricCard
+              accent="accent-cyan"
+              label="Custo do produto"
+              value={formatCurrency(fm.totalCost)}
+              caption="Kits expandidos por componente"
+              delta={costDelta}
+              spark={history.map((point) => point.cost)}
+              sparkColor="var(--cyan)"
+            />
+            <MetricCard
+              accent="accent-red"
+              label="Impostos"
+              value={formatCurrency(fm.totalTaxes)}
+              caption="ICMS + PIS/COFINS + DIFAL"
+              delta={taxesDelta}
+              spark={history.map((point) => point.taxes)}
+              sparkColor="var(--rose)"
+            />
+            <MetricCard
+              accent="accent-emerald"
+              label="Lucro fiscal"
+              value={formatCurrency(fm.totalProfit)}
+              caption="Receita − custo − impostos"
+              delta={profitDelta}
+              spark={history.map((point) => point.profit)}
+              sparkColor="var(--emerald)"
+            />
+            <MetricCard
+              accent="accent-yellow"
+              label="Margem fiscal"
+              value={fm.marginRate == null ? "-" : `${formatDecimal(fm.marginRate * 100, 1)}%`}
+              caption="Lucro / receita coberta"
+              delta={marginDelta}
+              spark={history.map((point) => (point.marginRate ?? 0) * 100)}
+              sparkColor="var(--gold)"
+            />
+            <MetricCard
+              accent="accent-violet"
+              label="ROI fiscal"
+              value={fm.roi == null ? "-" : `${formatDecimal(fm.roi * 100, 1)}%`}
+              caption="Lucro / custo"
+              delta={roiDelta}
+              spark={history.map((point) => point.roi ?? 0)}
+              sparkColor="var(--violet)"
+            />
           </div>
           <div className="fiscal-viz-row">
             <div className="viz-card">
@@ -1167,36 +1236,56 @@ export default async function HomePage({
             <h2>Pedidos e itens ainda não oficiais para ROI</h2>
           </div>
         <section className="metric-grid metric-grid-eight">
-          <Link className="metric metric-link accent-yellow" href={`/pedidos${filterQuery}`}>
-            <span className="label">Receita de pedidos</span>
-            <strong>{formatCurrency(data.nfMetrics.confirmedRevenue)}</strong>
-            <small>Auxiliar, não é a receita oficial</small>
-          </Link>
-          <Link className="metric metric-link accent-blue" href={`/pedidos${filterQuery}`}>
-            <span className="label">Pedidos confirmados</span>
-            <strong>{formatCount(data.nfMetrics.emittedCount)}</strong>
-            <small>Status não pendente/cancelado</small>
-          </Link>
-          <Link className="metric metric-link accent-cyan" href="/skus">
-            <span className="label">Itens vendidos</span>
-            <strong>{formatCount(data.monthUnits)}</strong>
-            <small>{formatCount(data.itemCount)} linhas de item na base</small>
-          </Link>
-          <Link className="metric metric-link accent-violet" href={`/pedidos${filterQuery}`}>
-            <span className="label">Ticket médio de pedidos</span>
-            <strong>{data.nfMetrics.emittedCount <= 0 ? "-" : formatCurrency(data.nfMetrics.confirmedRevenue / data.nfMetrics.emittedCount)}</strong>
-            <small>Auxiliar, não fiscal</small>
-          </Link>
-          <Link className="metric metric-link accent-red" href={`/pedidos${filterQuery}`}>
-            <span className="label">Canceladas</span>
-            <strong>{formatCount(data.nfMetrics.canceledCount)}</strong>
-            <small>Status cancelado no período</small>
-          </Link>
-          <Link className="metric metric-link accent-white" href={`/pedidos${filterQuery}`}>
-            <span className="label">Pendentes</span>
-            <strong>{formatCount(data.nfMetrics.pendingCount)}</strong>
-            <small>Status pendente no período</small>
-          </Link>
+          <MetricCard
+            accent="accent-yellow"
+            href={`/pedidos${filterQuery}`}
+            label="Receita de pedidos"
+            value={formatCurrency(data.nfMetrics.confirmedRevenue)}
+            caption="Auxiliar, não é a receita oficial"
+            spark={ordersRevenueSpark}
+            sparkColor="var(--gold)"
+          />
+          <MetricCard
+            accent="accent-blue"
+            href={`/pedidos${filterQuery}`}
+            label="Pedidos confirmados"
+            value={formatCount(data.nfMetrics.emittedCount)}
+            caption="Status não pendente/cancelado"
+            spark={ordersCountSpark}
+            sparkColor="var(--indigo)"
+          />
+          <MetricCard
+            accent="accent-cyan"
+            href="/skus"
+            label="Itens vendidos"
+            value={formatCount(data.monthUnits)}
+            caption={`${formatCount(data.itemCount)} linhas de item na base`}
+            spark={unitsSpark}
+            sparkColor="var(--cyan)"
+          />
+          <MetricCard
+            accent="accent-violet"
+            href={`/pedidos${filterQuery}`}
+            label="Ticket médio de pedidos"
+            value={data.nfMetrics.emittedCount <= 0 ? "-" : formatCurrency(data.nfMetrics.confirmedRevenue / data.nfMetrics.emittedCount)}
+            caption="Auxiliar, não fiscal"
+            spark={ordersTicketSpark}
+            sparkColor="var(--violet)"
+          />
+          <MetricCard
+            accent="accent-red"
+            href={`/pedidos${filterQuery}`}
+            label="Canceladas"
+            value={formatCount(data.nfMetrics.canceledCount)}
+            caption="Status cancelado no período"
+          />
+          <MetricCard
+            accent="accent-white"
+            href={`/pedidos${filterQuery}`}
+            label="Pendentes"
+            value={formatCount(data.nfMetrics.pendingCount)}
+            caption="Status pendente no período"
+          />
         </section>
         </section>
 

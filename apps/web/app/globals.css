@@ -664,8 +664,8 @@ p {
 }
 
 .metric {
-  min-height: 132px;
-  padding: 16px 18px;
+  min-height: 152px;
+  padding: 46px 18px 16px;
   display: grid;
   align-content: flex-end;
   gap: 7px;
@@ -724,7 +724,7 @@ p {
 .metric.curve-c        { --accent: var(--rose); }
 
 .metric strong {
-  font-size: clamp(1.1rem, 1.35vw, 1.5rem);
+  font-size: clamp(1.25rem, 1.5vw, 1.65rem);
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.05;
@@ -2199,7 +2199,7 @@ h2 {
   grid-template-columns: repeat(2, 1fr);
 }
 
-/* ====================== Hero cards (layout aprovado) ====================== */
+/* ============== Cards de métrica com curva de crescimento ============== */
 
 .pill-row {
   display: flex;
@@ -2235,109 +2235,32 @@ h2 {
   text-decoration: none;
 }
 
-.hero-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.hero-metric {
-  position: relative;
-  overflow: hidden;
-  min-height: 168px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--panel);
-  box-shadow: var(--shadow-sm);
-  padding: 24px 26px;
-  display: grid;
-  align-content: center;
-  gap: 12px;
-}
-
-.hero-metric::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 3px;
-  border-radius: var(--radius) var(--radius) 0 0;
-  background: var(--accent, var(--line-strong));
-}
-
-.hero-metric::after {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 70%;
-  pointer-events: none;
-  opacity: 0.55;
-  background: radial-gradient(130% 120% at 10% -20%, color-mix(in srgb, var(--accent, #ffffff) 14%, transparent) 0%, transparent 60%);
-}
-
-.hero-metric .label {
-  color: var(--muted);
+/* Chip de variação dentro dos cards (▲ bom = verde; .invert inverte a leitura
+   para métricas onde subir é ruim, como custo e impostos) */
+.metric-delta {
+  font-family: var(--mono);
   font-size: 12px;
-  font-weight: 750;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-}
-
-.hero-metric strong {
-  font-family: var(--mono);
-  font-variant-numeric: tabular-nums;
-  font-size: clamp(2rem, 3.2vw, 2.75rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
-
-.hero-metric strong small {
-  font-size: 0.52em;
   font-weight: 600;
-  color: var(--muted);
-  margin: 0 2px;
 }
 
-.hero-diamond {
+.metric-delta.up { color: var(--emerald); }
+.metric-delta.down { color: var(--rose); }
+.metric-delta.up.invert { color: var(--rose); }
+.metric-delta.down.invert { color: var(--emerald); }
+
+/* Curva de crescimento no canto superior direito do card */
+.metric .hero-spark {
   position: absolute;
-  top: 22px;
-  right: 24px;
-  color: var(--accent, var(--line-strong));
-  font-size: 15px;
+  top: 16px;
+  right: 16px;
+  width: 104px;
+  height: 28px;
+  opacity: 0.85;
+}
+
+.metric .label {
+  position: relative;
   z-index: 1;
-}
-
-.hero-delta {
-  font-family: var(--mono);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.hero-delta.up {
-  color: var(--emerald);
-}
-
-.hero-delta.down {
-  color: var(--rose);
-}
-
-.hero-delta.is-muted {
-  color: var(--faint);
-}
-
-.hero-spark {
-  position: absolute;
-  right: 24px;
-  bottom: 20px;
-  width: 150px;
-  height: 40px;
-  opacity: 0.95;
-}
-
-@media (max-width: 940px) {
-  .hero-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* No pill-row do hero, pills informativos são neutros; só o Exportar é ouro */
