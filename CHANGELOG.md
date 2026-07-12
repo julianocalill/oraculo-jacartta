@@ -2,6 +2,14 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-12] — Calculadora: presets de marketplace
+
+Seletor de marketplace nas faixas de comissão: **Shopee** (faixas originais, intocadas), **ML Clássico** (13% padrão; público 10–14% por categoria), **ML Premium** (18%; 15–19%) — ambos com custo fixo por unidade até R$ 78,99 (R$ 6,25/6,50/6,75) — e **TikTok Shop** (6%; 5–8% por categoria + R$ 4 fixo/item até R$ 78,99, vigente fev/2026). Faixas com tamanho variável por preset, tudo editável, "Restaurar padrão" volta ao preset selecionado, notas honestas sobre o que não é modelado (regra de 50% do ML abaixo de R$ 12,50; SFP ~6% do TikTok).
+
+**Commit:** `36f08a1`. **Deploy:** `b225adqn3`.
+
+---
+
 ## [2026-07-11] — Calculadora de Precificação como feature do Oráculo
 
 Porte fiel da calculadora.oliverhome.com.br para dentro do Oráculo (`/calculadora`, novo item na sidebar). Mantém as regras **próprias** da calculadora (norte rápido de precificação): modos por markup e por preço, kits, taxas editáveis (ICMS MG, DIFAL, PIS/COFINS sobre valor agregado, ads, custo fixo, reembolso) e faixas de comissão editáveis com restauração de padrão. **Não usa nem altera o motor fiscal do Oráculo** — nota explícita na página. Status Rentável / Margem baixa (<10%) / Prejuízo.
