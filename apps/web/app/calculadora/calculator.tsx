@@ -26,13 +26,57 @@ const RATE_FIELDS: Array<{ key: RateKey; label: string; suffix: "%" | "R$" }> = 
   { key: "averageRefund", label: "Reembolso médio (R$)", suffix: "R$" }
 ];
 
-const DEFAULT_TIERS = [
-  { max: 79.99, rate: 20, fixed: 4 },
-  { max: 99.99, rate: 14, fixed: 16 },
-  { max: 199.99, rate: 14, fixed: 20 },
-  { max: 499.99, rate: 14, fixed: 26 },
-  { max: Infinity, rate: 14, fixed: 28 }
-];
+// Presets de comissão por marketplace. Shopee = faixas originais da calculadora.
+// ML e TikTok = taxas públicas vigentes (jul/2026); comissão varia por categoria,
+// então tudo continua editável na tela. Último degrau é sempre faixa aberta.
+type MarketplaceKey = "shopee" | "meliClassico" | "meliPremium" | "tiktok";
+
+const MARKETPLACE_PRESETS: Record<
+  MarketplaceKey,
+  { label: string; note: string; tiers: Array<{ max: number; rate: number; fixed: number }> }
+> = {
+  shopee: {
+    label: "Shopee",
+    note: "Faixas originais da calculadora (comissão + fixo por faixa de preço).",
+    tiers: [
+      { max: 79.99, rate: 20, fixed: 4 },
+      { max: 99.99, rate: 14, fixed: 16 },
+      { max: 199.99, rate: 14, fixed: 20 },
+      { max: 499.99, rate: 14, fixed: 26 },
+      { max: Infinity, rate: 14, fixed: 28 }
+    ]
+  },
+  meliClassico: {
+    label: "ML Clássico",
+    note: "Comissão 10–14% conforme categoria (padrão 13% — ajuste para a sua) + custo fixo por unidade até R$ 78,99. Itens abaixo de R$ 12,50 pagam 50% do item como tarifa (não modelado).",
+    tiers: [
+      { max: 28.99, rate: 13, fixed: 6.25 },
+      { max: 49.99, rate: 13, fixed: 6.5 },
+      { max: 78.99, rate: 13, fixed: 6.75 },
+      { max: Infinity, rate: 13, fixed: 0 }
+    ]
+  },
+  meliPremium: {
+    label: "ML Premium",
+    note: "Comissão 15–19% conforme categoria (padrão 18% — ajuste para a sua) + custo fixo por unidade até R$ 78,99. Parcelamento sem juros incluso no plano.",
+    tiers: [
+      { max: 28.99, rate: 18, fixed: 6.25 },
+      { max: 49.99, rate: 18, fixed: 6.5 },
+      { max: 78.99, rate: 18, fixed: 6.75 },
+      { max: Infinity, rate: 18, fixed: 0 }
+    ]
+  },
+  tiktok: {
+    label: "TikTok Shop",
+    note: "Comissão 5–8% conforme categoria (padrão 6%) + R$ 4,00 fixo por item até R$ 78,99 (vigente fev/2026). Programa de frete SFP (~6%, teto R$ 50) não incluído — some em Ads/custo fixo se usar.",
+    tiers: [
+      { max: 78.99, rate: 6, fixed: 4 },
+      { max: Infinity, rate: 6, fixed: 0 }
+    ]
+  }
+};
+
+const MARKETPLACE_ORDER: MarketplaceKey[] = ["shopee", "meliClassico", "meliPremium", "tiktok"];
 
 const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const percentFmt = new Intl.NumberFormat("pt-BR", {
@@ -128,11 +172,13 @@ const DEFAULT_RATE_STRINGS = Object.fromEntries(
   Object.entries(DEFAULT_RATES).map(([key, value]) => [key, value.toFixed(2)])
 ) as Record<RateKey, string>;
 
-const DEFAULT_TIER_STRINGS = DEFAULT_TIERS.map((tier) => ({
-  max: Number.isFinite(tier.max) ? tier.max.toFixed(2) : "",
-  rate: tier.rate.toFixed(2),
-  fixed: tier.fixed.toFixed(2)
-}));
+function tierStringsFor(key: MarketplaceKey) {
+  return MARKETPLACE_PRESETS[key].tiers.map((tier) => ({
+    max: Number.isFinite(tier.max) ? tier.max.toFixed(2) : "",
+    rate: tier.rate.toFixed(2),
+    fixed: tier.fixed.toFixed(2)
+  }));
+}
 
 export function PricingCalculator() {
   const [unitCost, setUnitCost] = useState("50,00");
@@ -141,7 +187,13 @@ export function PricingCalculator() {
   const [markup, setMarkup] = useState("2,50");
   const [salePrice, setSalePrice] = useState("125,00");
   const [rateStrings, setRateStrings] = useState(DEFAULT_RATE_STRINGS);
-  const [tierStrings, setTierStrings] = useState(DEFAULT_TIER_STRINGS);
+  const [marketplace, setMarketplace] = useState<MarketplaceKey>("shopee");
+  const [tierStrings, setTierStrings] = useState(() => tierStringsFor("shopee"));
+
+  function selectMarketplace(key: MarketplaceKey) {
+    setMarketplace(key);
+    setTierStrings(tierStringsFor(key));
+  }
 
   const result = useMemo(() => {
     const rates = {
@@ -178,7 +230,7 @@ export function PricingCalculator() {
 
   function resetRates() {
     setRateStrings(DEFAULT_RATE_STRINGS);
-    setTierStrings(DEFAULT_TIER_STRINGS);
+    setTierStrings(tierStringsFor(marketplace));
   }
 
   return (
@@ -264,6 +316,22 @@ export function PricingCalculator() {
             <h2>Faixas de comissão</h2>
           </div>
         </div>
+
+        <div className="calc-mode calc-marketplace" role="radiogroup" aria-label="Marketplace">
+          {MARKETPLACE_ORDER.map((key) => (
+            <label key={key} className={marketplace === key ? "is-active" : undefined}>
+              <input
+                type="radio"
+                name="marketplacePreset"
+                checked={marketplace === key}
+                onChange={() => selectMarketplace(key)}
+              />
+              {MARKETPLACE_PRESETS[key].label}
+            </label>
+          ))}
+        </div>
+
+        <p className="table-note">{MARKETPLACE_PRESETS[marketplace].note}</p>
 
         <div className="calc-tiers">
           <div className="calc-tier calc-tier-head" aria-hidden="true">

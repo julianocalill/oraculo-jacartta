@@ -2193,3 +2193,8 @@ h2 {
     grid-template-columns: 1fr;
   }
 }
+
+/* Seletor de marketplace da calculadora (2x2) */
+.calc-marketplace {
+  grid-template-columns: repeat(2, 1fr);
+}
