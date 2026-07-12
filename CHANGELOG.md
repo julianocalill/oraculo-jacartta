@@ -2,6 +2,14 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-12] — Dashboard com hero cards (layout aprovado)
+
+A produção agora abre com o layout do mockup aprovado: header "Visão geral" + pills (sync fiscal saudável, período, botão Exportar ouro) e **5 hero cards** — Receita fiscal, Lucro fiscal, Margem, ROI e Cobertura — com valor grande em mono, chip de variação (▲/▼) e sparkline. Tudo com dado real: variação da receita compara com o **mesmo trecho** do mês anterior (12 dias vs 12 dias); lucro/margem/ROI/cobertura usam o histórico de capturas horárias do snapshot (última de cada dia). Deltas somem com elegância sem base de comparação; em janela custom os históricos ficam ocultos. Nova rota `/export-fiscal` (CSV da receita diária). Migration `20260712100000` libera leitura do histórico de snapshots pro role authenticated. Seção de margem perdeu os cards duplicados (Lucro/Margem/ROI agora só no hero).
+
+**Commit:** `e401a4f`. **Deploy:** `95tsf4huw`.
+
+---
+
 ## [2026-07-12] — Calculadora: presets de marketplace
 
 Seletor de marketplace nas faixas de comissão: **Shopee** (faixas originais, intocadas), **ML Clássico** (13% padrão; público 10–14% por categoria), **ML Premium** (18%; 15–19%) — ambos com custo fixo por unidade até R$ 78,99 (R$ 6,25/6,50/6,75) — e **TikTok Shop** (6%; 5–8% por categoria + R$ 4 fixo/item até R$ 78,99, vigente fev/2026). Faixas com tamanho variável por preset, tudo editável, "Restaurar padrão" volta ao preset selecionado, notas honestas sobre o que não é modelado (regra de 50% do ML abaixo de R$ 12,50; SFP ~6% do TikTok).
