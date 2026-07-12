@@ -12,7 +12,12 @@ export async function middleware(request: NextRequest) {
   if (
     PUBLIC_PATHS.some((path) => pathname.startsWith(path)) ||
     pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon")
+    pathname.startsWith("/favicon") ||
+    pathname.startsWith("/brand/") || // ícones/logo e imagem social (preview de link)
+    pathname === "/icon.svg" ||
+    pathname === "/apple-icon.png" ||
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml"
   ) {
     return NextResponse.next();
   }
