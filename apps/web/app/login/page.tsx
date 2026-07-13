@@ -8,6 +8,7 @@ import {
 } from "../../lib/auth/session";
 
 import { BrandMark } from "../components/brand-mark";
+import { PasswordField } from "./password-field";
 
 export const dynamic = "force-dynamic";
 
@@ -91,12 +92,15 @@ export default async function LoginPage({
     return (
       <main className="login-shell">
         <section className="login-card">
-          <BrandMark size={44} />
-          <h1>Você já está conectado</h1>
-          <p>{user.email}</p>
+          <div className="login-head">
+            <BrandMark size={48} />
+            <h1>Você já está conectado</h1>
+            <p>{user.email}</p>
+          </div>
           <form action={logout}>
             <button type="submit">Sair</button>
           </form>
+          <p className="login-foot">by Grupo Jacartta</p>
         </section>
       </main>
     );
@@ -105,9 +109,11 @@ export default async function LoginPage({
   return (
     <main className="login-shell">
       <section className="login-card">
-        <BrandMark size={44} />
-        <h1>{hasUsers ? "Entrar no Oráculo" : "Criar primeiro administrador"}</h1>
-        <p>{hasUsers ? "Acesse o painel operacional." : "Nenhum usuário existe ainda. Crie o primeiro admin."}</p>
+        <div className="login-head">
+          <BrandMark size={48} />
+          <h1>{hasUsers ? "Entrar no Oráculo" : "Criar primeiro administrador"}</h1>
+          <p>{hasUsers ? "Acesse o painel operacional." : "Nenhum usuário existe ainda. Crie o primeiro admin."}</p>
+        </div>
 
         {params?.error ? <strong className="form-error">{params.error}</strong> : null}
 
@@ -122,13 +128,12 @@ export default async function LoginPage({
             <span>Email</span>
             <input name="email" type="email" autoComplete="email" required />
           </label>
-          <label>
-            <span>Senha</span>
-            <input name="password" type="password" autoComplete={hasUsers ? "current-password" : "new-password"} required />
-          </label>
+          <PasswordField autoComplete={hasUsers ? "current-password" : "new-password"} />
           <input type="hidden" name="next" value={params?.next ?? "/"} />
           <button type="submit">{hasUsers ? "Entrar" : "Criar admin"}</button>
         </form>
+
+        <p className="login-foot">by Grupo Jacartta</p>
       </section>
     </main>
   );

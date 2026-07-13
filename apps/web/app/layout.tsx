@@ -7,14 +7,14 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "Oráculo · BI multicanal",
+    default: "Oráculo · Grupo Jacartta",
     template: "%s · Oráculo"
   },
   description:
     "Oráculo — plataforma de inteligência de vendas do Grupo Jacartta. Receita fiscal, margem, ROI e estoque multicanal em tempo real.",
   applicationName: "Oráculo",
   openGraph: {
-    title: "Oráculo · BI multicanal",
+    title: "Oráculo · Grupo Jacartta",
     description:
       "Inteligência de vendas do Grupo Jacartta: receita fiscal, margem, ROI e estoque multicanal.",
     siteName: "Oráculo",
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Oráculo · BI multicanal",
+    title: "Oráculo · Grupo Jacartta",
     images: ["/brand/oraculo-og.png"]
   }
 };
