@@ -9,7 +9,7 @@ Bicho" (`aisbanubvjwxrfjoywpd`) + n8n.
 | Loja | shop_id | partner_id | Observação |
 |---|---|---|---|
 | Donacor | 1227023039 | 2032705 | exibida como "Shopee Oliverhome"; a mais antiga (06/05) |
-| Jacartta | 279375549 | 2038778 | ⚠️ partner_key ausente no `shopee_app_config` |
+| Jacartta | 279375549 | 2038778 | live; partner_key cadastrada máquina-a-máquina em 2026-07-13 |
 | Espaço de Bicho | 823664460 | 2038777 | |
 | Oliverhome | 1540426526 | 2038779 | |
 
@@ -20,7 +20,7 @@ Bicho" (`aisbanubvjwxrfjoywpd`) + n8n.
 - **Edge function** `shopee-sync`: renova access_token (via refresh_token),
   lista + detalha pedidos, upsert em `shopee_orders`/`shopee_order_items`,
   log em `shopee_sync_runs`. Único renovador de token.
-- **Agendamento**: pg_cron + pg_net (a criar no go-live).
+- **Agendamento**: pg_cron + pg_net.
 
 ## ⚠️ Regra de ouro — rotação de refresh_token
 
@@ -62,16 +62,22 @@ reversível até o passo 3.
   `shop_id-order_sn[-item-model]`).
 - Janela padrão: pedidos alterados nos últimos 3 dias (`update_time`).
 
-## Status (2026-07-13) — LIVE para 3 lojas
+## Status (2026-07-13) — LIVE para 4 lojas
 
 - n8n `Dc6cFKsiWmI2kDJk` desativado; Oráculo é o renovador de token. ✅
 - Credenciais copiadas (app_config/shops/tokens). ✅
+- Partner_key da Jacartta cadastrada no `shopee_app_config` sem exposição em
+  chat/log durável. ✅
 - Edge function `shopee-sync` deployada, protegida por `x-sync-secret`
   (env `SHOPEE_SYNC_SECRET` + vault `oraculo_shopee_sync_job_secret`). ✅
 - Processamento página-por-página, janela 20 min, teto 800 pedidos/run. ✅
 - Validado end-to-end: Donacor (token válido) e Oliverhome (refresh de token). ✅
+- Validado end-to-end: Jacartta (`shop_id=279375549`) em 2026-07-13,
+  `status=success`, `records_fetched=234`, `records_upserted=234`,
+  `error_message=null`. ✅
 - pg_cron a cada 15 min, escalonado: Donacor (0/15), Espaço de Bicho (3/18),
-  Oliverhome (6/21). Migration `20260713160000`. ✅
+  Oliverhome (6/21), Jacartta (9/24/39/54). Migration `20260713160000` +
+  agendamento manual `shopee-sync-jacartta`. ✅
 
 ### Decisões
 - **Sem backfill histórico (2026-07-13):** seguimos "daqui pra frente". O sync
@@ -80,32 +86,30 @@ reversível até o passo 3.
   decisão do negócio, não é lacuna a corrigir. Os dados antigos existentes
   permanecem como estão.
 
-### Pendências
-- **Jacartta (279375549 / partner 2038778):** falta a `partner_key` no
-  `shopee_app_config` (é a chave secreta da API, ~64 chars, guardada na env
-  var `SHOPEE_PARTNER_KEY_2038778` do n8n — não é o partner_id).
-- **BI:** ligar a leitura Shopee no dashboard do Oráculo (unificação de canais).
+### BI — resolvido (2026-07-13): Olist é a verdade da receita Shopee
+O encanamento de unificação (`oraculo_orders_unified`, refresh do cache e
+`page.tsx`) **já** unia `source='shopee'`. Mas o **Olist já importa as vendas
+Shopee** (canais "Shopee Oliver/Donacor/toca/Jacartta"), então somar o sync
+direto por cima **duplicava** a receita no "Total multi-canal" (mês corrente:
++1.306 pedidos / +R$ 91.952 em cima dos R$ 1,21 mi que o Olist já reportava).
 
-### Como finalizar a Jacartta (receita completa)
+Decisão: **Olist = verdade da receita**. Os painéis de receita/consolidado do
+dashboard passam a filtrar `source != 'shopee'` (`loadUnifiedChannelRows` em
+`apps/web/app/page.tsx`). O sync Shopee direto (forward-only, sem backfill)
+serve à **camada de SKU/itens** (`/skus`, por fonte, sem soma cruzada) — onde o
+Olist é pobre pra marketplace. Verificado: consolidado do mês passou de 29.779
+para 28.473 pedidos (= agregado só-Olist, exato).
 
-1. Pegar a partner_key na VPS (`ssh 129.121.53.71`):
-   ```bash
-   docker exec $(docker ps -qf name=n8n_n8n_worker) printenv SHOPEE_PARTNER_KEY_2038778
-   ```
-2. Inserir no Oráculo (SQL Editor):
-   ```sql
-   insert into shopee_app_config (partner_id, partner_key, is_active)
-   values ('2038778', '<PARTNER_KEY>', true)
-   on conflict (partner_id) do update
-     set partner_key = excluded.partner_key, is_active = true, updated_at = now();
-   ```
-3. Testar (a função valida `x-sync-secret`; o cron/helper já tem o segredo):
-   ```sql
-   select private.invoke_shopee_sync(279375549, 20);
-   -- depois conferir: select * from shopee_sync_runs where source='shopee-sync:279375549' order by started_at desc limit 1;
-   ```
-4. Agendar (escalonado no minuto 9):
-   ```sql
-   select cron.schedule('shopee-sync-jacartta', '9-59/15 * * * *',
-     $$ select private.invoke_shopee_sync(279375549, 20); $$);
-   ```
+Reavaliar quando/se houver backfill histórico do Shopee direto — aí o direto
+poderia substituir os canais Shopee do Olist, em vez de só complementar itens.
+
+### Jacartta finalizada (2026-07-13)
+
+- `partner_id=2038778`, `shop_id=279375549`.
+- Partner_key veio da env var `SHOPEE_PARTNER_KEY_2038778` do worker n8n na VPS
+  e foi inserida diretamente no Supabase, sem persistir o valor no repo.
+- Teste manual via `private.invoke_shopee_sync(279375549, 20)` retornou request
+  id `2413`; run finalizou com `status=success`, `records_fetched=234`,
+  `records_upserted=234`, `error_message=null`.
+- Cron criado: `shopee-sync-jacartta`, schedule `9-59/15 * * * *`, comando
+  `select private.invoke_shopee_sync(279375549, 20);`.

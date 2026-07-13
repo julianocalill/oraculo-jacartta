@@ -427,6 +427,11 @@ async function loadUnifiedChannelRows(
     supabase
       .from("oraculo_channel_sales_unified_cache")
       .select("*")
+      // Receita/consolidado usam o Olist como verdade: ele já importa as vendas
+      // Shopee (canais "Shopee *"). O sync Shopee direto (source='shopee') é
+      // forward-only e serve a granularidade de SKU/itens — somá-lo aqui
+      // contaria as mesmas vendas em dobro no "Total multi-canal".
+      .neq("source", "shopee")
       .gte("order_date", filters.start)
       .lte("order_date", filters.end)
       .order("order_date", { ascending: false })

@@ -11,7 +11,18 @@ O sync das lojas Shopee saiu do n8n e passou a rodar no próprio Supabase do Or�
 - **Edge function `shopee-sync`:** assinatura HMAC, refresh de access_token, `get_order_list`+`get_order_detail` página-por-página (progresso persiste, teto 800/run), upsert idempotente em `shopee_orders`/`order_items`, log em `shopee_sync_runs`. Protegida por `x-sync-secret`.
 - **Agendamento:** pg_cron a cada 15 min, escalonado por loja. Migration `20260713160000`.
 - **Validado em produção:** Donacor (token válido) e Oliverhome (refresh) — sync + upsert OK; caminho do cron (x-sync-secret) OK.
-- **Pendente:** partner_key da Jacartta (não está no DB de origem); backfill histórico; leitura Shopee no dashboard.
+- **Jacartta live:** partner_key cadastrada máquina-a-máquina no Oráculo; teste
+  `shop_id=279375549` finalizou com `status=success`,
+  `records_fetched=234`, `records_upserted=234`, `error_message=null`; cron
+  `shopee-sync-jacartta` criado em `9-59/15 * * * *`.
+- **BI — dupla contagem corrigida:** o Olist já importa as vendas Shopee
+  (canais "Shopee *"), então somar o sync direto (`source='shopee'`) por cima
+  duplicava a receita no "Total multi-canal" (mês: +1.306 pedidos / +R$ 91.952).
+  Decisão: **Olist = verdade da receita** — os painéis de receita/consolidado
+  filtram `source != 'shopee'` (`loadUnifiedChannelRows` em `page.tsx`); o sync
+  direto serve à camada de SKU/itens (`/skus`, por fonte). Consolidado do mês:
+  29.779 → 28.473 pedidos (= agregado só-Olist).
+- **Pendente:** backfill histórico do Shopee direto.
 
 **Commits:** `27dcfa5`, `8c49721` (+ schedule/harden nesta leva).
 
