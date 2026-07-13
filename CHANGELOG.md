@@ -22,6 +22,18 @@ O sync das lojas Shopee saiu do n8n e passou a rodar no próprio Supabase do Or�
   filtram `source != 'shopee'` (`loadUnifiedChannelRows` em `page.tsx`); o sync
   direto serve à camada de SKU/itens (`/skus`, por fonte). Consolidado do mês:
   29.779 → 28.473 pedidos (= agregado só-Olist).
+- **Escrow sync (ROI/descontos):** nova edge function `shopee-escrow-sync` +
+  tabela `shopee_order_escrow` — comissão, taxa de serviço, vouchers, líquido
+  a receber e quebra por item via `payment.get_escrow_detail` (o detalhe de
+  pedido não traz esses campos). Nunca renova token (regra de ouro: só o
+  `shopee-sync` renova); cron 30 min por loja; backlog desde 2026-07-01.
+  Validado: take rate real 26–35% por pedido. Migrations `20260713200000` +
+  `20260713205000`.
+- **Papel das fontes (decisão):** Olist = fonte primária de receita de todos
+  os canais; Shopee direta = double-check + dados financeiros p/ ROI. Nova
+  view `oraculo_shopee_coverage_check` (Olist × direto por loja/dia) e
+  bucketing do Shopee direto corrigido p/ BRT (`America/Sao_Paulo`) na
+  unificação. Migration `20260713203000`.
 - **Pendente:** backfill histórico do Shopee direto.
 
 **Commits:** `27dcfa5`, `8c49721` (+ schedule/harden nesta leva).

@@ -100,8 +100,47 @@ serve à **camada de SKU/itens** (`/skus`, por fonte, sem soma cruzada) — onde
 Olist é pobre pra marketplace. Verificado: consolidado do mês passou de 29.779
 para 28.473 pedidos (= agregado só-Olist, exato).
 
-Reavaliar quando/se houver backfill histórico do Shopee direto — aí o direto
-poderia substituir os canais Shopee do Olist, em vez de só complementar itens.
+### Papel definitivo das fontes (decisão de negócio, 2026-07-13)
+
+- **Olist é e continuará sendo a fonte primária** de receita/volume de todos
+  os canais. A API direta da Shopee **não** vai substituí-la.
+- **Shopee direto = camada de double-check + dados financeiros detalhados**
+  que o Olist não tem: comissão, taxa de serviço, descontos/vouchers da
+  plataforma, valor líquido — insumos de ROI real por pedido/SKU.
+- Reconciliação Olist × direto validada em 2026-07-13: o direto é
+  forward-only (dados a partir de ~07-11, estável de 07-13 em diante).
+
+### Escrow sync — live (2026-07-13)
+
+Implementa a camada de ROI/descontos da fonte direta:
+
+- **Tabela `shopee_order_escrow`** (migration `20260713200000`): comissão,
+  taxa de serviço, vouchers (Shopee × vendedor), frete, líquido a receber
+  (`escrow_amount`), quebra por item (`items` jsonb). RLS service_role-only.
+- **Edge function `shopee-escrow-sync`**: pedidos COMPLETED sem escrow (rpc
+  `shopee_escrow_pending`, retry até 5×) → `payment.get_escrow_detail` um a
+  um → upsert. Teto 80/run. `?since=` limita o backlog (default 2026-07-01 —
+  coerente com a decisão sem backfill).
+- **⚠️ Não renova token, por design:** o único renovador continua sendo o
+  `shopee-sync` (regra de ouro). Se o access_token estiver a <5 min de
+  expirar, o run é pulado (`status=skipped`) e o próximo pega o token fresco.
+- **Cron a cada 30 min**, minutos sem colisão com o sync de pedidos:
+  Donacor (11/41), Espaço de Bicho (13/43), Oliverhome (17/47),
+  Jacartta (19/49). Migration `20260713205000`.
+- Validado end-to-end (Jacartta): 80/80 upserted, 0 falhas; take rate real
+  26–35% (comissão + taxa de serviço), voucher Shopee capturado.
+- Monitoramento: `shopee_sync_runs` com `source='shopee-escrow-sync:<shop_id>'`.
+
+### Bucketing BRT + view de cobertura (2026-07-13)
+
+- Migration `20260713203000`: `oraculo_orders_unified` e o refresh do cache
+  unificado bucketizam o Shopee direto em `America/Sao_Paulo` (antes UTC —
+  pedidos da noite caíam no dia seguinte). Cache de julho re-materializado.
+- **View `oraculo_shopee_coverage_check`**: Olist × direto por loja/dia
+  (pedidos, receita, match %). É o instrumento do papel de double-check.
+  Leitura: match <100% em dias recentes = direto ainda alcançando (pedidos
+  se auto-curam ao mudar de status); >100% = direto conta todos os status
+  (UNPAID etc.) na hora, Olist tem critério/lag próprio de importação.
 
 ### Jacartta finalizada (2026-07-13)
 

@@ -14,6 +14,8 @@ Current functions:
 - `olist-sync-stock`
 - `olist-sync-invoices`
 - `olist-sync-health`
+- `shopee-sync` — pedidos das lojas Shopee (único renovador de token Shopee)
+- `shopee-escrow-sync` — extrato financeiro por pedido (comissão/taxas/líquido); nunca renova token
 
 ## Runtime model
 
