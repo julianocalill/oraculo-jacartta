@@ -83,6 +83,29 @@ reversível até o passo 3.
 ### Pendências
 - **Jacartta (279375549 / partner 2038778):** falta a `partner_key` no
   `shopee_app_config` (é a chave secreta da API, ~64 chars, guardada na env
-  var `SHOPEE_PARTNER_KEY_2038778` do n8n — não é o partner_id). Sem ela, a
-  loja não sincroniza. Agendar após inserir a key.
+  var `SHOPEE_PARTNER_KEY_2038778` do n8n — não é o partner_id).
 - **BI:** ligar a leitura Shopee no dashboard do Oráculo (unificação de canais).
+
+### Como finalizar a Jacartta (receita completa)
+
+1. Pegar a partner_key na VPS (`ssh 129.121.53.71`):
+   ```bash
+   docker exec $(docker ps -qf name=n8n_n8n_worker) printenv SHOPEE_PARTNER_KEY_2038778
+   ```
+2. Inserir no Oráculo (SQL Editor):
+   ```sql
+   insert into shopee_app_config (partner_id, partner_key, is_active)
+   values ('2038778', '<PARTNER_KEY>', true)
+   on conflict (partner_id) do update
+     set partner_key = excluded.partner_key, is_active = true, updated_at = now();
+   ```
+3. Testar (a função valida `x-sync-secret`; o cron/helper já tem o segredo):
+   ```sql
+   select private.invoke_shopee_sync(279375549, 20);
+   -- depois conferir: select * from shopee_sync_runs where source='shopee-sync:279375549' order by started_at desc limit 1;
+   ```
+4. Agendar (escalonado no minuto 9):
+   ```sql
+   select cron.schedule('shopee-sync-jacartta', '9-59/15 * * * *',
+     $$ select private.invoke_shopee_sync(279375549, 20); $$);
+   ```
