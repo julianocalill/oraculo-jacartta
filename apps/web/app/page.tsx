@@ -1043,34 +1043,6 @@ export default async function HomePage({
               spark={ticketSpark}
               sparkColor="var(--violet)"
             />
-            <MetricCard
-              accent="accent-cyan"
-              href={`/pedidos${filterQuery}`}
-              label="NFs com pedido"
-              value={formatCount(data.fiscalMetrics.linkedOrdersCount)}
-              caption="Cobertura de vínculo pedido/NF"
-            />
-            <MetricCard
-              accent="accent-red"
-              href={`/pedidos${filterQuery}`}
-              label="Canceladas"
-              value={formatCount(data.fiscalMetrics.canceledCount)}
-              caption={`${formatCurrency(data.fiscalMetrics.canceledRevenue)} fora da receita`}
-            />
-            <MetricCard
-              accent="accent-red"
-              href={`/pedidos${filterQuery}`}
-              label="Devoluções excluídas"
-              value={formatCount(data.fiscalMetrics.excludedDevolutionsCount)}
-              caption={`${formatCurrency(data.fiscalMetrics.excludedDevolutionsRevenue)} fora da receita`}
-            />
-            <MetricCard
-              accent="accent-emerald"
-              href="/skus"
-              label="SKU fiscal em processamento"
-              value={`${formatDecimal(data.fiscalCoverage.orderItemsInvoicePct, 1)}%`}
-              caption={`${formatCount(data.fiscalCoverage.invoicesWithOrderItems)} NFs com pedido + itens`}
-            />
           </div>
         </section>
 
