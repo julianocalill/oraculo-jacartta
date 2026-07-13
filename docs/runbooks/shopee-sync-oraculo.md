@@ -73,11 +73,16 @@ reversível até o passo 3.
 - pg_cron a cada 15 min, escalonado: Donacor (0/15), Espaço de Bicho (3/18),
   Oliverhome (6/21). Migration `20260713160000`. ✅
 
+### Decisões
+- **Sem backfill histórico (2026-07-13):** seguimos "daqui pra frente". O sync
+  incremental por `update_time` já captura qualquer pedido que ainda receba
+  mudança de status; pedidos antigos já finalizados não são reimportados —
+  decisão do negócio, não é lacuna a corrigir. Os dados antigos existentes
+  permanecem como estão.
+
 ### Pendências
 - **Jacartta (279375549 / partner 2038778):** falta a `partner_key` no
-  `shopee_app_config` (não existe no DB de origem, só em env var do n8n).
-  Sem ela, a loja não sincroniza. Agendar após inserir a key.
-- **Backfill histórico:** o sync incremental (janela 20 min por `update_time`)
-  pega o que muda; pedidos antigos parados exigem um backfill dedicado por
-  faixa de data (a decidir).
+  `shopee_app_config` (é a chave secreta da API, ~64 chars, guardada na env
+  var `SHOPEE_PARTNER_KEY_2038778` do n8n — não é o partner_id). Sem ela, a
+  loja não sincroniza. Agendar após inserir a key.
 - **BI:** ligar a leitura Shopee no dashboard do Oráculo (unificação de canais).
