@@ -82,24 +82,31 @@ All colors are CSS custom properties (`--bg`, `--panel`, `--indigo`, etc.). To c
 ```
 
 ### Sortable table
-**File**: `apps/web/app/skus/sku-table.tsx`
+**File**: `apps/web/app/components/sortable-table.tsx` (generic — use this for new tables)
 
-Example of a client component (`"use client"`). State-based sorting with `useMemo` for performance. To add sorting to another table:
-1. Extract table data into a type (e.g., `SkuTableRow`).
-2. Create a client component with `useState` for sort key & direction.
-3. Use `useMemo` to sort data without re-render.
+Client component (`"use client"`) with state-based sorting (`useState` + `useMemo`). Rows are arrays of serializable cells (`{ text, sort, href?, badge?, subtitle? }`) built on the server and passed in — no sorting logic duplicated per page. Used on `/alertas`, `/curva-de-venda`, `/curva-de-estoque`. `/skus` keeps its own dedicated `sku-table.tsx` (same pattern, built first, not yet migrated to the generic component).
 
 ### Fiscal snapshots
 **File**: `apps/web/lib/fiscal-snapshots.ts`
 
-Three snapshots materialized nightly:
+Three snapshots, refreshed **hourly** (not nightly — see migration `20260710190000`):
 - `fiscal_margin_summary` — totals (revenue, cost, taxes, profit, margin %, ROI).
 - `fiscal_sku_margin` — per-SKU breakdown (array of rows).
 - `fiscal_channel_metrics` — revenue by channel.
 
-Loaders: `loadFiscalMarginSummarySnapshot()`, `loadFiscalSkuMarginSnapshot()`, `loadFiscalChannelMetricsSnapshot()`.
+Loaders: `loadFiscalMarginSummarySnapshot()`, `loadFiscalSkuMarginSnapshot()`, `loadFiscalChannelMetricsSnapshot()`. On the current-month window these are instant reads; on a custom date window the dashboard falls back to a live RPC call (see `loadFiscalMargin`/`loadFiscalChannels` in `app/page.tsx`).
 
 Used on: dashboard (page.tsx), `/skus` (page.tsx).
+
+### Metric cards with growth curves
+**File**: `apps/web/app/page.tsx` (`MetricCard` component + `Sparkline` from `app/components/fiscal-charts.tsx`)
+
+Every metric card can take an optional `delta` (variation chip) and `spark` (array of numbers → growth curve). Only pass them when you have an honest series — don't fabricate a trend. See how the dashboard builds `revenueDelta`, `profitDelta`, etc. from either the daily fiscal series (vs. same day-cut of previous month) or the hourly snapshot history (first vs. last capture in range).
+
+### Pricing calculator
+**File**: `apps/web/app/calculadora/calculator.tsx` (client) + `apps/web/app/calculadora/page.tsx` (server)
+
+Standalone rules ported from the external `calculadora.oliverhome.com.br` project — intentionally does not import from `packages/domain/fiscal.js` or read Oráculo's fiscal snapshots. Marketplace presets (Shopee/ML/TikTok) are plain data objects (`MARKETPLACE_PRESETS`); add a new marketplace by adding a preset, not new logic.
 
 ### Database migrations
 **Directory**: `supabase/migrations/`
@@ -110,8 +117,8 @@ npx supabase db query --linked --file <migration-file>
 ```
 
 **Never** use `db push` — it reapplies non-idempotent migrations. Latest migrations:
-- `20260710160000` — ICMS/PIS/DIFAL split in snapshot.
-- `20260710170000` — channel metrics snapshot.
+- `20260710190000` — snapshot capture moved from nightly to hourly, 14-day retention.
+- `20260712100000` — snapshot history readable by `authenticated` (powers card sparklines).
 
 ## Common tasks
 

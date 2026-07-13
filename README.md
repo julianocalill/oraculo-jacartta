@@ -33,15 +33,19 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md) **← start here** (latest delivery summary)
-2. [docs/project-context.md](docs/project-context.md)
-3. [docs/engineering-playbook.md](docs/engineering-playbook.md)
-4. [docs/deployment-map.md](docs/deployment-map.md)
-5. [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md) (prior state)
-6. [docs/fiscal-financeiro-port.md](docs/fiscal-financeiro-port.md)
-7. [docs/metric-contract.md](docs/metric-contract.md)
-8. [docs/oraculo-master-plan.md](docs/oraculo-master-plan.md)
-9. [vault/00-home/index.md](vault/00-home/index.md)
+1. [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md) **← start here** (current state)
+2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
+3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
+4. [docs/project-context.md](docs/project-context.md)
+5. [docs/engineering-playbook.md](docs/engineering-playbook.md)
+6. [docs/deployment-map.md](docs/deployment-map.md)
+7. [docs/fiscal-financeiro-port.md](docs/fiscal-financeiro-port.md)
+8. [docs/metric-contract.md](docs/metric-contract.md)
+9. [docs/oraculo-master-plan.md](docs/oraculo-master-plan.md)
+10. [CHANGELOG.md](CHANGELOG.md) (full history)
+11. [vault/00-home/index.md](vault/00-home/index.md)
+
+Earlier snapshots (historical, superseded): [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
 
 ## Tooling choices
 
@@ -52,31 +56,57 @@ oraculo/
 
 ## Current production state
 
-**Last update**: `2026-07-10` (see `docs/project-status-2026-07-10-final.md`)
+**Last update**: `2026-07-12` (see `docs/project-status-2026-07-12.md`)
 
 ### Deployment & auth
 - Production URL: `https://oraculo.oliverhome.com.br`
-- Latest Vercel deploy: `55xro0qty` (2026-07-10, sortable tables + sizing)
+- Latest Vercel deploy: `dtky866qf` (2026-07-12, visual identity + middleware fix)
 - Business-data reads run under RLS via an authenticated client (anon key + user
   JWT); service-role is reserved for writes, `/usuarios` and `/status`. Migrations
   `20260710092000` and `20260710094000`.
 - Sync health page at `/status`.
 
+### Navigation
+- Persistent sidebar (`AppShell` + `SidebarNav`) on all 10 authenticated pages,
+  including `/calculadora`. Active link auto-highlighted via `usePathname`.
+- Exact, global alert badge (`loadActionableAlertCount()`) — same number on every
+  page, not just the dashboard's truncated fetch.
+- `app/loading.tsx` skeleton keeps the sidebar solid between navigations.
+
 ### UI/Visual
-- **Dark theme** (2026-07-10): cool near-black background (#0b0e15), ouro accent (#f6c453),
+- **Dark theme**: cool near-black background (#0b0e15), ouro accent (#f6c453),
   jewel palette for data viz (indigo/violet/cyan/emerald/rose), numbers in monospace tabular.
-- **KPI cards**: colored top-rail (2px) per metric with subtle accent glow.
-- **Charts**: SVG server components (tax composition donut, margin/ROI gauges, daily revenue area).
-- **Sortable `/skus` table**: click headers to sort (Receita, Un., Ticket, Margem, ROI, 
-  Margem fiscal, ROI fiscal, Var., Estoque, Cobertura, etc.); nulls always last.
+- **Metric cards** (shared `MetricCard` component, used across the whole app, not just
+  the dashboard): sparkline (growth curve) + variation chip (▲/▼) against an honest
+  comparison base (same day-cut of the previous month for fiscal totals; hourly
+  snapshot history for margin/profit/ROI/coverage; cost and taxes have inverted delta
+  color). Cards without a real series stay plain.
+- **Charts**: SVG server components (tax composition donut, margin/ROI gauges, daily
+  revenue area with dashed average line).
+- **Sortable tables everywhere**: `/skus` (dedicated component) and a generic
+  `SortableTable` on `/alertas`, `/curva-de-venda`, `/curva-de-estoque`. Click a
+  header to sort, click again to reverse; nulls always last.
+- **Visual identity**: gold orb/iris logomark with a faceted gem center
+  (`app/icon.svg`, `favicon.ico`, `apple-icon.png`, `BrandMark` component). Brand kit
+  in `apps/web/public/brand/`. Guide: `docs/brand-oraculo.md`.
 
 ### Fiscal layer
 - Fiscal margin/ROI (Financeiro rules): `oraculo_fiscal_margin_*` + `oraculo_product_effective_cost`
   (kit costs expanded by components). See `docs/fiscal-financeiro-port.md`.
-- **Snapshots** (nightly via pg_cron `20 9 * * *` UTC): `fiscal_margin_summary`, `fiscal_sku_margin`,
-  `fiscal_channel_metrics` pre-computed and cached. Dashboard/SKUs read snapshots (instant),
-  degrade gracefully if unavailable. All queries tested under authenticated role; none timeout.
+- **Snapshots** (hourly via pg_cron, `**:15`, 14-day retention — migration `20260710190000`):
+  `fiscal_margin_summary`, `fiscal_sku_margin`, `fiscal_channel_metrics`. Dashboard/SKUs
+  read snapshots (instant) on the current-month default window; a custom date window
+  computes live via RPC with try/catch degradation. All queries tested under
+  authenticated role; none timeout. History readable by `authenticated` (migration
+  `20260712100000`) to power card sparklines.
 - Per-SKU margin/ROI shown on `/skus` table + detail panel with ICMS/PIS-COFINS/DIFAL breakdown.
+
+### Pricing calculator
+- `/calculadora`: faithful port of the standalone `calculadora.oliverhome.com.br`
+  project (`~/projetos/08-calculadora-marketplace`) into Oráculo as its own page.
+  Keeps its own simplified rules — does **not** touch the fiscal engine above.
+  Marketplace presets: Shopee, Mercado Livre Clássico/Premium, TikTok Shop
+  (editable commission tiers, "restore default").
 
 ### Repo structure
 - Primary GitHub repository: `https://github.com/Grupo-Jacartta/oraculo.git`
