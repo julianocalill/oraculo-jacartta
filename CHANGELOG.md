@@ -2,6 +2,20 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-13] — Cobertura SKU: automática, ligada ao filtro e denominador honesto
+
+O painel "Cobertura SKU" lia um snapshot fixo escrito por um script manual para uma janela de junho — então o dashboard de julho mostrava cobertura de junho, e nunca atualizava sozinho.
+
+- Captura da cobertura entrou no **job horário** de snapshots fiscais: primeiro dá `refresh` nos links NF→pedido do mês (senão o denominador defasa e infla o %), depois materializa `sku_coverage` do mês corrente. Migration `20260713120000`.
+- Painel **ligado ao filtro**: mês corrente lê o snapshot; janela customizada calcula ao vivo via RPC (grant de execução liberado pro role `authenticated`), com fallback pro snapshot. Rótulo do período no painel.
+- Cobertura real de julho corrigida para **~43% da receita / 45% das NFs** (48.219 NFs, 21.689 com item) — antes mostrava os 44,8% de junho sobre uma base de 21,7k NFs porque a tabela de links estava defasada.
+
+**Nota de arquitetura (Shopee):** confirmado que **todas as vendas Shopee (4 lojas) geram NF pelo Olist**. Logo o item da nota já vem do Olist — integrar as APIs Shopee enriquece o canal Shopee (produtos/pedidos), mas **não** muda a cobertura fiscal, que é 100% baseada em NF Olist + item de pedido Olist. O sync das lojas Shopee vive no **n8n** (`~/espacodebicho-integracoes`), não no Supabase. O que move a cobertura é o **backfill de itens do Olist**.
+
+**Commit:** `bd47eec`. **Deploy:** `1rn2ezz7k`.
+
+---
+
 ## [2026-07-12] — Identidade visual: logo, favicon e marca
 
 Nova identidade do Oráculo: logomark de **orbe/íris dourado com gema facetada (◆) no centro** — amarra ao motivo de losango dos acentos e da paleta joia. Legível de 16px a grandes formatos.
