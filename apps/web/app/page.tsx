@@ -563,6 +563,46 @@ async function loadFiscalChannels(
   }
 }
 
+// Cobertura de item por NF, ligada ao filtro: mês corrente lê o snapshot
+// (materializado de hora em hora, com os links já atualizados); janela custom
+// calcula ao vivo via RPC (a função lê da tabela de links, ~3s/mês) com
+// degradação para o snapshot em caso de erro/timeout.
+async function loadFiscalCoverage(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  filters: DashboardFilters
+): Promise<FiscalCoverage> {
+  if (isCurrentMonthWindow(filters)) {
+    return loadFiscalSkuCoverageSnapshot(supabase);
+  }
+  try {
+    const { data, error } = await supabase.rpc("oraculo_fiscal_order_item_backfill_progress", {
+      p_start_date: filters.start,
+      p_end_date: filters.end
+    });
+    if (error) throw error;
+    const payload = (data ?? {}) as { metrics?: Record<string, unknown>; coverage?: Record<string, unknown>; distinct_order_item_skus?: unknown };
+    const m = payload.metrics ?? {};
+    const c = payload.coverage ?? {};
+    return {
+      totalValidInvoices: asMetricNumber(m.total_valid_invoices as number),
+      totalValidRevenue: asMetricNumber(m.total_valid_revenue as number),
+      invoicesWithMatchedOrder: asMetricNumber(m.invoices_with_matched_order as number),
+      invoicesWithOrderItems: asMetricNumber(m.invoices_with_order_items as number),
+      revenueWithOrderItems: asMetricNumber(m.revenue_with_order_items as number),
+      invoicesWithoutOrderItems: asMetricNumber(m.invoices_without_order_items as number),
+      revenueWithoutOrderItems: asMetricNumber(m.revenue_without_order_items as number),
+      orderLinkInvoicePct: asMetricNumber(c.order_link_invoice_pct as number),
+      orderItemsInvoicePct: asMetricNumber(c.order_items_invoice_pct as number),
+      orderItemsRevenuePct: asMetricNumber(c.order_items_revenue_pct as number),
+      missingOrderItemsRevenuePct: asMetricNumber(c.missing_order_items_revenue_pct as number),
+      distinctOrderItemSkus: asMetricNumber(payload.distinct_order_item_skus as number)
+    };
+  } catch (err) {
+    console.error("loadFiscalCoverage live failed; falling back to snapshot", err);
+    return loadFiscalSkuCoverageSnapshot(supabase);
+  }
+}
+
 type MarginHistoryPoint = {
   day: string;
   profit: number;
@@ -750,7 +790,7 @@ async function loadDashboard(filters: DashboardFilters) {
       .lte("issued_date", filters.end)
       .order("issued_date", { ascending: false }),
     loadFiscalChannels(supabase, filters),
-    loadFiscalSkuCoverageSnapshot(supabase),
+    loadFiscalCoverage(supabase, filters),
     loadFiscalMargin(supabase, filters),
     loadMarginHistory(supabase)
   ]);
@@ -1049,7 +1089,7 @@ export default async function HomePage({
         <section className="panel coverage-panel">
           <div className="section-head section-row">
             <div>
-              <p className="eyebrow">Cobertura SKU</p>
+              <p className="eyebrow">Cobertura SKU · {formatMonthYearFromDate(filters.start)}</p>
               <h2>Margem e ROI operacionais</h2>
             </div>
             <span className="pill warning-pill">Leitura parcial liberada</span>
