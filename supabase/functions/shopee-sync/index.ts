@@ -18,9 +18,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SHOPEE_HOST = "https://partner.shopeemobile.com";
 const REFRESH_SKEW_SECONDS = 30 * 60; // renova se faltar menos de 30 min
-const ORDER_WINDOW_DAYS = 3; // janela padrão de pedidos alterados
+const DEFAULT_WINDOW_MINUTES = 45; // janela incremental padrão (sobreposição de segurança)
+const MAX_ORDERS_PER_RUN = 800; // teto por execução, respeita o limite de tempo da edge function
 const PAGE_SIZE = 50;
-const DETAIL_BATCH = 50;
 const ORDER_FIELDS =
   "order_status,create_time,update_time,pay_time,total_amount,currency,buyer_user_id,buyer_username,recipient_address,item_list,estimated_shipping_fee,actual_shipping_fee,days_to_ship,note";
 
@@ -118,7 +118,70 @@ function tsToIso(v: unknown): string | null {
 }
 
 // deno-lint-ignore no-explicit-any
-async function syncShop(supabase: any, shop: Shop, keyByPartner: Map<number, string>): Promise<{ fetched: number; upserted: number }> {
+async function upsertOrders(supabase: any, shop: Shop, orders: any[]): Promise<number> {
+  if (!orders.length) return 0;
+  const nowIso = new Date().toISOString();
+
+  // deno-lint-ignore no-explicit-any
+  const orderRows = orders.map((o: any) => ({
+    id: `${shop.shop_id}-${o.order_sn}`,
+    shop_id: shop.shop_id,
+    shop_name: shop.shop_name,
+    order_sn: o.order_sn,
+    order_status: o.order_status ?? null,
+    create_time: tsToIso(o.create_time),
+    update_time: tsToIso(o.update_time),
+    pay_time: tsToIso(o.pay_time),
+    total_amount: o.total_amount ?? null,
+    estimated_shipping_fee: o.estimated_shipping_fee ?? null,
+    actual_shipping_fee: o.actual_shipping_fee ?? null,
+    currency: o.currency ?? null,
+    buyer_user_id: o.buyer_user_id != null ? String(o.buyer_user_id) : null,
+    buyer_username: o.buyer_username ?? null,
+    recipient_name: o.recipient_address?.name ?? null,
+    recipient_phone: o.recipient_address?.phone ?? null,
+    recipient_city: o.recipient_address?.city ?? null,
+    recipient_state: o.recipient_address?.state ?? null,
+    days_to_ship: o.days_to_ship ?? null,
+    note: o.note ?? null,
+    raw_json: o,
+    synced_at: nowIso
+  }));
+
+  // deno-lint-ignore no-explicit-any
+  const itemRows = orders.flatMap((o: any) =>
+    (o.item_list ?? []).map((it: any) => ({
+      id: `${shop.shop_id}-${o.order_sn}-${it.item_id}-${it.model_id ?? 0}`,
+      order_id: `${shop.shop_id}-${o.order_sn}`,
+      shop_id: shop.shop_id,
+      order_sn: o.order_sn,
+      item_id: it.item_id != null ? String(it.item_id) : null,
+      item_name: it.item_name ?? null,
+      model_id: it.model_id != null ? String(it.model_id) : null,
+      model_name: it.model_name ?? null,
+      sku: it.model_sku || it.item_sku || null,
+      quantity: it.model_quantity_purchased ?? it.quantity_purchased ?? null,
+      raw_json: it,
+      synced_at: nowIso
+    }))
+  );
+
+  const { error: oErr } = await supabase.from("shopee_orders").upsert(orderRows, { onConflict: "id" });
+  if (oErr) throw new Error(`upsert orders ${shop.shop_id}: ${oErr.message}`);
+  if (itemRows.length) {
+    const { error: iErr } = await supabase.from("shopee_order_items").upsert(itemRows, { onConflict: "id" });
+    if (iErr) throw new Error(`upsert items ${shop.shop_id}: ${iErr.message}`);
+  }
+  return orderRows.length;
+}
+
+// deno-lint-ignore no-explicit-any
+async function syncShop(
+  supabase: any,
+  shop: Shop,
+  keyByPartner: Map<number, string>,
+  windowMinutes: number
+): Promise<{ fetched: number; upserted: number; capped: boolean }> {
   const partnerKey = keyByPartner.get(shop.partner_id);
   if (!partnerKey) throw new Error(`sem partner_key para partner_id ${shop.partner_id} (loja ${shop.shop_id})`);
 
@@ -148,11 +211,14 @@ async function syncShop(supabase: any, shop: Shop, keyByPartner: Map<number, str
       .eq("shop_id", shop.shop_id);
   }
 
-  // 2) Lista order_sn alterados na janela.
+  // 2) Página por página: lista → detalhe → upsert (progresso persiste a cada
+  // página; teto por execução respeita o limite de tempo da edge function).
   const timeTo = nowSec();
-  const timeFrom = timeTo - ORDER_WINDOW_DAYS * 24 * 3600;
-  const orderSns: string[] = [];
+  const timeFrom = timeTo - windowMinutes * 60;
   let cursor = "";
+  let fetched = 0;
+  let upserted = 0;
+  let capped = false;
   do {
     const list = await shopGet("/api/v2/order/get_order_list", shop.partner_id, partnerKey, shop.shop_id, accessToken, {
       time_range_field: "update_time",
@@ -162,80 +228,38 @@ async function syncShop(supabase: any, shop: Shop, keyByPartner: Map<number, str
       cursor,
       response_optional_fields: "order_status"
     });
-    for (const o of list.response?.order_list ?? []) orderSns.push(o.order_sn);
+    // deno-lint-ignore no-explicit-any
+    const sns = (list.response?.order_list ?? []).map((o: any) => o.order_sn);
+    if (sns.length) {
+      const detail = await shopGet("/api/v2/order/get_order_detail", shop.partner_id, partnerKey, shop.shop_id, accessToken, {
+        order_sn_list: sns.join(","),
+        response_optional_fields: ORDER_FIELDS
+      });
+      upserted += await upsertOrders(supabase, shop, detail.response?.order_list ?? []);
+      fetched += sns.length;
+    }
     cursor = list.response?.more ? list.response?.next_cursor ?? "" : "";
+    if (fetched >= MAX_ORDERS_PER_RUN) {
+      capped = true;
+      break;
+    }
   } while (cursor);
 
-  // 3) Detalhe em lotes de 50 + 4) upsert.
-  let upserted = 0;
-  for (let i = 0; i < orderSns.length; i += DETAIL_BATCH) {
-    const batch = orderSns.slice(i, i + DETAIL_BATCH);
-    const detail = await shopGet("/api/v2/order/get_order_detail", shop.partner_id, partnerKey, shop.shop_id, accessToken, {
-      order_sn_list: batch.join(","),
-      response_optional_fields: ORDER_FIELDS
-    });
-    const orders = detail.response?.order_list ?? [];
-    const nowIso = new Date().toISOString();
-
-    // deno-lint-ignore no-explicit-any
-    const orderRows = orders.map((o: any) => ({
-      id: `${shop.shop_id}-${o.order_sn}`,
-      shop_id: shop.shop_id,
-      shop_name: shop.shop_name,
-      order_sn: o.order_sn,
-      order_status: o.order_status ?? null,
-      create_time: tsToIso(o.create_time),
-      update_time: tsToIso(o.update_time),
-      pay_time: tsToIso(o.pay_time),
-      total_amount: o.total_amount ?? null,
-      estimated_shipping_fee: o.estimated_shipping_fee ?? null,
-      actual_shipping_fee: o.actual_shipping_fee ?? null,
-      currency: o.currency ?? null,
-      buyer_user_id: o.buyer_user_id != null ? String(o.buyer_user_id) : null,
-      buyer_username: o.buyer_username ?? null,
-      recipient_name: o.recipient_address?.name ?? null,
-      recipient_phone: o.recipient_address?.phone ?? null,
-      recipient_city: o.recipient_address?.city ?? null,
-      recipient_state: o.recipient_address?.state ?? null,
-      days_to_ship: o.days_to_ship ?? null,
-      note: o.note ?? null,
-      raw_json: o,
-      synced_at: nowIso
-    }));
-
-    // deno-lint-ignore no-explicit-any
-    const itemRows = orders.flatMap((o: any) =>
-      (o.item_list ?? []).map((it: any) => ({
-        id: `${shop.shop_id}-${o.order_sn}-${it.item_id}-${it.model_id ?? 0}`,
-        order_id: `${shop.shop_id}-${o.order_sn}`,
-        shop_id: shop.shop_id,
-        order_sn: o.order_sn,
-        item_id: it.item_id != null ? String(it.item_id) : null,
-        item_name: it.item_name ?? null,
-        model_id: it.model_id != null ? String(it.model_id) : null,
-        model_name: it.model_name ?? null,
-        sku: it.model_sku || it.item_sku || null,
-        quantity: it.model_quantity_purchased ?? it.quantity_purchased ?? null,
-        raw_json: it,
-        synced_at: nowIso
-      }))
-    );
-
-    if (orderRows.length) {
-      const { error } = await supabase.from("shopee_orders").upsert(orderRows, { onConflict: "id" });
-      if (error) throw new Error(`upsert orders ${shop.shop_id}: ${error.message}`);
-    }
-    if (itemRows.length) {
-      const { error } = await supabase.from("shopee_order_items").upsert(itemRows, { onConflict: "id" });
-      if (error) throw new Error(`upsert items ${shop.shop_id}: ${error.message}`);
-    }
-    upserted += orderRows.length;
-  }
-
-  return { fetched: orderSns.length, upserted };
+  return { fetched, upserted, capped };
 }
 
 Deno.serve(async (req) => {
+  // Proteção: uma vez que SHOPEE_SYNC_SECRET esteja setado, exige o header
+  // x-sync-secret (o agendador pg_cron envia). Sem o segredo setado, libera
+  // (fase de setup). Assim o endpoint não fica aberto em produção.
+  const expectedSecret = Deno.env.get("SHOPEE_SYNC_SECRET");
+  if (expectedSecret && req.headers.get("x-sync-secret") !== expectedSecret) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -243,6 +267,7 @@ Deno.serve(async (req) => {
 
   const url = new URL(req.url);
   const onlyShop = url.searchParams.get("shop_id");
+  const windowMinutes = Number(url.searchParams.get("minutes")) || DEFAULT_WINDOW_MINUTES;
 
   // Carrega partner_keys e lojas ativas.
   const { data: configs } = await supabase.from("shopee_app_config").select("partner_id, partner_key, is_active").eq("is_active", true);
@@ -257,7 +282,7 @@ Deno.serve(async (req) => {
   for (const shop of (shops ?? []) as Shop[]) {
     const startedAt = new Date().toISOString();
     try {
-      const { fetched, upserted } = await syncShop(supabase, shop, keyByPartner);
+      const { fetched, upserted, capped } = await syncShop(supabase, shop, keyByPartner, windowMinutes);
       await supabase.from("shopee_sync_runs").insert({
         source: `shopee-sync:${shop.shop_id}`,
         started_at: startedAt,
@@ -265,9 +290,9 @@ Deno.serve(async (req) => {
         status: "success",
         records_fetched: fetched,
         records_upserted: upserted,
-        meta: { shop_id: shop.shop_id, shop_name: shop.shop_name }
+        meta: { shop_id: shop.shop_id, shop_name: shop.shop_name, window_minutes: windowMinutes, capped }
       });
-      results.push({ shop_id: shop.shop_id, shop_name: shop.shop_name, fetched, upserted, status: "success" });
+      results.push({ shop_id: shop.shop_id, shop_name: shop.shop_name, fetched, upserted, capped, status: "success" });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       await supabase.from("shopee_sync_runs").insert({

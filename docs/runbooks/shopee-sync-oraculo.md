@@ -61,3 +61,23 @@ reversível até o passo 3.
 - A função é idempotente (upsert por `id` determinístico
   `shop_id-order_sn[-item-model]`).
 - Janela padrão: pedidos alterados nos últimos 3 dias (`update_time`).
+
+## Status (2026-07-13) — LIVE para 3 lojas
+
+- n8n `Dc6cFKsiWmI2kDJk` desativado; Oráculo é o renovador de token. ✅
+- Credenciais copiadas (app_config/shops/tokens). ✅
+- Edge function `shopee-sync` deployada, protegida por `x-sync-secret`
+  (env `SHOPEE_SYNC_SECRET` + vault `oraculo_shopee_sync_job_secret`). ✅
+- Processamento página-por-página, janela 20 min, teto 800 pedidos/run. ✅
+- Validado end-to-end: Donacor (token válido) e Oliverhome (refresh de token). ✅
+- pg_cron a cada 15 min, escalonado: Donacor (0/15), Espaço de Bicho (3/18),
+  Oliverhome (6/21). Migration `20260713160000`. ✅
+
+### Pendências
+- **Jacartta (279375549 / partner 2038778):** falta a `partner_key` no
+  `shopee_app_config` (não existe no DB de origem, só em env var do n8n).
+  Sem ela, a loja não sincroniza. Agendar após inserir a key.
+- **Backfill histórico:** o sync incremental (janela 20 min por `update_time`)
+  pega o que muda; pedidos antigos parados exigem um backfill dedicado por
+  faixa de data (a decidir).
+- **BI:** ligar a leitura Shopee no dashboard do Oráculo (unificação de canais).

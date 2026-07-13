@@ -2,6 +2,21 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-13] — Sync Shopee trazido para dentro do Oráculo (edge function)
+
+O sync das lojas Shopee saiu do n8n e passou a rodar no próprio Supabase do Oráculo, como o time pediu ("tudo no Oráculo").
+
+- **Tabelas de credencial** no Oráculo (`shopee_app_config/shops/tokens`, RLS service_role). Migration `20260713140000`.
+- **Handoff:** n8n `Dc6cFKsiWmI2kDJk` (renovação Shopee) desativado; o Oráculo virou o único renovador de token (a Shopee rotaciona o refresh_token — dois renovadores quebram a auth). Credenciais copiadas máquina-a-máquina, sem exposição.
+- **Edge function `shopee-sync`:** assinatura HMAC, refresh de access_token, `get_order_list`+`get_order_detail` página-por-página (progresso persiste, teto 800/run), upsert idempotente em `shopee_orders`/`order_items`, log em `shopee_sync_runs`. Protegida por `x-sync-secret`.
+- **Agendamento:** pg_cron a cada 15 min, escalonado por loja. Migration `20260713160000`.
+- **Validado em produção:** Donacor (token válido) e Oliverhome (refresh) — sync + upsert OK; caminho do cron (x-sync-secret) OK.
+- **Pendente:** partner_key da Jacartta (não está no DB de origem); backfill histórico; leitura Shopee no dashboard.
+
+**Commits:** `27dcfa5`, `8c49721` (+ schedule/harden nesta leva).
+
+---
+
 ## [2026-07-13] — Cobertura SKU: automática, ligada ao filtro e denominador honesto
 
 O painel "Cobertura SKU" lia um snapshot fixo escrito por um script manual para uma janela de junho — então o dashboard de julho mostrava cobertura de junho, e nunca atualizava sozinho.
