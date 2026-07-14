@@ -16,6 +16,8 @@ Current functions:
 - `olist-sync-health`
 - `shopee-sync` — pedidos das lojas Shopee (único renovador de token Shopee)
 - `shopee-escrow-sync` — extrato financeiro por pedido (comissão/taxas/líquido); nunca renova token
+- `mercadolivre-oauth-callback` — conclui OAuth com PKCE, valida `/users/me` e salva conta/tokens
+- `mercadolivre-webhook` — inbox idempotente de notificações; não processa recursos no request
 
 ## Runtime model
 
@@ -30,6 +32,8 @@ npx supabase functions deploy olist-sync-orders --no-verify-jwt
 npx supabase functions deploy olist-derived-refresh --no-verify-jwt
 npx supabase functions deploy olist-sync-stock --no-verify-jwt
 npx supabase functions deploy olist-sync-invoices --no-verify-jwt
+npx supabase functions deploy mercadolivre-oauth-callback --no-verify-jwt
+npx supabase functions deploy mercadolivre-webhook --no-verify-jwt
 ```
 
 ## Current sync roles
@@ -40,6 +44,8 @@ npx supabase functions deploy olist-sync-invoices --no-verify-jwt
 - `olist-sync-invoices`: pulls fiscal invoices in checkpointed batches for recent days and current-month catch-up.
 - `olist-oauth-callback`: stores Olist refresh token after OAuth.
 - `olist-sync-health`: health/status endpoint.
+- `mercadolivre-oauth-callback`: conexão inicial por seller; ainda não importa dados.
+- `mercadolivre-webhook`: recebe notificações do app Mercado Livre e grava a fila `pending`.
 
 `olist-sync-invoices` is scheduled by:
 

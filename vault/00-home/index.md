@@ -7,11 +7,18 @@
 - [[../03-architecture/system-map]]
 - [[../04-data/canonical-data-model]]
 - [[../05-integrations/olist]]
+- [[../05-integrations/mercadolivre]]
 - [[../07-decisions/decision-log]]
 
 ## Current north star
 
 Build an operational intelligence system where Supabase is the canonical backend, Vercel is the product surface, and documentation preserves continuity across people and AI agents.
+
+## Update 2026-07-14 — Mercado Livre integrado
+
+- Conta JACARTTA conectada (OAuth PKCE) e ingestão horária ativa (somente leitura).
+- Página `/mercado-livre`: ruptura em R$/dia, cobertura e capital parado no Full.
+- Detalhes: [[../05-integrations/mercadolivre]] e `docs/project-status-2026-07-14.md`.
 
 ## Current status - 2026-07-07
 

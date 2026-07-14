@@ -55,6 +55,27 @@
   - JWT verification is disabled at deploy level for internal cron calls; protected by `x-sync-secret`.
 - `olist-sync-health`
   - Health/status endpoint for sync operations.
+- `mercadolivre-oauth-callback`
+  - Public OAuth callback with PKCE and one-time state validation.
+  - Exchanges the authorization code, validates `GET /users/me` and stores the
+    seller/tokens in service-role-only tables.
+  - Does not import orders, products or financial data.
+- `mercadolivre-webhook`
+  - Public callback registered in Mercado Livre DevCenter.
+  - Validates the application ID, persists notifications idempotently and
+    returns without fetching the notified resource.
+  - Topics remain disabled until the data ingestion scope is approved.
+- `mercadolivre-sync` (deployed 2026-07-14; hourly cron active)
+  - Read-only ingestion for the `/mercado-livre` analytics page: items (scan),
+    Full stock (`/inventories/{id}/stock/fulfillment`) and paid orders
+    (default 30-day lookback) into `mercadolivre_items`,
+    `mercadolivre_sales_daily` and `mercadolivre_inventory_snapshots`.
+  - Sole owner of the rotating refresh token renewal in `mercadolivre_tokens`
+    (optimistic update; concurrent rotation is re-read, never overwritten).
+  - Protected by `x-sync-secret` (`MERCADOLIVRE_SYNC_JOB_SECRET`); runs logged
+    in `mercadolivre_sync_runs`.
+  - Activation runbook (executed 2026-07-14) in
+    `docs/mercadolivre-integration.md`.
 
 ## Supabase Cron
 
@@ -79,6 +100,11 @@ Active jobs in `cron.job`:
   - Window: first day of current month through `current_date`.
   - Payload: `pageSize=100`, `maxPages=300`, `hydrateDetails=false`, `delayMs=100`.
   - Keeps NF headers/counts aligned with Olist before item hydration finishes.
+- `oraculo-mercadolivre-sync-hourly`: `55 * * * *`
+  - Calls `mercadolivre-sync` via `private.invoke_oraculo_mercadolivre_sync`
+    (Vault secrets `oraculo_project_url` + `oraculo_mercadolivre_sync_job_secret`).
+  - Payload: `lookbackDays=2` (initial 30-day load was run manually at activation).
+  - Scheduled at `:55` to avoid competing with the Olist jobs.
 - `oraculo-olist-order-items-backfill-overnight`: `50 3-8 * * *` (UTC = 00h-05h `America/Sao_Paulo`)
   - Calls `olist-backfill-order-items`.
   - Window: `2026-06-01` through `2026-06-19` while the fiscal SKU coverage gate is still open.

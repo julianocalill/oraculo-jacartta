@@ -2,6 +2,41 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-14] — Ingestão analítica Mercado Livre Full (ATIVADA em produção)
+
+- Added migration `20260714203000` with read-model tables `mercadolivre_items`,
+  `mercadolivre_sales_daily`, `mercadolivre_inventory_snapshots` and
+  `mercadolivre_sync_runs` (service-role writes, authenticated reads via
+  grant + policy on base tables).
+- Added edge function `mercadolivre-sync` (GET-only ingestion: items, Full
+  stock, paid orders 30d) — the single owner of rotating refresh-token renewal,
+  guarded by `x-sync-secret` and audited in `mercadolivre_sync_runs`.
+- Added `/mercado-livre` page (AppShell + SortableTable): estimated revenue
+  loss per day from Full stockouts, stock coverage with 7/15-day thresholds
+  and idle capital in fulfillment; sidebar entry "Mercado Livre Full".
+- Activated in production on 2026-07-14: migration applied, function deployed,
+  `MERCADOLIVRE_SYNC_JOB_SECRET` set (Edge Secrets + Vault), hourly cron
+  `oraculo-mercadolivre-sync-hourly` (`55 * * * *`, lookbackDays=2) scheduled,
+  web deployed. First 30-day load: 1,928 items (435 fulfillment), 1,932 paid
+  orders; initial stockout diagnosis ~R$ 2.881/day of estimated lost revenue.
+- Owner decision: keep the current broad DevCenter grant (scope reduction to
+  read-only stays as a future recommendation; the sync code is GET-only).
+- No existing metrics touched.
+
+## [2026-07-14] — Fundação da conexão Mercado Livre
+
+- Added service-role-only tables for Mercado Livre OAuth state, connected
+  sellers, rotating tokens, notification inbox and connection audit runs.
+- Added PKCE OAuth callback that exchanges the authorization code and validates
+  the connected seller through `/users/me`.
+- Added a fast, idempotent notification receiver that validates the application
+  ID and queues events without fetching resources in the webhook request.
+- Added `scripts/connect-mercadolivre.js` to create a short-lived PKCE state and
+  generate the seller authorization URL without reading or printing the Client Secret.
+- No Mercado Livre orders/products/financial data or Oráculo metrics were changed.
+- Production OAuth validated for seller `112538836` (`JACARTTA ATACADOEVAREJO`,
+  site `MLB`) with offline refresh token and successful `/users/me` verification.
+
 ## [2026-07-14] — Cobertura SKU passa a medir itens da própria NF
 
 Na Olist toda NF carrega seus produtos — o card "NFs com pedido + itens" (23,5k

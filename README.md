@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md) **← start here** (current state)
+1. [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md) **← start here** (current state)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
 4. [docs/project-context.md](docs/project-context.md)
@@ -45,7 +45,7 @@ oraculo/
 10. [CHANGELOG.md](CHANGELOG.md) (full history)
 11. [vault/00-home/index.md](vault/00-home/index.md)
 
-Earlier snapshots (historical, superseded): [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
+Earlier snapshots (historical, superseded): [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
 
 ## Tooling choices
 
@@ -56,7 +56,8 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-07-10-fina
 
 ## Current production state
 
-**Last update**: `2026-07-12` (see `docs/project-status-2026-07-12.md`)
+**Last update**: `2026-07-14` (see `docs/project-status-2026-07-14.md`) —
+Mercado Livre connected + hourly Full analytics ingestion + `/mercado-livre` page live.
 
 ### Deployment & auth
 - Production URL: `https://oraculo.oliverhome.com.br`
@@ -133,6 +134,7 @@ Current product areas:
 - Rupture/no-sale product watchlist.
 - Manual parameters by channel, SKU and UF.
 - Read-only Shopee Donacor data.
+- Mercado Livre connection foundation (OAuth PKCE + notification inbox), without business-data import yet.
 
 Production behavior on `2026-07-03`:
 
@@ -257,6 +259,9 @@ Required variables for the current dashboard:
 - `OLIST_API_AUTH_HEADER`
 - `OLIST_API_AUTH_PREFIX`
 - `OLIST_STOCK_ENDPOINT`
+- `MERCADOLIVRE_APP_ID`
+- `MERCADOLIVRE_CLIENT_SECRET`
+- `MERCADOLIVRE_OAUTH_REDIRECT_URI`
 
 ## Portability rule
 

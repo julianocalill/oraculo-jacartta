@@ -9,3 +9,6 @@
 - 2026-06-21: Olist stock/products sync every 6 hours, not hourly, because the current endpoint flow is not safely incremental.
 - 2026-06-21: Fiscal UF rules are stored as manual parameters and must remain pending until validated by accounting/fiscal.
 - 2026-06-21: Mobile support is a product requirement; the app must remain usable on phone screens.
+- 2026-07-14: Mercado Livre entra como segundo canal integrado (OAuth PKCE + ingestão horária somente leitura). A analítica do canal vive dentro do Oráculo (página `/mercado-livre`), não em app separado.
+- 2026-07-14: O grant do app Mercado Livre no DevCenter permanece amplo por decisão do proprietário; o código de ingestão é exclusivamente `GET` e a redução de escopo fica como recomendação futura.
+- 2026-07-14: `mercadolivre-sync` é a única função autorizada a renovar o refresh token rotativo (update otimista; rotação concorrente é relida, nunca sobrescrita).

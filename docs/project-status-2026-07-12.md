@@ -16,6 +16,23 @@ Precificação, com presets por marketplace; (6) identidade visual própria
 (logo, favicon, kit de marca); (7) documentação de negócio para diretoria e
 treinamento.
 
+## Atualização em 2026-07-14 — conexão Mercado Livre
+
+- Aplicativo Mercado Livre criado para o Oráculo; credencial exposta durante o
+  setup foi rotacionada antes da integração.
+- Migration `20260714170000` cria estado OAuth PKCE, sellers conectados, tokens
+  rotativos, inbox idempotente de notificações e auditoria da conexão, todos
+  restritos ao `service_role`.
+- Edge Functions `mercadolivre-oauth-callback` e `mercadolivre-webhook` formam a
+  base da conexão. O callback valida `/users/me`; o webhook só enfileira.
+- Nenhum pedido, anúncio, estoque ou dado financeiro do Mercado Livre entra no
+  Oráculo nesta fase e nenhuma métrica existente foi alterada.
+- OAuth validado em produção para `JACARTTA ATACADOEVAREJO` (`MLB`, seller
+  `112538836`), com refresh token presente e run de conexão `success`.
+- O grant retornado contém escopos de escrita amplos; o código atual usa apenas
+  leitura, e a redução das permissões no DevCenter é requisito antes da ingestão.
+- Runbook: `docs/mercadolivre-integration.md`.
+
 ## 1. Navegação
 
 - `AppShell` + `SidebarNav` (client, `usePathname`) substituem a sidebar que só
