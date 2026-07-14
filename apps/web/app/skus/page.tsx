@@ -254,7 +254,7 @@ export default async function SkusPage({
         </div>
         <div className="coverage-grid">
           <article>
-            <span>NFs com pedido + itens</span>
+            <span>NFs com itens sincronizados</span>
             <strong>{count(data.fiscalCoverage.invoicesWithOrderItems)}</strong>
             <small>{data.fiscalCoverage.orderItemsInvoicePct.toFixed(1).replace(".", ",")}% das NFs válidas</small>
           </article>
@@ -266,7 +266,7 @@ export default async function SkusPage({
           <article>
             <span>Receita sem cobertura</span>
             <strong>{money(data.fiscalCoverage.revenueWithoutOrderItems)}</strong>
-            <small>{data.fiscalCoverage.missingOrderItemsRevenuePct.toFixed(1).replace(".", ",")}% ainda em backfill</small>
+            <small>{data.fiscalCoverage.missingOrderItemsRevenuePct.toFixed(1).replace(".", ",")}% aguardando sync de itens</small>
           </article>
           <article>
             <span>Produtos carregados</span>

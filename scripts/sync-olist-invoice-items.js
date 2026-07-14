@@ -233,6 +233,13 @@ async function main() {
   const runEndpoint = `${listEndpoint}:items`;
   const startDate = arg("start", "2026-06-01");
   const endDate = arg("end", "2026-06-19");
+  // --ids-file=<path>: processa exatamente esses ids de NF (um por linha) em vez
+  // de varrer olist_invoices pela janela — usado para backfill direcionado das
+  // NFs ainda sem linhas em olist_invoice_items (evita re-hidratar as demais).
+  const idsFile = arg("ids-file", "");
+  const targetIds = idsFile
+    ? readFileSync(idsFile, "utf8").split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+    : null;
   const pageSize = intArg("page-size", 50, 500);
   const maxPages = intArg("max-pages", 1);
   const delayMs = intArg("delay-ms", 500);
@@ -255,10 +262,12 @@ async function main() {
   try {
     for (let page = 0; page < maxPages; page += 1) {
       const statusFilter = status ? `&status=eq.${encodeURIComponent(status)}` : "";
-      const invoices = await supabaseFetch(
-        env,
-        `/rest/v1/olist_invoices?select=id,invoice_number&emission_date=gte.${startDate}&emission_date=lt.${endDate}T23:59:59${statusFilter}&order=emission_date.asc,id.asc&limit=${pageSize}&offset=${offset}`
-      );
+      const invoices = targetIds
+        ? targetIds.slice(offset, offset + pageSize).map((id) => ({ id }))
+        : await supabaseFetch(
+            env,
+            `/rest/v1/olist_invoices?select=id,invoice_number&emission_date=gte.${startDate}&emission_date=lt.${endDate}T23:59:59${statusFilter}&order=emission_date.asc,id.asc&limit=${pageSize}&offset=${offset}`
+          );
       if (!Array.isArray(invoices) || invoices.length === 0) break;
 
       const updatedInvoices = [];

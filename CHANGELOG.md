@@ -2,6 +2,32 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-14] — Cobertura SKU passa a medir itens da própria NF
+
+Na Olist toda NF carrega seus produtos — o card "NFs com pedido + itens" (23,5k
+de 53,3k, via `olist_order_items`) subestimava a cobertura e sugeria NF "sem
+produto", quando o gap real é só fila de sync.
+
+- **RPC `oraculo_fiscal_order_item_backfill_progress`** agora mede cobertura por
+  `olist_invoice_items` (itens da NF, sincronizados NF a NF da API Olist), mesmo
+  shape de JSON — snapshot `sku_coverage`, loaders e auditorias intactos.
+  Migration `20260714120000`. Julho: 46,5k NFs (87,2%), R$ 3,53M (88,3%) de
+  receita coberta, 304 SKUs; converge para 100% conforme o sync avança.
+- **Margem fiscal não muda:** `oraculo_fiscal_margin_*` segue no caminho
+  NF → pedido → itens (custo via `olist_products`), com cobertura própria na
+  seção "Margem e ROI fiscais".
+- **Dashboard:** card renomeado para "NFs com itens sincronizados", legenda
+  "aguardando sync de itens" (antes "ainda em backfill") em `/` e `/skus`;
+  removido o pill "Regra: status 6/7 · saída · sem devolução" do header fiscal.
+- **Backfill direcionado:** `sync-olist-invoice-items.js` ganhou `--ids-file`
+  (processa exatamente as NFs sem itens, sem re-hidratar as demais). Rodado para
+  as 6,7k NFs de julho pendentes (gaps de 05-07 e 12-14/07 — dias em que a fila
+  do job de 15 min não acompanhou o volume).
+- **Sync quase em tempo real:** migration `20260714150000` sobe o job
+  `oraculo-olist-invoices-15m` de 2 para 4 páginas por rodada (100 → 200
+  detalhes/run; 9,6k → 19,2k NFs/dia), re-hidratando a janela de 3 dias ~4x/dia
+  — capacidade acima do volume diário (~4-5k NFs), a fila não acumula mais.
+
 ## [2026-07-13] — Sync Shopee trazido para dentro do Oráculo (edge function)
 
 O sync das lojas Shopee saiu do n8n e passou a rodar no próprio Supabase do Oráculo, como o time pediu ("tudo no Oráculo").

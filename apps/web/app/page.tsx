@@ -568,10 +568,10 @@ async function loadFiscalChannels(
   }
 }
 
-// Cobertura de item por NF, ligada ao filtro: mês corrente lê o snapshot
-// (materializado de hora em hora, com os links já atualizados); janela custom
-// calcula ao vivo via RPC (a função lê da tabela de links, ~3s/mês) com
-// degradação para o snapshot em caso de erro/timeout.
+// Cobertura de item por NF (itens da própria NF, olist_invoice_items — toda NF
+// Olist tem produto; o gap é fila de sync), ligada ao filtro: mês corrente lê o
+// snapshot (materializado de hora em hora); janela custom calcula ao vivo via
+// RPC com degradação para o snapshot em caso de erro/timeout.
 async function loadFiscalCoverage(
   supabase: ReturnType<typeof createSupabaseAdminClient>,
   filters: DashboardFilters
@@ -1055,7 +1055,6 @@ export default async function HomePage({
               <p className="eyebrow">Fiscal oficial</p>
               <h2>Venda por NF faturada</h2>
             </div>
-            <span className="pill">Regra: status 6/7 · saída · sem devolução</span>
           </div>
           <div className="metric-grid metric-grid-eight">
             <MetricCard
@@ -1101,7 +1100,7 @@ export default async function HomePage({
           </div>
           <div className="coverage-grid">
             <article>
-              <span>NFs com pedido + itens</span>
+              <span>NFs com itens sincronizados</span>
               <strong>{formatCount(data.fiscalCoverage.invoicesWithOrderItems)}</strong>
               <small>{formatDecimal(data.fiscalCoverage.orderItemsInvoicePct, 1)}% das NFs válidas</small>
             </article>
@@ -1113,7 +1112,7 @@ export default async function HomePage({
             <article>
               <span>Receita sem cobertura</span>
               <strong>{formatCurrency(data.fiscalCoverage.revenueWithoutOrderItems)}</strong>
-              <small>{formatDecimal(data.fiscalCoverage.missingOrderItemsRevenuePct, 1)}% ainda em backfill</small>
+              <small>{formatDecimal(data.fiscalCoverage.missingOrderItemsRevenuePct, 1)}% aguardando sync de itens</small>
             </article>
             <article>
               <span>SKUs identificados</span>
