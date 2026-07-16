@@ -57,8 +57,8 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-07-14.md](
 ## Current production state
 
 **Last update**: `2026-07-16` (see `docs/project-status-2026-07-16.md`) —
-Mercado Livre analytics v3: variações, margem via custo Olist, trânsito,
-tendência 120d e aba "Sugestão de envio Full" com regra Magiic.
+Mercado Livre analytics v3 + Shopee estoque/FBS multi-armazém com sugestão de
+reposição (15 itens/loja) + rastreamento de importações com mapa AIS.
 
 ### Deployment & auth
 - Production URL: `https://oraculo.oliverhome.com.br`

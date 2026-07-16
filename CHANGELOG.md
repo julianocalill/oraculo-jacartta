@@ -2,6 +2,29 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-16] — Shopee: FBS multi-armazém, estoque local e sugestão de reposição
+
+O canal Shopee ganha a mesma analítica do ML — com uma vantagem: as 4 lojas
+estão inscritas no FBS (7 armazéns BR) e o módulo SBS da Shopee entrega
+velocidade, cobertura, trânsito e janelas de venda prontos por SKU × armazém.
+
+- **`shopee-sync-sbs`** (cron :42): materializa `/api/v2/sbs/get_current_inventory`
+  em `shopee_sbs_inventory` + snapshot diário. Oliverhome já opera FBS
+  (8 SKUs em ruptura na primeira carga).
+- **`shopee-sync-products`** (cron 6h POR LOJA — as 4 juntas estouram o teto
+  da edge function): popula `shopee_products` (3.747 modelos, 98% com SKU),
+  snapshot diário, e recalcula `shopee_sales_daily` (derivada dos ~46k
+  pedidos) + agregados 30/60d via RPCs (migration `20260716220000`).
+- **Página `/shopee` com 3 abas**: Take Rate (existente) + **Estoque & FBS**
+  (ruptura FBS por armazém com perda R$/dia, cobertura da Shopee, ruptura e
+  parado do estoque local, ABC por loja, tendência, filtro por loja) +
+  **Sugestão de reposição** (repor = média/dia × (alvo + prazo) − estoque −
+  trânsito; FBS limitado ao estoque local p/ envio; justificativa por item;
+  máx. 15 itens/loja).
+- Diagnóstico da primeira carga: 76 rupturas locais ≈ R$ 12,9k/dia + FBS.
+- Regra do renovador único respeitada: novas funções só LEEM o token
+  (adiam a loja se faltar <2min); renovação segue exclusiva do shopee-sync.
+
 ## [2026-07-16] — Importações: aba de rastreamento com mapa AIS e cadastro
 
 Porta o MVP local `~/rastreamento-importacoes` para dentro do Oráculo

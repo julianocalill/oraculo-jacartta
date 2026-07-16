@@ -84,12 +84,26 @@ Porta do MVP local `~/rastreamento-importacoes` para o Oráculo (migration
   `importacao_ais_sync_runs` visíveis no `/status`. Nada roda mais na máquina
   local; runbook em `docs/importacoes-rastreamento.md`.
 
+## Shopee (mesma data — canal de estoque completo)
+
+As 4 lojas (Jacartta, Espaço De Bicho, Donacor, Oliverhome) estão inscritas no
+FBS (7 armazéns BR); Oliverhome opera com estoque em CD. Página `/shopee`
+ganhou 3 abas: Take Rate (existente), **Estoque & FBS** (ruptura FBS por
+armazém com a velocidade calculada pela própria Shopee, cobertura, ruptura e
+parado do estoque local, ABC por loja, tendência) e **Sugestão de reposição**
+(repor = média/dia × (alvo + prazo) − estoque − trânsito; máx. 15 itens/loja).
+Ingestão: `shopee-sync-sbs` (horário) + `shopee-sync-products` (6h POR LOJA);
+3.747 produtos (98% com SKU), série de vendas derivada dos ~46k pedidos.
+Diagnóstico inicial: 76 rupturas locais ≈ R$ 12,9k/dia + 8 SKUs zerados no
+FBS. Cada loja tem partner app próprio — chamadas assinam com a chave da loja.
+
 ## Fora do escopo / próximos naturais
 
 - Elasticidade de preços (histórico de preço/visitas acumulando; ~semanas).
 - Exportação da sugestão de envio (planilha p/ separação, formato Bling).
 - De-para de SKU (engenharia reversa) se a padronização manual não avançar.
 - Entrada do canal ML nas views unificadas e na camada fiscal.
+- Linhas shopee-sync-sbs/products no `/status` (runs já em `shopee_sync_runs`).
 
 ## Referências
 

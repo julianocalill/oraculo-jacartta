@@ -65,6 +65,19 @@
   - Validates the application ID, persists notifications idempotently and
     returns without fetching the notified resource.
   - Topics remain disabled until the data ingestion scope is approved.
+- `shopee-sync-sbs` (deployed 2026-07-16; hourly cron `:42`)
+  - Materializes FBS warehouse inventory (`/api/v2/sbs/get_current_inventory`,
+    region BR) into `shopee_sbs_inventory` + daily snapshots. Shopee provides
+    sellable/reserved/in-transit, coverage_days, selling_speed and 7–90d sales
+    windows per SKU × warehouse. Read-only on tokens (renewal stays exclusive
+    to `shopee-sync`); signs per-shop with each shop's own partner app key.
+- `shopee-sync-products` (deployed 2026-07-16; 6h crons PER SHOP, staggered)
+  - Items + models/variations + local stock (`get_item_list` →
+    `get_item_base_info` → `get_model_list`) into `shopee_products` + daily
+    snapshots; then rebuilds `shopee_sales_daily` (derived from ingested
+    orders) and 30/60d product aggregates via RPCs (migration `20260716220000`).
+  - Scheduled per shop because the 4 catalogs together exceed the edge
+    function wall clock (observed on first load).
 - `mercadolivre-sync` (deployed 2026-07-14; hourly cron active)
   - Read-only ingestion for the `/mercado-livre` analytics page: items (scan),
     Full stock (`/inventories/{id}/stock/fulfillment`) and paid orders
@@ -122,6 +135,10 @@ Active jobs in `cron.job`:
   - Window: first day of current month through `current_date`.
   - Payload: `pageSize=100`, `maxPages=300`, `hydrateDetails=false`, `delayMs=100`.
   - Keeps NF headers/counts aligned with Olist before item hydration finishes.
+- `shopee-sbs-hourly`: `42 * * * *` — calls `shopee-sync-sbs` (all shops; light).
+- `shopee-products-{jacartta,espaco-de-bicho,donacor,oliverhome}`:
+  `22/32/44/52 1,7,13,19 * * *` — per-shop `shopee-sync-products` runs
+  (staggered; one invocation per shop fits the wall clock).
 - `oraculo-mercadolivre-sync-hourly`: `55 * * * *`
   - Calls `mercadolivre-sync` via `private.invoke_oraculo_mercadolivre_sync`
     (Vault secrets `oraculo_project_url` + `oraculo_mercadolivre_sync_job_secret`).

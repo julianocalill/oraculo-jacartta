@@ -8,6 +8,7 @@
 - [[../04-data/canonical-data-model]]
 - [[../05-integrations/olist]]
 - [[../05-integrations/mercadolivre]]
+- [[../05-integrations/shopee]]
 - [[../07-decisions/decision-log]]
 
 ## Current north star

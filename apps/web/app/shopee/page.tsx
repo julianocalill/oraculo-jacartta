@@ -1,6 +1,7 @@
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { requireCurrentUser } from "../../lib/auth/session";
 import { AppShell } from "../components/app-shell";
+import { ShopeeTabs } from "./tabs";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 import { SortableTable } from "../components/sortable-table";
 
@@ -257,6 +258,8 @@ export default async function ShopeeTakeRatePage({
           <button type="submit">Aplicar</button>
         </form>
       </header>
+
+      <ShopeeTabs active="takerate" />
 
       <section className="metric-grid metric-grid-eight">
         <article className="metric accent-blue">

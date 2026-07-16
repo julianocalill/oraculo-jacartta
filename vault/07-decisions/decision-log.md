@@ -16,3 +16,4 @@
 - 2026-07-16: Estoque em trânsito é informado manualmente na página (tabela `mercadolivre_transit`), não via PDF/API — simplicidade primeiro; automação só se a rotina doer.
 - 2026-07-16: Margem unitária do ML cruza SKU do anúncio/variação com o custo Olist; a padronização de SKUs nos anúncios ML é ação operacional do time (de-para/"engenharia reversa" só se a padronização não avançar).
 - 2026-07-16: Sugestões de reposição/envio mostram no máximo 15 itens por loja em cada marketplace (ajustável na tela) — foco de execução, não lista infinita. Vale para o ML e para os canais futuros (Shopee).
+- 2026-07-16: Canal Shopee replica a analítica do ML com dados nativos do módulo SBS (velocidade/cobertura/trânsito da própria Shopee) para FBS; estoque local usa a mesma velocidade sobre dias-com-estoque do ML. Syncs de produto agendados POR LOJA (catálogos grandes estouram o teto de uma invocação única).
