@@ -4,7 +4,7 @@ import { requireCurrentUser } from "../../../lib/auth/session";
 import { AppShell } from "../../components/app-shell";
 import { loadActionableAlertCount } from "../../../lib/alert-count";
 import { SortableTable, type SortableCell } from "../../components/sortable-table";
-import { ShopeeTabs } from "../tabs";
+import { LojaPills, ShopeeTabs } from "../tabs";
 import {
   type Curve,
   brl,
@@ -95,6 +95,13 @@ function clampInt(value: string | undefined, fallback: number, min: number, max:
   return Math.min(Math.max(parsed, min), max);
 }
 
+// Kits ficam FORA da sugestão (decisão 2026-07-16): kits são compostos de
+// produtos simples — repõe-se o componente, não o bundle. Detecção pelo nome
+// do anúncio ("Kit ..."), o padrão do catálogo das lojas.
+function isKit(name: string | null | undefined) {
+  return /\bkit\b/i.test(name ?? "");
+}
+
 export default async function ShopeeReposicaoPage({
   searchParams
 }: {
@@ -166,7 +173,9 @@ export default async function ShopeeReposicaoPage({
     list.push(row);
     fbsBySku.set(key, list);
   }
+  let kitsExcluidos = 0;
   for (const [key, rows] of fbsBySku) {
+    if (isKit(rows[0].item_name)) { kitsExcluidos++; continue; }
     const speed = rows.reduce((sum, r) => sum + r.selling_speed, 0);
     if (speed <= 0) continue;
     const sellable = rows.reduce((sum, r) => sum + r.sellable_qty, 0);
@@ -190,6 +199,7 @@ export default async function ShopeeReposicaoPage({
       .join(", ");
 
     const porque: string[] = [];
+    if (!lojaFiltro) porque.push(`Loja ${shopName.get(shopId) ?? shopId}`);
     porque.push(curve ? `Curva ${curve}` : "Sem curva");
     porque.push(`FBS vende ${speed.toFixed(1)}/dia (dado da Shopee)`);
     if (situacao === "ruptura_fbs") porque.push(`armazéns zerados, perdendo ${brl(lossPerDay)}/dia`);
@@ -211,6 +221,7 @@ export default async function ShopeeReposicaoPage({
   // ---- Local: repor estoque do anúncio (compra/produção) ----
   for (const product of products) {
     if (product.sold_qty_60d <= 0) continue;
+    if (isKit(product.item_name) || isKit(product.model_name)) { kitsExcluidos++; continue; }
     const key = productKey(product.shop_id, product.item_id, product.model_id);
     if (fbsBySku.has(key)) continue; // já tratado como FBS
     const stock = stockOf(product);
@@ -230,6 +241,7 @@ export default async function ShopeeReposicaoPage({
     const idle = daysSince(product.last_sale_at);
 
     const porque: string[] = [];
+    if (!lojaFiltro) porque.push(`Loja ${shopName.get(product.shop_id) ?? product.shop_id}`);
     porque.push(curve ? `Curva ${curve}` : "Sem curva");
     porque.push(`vende ${velocity.toFixed(1)}/dia (${trendLabel(trends.get(key))})`);
     if (situacao === "ruptura_local") porque.push(`anúncio zerado${idle != null ? ` há ${idle}d` : ""}, perdendo ${brl(lossPerDay)}/dia`);
@@ -271,7 +283,6 @@ export default async function ShopeeReposicaoPage({
 
   const rows: SortableCell[][] = visiveis.map((s) => [
     { text: s.titulo, sort: s.titulo, subtitle: s.porque },
-    { text: shopName.get(s.shopId) ?? String(s.shopId), sort: shopName.get(s.shopId) ?? "" },
     { text: situacaoMeta[s.situacao].label, sort: situacaoMeta[s.situacao].rank, badge: situacaoMeta[s.situacao].badge },
     s.curve ? { text: `Curva ${s.curve}`, sort: s.curve, badge: curveBadge[s.curve] } : { text: "—", sort: null },
     { text: s.vendas, sort: s.vendas },
@@ -305,17 +316,7 @@ export default async function ShopeeReposicaoPage({
             <span>Prazo de reposição</span>
             <input type="number" name="prazo" min={0} max={30} defaultValue={prazo} />
           </label>
-          <label>
-            <span>Loja</span>
-            <select name="loja" defaultValue={lojaFiltro ?? ""}>
-              <option value="">Todas</option>
-              {shops.map((s) => (
-                <option key={s.shop_id} value={s.shop_id}>
-                  {s.shop_name ?? s.shop_id}
-                </option>
-              ))}
-            </select>
-          </label>
+          {lojaFiltro ? <input type="hidden" name="loja" value={lojaFiltro} /> : null}
           <label>
             <span>Itens por loja</span>
             <input type="number" name="limite" min={1} max={100} defaultValue={limite} />
@@ -325,6 +326,12 @@ export default async function ShopeeReposicaoPage({
       </header>
 
       <ShopeeTabs active="reposicao" />
+      <LojaPills
+        shops={shops}
+        active={lojaFiltro}
+        basePath="/shopee/reposicao"
+        extraParams={{ alvo, prazo, limite }}
+      />
 
       <section className="metric-grid metric-grid-eight">
         <article className="metric accent-blue">
@@ -364,7 +371,6 @@ export default async function ShopeeReposicaoPage({
         <SortableTable
           columns={[
             { label: "Produto e justificativa" },
-            { label: "Loja" },
             { label: "Situação" },
             { label: "Curva" },
             { label: "Vendas 30/60d", numeric: true },
@@ -377,7 +383,7 @@ export default async function ShopeeReposicaoPage({
             { label: "Custo (Olist)", numeric: true }
           ]}
           rows={rows}
-          initialSort={2}
+          initialSort={1}
           initialDir="asc"
           showRank
         />
@@ -385,6 +391,12 @@ export default async function ShopeeReposicaoPage({
           <p className="table-note">
             Exibindo até {limite} itens por loja — {count(omitidos)} candidatos de menor prioridade ficaram
             fora. Ajuste “Itens por loja” para ver mais.
+          </p>
+        )}
+        {kitsExcluidos > 0 && (
+          <p className="table-note">
+            {count(kitsExcluidos)} kits ficaram fora da sugestão — kits são compostos de produtos simples;
+            reponha os componentes.
           </p>
         )}
         <p className="table-note">

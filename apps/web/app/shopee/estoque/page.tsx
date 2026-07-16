@@ -2,7 +2,7 @@ import { requireCurrentUser } from "../../../lib/auth/session";
 import { AppShell } from "../../components/app-shell";
 import { loadActionableAlertCount } from "../../../lib/alert-count";
 import { SortableTable, type SortableCell } from "../../components/sortable-table";
-import { ShopeeTabs } from "../tabs";
+import { LojaPills, ShopeeTabs } from "../tabs";
 import {
   type Curve,
   type ShopeeProduct,
@@ -185,23 +185,10 @@ export default async function ShopeeEstoquePage({
           <h1>Estoque Shopee</h1>
           <p>Estoque local dos anúncios + inventário FBS por armazém (dados da própria Shopee)</p>
         </div>
-        <form className="filter-row filter-form" method="get">
-          <label>
-            <span>Loja</span>
-            <select name="loja" defaultValue={lojaFiltro ?? ""}>
-              <option value="">Todas</option>
-              {shops.map((s) => (
-                <option key={s.shop_id} value={s.shop_id}>
-                  {s.shop_name ?? s.shop_id}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit">Aplicar</button>
-        </form>
       </header>
 
       <ShopeeTabs active="estoque" />
+      <LojaPills shops={shops} active={lojaFiltro} basePath="/shopee/estoque" />
 
       <section className="metric-grid metric-grid-eight">
         <article className="metric accent-red">

@@ -2,6 +2,17 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-16] — Reposição Shopee: filtro por loja em abas, sem kits, nomes corretos
+
+- Fix: `shopee_shops` não tinha leitura para `authenticated` (migration
+  `20260716250000`) — as páginas mostravam o shop_id em vez do nome da loja.
+- Filtro por loja vira "abas" (pills) nas duas páginas de estoque/reposição,
+  no lugar da coluna/select; com loja selecionada a lista traz os 15 daquela
+  loja; em "Todas", a loja aparece na justificativa do item.
+- **Kits fora da sugestão de reposição** (detecção por nome "Kit ..."): kits
+  são compostos de produtos simples — repõe-se o componente, não o bundle.
+  Nota na página informa quantos ficaram de fora.
+
 ## [2026-07-16] — Custos ancorados no SKU do marketplace
 
 - Nova view `oraculo_sku_unit_cost` (migration `20260716240000`): resolvedor
