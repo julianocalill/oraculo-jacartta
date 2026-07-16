@@ -2,6 +2,19 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-16] — ML: tópicos ativos, backlog saneado e limpeza automática
+
+- DevCenter topics enabled by the operator; webhook inbox now receives live
+  events (items, prices, stock, orders, shipments, payments and others).
+- 14,122 stale pending notifications (accumulated before the processor went
+  live) bulk-ignored — all predated the 13:55 full sync, whose item refresh
+  already captured that state. Processor now handles only fresh events.
+- New weekly cleanup cron `oraculo-mercadolivre-notifications-cleanup-weekly`
+  (Sun 06:37 UTC, migration `20260716143000`): deletes `ignored`/`processed`
+  notifications older than 30 days; `failed` rows kept for inspection.
+- Post-fix verification: hourly syncs held correct aggregates for 36h
+  (10 stockout items ≈ R$ 2.882/day, steady).
+
 ## [2026-07-14] — ML: correção dos agregados 30d, inbox quase em tempo real e /status
 
 - **Fix (correctness)**: o cron horário (`lookbackDays=2`) sobrescrevia

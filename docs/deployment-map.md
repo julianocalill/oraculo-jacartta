@@ -119,6 +119,13 @@ Active jobs in `cron.job`:
   - Calls `mercadolivre-process-notifications` via
     `private.invoke_oraculo_mercadolivre_function` (generic ML helper, same
     Vault secrets). Minutes 0/10/20/30/40/50 are free of other jobs.
+- `oraculo-mercadolivre-notifications-cleanup-weekly`: `37 6 * * 0`
+  - Direct Postgres delete (no edge function): removes `ignored`/`processed`
+    notifications older than 30 days; `failed` rows are kept for inspection.
+  - Operational note: backlog created BEFORE the latest successful full sync
+    can be safely bulk-ignored — the hourly sync already captured that state
+    (done manually on 2026-07-16 for the 14k backlog accumulated while
+    DevCenter topics were enabled before the processor existed).
 - `oraculo-olist-order-items-backfill-overnight`: `50 3-8 * * *` (UTC = 00h-05h `America/Sao_Paulo`)
   - Calls `olist-backfill-order-items`.
   - Window: `2026-06-01` through `2026-06-19` while the fiscal SKU coverage gate is still open.
