@@ -197,15 +197,20 @@ async function fetchPaidOrders(
   accessToken: string,
   sellerId: number,
   lookbackDays: number,
-  maxPages: number
+  maxPages: number,
+  toDaysAgo = 0
 ) {
-  const from = new Date(Date.now() - lookbackDays * 86_400_000).toISOString();
+  // Janela [agora - toDaysAgo - lookbackDays, agora - toDaysAgo] — o offset do
+  // /orders/search satura em ~10k; períodos longos são buscados em fatias.
+  const from = new Date(Date.now() - (toDaysAgo + lookbackDays) * 86_400_000).toISOString();
+  const to = new Date(Date.now() - toDaysAgo * 86_400_000).toISOString();
   const orders: MlOrder[] = [];
   let offset = 0;
   for (let page = 0; page < maxPages; page++) {
     const qs = new URLSearchParams({
       seller: String(sellerId),
       "order.date_created.from": from,
+      "order.date_created.to": to,
       limit: "50",
       offset: String(offset),
       sort: "date_desc"
@@ -252,8 +257,9 @@ Deno.serve(async (req) => {
   } catch {
     payload = {};
   }
-  const lookbackDays = Math.min(Number(payload.lookbackDays ?? 30) || 30, 60);
-  const maxOrderPages = Math.min(Number(payload.maxOrderPages ?? 40) || 40, 100);
+  const lookbackDays = Math.min(Number(payload.lookbackDays ?? 30) || 30, 120);
+  const maxOrderPages = Math.min(Number(payload.maxOrderPages ?? 40) || 40, 200);
+  const toDaysAgo = Math.min(Math.max(Number(payload.toDaysAgo ?? 0) || 0, 0), 120);
   const detailDelayMs = Number(payload.detailDelayMs ?? 150) || 0;
 
   let runId: string | null = null;
@@ -295,7 +301,7 @@ Deno.serve(async (req) => {
       // Os agregados 30d dos itens NÃO são calculados aqui: a janela do sync
       // pode ser curta (cron usa 2 dias). A fonte da verdade é a série
       // mercadolivre_sales_daily; o RPC ao final recalcula os 30 dias.
-      const orders = await fetchPaidOrders(accessToken, sellerId, lookbackDays, maxOrderPages);
+      const orders = await fetchPaidOrders(accessToken, sellerId, lookbackDays, maxOrderPages, toDaysAgo);
       const daily = new Map<string, { qty: number; revenue: number }>();
       for (const order of orders) {
         const when = order.date_closed ?? order.date_created ?? "";

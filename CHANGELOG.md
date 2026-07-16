@@ -2,6 +2,32 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-16] — ML: analítica v2 (estudo Magiic aplicado)
+
+Melhorias na página `/mercado-livre` derivadas do estudo da base de
+conhecimento da Magiic (concorrente de referência em gestão Full):
+
+- **Velocidade por dias-com-estoque**: a média de vendas passa a ser calculada
+  sobre os dias em que o item TINHA estoque (via `inventory_snapshots`),
+  extrapolada com piso de 15% enquanto o histórico é curto — a média bruta de
+  30d subestimava a venda perdida de itens parcialmente em ruptura.
+- **Janela de 60d** (`sold_qty_60d`/`revenue_60d`) como critério de
+  probabilidade de venda para ruptura + colunas 30/60d (migration
+  `20260716150000`, RPC v2).
+- **Backfill de ~120 dias de pedidos** (19,2k pedidos em 2 janelas; novo
+  parâmetro `toDaysAgo` no sync — o offset do `/orders/search` satura em 10k,
+  períodos longos são buscados em fatias). Habilita a coluna de **tendência
+  120/90 · 90/60 · 60/30 · 30/0**.
+- **Curva ABC 80/15/5** por contribuição de receita 30d (conta toda), como
+  coluna em todos os relatórios + card "Curva A em risco".
+- **Ruptura e estoque parado agora cobrem anúncios fora do Full** (badge de
+  origem Full/Local), como a Magiic faz.
+- **Ação sugerida no estoque parado** (heurística: 120d+ sem venda → avaliar
+  retirada; Curva A parada → investigar; demais → ativar promoção).
+- **Fix**: paginação das consultas da página — o PostgREST corta em 1.000
+  linhas e o catálogo tem 1.930 anúncios; a página anterior analisava um
+  subconjunto silenciosamente truncado.
+
 ## [2026-07-16] — ML: tópicos ativos, backlog saneado e limpeza automática
 
 - DevCenter topics enabled by the operator; webhook inbox now receives live
