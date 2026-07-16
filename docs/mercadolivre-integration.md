@@ -1,5 +1,10 @@
 # Integração Mercado Livre
 
+> Origem do produto: o estudo da plataforma Magiic e o PRD que definiram a
+> tese analítica estão em `docs/product/prd-mercadolivre-analytics.md`
+> (protótipo standalone arquivado em
+> `docs/product/prototipo-full-analytics-readme.md`).
+
 ## Estado atual
 
 A fundação de conexão existe sem importar dados de negócio:

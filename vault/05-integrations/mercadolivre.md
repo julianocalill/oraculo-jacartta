@@ -53,4 +53,5 @@ abaixo do alvo → fora do Full; cards de venda protegida e perda estancada.
 
 - `docs/mercadolivre-integration.md` (arquitetura/segurança/operação)
 - `docs/project-status-2026-07-16.md` (estado atual)
+- `docs/product/prd-mercadolivre-analytics.md` (tese de produto / estudo Magiic)
 - [[olist]] — padrão de sync; [[../07-decisions/decision-log]]
