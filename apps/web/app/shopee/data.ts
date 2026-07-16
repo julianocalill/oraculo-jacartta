@@ -217,9 +217,8 @@ export async function loadShopeeData(): Promise<ShopeeData | null> {
     ),
     fetchAllPages<CostRow>((from, to) =>
       supabase
-        .from("oraculo_product_effective_cost")
+        .from("oraculo_sku_unit_cost") // resolvedor unificado: override manual > Olist > kits
         .select("sku, unit_cost")
-        .not("unit_cost", "is", null)
         .range(from, to)
     )
   ]);

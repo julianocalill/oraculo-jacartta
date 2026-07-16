@@ -1,3 +1,5 @@
+import { revalidatePath } from "next/cache";
+import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
 import { requireCurrentUser } from "../../../lib/auth/session";
 import { AppShell } from "../../components/app-shell";
 import { loadActionableAlertCount } from "../../../lib/alert-count";
@@ -27,6 +29,50 @@ export const dynamic = "force-dynamic";
 
 // Regra de produto (2026-07-16): máx. 15 sugestões por loja (ajustável)
 const SUGESTOES_POR_LOJA = 15;
+
+// Cadastro de custos em massa, ancorado no SKU do marketplace (decisão
+// 2026-07-16: os custos do ERP estão zerados para a maioria dos SKUs; o
+// livro de custos passa a ser mantido aqui, com prioridade sobre o Olist).
+async function saveCustos(formData: FormData) {
+  "use server";
+  await requireCurrentUser();
+  const raw = String(formData.get("linhas") ?? "");
+  const rows = raw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const match = line.match(/^(\S+)\s+([\d.,]+)$/);
+      if (!match) return null;
+      const cost = Number(match[2].replace(/\./g, "").replace(",", "."));
+      const costDot = Number(match[2].replace(",", "."));
+      // aceita "12,34", "12.34" e "1.234,56"
+      const unit = Number.isFinite(costDot) && match[2].includes(".") && !match[2].includes(",") ? costDot : cost;
+      return Number.isFinite(unit) && unit > 0 ? { sku: match[1], unit } : null;
+    })
+    .filter((row): row is { sku: string; unit: number } => row !== null);
+  if (rows.length === 0) return;
+
+  const admin = createSupabaseAdminClient();
+  const now = new Date().toISOString();
+  const { error } = await admin.from("oraculo_margin_sku_params").upsert(
+    rows.map((row) => ({
+      source: "shopee",
+      sku: row.sku,
+      unit_cost_override: row.unit,
+      active: true,
+      notes: "cadastro em massa (reposição Shopee)",
+      updated_at: now
+    })),
+    { onConflict: "source,sku" }
+  );
+  if (error) throw error;
+  revalidatePath("/shopee/reposicao");
+  revalidatePath("/shopee/estoque");
+  revalidatePath("/shopee");
+  revalidatePath("/mercado-livre");
+  revalidatePath("/mercado-livre/envio");
+}
 
 type Situacao = "ruptura_fbs" | "critico_fbs" | "ruptura_local" | "abaixo_alvo";
 
@@ -343,9 +389,27 @@ export default async function ShopeeReposicaoPage({
         )}
         <p className="table-note">
           Sugestões FBS usam a velocidade calculada pela própria Shopee e são limitadas ao estoque local
-          disponível para envio; sugestões locais indicam reposição de compra/produção. Custo aparece quando
-          o SKU casa com o Olist.
+          disponível para envio; sugestões locais indicam reposição de compra/produção. Custo vem do livro
+          de custos por SKU (cadastro abaixo &gt; Olist &gt; kits).
         </p>
+      </section>
+
+      <section className="panel">
+        <div className="section-head">
+          <p className="eyebrow">
+            Livro de custos ancorado no SKU do marketplace — tem prioridade sobre o custo do ERP
+          </p>
+          <h2>Cadastrar custos por SKU</h2>
+        </div>
+        <p className="table-note">
+          Uma linha por SKU: <code>0770 12,50</code>. Os custos aparecem imediatamente nas colunas de
+          margem/custo da Shopee e do Mercado Livre (mesmo livro). Dica: comece pelos SKUs listados na
+          sugestão acima — são só {count(visiveis.length)}.
+        </p>
+        <form action={saveCustos} className="upload-form manual-form">
+          <textarea name="linhas" rows={6} placeholder={"0770 12,50\n0771-100un 8,90\nSTRONDAL-PLUS 21,00"} />
+          <button type="submit">Salvar custos</button>
+        </form>
       </section>
     </AppShell>
   );

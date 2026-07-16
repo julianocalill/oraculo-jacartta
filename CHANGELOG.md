@@ -2,6 +2,20 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-16] — Custos ancorados no SKU do marketplace
+
+- Nova view `oraculo_sku_unit_cost` (migration `20260716240000`): resolvedor
+  unificado de custo por SKU — override manual (oraculo_margin_sku_params,
+  qualquer source) > olist_products (ignorando custos R$ 0, que são a maioria
+  no ERP) > custo efetivo de kits. Páginas Shopee e ML passam a usar o mesmo
+  livro de custos.
+- Cadastro em massa de custos na aba /shopee/reposicao (linhas "SKU valor",
+  server action, source='shopee') — pensado para cobrir os 15 itens/loja das
+  sugestões primeiro.
+- Achado da investigação: o "com custo" do Take Rate contava custos R$ 0 do
+  Olist (ex.: SKU 0770 existe no ERP com custo zero); a cobertura real de
+  custo era ~nula. O livro manual por SKU do marketplace corrige na origem.
+
 ## [2026-07-16] — Shopee: FBS multi-armazém, estoque local e sugestão de reposição
 
 O canal Shopee ganha a mesma analítica do ML — com uma vantagem: as 4 lojas
