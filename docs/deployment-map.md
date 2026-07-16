@@ -76,6 +76,16 @@
     in `mercadolivre_sync_runs`.
   - Activation runbook (executed 2026-07-14) in
     `docs/mercadolivre-integration.md`.
+  - Item 30d aggregates are recomputed from `mercadolivre_sales_daily` by RPC
+    `mercadolivre_refresh_item_aggregates` at the end of each run (migration
+    `20260714230000`) — never from the sync's own lookback window.
+- `mercadolivre-process-notifications` (deployed 2026-07-14; 10-min cron active)
+  - Drains the `mercadolivre_notifications` inbox: `items`/`items_prices`
+    notifications refresh the item (detail + Full stock) within ~10 minutes;
+    `orders_v2` is marked ignored (sales are covered by the hourly sync).
+  - Reads the access token but NEVER refreshes it (renewal stays exclusive to
+    `mercadolivre-sync`); defers the batch when the token is about to expire.
+  - DevCenter topics must be enabled by the operator for events to arrive.
 
 ## Supabase Cron
 
@@ -105,6 +115,10 @@ Active jobs in `cron.job`:
     (Vault secrets `oraculo_project_url` + `oraculo_mercadolivre_sync_job_secret`).
   - Payload: `lookbackDays=2` (initial 30-day load was run manually at activation).
   - Scheduled at `:55` to avoid competing with the Olist jobs.
+- `oraculo-mercadolivre-notifications-10m`: `*/10 * * * *`
+  - Calls `mercadolivre-process-notifications` via
+    `private.invoke_oraculo_mercadolivre_function` (generic ML helper, same
+    Vault secrets). Minutes 0/10/20/30/40/50 are free of other jobs.
 - `oraculo-olist-order-items-backfill-overnight`: `50 3-8 * * *` (UTC = 00h-05h `America/Sao_Paulo`)
   - Calls `olist-backfill-order-items`.
   - Window: `2026-06-01` through `2026-06-19` while the fiscal SKU coverage gate is still open.

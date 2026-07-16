@@ -2,6 +2,26 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-14] — ML: correção dos agregados 30d, inbox quase em tempo real e /status
+
+- **Fix (correctness)**: o cron horário (`lookbackDays=2`) sobrescrevia
+  `sold_qty_30d`/`revenue_30d` com a janela curta, distorcendo ruptura e
+  capital parado. Novo RPC `mercadolivre_refresh_item_aggregates` (migration
+  `20260714230000`) recalcula os agregados a partir de
+  `mercadolivre_sales_daily` (fonte da verdade); `mercadolivre-sync` não
+  escreve mais agregados no upsert de itens. Recalculado em produção —
+  valores restaurados (10 itens em ruptura ≈ R$ 2.882/dia).
+- **Nova função `mercadolivre-process-notifications`** + cron
+  `oraculo-mercadolivre-notifications-10m` (`*/10 * * * *`, migration
+  `20260714220000` com helper genérico `invoke_oraculo_mercadolivre_function`):
+  processa a inbox do webhook; tópicos `items`/`items_prices` atualizam o
+  anúncio (detalhe + estoque Full) em até 10 min. Não renova token (regra:
+  renovação exclusiva do `mercadolivre-sync`); lote é adiado se o token
+  estiver a <2min de expirar. Tópicos do DevCenter ainda precisam ser
+  ativados pelo operador para o fluxo receber eventos.
+- **`/status`** agora monitora o ML: linha "Mercado Livre (Full)" nas últimas
+  execuções + alertas de falha/reautorização/sync não rodou hoje.
+
 ## [2026-07-14] — Ingestão analítica Mercado Livre Full (ATIVADA em produção)
 
 - Added migration `20260714203000` with read-model tables `mercadolivre_items`,

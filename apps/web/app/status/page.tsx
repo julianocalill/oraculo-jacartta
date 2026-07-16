@@ -14,6 +14,8 @@ type SyncRun = {
   items_upserted?: number | null;
   orders_processed?: number | null;
   orders_with_error?: number | null;
+  items_count?: number | null;
+  orders_count?: number | null;
   error_message: string | null;
 };
 
@@ -86,7 +88,7 @@ async function latestRun(
 async function loadStatus() {
   const supabase = createSupabaseAdminClient();
 
-  const [tokenResult, ordersRun, stockRun, invoicesRun, backfillRun] = await Promise.all([
+  const [tokenResult, ordersRun, stockRun, invoicesRun, backfillRun, mercadolivreRun] = await Promise.all([
     supabase
       .from("olist_oauth_tokens")
       .select("updated_at, expires_at, token_type, scope")
@@ -95,7 +97,8 @@ async function loadStatus() {
     latestRun(supabase, "olist_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message"),
     latestRun(supabase, "olist_stock_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message"),
     latestRun(supabase, "olist_invoice_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, items_upserted, error_message"),
-    latestRun(supabase, "olist_order_items_backfill_runs", "started_at, finished_at, status, orders_processed, orders_with_error, items_upserted, error_message")
+    latestRun(supabase, "olist_order_items_backfill_runs", "started_at, finished_at, status, orders_processed, orders_with_error, items_upserted, error_message"),
+    latestRun(supabase, "mercadolivre_sync_runs", "started_at, finished_at, status, items_count, orders_count, error_message")
   ]);
 
   const token = (tokenResult.data as TokenRow | null) ?? null;
@@ -113,8 +116,17 @@ async function loadStatus() {
     runFailed(ordersRun) ? `Sync de pedidos falhou: ${ordersRun?.error_message ?? "sem mensagem"}` : "",
     runFailed(stockRun) ? `Sync de estoque falhou: ${stockRun?.error_message ?? "sem mensagem"}` : "",
     runFailed(invoicesRun) ? `Sync de notas falhou: ${invoicesRun?.error_message ?? "sem mensagem"}` : "",
+    runFailed(mercadolivreRun)
+      ? `Sync Mercado Livre falhou: ${mercadolivreRun?.error_message ?? "sem mensagem"}`
+      : "",
+    hasTokenFailure(mercadolivreRun)
+      ? "Mercado Livre recusou o refresh token. É necessário reautorizar o aplicativo."
+      : "",
     ordersNotRunToday ? "Sync de pedidos ainda não rodou hoje." : "",
-    stockNotRunToday ? "Sync de estoque ainda não rodou hoje." : ""
+    stockNotRunToday ? "Sync de estoque ainda não rodou hoje." : "",
+    brtDate(mercadolivreRun?.started_at) !== today
+      ? "Sync do Mercado Livre ainda não rodou hoje."
+      : ""
   ].filter(Boolean);
 
   return {
@@ -128,7 +140,8 @@ async function loadStatus() {
       { key: "orders", label: "Pedidos", run: ordersRun },
       { key: "stock", label: "Estoque / produtos", run: stockRun },
       { key: "invoices", label: "Notas fiscais", run: invoicesRun },
-      { key: "backfill", label: "Backfill de itens", run: backfillRun }
+      { key: "backfill", label: "Backfill de itens", run: backfillRun },
+      { key: "mercadolivre", label: "Mercado Livre (Full)", run: mercadolivreRun }
     ]
   };
 }
@@ -151,7 +164,7 @@ export default async function StatusPage() {
       <header className="topbar">
         <div>
           <h1>Status do sync</h1>
-          <p>Saúde das integrações Olist · referência {data.today} (America/Sao_Paulo)</p>
+          <p>Saúde das integrações Olist e Mercado Livre · referência {data.today} (America/Sao_Paulo)</p>
         </div>
         <span className={`status-pill ${data.ok ? "signal-good" : "signal-danger"}`}>
           {data.ok ? "Tudo operacional" : `${data.alerts.length} alerta(s)`}
@@ -211,7 +224,7 @@ export default async function StatusPage() {
             <tbody>
               {data.runs.map(({ key, label, run }) => {
                 const badge = runBadge(run);
-                const records = run?.records_upserted ?? run?.items_upserted ?? run?.orders_processed ?? null;
+                const records = run?.records_upserted ?? run?.items_upserted ?? run?.orders_processed ?? run?.items_count ?? null;
                 return (
                   <tr key={key}>
                     <td>{label}</td>

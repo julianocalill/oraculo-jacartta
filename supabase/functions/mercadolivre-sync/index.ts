@@ -292,9 +292,11 @@ Deno.serve(async (req) => {
       }
 
       // 3) Pedidos pagos → agregação por anúncio/dia
+      // Os agregados 30d dos itens NÃO são calculados aqui: a janela do sync
+      // pode ser curta (cron usa 2 dias). A fonte da verdade é a série
+      // mercadolivre_sales_daily; o RPC ao final recalcula os 30 dias.
       const orders = await fetchPaidOrders(accessToken, sellerId, lookbackDays, maxOrderPages);
       const daily = new Map<string, { qty: number; revenue: number }>();
-      const perItem = new Map<string, { qty: number; revenue: number; lastSale: string }>();
       for (const order of orders) {
         const when = order.date_closed ?? order.date_created ?? "";
         const saleDate = when.slice(0, 10);
@@ -309,15 +311,10 @@ Deno.serve(async (req) => {
           day.qty += qty;
           day.revenue += qty * unit;
           daily.set(dayKey, day);
-          const total = perItem.get(mlbId) ?? { qty: 0, revenue: 0, lastSale: when };
-          total.qty += qty;
-          total.revenue += qty * unit;
-          if (when > total.lastSale) total.lastSale = when;
-          perItem.set(mlbId, total);
         }
       }
 
-      // 4) Upsert de anúncios (com agregados 30d)
+      // 4) Upsert de anúncios (sem tocar nos agregados 30d)
       const nowIso = new Date().toISOString();
       const itemRows = items.map((item) => ({
         seller_id: sellerId,
@@ -333,9 +330,6 @@ Deno.serve(async (req) => {
         inventory_id: item.inventory_id ?? null,
         available_qty: Number(item.available_quantity ?? 0),
         full_stock: fullStocks.get(item.id) ?? 0,
-        sold_qty_30d: perItem.get(item.id)?.qty ?? 0,
-        revenue_30d: perItem.get(item.id)?.revenue ?? 0,
-        last_sale_at: perItem.get(item.id)?.lastSale ?? null,
         raw_json: item,
         synced_at: nowIso
       }));
@@ -365,6 +359,13 @@ Deno.serve(async (req) => {
           .upsert(salesRows.slice(index, index + 200), { onConflict: "seller_id,mlb_id,sale_date" });
         if (salesError) throw salesError;
       }
+
+      // 5b) Recalcula agregados 30d a partir da série acumulada (fonte da verdade)
+      const { error: aggregateError } = await supabase.rpc(
+        "mercadolivre_refresh_item_aggregates",
+        { p_seller_id: sellerId }
+      );
+      if (aggregateError) throw aggregateError;
 
       // 6) Snapshot diário de estoque (idempotente por dia)
       const snapshotDate = nowIso.slice(0, 10);
