@@ -86,6 +86,18 @@
   - Reads the access token but NEVER refreshes it (renewal stays exclusive to
     `mercadolivre-sync`); defers the batch when the token is about to expire.
   - DevCenter topics must be enabled by the operator for events to arrive.
+- `importacoes-ais-sync` (deployed 2026-07-16; 6-hour cron active)
+  - Fetches the last known AIS position (VesselAPI REST) for every vessel with
+    MMSI referenced by `importacao_faturas` (body `{"all": true}` widens to the
+    whole `importacao_navios` registry) and upserts `importacao_posicoes` only
+    when the incoming position is newer — same idempotent rule as the local MVP.
+  - Secrets: `VESSELAPI_API_KEY` + `IMPORTACOES_AIS_JOB_SECRET` (function env);
+    protected by `x-sync-secret`; JWT verification disabled at deploy level.
+  - Runs logged in `importacao_ais_sync_runs` (surfaced on `/status` as
+    "Importações (AIS)").
+  - Replaces the 03:00 AISStream collection of the local MVP
+    `~/rastreamento-importacoes` — the map no longer depends on any local
+    machine being on.
 
 ## Supabase Cron
 
@@ -133,6 +145,11 @@ Active jobs in `cron.job`:
   - Runs only in the overnight low-traffic window to reduce Olist `429` during business hours.
   - Replaced the previous hourly job `oraculo-olist-order-items-backfill-hourly` (migration `20260710090000`).
   - Processes online in Supabase and does not depend on a local terminal or Mac being on.
+- `oraculo-importacoes-ais-sync`: `0 0,6,12,18 * * *`
+  - Calls `importacoes-ais-sync` via `private.invoke_oraculo_importacoes_ais_sync`
+    (Vault secrets `oraculo_project_url` + `oraculo_importacoes_ais_job_secret`).
+  - 03:00/09:00/15:00/21:00 `America/Sao_Paulo`; only vessels referenced by
+    invoices are queried, so VesselAPI free-tier usage stays minimal.
 - Sync health is surfaced through the `/status` page (pull-based). There is no push notification channel; Telegram alerting was intentionally not adopted for this project.
 
 ## Cached Analytics Sources

@@ -66,6 +66,24 @@ quando o SKU casa com o Olist.
 - PostgREST corta em 1.000 linhas: TODAS as consultas da página são
   paginadas (`fetchAllPages` em `app/mercado-livre/data.ts`).
 
+## Importações (aba nova, mesma data)
+
+Porta do MVP local `~/rastreamento-importacoes` para o Oráculo (migration
+`20260716180000`, entrada própria no `CHANGELOG.md`):
+
+- `/importacoes`: mapa Leaflet com um marcador nomeado por navio e tooltip
+  no hover com itens a bordo, destino, chegada e faturas; cards + tabela
+  ordenável de embarques.
+- `/importacoes/cadastro`: server actions para fatura (todos os campos do
+  follow-up Excel), itens por fatura e registro de navio (aliases + IMO/MMSI).
+- Seed `scripts/import-rastreamento-followup.js` — só linhas ≥ 419 da
+  planilha (9 faturas, 30 itens); navios e posições AIS vêm dos JSONs do MVP.
+- **Posições AIS autônomas**: Edge Function `importacoes-ais-sync` (VesselAPI)
+  a cada 6h via pg_cron (migration `20260716200000`), idempotente
+  (upsert só se a posição for mais recente), runs em
+  `importacao_ais_sync_runs` visíveis no `/status`. Nada roda mais na máquina
+  local; runbook em `docs/importacoes-rastreamento.md`.
+
 ## Fora do escopo / próximos naturais
 
 - Elasticidade de preços (histórico de preço/visitas acumulando; ~semanas).

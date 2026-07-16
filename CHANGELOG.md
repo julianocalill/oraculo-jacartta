@@ -2,6 +2,38 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-16] — Importações: aba de rastreamento com mapa AIS e cadastro
+
+Porta o MVP local `~/rastreamento-importacoes` para dentro do Oráculo
+(migration `20260716180000`):
+
+- **Nova aba `/importacoes`** (sidebar Principal): mapa Leaflet dark com um
+  ponto por navio, nome do navio visível no marcador e **tooltip no hover com
+  os itens a bordo** (quantidade × descrição), destino, chegada e faturas;
+  cards (navios em rota, faturas, itens, próxima chegada) e tabela ordenável
+  de embarques.
+- **Sub-aba `/importacoes/cadastro`**: formulários (server actions) para
+  fatura/embarque com todos os campos do follow-up em Excel, itens por fatura
+  (com remoção) e registro de navio (nome oficial + aliases + IMO/MMSI, que
+  liga o navio à posição no mapa).
+- **Dados**: tabelas `importacao_faturas`, `importacao_itens`,
+  `importacao_navios`, `importacao_posicoes` (RLS padrão: leitura
+  authenticated, escrita service_role). Seed via
+  `scripts/import-rastreamento-followup.js`, que lê o último import da
+  planilha `FOLLOW UP - COMPLETO.xlsx` e **considera apenas as linhas ≥ 419**
+  (embarques anteriores são antigos e ficam fora) + registro de navios e
+  últimas posições AIS do MVP local (9 faturas, 30 itens, 59 navios/posições).
+- Novidade de stack: dependência `leaflet` no `apps/web` (client component
+  com `next/dynamic` ssr:false; tiles OSM escurecidos por CSS filter;
+  `scrollWheelZoom` desligado para não sequestrar o scroll da página).
+- **Posições AIS autônomas na nuvem**: Edge Function `importacoes-ais-sync`
+  (VesselAPI REST) atualiza `importacao_posicoes` a cada 6h via pg_cron
+  (migration `20260716200000`, job `oraculo-importacoes-ais-sync`,
+  03/09/15/21h BRT), só para navios citados em faturas e só quando a posição
+  é mais recente. Secret no Vault + `x-sync-secret`, runs em
+  `importacao_ais_sync_runs` com linha própria no `/status`. A coleta local
+  do MVP (`~/rastreamento-importacoes`) deixou de ser necessária.
+
 ## [2026-07-16] — ML: aba "Sugestão de envio Full" com justificativa por item
 
 - Nova aba `/mercado-livre/envio` (tabs na própria página): sugestão de
