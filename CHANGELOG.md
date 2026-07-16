@@ -2,6 +2,30 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-16] — ML: variações, margem Olist, trânsito e saúde da Curva A
+
+Segundo pacote do estudo Magiic (migration `20260716160000`):
+
+- **Variações (SKU-level)**: novas tabelas `mercadolivre_variations` e
+  `mercadolivre_variation_sales_daily`; o sync ingere atributos, preço,
+  estoque Full por variação (inventories por variação) e vendas por
+  `variation_id` dos pedidos. Seção "Ruptura — variações" na página (pega a
+  cor/tamanho que rompeu dentro de anúncio saudável). Realidade da conta:
+  96 anúncios com variação, nenhum com venda em 60d — seção fica vazia até
+  venderem, mas o rastreamento é contínuo.
+- **Margem unitária via custo Olist**: cruzamento do SKU ML/variação com
+  `oraculo_product_effective_cost` (colunas "Margem unit." em ruptura e
+  cobertura + card de cobertura de custo). Limite atual é operacional: só
+  20/1930 anúncios têm SKU preenchido no ML e 0 variações — preencher os
+  SKUs no ML com os códigos do ERP destrava o cruzamento.
+- **Estoque em trânsito** (`mercadolivre_transit`): formulário na própria
+  página (linhas "MLB123 qtd", server action + service-role); cobertura e
+  ruptura passam a somar o trânsito, como a Magiic.
+- **Card "Saúde da Curva A"**: % dos itens Curva A fora de risco (ruptura ou
+  cobertura crítica).
+- Sync: janelas de backfill agora podem exceder 150s do gateway — a execução
+  continua em background e é auditada em `mercadolivre_sync_runs`.
+
 ## [2026-07-16] — ML: analítica v2 (estudo Magiic aplicado)
 
 Melhorias na página `/mercado-livre` derivadas do estudo da base de

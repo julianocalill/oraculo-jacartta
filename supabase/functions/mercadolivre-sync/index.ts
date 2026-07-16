@@ -145,6 +145,15 @@ async function listItemIds(accessToken: string, sellerId: number): Promise<strin
   return ids;
 }
 
+type MlVariation = {
+  id: number | string;
+  price?: number;
+  available_quantity?: number;
+  seller_custom_field?: string | null;
+  inventory_id?: string | null;
+  attribute_combinations?: Array<{ name?: string; value_name?: string }>;
+};
+
 type MlItem = {
   id: string;
   title?: string;
@@ -157,11 +166,12 @@ type MlItem = {
   seller_custom_field?: string | null;
   inventory_id?: string | null;
   shipping?: { logistic_type?: string };
+  variations?: MlVariation[];
 };
 
 async function fetchItemDetails(accessToken: string, ids: string[], delayMs: number) {
   const attrs =
-    "id,title,price,status,sub_status,available_quantity,permalink,thumbnail,seller_custom_field,inventory_id,shipping";
+    "id,title,price,status,sub_status,available_quantity,permalink,thumbnail,seller_custom_field,inventory_id,shipping,variations";
   const items: MlItem[] = [];
   for (let index = 0; index < ids.length; index += 20) {
     const batch = ids.slice(index, index + 20);
@@ -190,7 +200,11 @@ type MlOrder = {
   status?: string;
   date_created?: string;
   date_closed?: string;
-  order_items?: Array<{ item?: { id?: string }; quantity?: number; unit_price?: number }>;
+  order_items?: Array<{
+    item?: { id?: string; variation_id?: number | string | null };
+    quantity?: number;
+    unit_price?: number;
+  }>;
 };
 
 async function fetchPaidOrders(
@@ -297,12 +311,26 @@ Deno.serve(async (req) => {
         }
       }
 
-      // 3) Pedidos pagos → agregação por anúncio/dia
+      // 2b) Estoque Full por variação (anúncios fulfillment com variações)
+      const variationFullStocks = new Map<string, number>(); // `${mlb}|${varId}` → qty
+      for (const item of items) {
+        if (item.shipping?.logistic_type !== "fulfillment" || !item.variations?.length) continue;
+        for (const variation of item.variations) {
+          if (!variation.inventory_id) continue;
+          variationFullStocks.set(
+            `${item.id}|${String(variation.id)}`,
+            await fetchFullStock(accessToken, variation.inventory_id)
+          );
+        }
+      }
+
+      // 3) Pedidos pagos → agregação por anúncio/dia e por variação/dia
       // Os agregados 30d dos itens NÃO são calculados aqui: a janela do sync
       // pode ser curta (cron usa 2 dias). A fonte da verdade é a série
       // mercadolivre_sales_daily; o RPC ao final recalcula os 30 dias.
       const orders = await fetchPaidOrders(accessToken, sellerId, lookbackDays, maxOrderPages, toDaysAgo);
       const daily = new Map<string, { qty: number; revenue: number }>();
+      const variationDaily = new Map<string, { qty: number; revenue: number }>();
       for (const order of orders) {
         const when = order.date_closed ?? order.date_created ?? "";
         const saleDate = when.slice(0, 10);
@@ -317,6 +345,15 @@ Deno.serve(async (req) => {
           day.qty += qty;
           day.revenue += qty * unit;
           daily.set(dayKey, day);
+
+          const variationId = line.item?.variation_id;
+          if (variationId != null && String(variationId) !== "") {
+            const varKey = `${mlbId}|${String(variationId)}|${saleDate}`;
+            const varDay = variationDaily.get(varKey) ?? { qty: 0, revenue: 0 };
+            varDay.qty += qty;
+            varDay.revenue += qty * unit;
+            variationDaily.set(varKey, varDay);
+          }
         }
       }
 
@@ -346,6 +383,33 @@ Deno.serve(async (req) => {
         if (upsertError) throw upsertError;
       }
 
+      // 4b) Upsert de variações (SKU, atributos e estoque por variação)
+      const variationRows = items.flatMap((item) =>
+        (item.variations ?? []).map((variation) => ({
+          seller_id: sellerId,
+          mlb_id: item.id,
+          variation_id: String(variation.id),
+          sku: variation.seller_custom_field ?? null,
+          attrs:
+            variation.attribute_combinations
+              ?.map((combo) => `${combo.name ?? ""}: ${combo.value_name ?? ""}`)
+              .join(" · ") || null,
+          price: Number(variation.price ?? item.price ?? 0),
+          available_qty: Number(variation.available_quantity ?? 0),
+          full_stock: variationFullStocks.get(`${item.id}|${String(variation.id)}`) ?? 0,
+          inventory_id: variation.inventory_id ?? null,
+          synced_at: nowIso
+        }))
+      );
+      for (let index = 0; index < variationRows.length; index += 200) {
+        const { error: variationError } = await supabase
+          .from("mercadolivre_variations")
+          .upsert(variationRows.slice(index, index + 200), {
+            onConflict: "seller_id,mlb_id,variation_id"
+          });
+        if (variationError) throw variationError;
+      }
+
       // 5) Série diária de vendas
       const knownIds = new Set(items.map((item) => item.id));
       const salesRows = [...daily.entries()].map(([key, value]) => {
@@ -364,6 +428,28 @@ Deno.serve(async (req) => {
           .from("mercadolivre_sales_daily")
           .upsert(salesRows.slice(index, index + 200), { onConflict: "seller_id,mlb_id,sale_date" });
         if (salesError) throw salesError;
+      }
+
+      // 5a) Série diária de vendas por variação
+      const variationSalesRows = [...variationDaily.entries()].map(([key, value]) => {
+        const [mlbId, variationId, saleDate] = key.split("|");
+        return {
+          seller_id: sellerId,
+          mlb_id: mlbId,
+          variation_id: variationId,
+          sale_date: saleDate,
+          qty_sold: value.qty,
+          revenue: value.revenue,
+          updated_at: nowIso
+        };
+      }).filter((row) => knownIds.has(row.mlb_id));
+      for (let index = 0; index < variationSalesRows.length; index += 200) {
+        const { error: variationSalesError } = await supabase
+          .from("mercadolivre_variation_sales_daily")
+          .upsert(variationSalesRows.slice(index, index + 200), {
+            onConflict: "seller_id,mlb_id,variation_id,sale_date"
+          });
+        if (variationSalesError) throw variationSalesError;
       }
 
       // 5b) Recalcula agregados 30d a partir da série acumulada (fonte da verdade)
