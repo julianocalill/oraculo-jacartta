@@ -43,6 +43,10 @@ function clampInt(value: string | undefined, fallback: number, min: number, max:
   return Math.min(Math.max(parsed, min), max);
 }
 
+// Regra de produto (2026-07-16): a sugestão traz no máximo 15 itens por loja
+// — foco no que importa, não uma lista infinita. Ajustável via ?limite=.
+const SUGESTOES_POR_LOJA = 15;
+
 const curveBadge: Record<Exclude<Curve, null>, string> = {
   A: "status-pill signal-good",
   B: "status-pill signal-warning",
@@ -52,13 +56,14 @@ const curveBadge: Record<Exclude<Curve, null>, string> = {
 export default async function EnvioFullPage({
   searchParams
 }: {
-  searchParams?: Promise<{ alvo?: string; coleta?: string; curva?: string }>;
+  searchParams?: Promise<{ alvo?: string; coleta?: string; curva?: string; limite?: string }>;
 }) {
   await requireCurrentUser();
   const alertCount = await loadActionableAlertCount();
   const params = await searchParams;
   const alvo = clampInt(params?.alvo, 30, 7, 90);
   const coleta = clampInt(params?.coleta, 5, 0, 30);
+  const limite = clampInt(params?.limite, SUGESTOES_POR_LOJA, 1, 100);
   const curvaFiltro = ["A", "B", "C"].includes(params?.curva ?? "") ? (params?.curva as "A" | "B" | "C") : null;
   const horizonte = alvo + coleta;
 
@@ -159,12 +164,23 @@ export default async function EnvioFullPage({
       return b.lossPerDay - a.lossPerDay || b.gmvProtegido - a.gmvProtegido;
     });
 
-  const totalUnidades = sugestoes.reduce((sum, s) => sum + s.enviar, 0);
-  const totalGmv = sugestoes.reduce((sum, s) => sum + s.gmvProtegido, 0);
-  const perdaEstancada = sugestoes.reduce((sum, s) => sum + s.lossPerDay, 0);
-  const rupturaCount = sugestoes.filter((s) => s.situacao === "ruptura").length;
+  // Máx. N por loja (conta ML): a lista já vem priorizada, corta-se o topo.
+  const porLoja = new Map<number, number>();
+  const visiveis = sugestoes.filter((s) => {
+    const usados = porLoja.get(s.item.seller_id) ?? 0;
+    if (usados >= limite) return false;
+    porLoja.set(s.item.seller_id, usados + 1);
+    return true;
+  });
+  const omitidos = sugestoes.length - visiveis.length;
 
-  const rows: SortableCell[][] = sugestoes.map((s) => [
+  // Cards refletem o envio proposto (os itens exibidos), não o universo todo
+  const totalUnidades = visiveis.reduce((sum, s) => sum + s.enviar, 0);
+  const totalGmv = visiveis.reduce((sum, s) => sum + s.gmvProtegido, 0);
+  const perdaEstancada = visiveis.reduce((sum, s) => sum + s.lossPerDay, 0);
+  const rupturaCount = visiveis.filter((s) => s.situacao === "ruptura").length;
+
+  const rows: SortableCell[][] = visiveis.map((s) => [
     {
       text: s.item.title ?? s.item.mlb_id,
       sort: s.item.title ?? s.item.mlb_id,
@@ -222,6 +238,10 @@ export default async function EnvioFullPage({
               <option value="C">Somente C</option>
             </select>
           </label>
+          <label>
+            <span>Itens por loja</span>
+            <input type="number" name="limite" min={1} max={100} defaultValue={limite} />
+          </label>
           <button type="submit">Recalcular</button>
         </form>
       </header>
@@ -231,7 +251,7 @@ export default async function EnvioFullPage({
       <section className="metric-grid metric-grid-eight">
         <article className="metric accent-blue">
           <span className="label">Itens sugeridos</span>
-          <strong>{count(sugestoes.length)}</strong>
+          <strong>{count(visiveis.length)}</strong>
           <small>{count(rupturaCount)} em ruptura agora</small>
         </article>
         <article className="metric accent-blue">
@@ -289,6 +309,12 @@ export default async function EnvioFullPage({
               {horizonte} dias. Experimente aumentar os dias de estoque alvo.
             </p>
           </div>
+        )}
+        {omitidos > 0 && (
+          <p className="table-note">
+            Exibindo os {count(visiveis.length)} itens mais prioritários por loja — {count(omitidos)}{" "}
+            candidatos de menor prioridade ficaram fora. Ajuste “Itens por loja” para ver mais.
+          </p>
         )}
         <p className="table-note">
           “Fora do Full” são anúncios que vendem pelo estoque local e têm unidades disponíveis — candidatos
