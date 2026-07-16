@@ -14,11 +14,13 @@
 
 Build an operational intelligence system where Supabase is the canonical backend, Vercel is the product surface, and documentation preserves continuity across people and AI agents.
 
-## Update 2026-07-14 — Mercado Livre integrado
+## Update 2026-07-16 — Mercado Livre: canal analítico completo
 
-- Conta JACARTTA conectada (OAuth PKCE) e ingestão horária ativa (somente leitura).
-- Página `/mercado-livre`: ruptura em R$/dia, cobertura e capital parado no Full.
-- Detalhes: [[../05-integrations/mercadolivre]] e `docs/project-status-2026-07-14.md`.
+- Ingestão horária + tempo quase real (notificações) + histórico de vendas desde 2026-03.
+- Duas abas em `/mercado-livre`: Visão geral (ruptura R$/dia com velocidade sobre
+  dias-com-estoque, variações, ABC, tendência 120d, trânsito, margem via custo Olist)
+  e Sugestão de envio Full (regra Magiic com justificativa por item).
+- Detalhes: [[../05-integrations/mercadolivre]] e `docs/project-status-2026-07-16.md`.
 
 ## Current status - 2026-07-07
 

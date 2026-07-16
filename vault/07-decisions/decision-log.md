@@ -12,3 +12,6 @@
 - 2026-07-14: Mercado Livre entra como segundo canal integrado (OAuth PKCE + ingestão horária somente leitura). A analítica do canal vive dentro do Oráculo (página `/mercado-livre`), não em app separado.
 - 2026-07-14: O grant do app Mercado Livre no DevCenter permanece amplo por decisão do proprietário; o código de ingestão é exclusivamente `GET` e a redução de escopo fica como recomendação futura.
 - 2026-07-14: `mercadolivre-sync` é a única função autorizada a renovar o refresh token rotativo (update otimista; rotação concorrente é relida, nunca sobrescrita).
+- 2026-07-16: As regras analíticas do canal ML seguem o estudo da base de conhecimento da Magiic: velocidade de venda sobre dias-com-estoque, ruptura com critério de venda em 60d (Full e local), Curva ABC 80/15/5, cobertura somando trânsito e sugestão de envio = média/dia × (alvo + coleta) − Full − trânsito.
+- 2026-07-16: Estoque em trânsito é informado manualmente na página (tabela `mercadolivre_transit`), não via PDF/API — simplicidade primeiro; automação só se a rotina doer.
+- 2026-07-16: Margem unitária do ML cruza SKU do anúncio/variação com o custo Olist; a padronização de SKUs nos anúncios ML é ação operacional do time (de-para/"engenharia reversa" só se a padronização não avançar).

@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md) **← start here** (current state)
+1. [docs/project-status-2026-07-16.md](docs/project-status-2026-07-16.md) **← start here** (current state)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
 4. [docs/project-context.md](docs/project-context.md)
@@ -45,7 +45,7 @@ oraculo/
 10. [CHANGELOG.md](CHANGELOG.md) (full history)
 11. [vault/00-home/index.md](vault/00-home/index.md)
 
-Earlier snapshots (historical, superseded): [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
+Earlier snapshots (historical, superseded): [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md), [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
 
 ## Tooling choices
 
@@ -56,12 +56,13 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-07-12.md](
 
 ## Current production state
 
-**Last update**: `2026-07-14` (see `docs/project-status-2026-07-14.md`) —
-Mercado Livre connected + hourly Full analytics ingestion + `/mercado-livre` page live.
+**Last update**: `2026-07-16` (see `docs/project-status-2026-07-16.md`) —
+Mercado Livre analytics v3: variações, margem via custo Olist, trânsito,
+tendência 120d e aba "Sugestão de envio Full" com regra Magiic.
 
 ### Deployment & auth
 - Production URL: `https://oraculo.oliverhome.com.br`
-- Latest Vercel deploy: `dtky866qf` (2026-07-12, visual identity + middleware fix)
+- Latest Vercel deploy: `oraculo-jacartta-37k55lhgq` (2026-07-16, aba Sugestão de envio Full)
 - Business-data reads run under RLS via an authenticated client (anon key + user
   JWT); service-role is reserved for writes, `/usuarios` and `/status`. Migrations
   `20260710092000` and `20260710094000`.
@@ -134,7 +135,9 @@ Current product areas:
 - Rupture/no-sale product watchlist.
 - Manual parameters by channel, SKU and UF.
 - Read-only Shopee Donacor data.
-- Mercado Livre connection foundation (OAuth PKCE + notification inbox), without business-data import yet.
+- Mercado Livre channel: OAuth PKCE + hourly ingestion (items, variations, Full
+  stock, orders since 2026-03) + near-real-time notification processing, with the
+  `/mercado-livre` analytics tabs (Visão geral + Sugestão de envio Full).
 
 Production behavior on `2026-07-03`:
 

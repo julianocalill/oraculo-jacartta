@@ -115,6 +115,28 @@ em R$/dia, cobertura de estoque e capital parado no fulfillment):
 Para reexecutar uma carga ampla manualmente, repetir o passo 5 com o
 `lookbackDays` desejado (máx. 60).
 
+## Evolução analítica (fase 3 — 2026-07-16, estudo Magiic)
+
+Regras de cálculo adotadas da base de conhecimento da Magiic:
+
+- **Velocidade sobre dias-com-estoque**: com ≥15 dias de snapshots usa o ratio
+  observado (`in_stock_days_30d/snapshot_days_30d`); antes disso aproxima por
+  dias-desde-a-última-venda (vendas 60d ÷ dias com estoque). RPC
+  `mercadolivre_refresh_item_aggregates` mantém as janelas 30/60d de anúncios
+  e variações a cada sync.
+- **Variações** (`mercadolivre_variations` + `mercadolivre_variation_sales_daily`,
+  migration `20260716160000`): estoque Full por variação e vendas por
+  `variation_id` dos pedidos.
+- **Trânsito** (`mercadolivre_transit`): informado na própria página (server
+  action, escrita service-role); soma na cobertura e na sugestão de envio.
+- **Backfill por fatias**: `toDaysAgo` no payload do sync (o offset do
+  `/orders/search` satura em 10k). Histórico atual desde 2026-03-24.
+- **Sugestão de envio** (`/mercado-livre/envio`): `enviar = média/dia ×
+  (alvo + coleta) − Full − trânsito`; inclui pausados por ruptura; fora-do-Full
+  limitado ao estoque local; justificativa por item.
+- **Margem**: SKU do anúncio/variação × `oraculo_product_effective_cost`.
+  Trava operacional: preencher SKUs nos anúncios ML.
+
 ## Fora do escopo (aguardando decisão)
 
 - processamento das notificações enfileiradas em `mercadolivre_notifications`
