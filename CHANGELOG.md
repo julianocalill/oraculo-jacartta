@@ -2,6 +2,24 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-16] — ML: aba "Sugestão de envio Full" com justificativa por item
+
+- Nova aba `/mercado-livre/envio` (tabs na própria página): sugestão de
+  reposição com a regra Magiic — `enviar = média/dia × (dias de estoque alvo +
+  dias até coleta) − estoque Full − trânsito`, parâmetros ajustáveis no topo
+  (alvo 7–90d, coleta 0–30d, filtro por curva).
+- Cada item traz o **porquê** sob o título: curva ABC, velocidade/dia com
+  rótulo de tendência (crescendo/estável/caindo), situação (Em ruptura com
+  perda R$/dia · Crítico <7d · Abaixo do alvo · Fora do Full) e a conta do
+  envio (alvo ⇒ un − Full − trânsito ⇒ enviar).
+- Inclui anúncios pausados por ruptura (o ML pausa ao zerar; pausado COM
+  estoque é decisão do seller e fica de fora) e oportunidades fora do Full
+  limitadas ao estoque local disponível.
+- Cards: itens sugeridos, unidades, venda protegida (GMV do envio), perda
+  estancada/dia; coluna de custo do envio quando o SKU tem custo Olist.
+- Refatoração: camada de dados compartilhada em `app/mercado-livre/data.ts`
+  (loaders paginados, velocidade, curvas, tendência) usada pelas duas abas.
+
 ## [2026-07-16] — ML: variações, margem Olist, trânsito e saúde da Curva A
 
 Segundo pacote do estudo Magiic (migration `20260716160000`):
