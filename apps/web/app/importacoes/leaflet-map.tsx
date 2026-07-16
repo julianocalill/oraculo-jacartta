@@ -81,11 +81,43 @@ export default function LeafletMap({ vessels }: { vessels: MapVessel[] }) {
         })
       });
 
-      marker.bindTooltip(tooltipHtml(vessel), {
-        direction: "top",
-        offset: [0, -12],
-        opacity: 1,
-        className: "vessel-tooltip"
+      // Popup (não tooltip): autoPan reposiciona o mapa para o balão caber
+      // inteiro e maxHeight rola a lista quando o navio tem muitos itens —
+      // nunca fica cortado pela borda do mapa.
+      marker.bindPopup(tooltipHtml(vessel), {
+        className: "vessel-popup",
+        maxWidth: 300,
+        minWidth: 240,
+        maxHeight: 300,
+        autoPan: true,
+        autoPanPadding: [24, 24],
+        closeButton: false,
+        offset: [0, -6]
+      });
+
+      // Abre no hover e mantém aberto enquanto o mouse estiver no marcador ou
+      // dentro do balão (para conseguir rolar a lista). Fecha ao sair de ambos.
+      let closeTimer: number | undefined;
+      const cancelClose = () => {
+        if (closeTimer) {
+          window.clearTimeout(closeTimer);
+          closeTimer = undefined;
+        }
+      };
+      const scheduleClose = () => {
+        cancelClose();
+        closeTimer = window.setTimeout(() => marker.closePopup(), 200);
+      };
+
+      marker.on("mouseover", () => {
+        cancelClose();
+        marker.openPopup();
+      });
+      marker.on("mouseout", scheduleClose);
+      marker.on("popupopen", (event) => {
+        const el = (event as unknown as { popup: L.Popup }).popup.getElement();
+        el?.addEventListener("mouseenter", cancelClose);
+        el?.addEventListener("mouseleave", scheduleClose);
       });
 
       marker.addTo(map);
