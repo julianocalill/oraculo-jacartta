@@ -52,16 +52,20 @@ function daysSince(iso: string | null) {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
 }
 
-// Velocidade de venda diária estimada sobre os dias COM estoque (estudo Magiic):
-// a média bruta de 30 dias subestima itens que passaram parte da janela em
-// ruptura. Enquanto o histórico de snapshots é curto, o ratio observado é
-// extrapolado para a janela toda, com piso de 15% para não inflar ao extremo.
+// Velocidade de venda diária estimada sobre os dias COM estoque (estudo
+// Magiic: "vendia X/dia quando possuía estoque"). A média bruta de 30 dias
+// subestima itens que passaram parte da janela em ruptura.
 function dailyVelocity(item: MlItem) {
-  const ratio =
-    item.snapshot_days_30d > 0
-      ? Math.max(item.in_stock_days_30d / item.snapshot_days_30d, 0.15)
-      : 1;
-  return item.sold_qty_30d / (30 * ratio);
+  // Com histórico de snapshots suficiente, usa o ratio observado (real).
+  if (item.snapshot_days_30d >= 15) {
+    const ratio = Math.max(item.in_stock_days_30d / item.snapshot_days_30d, 0.1);
+    return item.sold_qty_30d / (30 * ratio);
+  }
+  // Sem histórico: aproxima os dias sem estoque pelos dias desde a última
+  // venda — velocidade = vendas 60d ÷ dias com estoque na janela de 60d.
+  const daysOut = Math.min(daysSince(item.last_sale_at) ?? 60, 60);
+  const inStockDays = Math.max(60 - daysOut, 3);
+  return item.sold_qty_60d / inStockDays;
 }
 
 function isFull(item: MlItem) {
