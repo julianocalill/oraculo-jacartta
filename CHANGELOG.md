@@ -2,6 +2,24 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-16] — Export .xlsx das sugestões (ML e Shopee)
+
+- Botão **Exportar .xlsx** nas abas de sugestão; a planilha respeita os mesmos
+  parâmetros da tela (alvo, coleta/prazo, curva, loja, itens por loja).
+- **Regra de correção**: a lógica de sugestão foi extraída para
+  `build-suggestions.ts` em cada canal e é compartilhada por página e rota de
+  export — a planilha é, por construção, o que está na tela (não há um segundo
+  cálculo para divergir).
+- Helper `lib/xlsx.ts` (exceljs): cabeçalho congelado, autofiltro, larguras,
+  números como número (não texto), moeda `R$ #,##0.00`, decimais `#,##0.0` e
+  linhas de contexto no topo (regra usada, parâmetros, totais, data).
+- Colunas do export vão além da tela: MLB/Item ID, SKU, origem, estoque,
+  trânsito, alvo em unidades, preço, custo unitário, custo do envio, armazéns
+  (FBS) e a justificativa completa.
+- Nome do arquivo com carimbo BRT: `oraculo-envio-full_2026-07-16_1432.xlsx`,
+  `oraculo-reposicao-shopee_oliverhome_...xlsx`.
+- Verificado gerando e relendo um arquivo real (tipos, formatos, autofiltro).
+
 ## [2026-07-16] — Tooltips explicativos nos cabeçalhos das tabelas
 
 - `SortableColumn` ganha o campo opcional `hint`: o cabeçalho exibe uma marca

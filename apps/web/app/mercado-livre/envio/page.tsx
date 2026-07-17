@@ -1,52 +1,20 @@
+import Link from "next/link";
 import { requireCurrentUser } from "../../../lib/auth/session";
 import { AppShell } from "../../components/app-shell";
 import { loadActionableAlertCount } from "../../../lib/alert-count";
 import { SortableTable, type SortableCell } from "../../components/sortable-table";
 import { MlTabs } from "../tabs";
 import { HINTS } from "../../../lib/column-hints";
+import { type Curve, brl, count, loadMlData, trendSlope, trendText } from "../data";
 import {
-  type Curve,
-  type MlItem,
-  brl,
-  buildCostIndex,
-  computeCurves,
-  computeTrends,
-  costOfItemFactory,
-  count,
-  dailyVelocity,
-  daysSince,
-  isFull,
-  loadMlData,
-  n,
-  stockOf,
-  trendLabel,
-  trendSlope,
-  trendText
-} from "../data";
+  SUGESTOES_POR_LOJA,
+  buildEnvioSuggestions,
+  clampInt,
+  parseCurva,
+  situacaoMeta
+} from "./build-suggestions";
 
 export const dynamic = "force-dynamic";
-
-// Regra de reposição (estudo Magiic): o envio precisa cobrir a demanda do
-// horizonte inteiro — dias de estoque ALVO + dias até a COLETA chegar ao Full.
-// enviar = teto(média/dia × (alvo + coleta)) − estoque Full − trânsito
-type Situacao = "ruptura" | "critico" | "abaixo_alvo" | "fora_do_full";
-
-const situacaoMeta: Record<Situacao, { label: string; badge: string; rank: number }> = {
-  ruptura: { label: "Em ruptura", badge: "status-pill signal-danger", rank: 0 },
-  critico: { label: "Crítico (<7d)", badge: "status-pill signal-danger", rank: 1 },
-  abaixo_alvo: { label: "Abaixo do alvo", badge: "status-pill signal-warning", rank: 2 },
-  fora_do_full: { label: "Fora do Full", badge: "status-pill signal-muted", rank: 3 }
-};
-
-function clampInt(value: string | undefined, fallback: number, min: number, max: number) {
-  const parsed = Number.parseInt(value ?? "", 10);
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.min(Math.max(parsed, min), max);
-}
-
-// Regra de produto (2026-07-16): a sugestão traz no máximo 15 itens por loja
-// — foco no que importa, não uma lista infinita. Ajustável via ?limite=.
-const SUGESTOES_POR_LOJA = 15;
 
 const curveBadge: Record<Exclude<Curve, null>, string> = {
   A: "status-pill signal-good",
@@ -65,8 +33,7 @@ export default async function EnvioFullPage({
   const alvo = clampInt(params?.alvo, 30, 7, 90);
   const coleta = clampInt(params?.coleta, 5, 0, 30);
   const limite = clampInt(params?.limite, SUGESTOES_POR_LOJA, 1, 100);
-  const curvaFiltro = ["A", "B", "C"].includes(params?.curva ?? "") ? (params?.curva as "A" | "B" | "C") : null;
-  const horizonte = alvo + coleta;
+  const curvaFiltro = parseCurva(params?.curva);
 
   const data = await loadMlData();
   if (!data) {
@@ -78,108 +45,30 @@ export default async function EnvioFullPage({
             <p>Aguardando primeira sincronização do canal.</p>
           </div>
         </header>
+        <MlTabs active="envio" />
       </AppShell>
     );
   }
 
-  const { items, sales, variations, transit, costs, lastRun } = data;
-  const curves = computeCurves(items);
-  const trends = computeTrends(sales);
-  const transitByMlb = new Map(transit.map((row) => [row.mlb_id, row.qty]));
-  const costOfItem = costOfItemFactory(buildCostIndex(costs), variations);
+  const { lastRun } = data;
+  const {
+    horizonte,
+    trends,
+    visiveis,
+    omitidos,
+    totalUnidades,
+    totalGmv,
+    perdaEstancada,
+    rupturaCount
+  } = buildEnvioSuggestions(data, { alvo, coleta, limite, curva: curvaFiltro });
 
-  // Elegibilidade (regra Magiic): produto com venda no período analisado.
-  // Inclui anúncios pausados POR RUPTURA (o ML pausa automaticamente quando o
-  // estoque zera) — pausado COM estoque é decisão do seller e fica de fora.
-  // Fora do Full só entra como oportunidade se tiver estoque local p/ enviar.
-  const sugestoes = items
-    .filter(
-      (item) =>
-        item.sold_qty_60d > 0 &&
-        (item.status === "active" || (item.status === "paused" && stockOf(item) <= 0))
-    )
-    .map((item) => {
-      const velocity = dailyVelocity(item);
-      const transitQty = transitByMlb.get(item.mlb_id) ?? 0;
-      const emFull = isFull(item);
-      const disponivel = (emFull ? item.full_stock : 0) + transitQty;
-      const alvoUnidades = Math.ceil(velocity * horizonte);
-      let enviar = alvoUnidades - disponivel;
-
-      // fora do Full: limita ao estoque local disponível para envio
-      if (!emFull) enviar = Math.min(enviar, item.available_qty);
-      if (enviar <= 0 || velocity <= 0) return null;
-
-      const coberturaAtual = velocity > 0 ? disponivel / velocity : 0;
-      const situacao: Situacao = !emFull
-        ? "fora_do_full"
-        : disponivel <= 0
-          ? "ruptura"
-          : coberturaAtual < 7
-            ? "critico"
-            : "abaixo_alvo";
-
-      const lossPerDay = situacao === "ruptura" ? velocity * n(item.price) : 0;
-      const curve = curves.get(item.mlb_id) ?? null;
-      const trend = trends.get(item.mlb_id);
-      const idle = daysSince(item.last_sale_at);
-
-      // O "porquê" detalhado, parte a parte
-      const porque: string[] = [];
-      porque.push(curve ? `Curva ${curve}` : "Sem curva");
-      porque.push(`vende ${velocity.toFixed(1)}/dia (${trendLabel(trend)})`);
-      if (situacao === "ruptura") {
-        porque.push(`em ruptura${idle != null ? ` há ${idle}d` : ""}, perdendo ${brl(lossPerDay)}/dia`);
-      } else if (situacao === "critico") {
-        porque.push(`cobertura atual de ${Math.floor(coberturaAtual)}d — rompe antes da próxima coleta`);
-      } else if (situacao === "abaixo_alvo") {
-        porque.push(`cobertura de ${Math.floor(coberturaAtual)}d < alvo de ${horizonte}d`);
-      } else {
-        porque.push(`vende fora do Full com ${count(item.available_qty)} un locais — candidato a entrar no Full`);
-      }
-      const contas = [`alvo ${horizonte}d ⇒ ${count(alvoUnidades)} un`];
-      if (emFull && item.full_stock > 0) contas.push(`Full tem ${count(item.full_stock)}`);
-      if (transitQty > 0) contas.push(`${count(transitQty)} em trânsito`);
-      contas.push(`enviar ${count(enviar)}`);
-      porque.push(contas.join(" · "));
-
-      return {
-        item,
-        curve,
-        situacao,
-        velocity,
-        transitQty,
-        coberturaAtual,
-        enviar,
-        lossPerDay,
-        gmvProtegido: enviar * n(item.price),
-        porque: porque.join(" — ")
-      };
-    })
-    .filter((s): s is NonNullable<typeof s> => s !== null)
-    .filter((s) => (curvaFiltro ? s.curve === curvaFiltro : true))
-    .sort((a, b) => {
-      const rank = situacaoMeta[a.situacao].rank - situacaoMeta[b.situacao].rank;
-      if (rank !== 0) return rank;
-      if (a.curve !== b.curve) return String(a.curve ?? "Z").localeCompare(String(b.curve ?? "Z"));
-      return b.lossPerDay - a.lossPerDay || b.gmvProtegido - a.gmvProtegido;
-    });
-
-  // Máx. N por loja (conta ML): a lista já vem priorizada, corta-se o topo.
-  const porLoja = new Map<number, number>();
-  const visiveis = sugestoes.filter((s) => {
-    const usados = porLoja.get(s.item.seller_id) ?? 0;
-    if (usados >= limite) return false;
-    porLoja.set(s.item.seller_id, usados + 1);
-    return true;
+  // O export recebe os mesmos parâmetros da tela para gerar a mesma lista
+  const exportQs = new URLSearchParams({
+    alvo: String(alvo),
+    coleta: String(coleta),
+    limite: String(limite)
   });
-  const omitidos = sugestoes.length - visiveis.length;
-
-  // Cards refletem o envio proposto (os itens exibidos), não o universo todo
-  const totalUnidades = visiveis.reduce((sum, s) => sum + s.enviar, 0);
-  const totalGmv = visiveis.reduce((sum, s) => sum + s.gmvProtegido, 0);
-  const perdaEstancada = visiveis.reduce((sum, s) => sum + s.lossPerDay, 0);
-  const rupturaCount = visiveis.filter((s) => s.situacao === "ruptura").length;
+  if (curvaFiltro) exportQs.set("curva", curvaFiltro);
 
   const rows: SortableCell[][] = visiveis.map((s) => [
     {
@@ -189,11 +78,9 @@ export default async function EnvioFullPage({
       subtitle: s.porque
     },
     { text: situacaoMeta[s.situacao].label, sort: situacaoMeta[s.situacao].rank, badge: situacaoMeta[s.situacao].badge },
-    s.curve
-      ? { text: `Curva ${s.curve}`, sort: s.curve, badge: curveBadge[s.curve] }
-      : { text: "—", sort: null },
+    s.curve ? { text: `Curva ${s.curve}`, sort: s.curve, badge: curveBadge[s.curve] } : { text: "—", sort: null },
     { text: `${count(s.item.sold_qty_30d)} / ${count(s.item.sold_qty_60d)}`, sort: s.item.sold_qty_60d },
-    { text: trendText(trends.get(s.item.mlb_id)), sort: trendSlope(trends.get(s.item.mlb_id)) },
+    { text: trendText(trends.get(s.trendKey)), sort: trendSlope(trends.get(s.trendKey)) },
     { text: s.velocity.toFixed(1), sort: s.velocity },
     { text: `${Math.floor(s.coberturaAtual)}d`, sort: s.coberturaAtual },
     s.lossPerDay > 0
@@ -201,12 +88,9 @@ export default async function EnvioFullPage({
       : { text: "—", sort: 0 },
     { text: count(s.enviar), sort: s.enviar, badge: "status-pill signal-good" },
     { text: brl(s.gmvProtegido), sort: s.gmvProtegido },
-    (() => {
-      const cost = costOfItem(s.item);
-      return cost && cost > 0
-        ? { text: brl(cost * s.enviar), sort: cost * s.enviar }
-        : { text: "—", sort: null };
-    })()
+    s.custoUnit && s.custoUnit > 0
+      ? { text: brl(s.custoUnit * s.enviar), sort: s.custoUnit * s.enviar }
+      : { text: "—", sort: null }
   ]);
 
   return (
@@ -244,6 +128,9 @@ export default async function EnvioFullPage({
             <input type="number" name="limite" min={1} max={100} defaultValue={limite} />
           </label>
           <button type="submit">Recalcular</button>
+          <Link className="button-link" href={`/mercado-livre/envio/export?${exportQs.toString()}`}>
+            Exportar .xlsx
+          </Link>
         </form>
       </header>
 
@@ -303,7 +190,7 @@ export default async function EnvioFullPage({
           initialDir="asc"
           showRank
         />
-        {sugestoes.length === 0 && (
+        {visiveis.length === 0 && (
           <div className="empty-state">
             <p>
               Nada a enviar com esses parâmetros — todos os itens com giro têm cobertura acima de{" "}
@@ -319,8 +206,8 @@ export default async function EnvioFullPage({
         )}
         <p className="table-note">
           “Fora do Full” são anúncios que vendem pelo estoque local e têm unidades disponíveis — candidatos
-          a entrar no Full (limitados ao estoque local). O custo do envio aparece quando o SKU tem custo
-          casado no Olist. Informe envios já despachados na aba Visão geral (Estoque em trânsito) para não
+          a entrar no Full (limitados ao estoque local). O custo do envio aparece quando o SKU tem custo no
+          livro de custos. Informe envios já despachados na aba Visão geral (Estoque em trânsito) para não
           sugerir em dobro.
         </p>
       </section>
