@@ -78,11 +78,15 @@ ainda não — runs em `shopee_sync_runs`).
 - **Tooltips** nos cabeçalhos: `SortableColumn.hint` renderiza "?" + explicação
   no hover (CSS puro + `.sr-only` para leitores de tela). Textos centralizados
   em `apps/web/lib/column-hints.ts` — ML e Shopee explicam igual.
-- **Export .xlsx** das sugestões (`/mercado-livre/envio/export`,
-  `/shopee/reposicao/export`): mesma lógica da tela via
-  `build-suggestions.ts` compartilhado (a planilha não pode divergir da
-  página). Helper `lib/xlsx.ts` (exceljs): freeze, autofiltro, números
-  tipados, moeda pt-BR e contexto no topo.
+- **Export .xlsx nas 4 abas de dados** — sugestões
+  (`/mercado-livre/envio/export`, `/shopee/reposicao/export`) e estoque
+  (`/mercado-livre/export`, `/shopee/estoque/export`, este com uma aba por
+  relatório: Ruptura FBS · Cobertura FBS · Parado FBS · Ruptura local ·
+  Parado local, respeitando o filtro de loja). Mesma lógica da tela via
+  `build-suggestions.ts` / `build-estoque.ts` compartilhados (a planilha não
+  pode divergir da página). Helper `lib/xlsx.ts` (exceljs): freeze,
+  autofiltro, números tipados, moeda pt-BR, contexto no topo e múltiplas
+  abas (`buildXlsxWorkbook`).
 - **Fix de layout (afeta todo o app)**: `.workspace > * { min-width: 0 }`.
   Grid items nascem com `min-width: auto` e inchavam até o tamanho da tabela,
   fazendo a página inteira rolar e arrastar a sidebar. Agora só o

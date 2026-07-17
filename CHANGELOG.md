@@ -2,6 +2,24 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-17] — Export .xlsx também nas abas de estoque (Shopee e ML)
+
+Paridade de export entre os canais: além das sugestões, as abas de estoque
+agora exportam.
+
+- `/shopee/estoque/export`: planilha com **uma aba por relatório da tela** —
+  Ruptura FBS · Cobertura FBS · Parado FBS · Ruptura local · Parado local;
+  respeita o filtro de loja (pills) e nomeia o arquivo com a loja.
+- `/mercado-livre/export`: Ruptura · Ruptura variações · Cobertura Full ·
+  Estoque parado (com ação sugerida e margem unitária).
+- `lib/xlsx.ts` ganha `buildXlsxWorkbook([...])` para múltiplas abas; nome de
+  aba é saneado (31 chars, sem caracteres proibidos) e aba sem linhas não
+  recebe autofiltro. Verificado gerando arquivo com aba vazia e nome inválido.
+- `build-estoque.ts` (Shopee) segue a regra da casa: a mesma função alimenta a
+  página e o export — a planilha não pode divergir da tela.
+- Nota: o fix de layout (`.workspace > *`) é global e já valia para a Shopee;
+  a aba de reposição da Shopee já tinha export.
+
 ## [2026-07-17] — Fix de layout: tabelas largas não arrastam mais a página
 
 - **Bug**: em telas com tabela larga (sugestão de envio/reposição, 11+ colunas)

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { requireCurrentUser } from "../../lib/auth/session";
@@ -294,6 +295,11 @@ export default async function MercadoLivrePage() {
               ? `último sync ${new Date(lastRun.finished_at).toLocaleString("pt-BR")}`
               : "aguardando primeira sincronização"}
           </p>
+        </div>
+        <div className="filter-row">
+          <Link className="button-link" href="/mercado-livre/export">
+            Exportar .xlsx
+          </Link>
         </div>
       </header>
 

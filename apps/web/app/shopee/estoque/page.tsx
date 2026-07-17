@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { requireCurrentUser } from "../../../lib/auth/session";
 import { AppShell } from "../../components/app-shell";
 import { loadActionableAlertCount } from "../../../lib/alert-count";
 import { SortableTable, type SortableCell } from "../../components/sortable-table";
 import { LojaPills, ShopeeTabs } from "../tabs";
+import { buildEstoqueReports } from "./build-estoque";
 import { HINTS } from "../../../lib/column-hints";
 import {
   type Curve,
@@ -77,52 +79,23 @@ export default async function ShopeeEstoquePage({
     );
   }
 
-  const { shops, products: allProducts, sbs: allSbs, sales, costs } = data;
-  const shopName = new Map(shops.map((s) => [s.shop_id, s.shop_name ?? String(s.shop_id)]));
-  const products = lojaFiltro ? allProducts.filter((p) => p.shop_id === lojaFiltro) : allProducts;
-  const sbs = lojaFiltro ? allSbs.filter((r) => r.shop_id === lojaFiltro) : allSbs;
-  const curves = computeCurves(allProducts);
-  const trends = computeTrends(sales);
-  const costBySku = buildCostIndex(costs);
+  const { shops } = data;
+  const {
+    shopName,
+    curveOf,
+    trendOf,
+    fbsRuptura,
+    fbsCobertura,
+    fbsParado,
+    localRuptura,
+    localParado,
+    fbsLoss,
+    localLoss,
+    capitalParado,
+    fbsCriticos
+  } = buildEstoqueReports(data, { loja: lojaFiltro });
 
-  // preço dos SKUs FBS via produtos (shop_item_id/shop_model_id → catálogo)
-  const priceByKey = new Map<string, number>();
-  for (const product of allProducts) {
-    priceByKey.set(productKey(product.shop_id, product.item_id, product.model_id), priceOf(product));
-  }
-  const sbsPrice = (row: (typeof sbs)[number]) =>
-    priceByKey.get(productKey(row.shop_id, row.shop_item_id ?? row.item_id, row.shop_model_id ?? row.model_id)) ??
-    priceByKey.get(productKey(row.shop_id, row.shop_item_id ?? row.item_id, "0")) ?? 0;
-
-  // ---- FBS: ruptura (vendável zero com giro) e cobertura crítica ----
-  const fbsRuptura = sbs
-    .filter((row) => row.sellable_qty <= 0 && (row.selling_speed > 0 || row.last_30_sold > 0))
-    .map((row) => ({ row, lossPerDay: row.selling_speed * sbsPrice(row) }))
-    .sort((a, b) => b.lossPerDay - a.lossPerDay);
-
-  const fbsCobertura = sbs
-    .filter((row) => row.sellable_qty > 0 && row.selling_speed > 0)
-    .sort((a, b) => n(a.coverage_days) - n(b.coverage_days));
-
-  const fbsParado = sbs.filter((row) => row.sellable_qty > 0 && row.not_moving_tag === 1);
-
-  // ---- Local: ruptura e parado ----
-  const localRuptura = products
-    .filter((p) => stockOf(p) <= 0 && p.sold_qty_60d > 0)
-    .map((p) => {
-      const velocity = velocityOf(p);
-      return { p, velocity, lossPerDay: velocity * priceOf(p) };
-    })
-    .sort((a, b) => b.lossPerDay - a.lossPerDay);
-
-  const localParado = products
-    .filter((p) => stockOf(p) > 0 && p.sold_qty_60d <= 0)
-    .map((p) => ({ p, capital: stockOf(p) * priceOf(p) }))
-    .sort((a, b) => b.capital - a.capital);
-
-  const fbsLoss = fbsRuptura.reduce((sum, r) => sum + r.lossPerDay, 0);
-  const localLoss = localRuptura.reduce((sum, r) => sum + r.lossPerDay, 0);
-  const capitalParado = localParado.reduce((sum, r) => sum + r.capital, 0);
+  const exportQs = lojaFiltro ? `?loja=${lojaFiltro}` : "";
 
   const fbsRupturaRows: SortableCell[][] = fbsRuptura.map(({ row, lossPerDay }) => [
     productCell({ item_name: row.item_name, model_name: row.model_name, item_id: row.item_id, loja: shopName.get(row.shop_id) }),
@@ -135,7 +108,7 @@ export default async function ShopeeEstoquePage({
     { text: brl(lossPerDay), sort: lossPerDay, badge: "status-pill signal-danger" }
   ]);
 
-  const fbsCoberturaRows: SortableCell[][] = fbsCobertura.slice(0, MAX_ROWS).map((row) => [
+  const fbsCoberturaRows: SortableCell[][] = fbsCobertura.slice(0, MAX_ROWS).map(({ row }) => [
     productCell({ item_name: row.item_name, model_name: row.model_name, item_id: row.item_id, loja: shopName.get(row.shop_id) }),
     { text: row.whs_id, sort: row.whs_id, badge: "status-pill signal-muted" },
     { text: count(row.sellable_qty), sort: row.sellable_qty },
@@ -156,9 +129,9 @@ export default async function ShopeeEstoquePage({
 
   const localRupturaRows: SortableCell[][] = localRuptura.slice(0, MAX_ROWS).map(({ p, velocity, lossPerDay }) => [
     productCell({ item_name: p.item_name, model_name: p.model_name, item_id: p.item_id, sku: skuOf(p), loja: shopName.get(p.shop_id) }),
-    curveCell(curves.get(productKey(p.shop_id, p.item_id, p.model_id)) ?? null),
+    curveCell(curveOf(p)),
     { text: `${count(p.sold_qty_30d)} / ${count(p.sold_qty_60d)}`, sort: p.sold_qty_60d },
-    { text: trendText(trends.get(productKey(p.shop_id, p.item_id, p.model_id))), sort: trendSlope(trends.get(productKey(p.shop_id, p.item_id, p.model_id))) },
+    { text: trendText(trendOf(p)), sort: trendSlope(trendOf(p)) },
     { text: velocity.toFixed(1), sort: velocity },
     { text: brl(lossPerDay), sort: lossPerDay, badge: "status-pill signal-danger" },
     {
@@ -169,7 +142,7 @@ export default async function ShopeeEstoquePage({
 
   const localParadoRows: SortableCell[][] = localParado.slice(0, MAX_ROWS).map(({ p, capital }) => [
     productCell({ item_name: p.item_name, model_name: p.model_name, item_id: p.item_id, sku: skuOf(p), loja: shopName.get(p.shop_id) }),
-    curveCell(curves.get(productKey(p.shop_id, p.item_id, p.model_id)) ?? null),
+    curveCell(curveOf(p)),
     { text: brl(priceOf(p)), sort: priceOf(p) },
     { text: count(stockOf(p)), sort: stockOf(p) },
     { text: brl(capital), sort: capital, badge: "status-pill signal-warning" },
@@ -185,6 +158,11 @@ export default async function ShopeeEstoquePage({
         <div>
           <h1>Estoque Shopee</h1>
           <p>Estoque local dos anúncios + inventário FBS por armazém (dados da própria Shopee)</p>
+        </div>
+        <div className="filter-row">
+          <Link className="button-link" href={`/shopee/estoque/export${exportQs}`}>
+            Exportar .xlsx
+          </Link>
         </div>
       </header>
 
@@ -204,7 +182,7 @@ export default async function ShopeeEstoquePage({
         </article>
         <article className="metric accent-yellow">
           <span className="label">FBS crítico</span>
-          <strong>{count(fbsCobertura.filter((r) => n(r.coverage_days) < 7).length)}</strong>
+          <strong>{count(fbsCriticos)}</strong>
           <small>Cobertura &lt; 7 dias (cálculo da Shopee)</small>
         </article>
         <article className="metric accent-blue">
