@@ -2,6 +2,24 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-16] — Fix de layout: tabelas largas não arrastam mais a página
+
+- **Bug**: em telas com tabela larga (sugestão de envio/reposição, 11+ colunas)
+  a PÁGINA INTEIRA rolava na horizontal e a sidebar saía da tela.
+- **Causa**: `.workspace` já tinha `min-width: 0`, mas seus filhos (`.panel`,
+  `.topbar`) são grid items e nascem com `min-width: auto` — incham até o
+  tamanho intrínseco do conteúdo. Medido: painel com 1.986px dentro de uma
+  coluna de 1.017px, documento rolando 2.258px em viewport de 1.265px, e o
+  `.table-wrap` nunca ativando seu próprio `overflow-x`.
+- **Fix**: `.workspace > * { min-width: 0 }` (uma linha) — agora só o
+  `.table-wrap` rola, a sidebar fica fixa e a página não rola na horizontal.
+  Vale para TODAS as páginas do shell, não só as novas.
+- Barra de rolagem da tabela passa a ser sempre visível (10px, estilizada nos
+  tokens do tema) — no macOS a barra overlay só aparecia ao rolar e ninguém
+  descobria que a tabela continuava para o lado.
+- Verificado no navegador em 1440px e 1280px: `paginaRolaHorizontal: false`,
+  sidebar em `left: 0` antes e depois de rolar a tabela até o fim.
+
 ## [2026-07-16] — Export .xlsx das sugestões (ML e Shopee)
 
 - Botão **Exportar .xlsx** nas abas de sugestão; a planilha respeita os mesmos

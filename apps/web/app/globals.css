@@ -351,6 +351,14 @@ p {
   gap: 18px;
 }
 
+/* Grid/flex items nascem com min-width:auto e incham até o tamanho intrínseco
+   do conteúdo. Sem isto, uma tabela larga estoura o painel, depois o shell, e
+   a PÁGINA INTEIRA passa a rolar na horizontal (arrastando a sidebar fixa).
+   Com min-width:0 o painel respeita a coluna e o .table-wrap rola sozinho. */
+.workspace > * {
+  min-width: 0;
+}
+
 .single-workspace {
   max-width: 1480px;
   width: 100%;
@@ -1094,6 +1102,26 @@ h2 {
 
 .table-wrap {
   overflow-x: auto;
+  /* Barra sempre visível (no macOS a barra "overlay" só aparece ao rolar e o
+     usuário não descobre que a tabela continua para o lado). */
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+  overscroll-behavior-x: contain;
+}
+.table-wrap::-webkit-scrollbar {
+  height: 10px;
+}
+.table-wrap::-webkit-scrollbar-track {
+  background: var(--panel-soft);
+  border-radius: 8px;
+}
+.table-wrap::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border: 2px solid var(--panel-soft);
+  border-radius: 8px;
+}
+.table-wrap::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
 }
 
 .dense-table-wrap {
