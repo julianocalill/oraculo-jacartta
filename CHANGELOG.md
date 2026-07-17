@@ -99,6 +99,19 @@ velocidade, cobertura, trânsito e janelas de venda prontos por SKU × armazém.
 - Regra do renovador único respeitada: novas funções só LEEM o token
   (adiam a loja se faltar <2min); renovação segue exclusiva do shopee-sync.
 
+## [2026-07-16] — Importações: balão do mapa vira popup rolável
+
+- **Bug**: navio com muitos itens (EVER LEADING, 13 itens) tinha o balão
+  cortado pela borda do mapa — tooltip do Leaflet vive dentro do container,
+  que tem `overflow: hidden`, e estourava o topo.
+- **Fix**: tooltip → **popup** do Leaflet, que resolve na raiz: `autoPan`
+  reposiciona o mapa para o balão caber inteiro e `maxHeight` rola a lista
+  por dentro. Abre no hover e continua aberto enquanto o mouse estiver no
+  marcador ou no balão (para conseguir rolar); largura fixa de 250px para o
+  texto não quebrar.
+- Verificado no navegador com o pior caso: `fitsInsideMap: true`, lista
+  rolável (300px visíveis de 2.445px) e último item legível.
+
 ## [2026-07-16] — Importações: aba de rastreamento com mapa AIS e cadastro
 
 Porta o MVP local `~/rastreamento-importacoes` para dentro do Oráculo
@@ -146,6 +159,9 @@ Porta o MVP local `~/rastreamento-importacoes` para dentro do Oráculo
   limitadas ao estoque local disponível.
 - Cards: itens sugeridos, unidades, venda protegida (GMV do envio), perda
   estancada/dia; coluna de custo do envio quando o SKU tem custo Olist.
+- **Máx. 15 itens por loja** (ajustável na tela): regra de produto — a lista
+  serve para executar, não para contemplar. Vale para os dois canais; a
+  Shopee nasceu com a mesma regra.
 - Refatoração: camada de dados compartilhada em `app/mercado-livre/data.ts`
   (loaders paginados, velocidade, curvas, tendência) usada pelas duas abas.
 

@@ -9,9 +9,14 @@ de nenhuma máquina local.
 
 - **`/importacoes` (Mapa e embarques)**: cards (navios em rota, faturas,
   itens, próxima chegada), mapa Leaflet dark com um marcador nomeado por
-  navio — o hover mostra destino, chegada prevista, faturas e os **itens a
-  bordo** (quantidade × descrição) — e tabela ordenável de embarques com a
-  linha de origem da planilha.
+  navio — o hover abre um popup com destino, chegada prevista, faturas e os
+  **itens a bordo** (quantidade × descrição) — e tabela ordenável de embarques
+  com a linha de origem da planilha.
+  - É **popup, não tooltip**, de propósito: tooltip vive dentro do container
+    do mapa (`overflow: hidden`) e era cortado em navio com muitos itens. O
+    popup tem `autoPan` (o mapa se desloca para o balão caber inteiro) e
+    `maxHeight` com rolagem interna. Ele fica aberto enquanto o mouse estiver
+    no marcador ou dentro do balão, para dar conta de rolar a lista.
 - **`/importacoes/cadastro`**: server actions para registrar fatura/embarque
   (todos os campos do follow-up Excel), adicionar/remover itens de uma fatura
   e registrar navio (nome oficial + aliases + IMO/MMSI). O MMSI é o que liga

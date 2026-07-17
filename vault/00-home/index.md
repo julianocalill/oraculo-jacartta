@@ -23,7 +23,25 @@ Build an operational intelligence system where Supabase is the canonical backend
   e Sugestão de envio Full (regra Magiic com justificativa por item).
 - Detalhes: [[../05-integrations/mercadolivre]] e `docs/project-status-2026-07-17.md`.
 
-## Current status - 2026-07-07
+## Update 2026-07-17 — três canais, custos e importações
+
+- **Shopee virou canal completo** (não é mais leitura de uma loja): 4 lojas,
+  todas no FBS (7 armazéns BR), com pedidos, escrow (take rate), inventário FBS
+  e estoque local. Abas: Take Rate + Estoque & FBS + Sugestão de reposição.
+  Detalhes: [[../05-integrations/shopee]].
+- **Mesma linguagem nos três canais**: ruptura em R$/dia, Curva ABC, tendência
+  e sugestão de reposição justificada (máx. 15 itens/loja).
+- **Livro de custos por SKU** (`oraculo_sku_unit_cost`): override manual >
+  custo Olist (ignorando R$ 0) > custo de kit. O ERP tem custo zerado na
+  maioria dos SKUs; o marketplace tem a disciplina de SKU.
+- **Importações** (`/importacoes`): mapa AIS dos navios + cadastro de faturas
+  e itens; posições atualizadas na nuvem a cada 6h (nada roda local).
+- Retrato completo: `docs/project-status-2026-07-17.md`.
+
+## Olist/fiscal foundation — validado em 2026-07-07
+
+Bloco histórico da era Olist/fiscal. As regras seguem valendo; os números são
+daquela data. Para o estado atual, leia o status doc de 2026-07-17.
 
 - Production: `https://oraculo.oliverhome.com.br`
 - Latest documented Vercel deploy: `dpl_ARv9uGp7C6sF2z6ode69r6cYxyGf`
@@ -42,9 +60,7 @@ Build an operational intelligence system where Supabase is the canonical backend
   - derived metrics hourly;
   - NF cache hourly in Postgres;
   - stock/products every 6 hours.
-- Shopee Donacor data is read-only.
 - Mobile responsive layout is live.
-- Light/white dashboard layout is live.
 - Official fiscal sale/revenue uses valid outbound NFs, not order creation.
 - Fiscal reconciliation is accepted historically: `71.198` valid NFs and `R$ 5.243.715,76` for `2026-06-01` to `2026-06-19`.
 - July current-month validation on `2026-07-03`: `7.186` valid NFs, `R$ 688.547,55`, data through `2026-07-03`.
@@ -64,12 +80,21 @@ Build an operational intelligence system where Supabase is the canonical backend
 
 ## Immediate next work
 
-- Continue the controlled backfill of `olist_order_items` only for orders linked to valid fiscal NFs.
+Canonical list: "Fora do escopo / próximos naturais" em
+`docs/project-status-2026-07-17.md`. Em resumo:
+
+- Padronizar os SKUs dos anúncios do ML (só 20/1930 têm SKU) — é o que destrava
+  a margem; e cadastrar o livro de custos a partir dos itens sugeridos.
+- Linhas `shopee-sync-sbs` / `shopee-sync-products` no `/status`.
+- Kits por marcação do ERP (`tipo = K`) em vez de detecção por nome.
+- Entrada dos canais ML/Shopee nas views unificadas e na camada fiscal.
+- Elasticidade de preços (histórico de preço/visitas acumulando desde 14/07).
+
+## Standing rules (não reabrir)
+
+- Sales curve is operational inventory intelligence, not official fiscal margin/ROI.
+- Stock curve stays based on coverage months from average sales: stock / (daily average * 30).
+- Curve and home pages stay on cached Supabase sources; request-time scans of raw order history are not acceptable in production.
+- Backfill throughput: keep `--delay-ms=900 --concurrency=2 --limit=2000 --skip-audit` unless a new rate-limit test proves safer.
+- Official fiscal margin, ROI and ROAS stay gated until the SKU candidate view is audited. Operational `/skus` margin/ROI can stay visible with partial-label copy.
 - Classify NF `394638` / `Sem canal` business-wise before changing channel mapping.
-- Keep the sales curve clearly treated as operational inventory intelligence, not as official fiscal margin/ROI.
-- Keep the stock curve based on coverage months from average sales: stock / (daily average * 30).
-- Keep curve and home pages on cached Supabase sources; request-time scans of raw order history are not acceptable for production.
-- Keep `--delay-ms=900 --concurrency=2 --limit=2000 --skip-audit` unless a new rate-limit test proves safer.
-- Re-run the fiscal item coverage audit after each batch and write snapshots.
-- Create `oraculo_fiscal_sku_sales_by_order_link` only after the coverage gate passes.
-- Keep official fiscal margin, ROI and ROAS gated until the SKU candidate view is audited. Operational `/skus` margin/ROI can stay visible with partial-label copy.

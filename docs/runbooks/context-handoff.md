@@ -9,7 +9,13 @@ Before handing work to another agent or account:
 
 Never rely on "the next agent will infer it from chat".
 
-## Current handoff - 2026-07-07
+## Handoff snapshot - 2026-07-07 (historical)
+
+**For the current state, read `docs/project-status-2026-07-17.md`.** This
+section is the Olist/fiscal-era snapshot: the delivered list and the deploy
+hashes below are from that date and have been superseded (the app is now dark
+themed and multichannel). The "Known technical caveats" further down, however,
+are mostly still-valid invariants — that's why this snapshot is kept.
 
 Production:
 
@@ -35,7 +41,7 @@ Implemented recently:
 - Official fiscal views/RPCs and a fiscal-first dashboard MVP.
 - Fiscal item coverage audit in `scripts/audit-olist-invoice-items-coverage.js`.
 - Production fix for Vercel server-side timeout: do not call heavy fiscal audit RPCs during page render.
-- Light/white dashboard theme.
+- Light/white dashboard theme (superseded on 2026-07-12 by the dark token-based theme).
 - Local dev auth fallback for localhost only.
 - `olist-sync-invoices` Edge Function and Supabase cron automation for fiscal invoices.
 - Dashboard and `/pedidos` default filters now use the current month in `America/Sao_Paulo`.

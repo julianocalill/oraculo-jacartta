@@ -11,8 +11,9 @@
 - Primary GitHub repository: `https://github.com/Grupo-Jacartta/oraculo.git`
 - Personal mirror: `https://github.com/julianocalill/oraculo-jacartta`
 - Current deployment mode: production deploys through Vercel CLI/GitHub integration.
-- Auth: Supabase Auth protects `/`, `/parametros`, `/skus`, `/pedidos`, `/alertas`, `/curva-de-venda`, `/curva-de-estoque`, `/status`, `/usuarios` and other app routes. `/login` is public.
-- Defense in depth: besides the middleware, every protected page now calls `requireCurrentUser()` at the top of its server component, and the CSV export routes (`/curva-de-venda/export`, `/curva-de-estoque/export`) return `401` when there is no authenticated user. Pages use the service-role client, so this page-level check is the second barrier if the middleware is ever bypassed.
+- Auth: Supabase Auth protects every app route — `/`, `/pedidos`, `/skus`, `/curva-de-venda`, `/curva-de-estoque`, `/shopee` (+ `/shopee/estoque`, `/shopee/reposicao`), `/mercado-livre` (+ `/mercado-livre/envio`), `/importacoes` (+ `/importacoes/cadastro`), `/calculadora`, `/alertas`, `/parametros`, `/usuarios`, `/status`. `/login` is public.
+- Defense in depth: besides the middleware, every protected page calls `requireCurrentUser()` at the top of its server component, and every export route returns `401` when there is no authenticated user — CSV (`/curva-de-venda/export`, `/curva-de-estoque/export`) and `.xlsx` (`/mercado-livre/envio/export`, `/shopee/reposicao/export`). Pages use the service-role client, so this page-level check is the second barrier if the middleware is ever bypassed.
+- Gotcha when verifying a new route: the middleware redirects anonymous requests to `/login`, so an external `curl` returns `307` even for a route that does not exist — a `307` proves nothing. Confirm new routes in the deploy build output instead.
 - Middleware rule: when a local JWT is still valid, do not call Supabase Auth on every request; refresh only near token expiration to keep navigation light.
 - Sync health page: `/status` reads the latest `*_sync_runs`/`olist_order_items_backfill_runs` rows and the Olist token directly (service-role) and surfaces the same alerts as `olist-sync-health`.
 
@@ -65,6 +66,17 @@
   - Validates the application ID, persists notifications idempotently and
     returns without fetching the notified resource.
   - Topics remain disabled until the data ingestion scope is approved.
+- `shopee-sync` (per-shop cron every 15 min)
+  - Pulls Shopee orders + items for each shop into `shopee_orders`/`shopee_order_items`.
+  - **Sole owner of the Shopee token renewal** (rotating refresh token): every
+    other Shopee function only READS the token and defers the shop when it is
+    about to expire. Any new Shopee function MUST respect this.
+  - Each shop has its **own partner app** — requests are signed with that
+    shop's partner key. An `invalid_access_token` is usually a wrong signature
+    (wrong app for the shop), not an expired token.
+- `shopee-escrow-sync` (per-shop cron every 30 min)
+  - Pulls escrow detail per order (commission, fees, net) — the source of the
+    take rate / net ROI on `/shopee`. Read-only on tokens.
 - `shopee-sync-sbs` (deployed 2026-07-16; hourly cron `:42`)
   - Materializes FBS warehouse inventory (`/api/v2/sbs/get_current_inventory`,
     region BR) into `shopee_sbs_inventory` + daily snapshots. Shopee provides
@@ -135,6 +147,12 @@ Active jobs in `cron.job`:
   - Window: first day of current month through `current_date`.
   - Payload: `pageSize=100`, `maxPages=300`, `hydrateDetails=false`, `delayMs=100`.
   - Keeps NF headers/counts aligned with Olist before item hydration finishes.
+- `shopee-sync-{donacor,espaco-de-bicho,oliverhome,jacartta}`:
+  `0/3/6/9-59/15 * * * *` — per-shop `shopee-sync` every 15 min, staggered by
+  3 min so the shops never sign at the same minute. Migration `20260713160000`.
+- `shopee-escrow-{donacor,espaco-de-bicho,oliverhome,jacartta}`:
+  `11/13/17/19-59/30 * * * *` — per-shop `shopee-escrow-sync` every 30 min,
+  offset from the order sync so escrow reads orders that already landed.
 - `shopee-sbs-hourly`: `42 * * * *` — calls `shopee-sync-sbs` (all shops; light).
 - `shopee-products-{jacartta,espaco-de-bicho,donacor,oliverhome}`:
   `22/32/44/52 1,7,13,19 * * *` — per-shop `shopee-sync-products` runs
@@ -224,6 +242,13 @@ Fixed in `20260710094000_fix_fiscal_rls_read.sql`: grant + RLS policy for
 `oraculo_fiscal_invoices_valid` / `oraculo_fiscal_channel_sales`. Rule of thumb: a
 `security definer` view is not enough when the base table has RLS without a policy
 for `authenticated` — grant + policy the base tables.
+
+The same class of bug reappeared on 2026-07-16: `shopee_shops` had no
+`authenticated` read, so the Shopee pages silently rendered the raw `shop_id`
+instead of the shop name (fixed in `20260716250000_shopee_shops_authenticated_read.sql`).
+**Checklist for every new table read by a page**: `grant select ... to authenticated`
+*and* a `for select to authenticated` policy — otherwise the page degrades
+quietly instead of failing loudly.
 
 ## Manual Validation Commands
 

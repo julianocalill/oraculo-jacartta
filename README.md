@@ -70,8 +70,9 @@ rastreamento de importações com mapa AIS.
 - Sync health page at `/status`.
 
 ### Navigation
-- Persistent sidebar (`AppShell` + `SidebarNav`) on all 10 authenticated pages,
-  including `/calculadora`. Active link auto-highlighted via `usePathname`.
+- Persistent sidebar (`AppShell` + `SidebarNav`) on every authenticated page
+  (13 links: 11 under Principal + 2 under Admin). Active link auto-highlighted
+  via `usePathname`.
 - Exact, global alert badge (`loadActionableAlertCount()`) — same number on every
   page, not just the dashboard's truncated fetch.
 - `app/loading.tsx` skeleton keeps the sidebar solid between navigations.
@@ -135,7 +136,6 @@ Current product areas:
 - Both curve pages read cached Supabase RPCs instead of scanning raw order-item history during Next.js render.
 - Rupture/no-sale product watchlist.
 - Manual parameters by channel, SKU and UF.
-- Read-only Shopee Donacor data.
 - Mercado Livre channel: OAuth PKCE + hourly ingestion (items, variations, Full
   stock, orders since 2026-03) + near-real-time notification processing, with the
   `/mercado-livre` analytics tabs (Visão geral + Sugestão de envio Full, .xlsx export).
@@ -151,7 +151,7 @@ Production behavior on `2026-07-03`:
 - the dashboard default filter is the current month in `America/Sao_Paulo`;
 - legacy links carrying `start=2026-06-01&end=2026-06-30` are normalized to the current month;
 - the fiscal header text is derived from the active filter and must not be hardcoded to June;
-- July 2026 fiscal layer currently reports `7.186` valid NFs, `R$ 688.547,55` billed revenue and data through `2026-07-03`;
+- July 2026 fiscal layer reported, on that date, `7.186` valid NFs, `R$ 688.547,55` billed revenue and data through `2026-07-03` (historical figure — do not read as current);
 - the `Sem canal` fiscal bucket means the Olist NF payload had no integration, marketplace, channel or ecommerce name; on July 2026 this bucket is dominated by NF `394638` for `R$ 178.500,00`, likely a direct/manual sale that needs business classification.
 
 ## Official fiscal contract
@@ -206,15 +206,9 @@ Latest audit:
 
 The controlled backfill is implemented in `scripts/backfill-olist-order-items-for-valid-invoices.js`, with persistent checkpoint, per-order errors, retry/backoff, controlled concurrency and batch item upsert.
 
-Recent production commits:
-
-- `c4b2766` - fiscal revenue dashboard MVP;
-- `a5f853f` - remove heavy SKU coverage RPC from render;
-- `ab536d5` - use fast fiscal daily metrics on dashboard.
-- `f26b677` - automate fiscal invoice sync;
-- `ea003d5` - restore cached SKU ranking on dashboard;
-- `7aae605` - default dashboard filters to current month;
-- `8d4b730` - fix current fiscal period header.
+Delivery history: see [CHANGELOG.md](CHANGELOG.md) (dated entries, newest first)
+and `git log`. A hand-maintained commit list used to live here and was two weeks
+stale — the CHANGELOG is the canonical record.
 - `d03dd66` - add sales curve inventory view.
 
 Recent production deployment notes:
