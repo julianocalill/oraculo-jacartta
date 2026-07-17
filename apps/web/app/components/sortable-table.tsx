@@ -22,6 +22,8 @@ export type SortableCell = {
 export type SortableColumn = {
   label: string;
   numeric?: boolean;
+  /** Explicação da coluna, exibida em tooltip ao passar o mouse no cabeçalho. */
+  hint?: string;
 };
 
 function compare(a: number | string | null, b: number | string | null, dir: "asc" | "desc") {
@@ -82,7 +84,13 @@ export function SortableTable({
             {columns.map((col, idx) => {
               const active = idx === sortIdx;
               return (
-                <th key={col.label} className={col.numeric ? "numeric" : undefined}>
+                <th
+                  key={col.label}
+                  className={[col.numeric ? "numeric" : null, col.hint ? "th-has-hint" : null]
+                    .filter(Boolean)
+                    .join(" ") || undefined}
+                  data-hint={col.hint}
+                >
                   <button
                     type="button"
                     className={`th-sort${active ? " is-active" : ""}`}
@@ -90,6 +98,15 @@ export function SortableTable({
                     aria-label={`Ordenar por ${col.label}`}
                   >
                     <span>{col.label}</span>
+                    {col.hint ? (
+                      <>
+                        {/* leitores de tela recebem a explicação; o visual é o tooltip do th */}
+                        <span className="sr-only">{col.hint}</span>
+                        <span className="th-hint-mark" aria-hidden="true">
+                          ?
+                        </span>
+                      </>
+                    ) : null}
                     <span className="th-caret" aria-hidden="true">
                       {active ? (dir === "desc" ? "▼" : "▲") : "↕"}
                     </span>

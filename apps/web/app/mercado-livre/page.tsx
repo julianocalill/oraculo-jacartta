@@ -5,6 +5,7 @@ import { AppShell } from "../components/app-shell";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 import { SortableTable, type SortableCell } from "../components/sortable-table";
 import { MlTabs } from "./tabs";
+import { HINTS } from "../../lib/column-hints";
 import {
   type Curve,
   type MlItem,
@@ -336,14 +337,14 @@ export default async function MercadoLivrePage() {
         <SortableTable
           columns={[
             { label: "Anúncio" },
-            { label: "Origem" },
-            { label: "Curva" },
-            { label: "Vendas 30/60d", numeric: true },
-            { label: "Tendência 120→0", numeric: true },
-            { label: "Média/dia", numeric: true },
-            { label: "Trânsito", numeric: true },
-            { label: "Perda/dia", numeric: true },
-            { label: "Margem unit.", numeric: true }
+            { label: "Origem", hint: HINTS.origem },
+            { label: "Curva", hint: HINTS.curva },
+            { label: "Vendas 30/60d", numeric: true, hint: HINTS.vendas3060 },
+            { label: "Tendência 120→0", numeric: true, hint: HINTS.tendencia },
+            { label: "Média/dia", numeric: true, hint: HINTS.mediaDia },
+            { label: "Trânsito", numeric: true, hint: HINTS.transito },
+            { label: "Perda/dia", numeric: true, hint: HINTS.perdaDia },
+            { label: "Margem unit.", numeric: true, hint: HINTS.margemUnit }
           ]}
           rows={rupturaRows}
           initialSort={7}
@@ -362,12 +363,12 @@ export default async function MercadoLivrePage() {
         <SortableTable
           columns={[
             { label: "Anúncio" },
-            { label: "Variação" },
-            { label: "Curva" },
-            { label: "Vendas 30/60d", numeric: true },
-            { label: "Média/dia", numeric: true },
-            { label: "Perda/dia", numeric: true },
-            { label: "Margem unit.", numeric: true }
+            { label: "Variação", hint: HINTS.variacao },
+            { label: "Curva", hint: HINTS.curva },
+            { label: "Vendas 30/60d", numeric: true, hint: HINTS.vendas3060 },
+            { label: "Média/dia", numeric: true, hint: HINTS.mediaDia },
+            { label: "Perda/dia", numeric: true, hint: HINTS.perdaDia },
+            { label: "Margem unit.", numeric: true, hint: HINTS.margemUnit }
           ]}
           rows={rupturaVarRows}
           initialSort={5}
@@ -388,14 +389,14 @@ export default async function MercadoLivrePage() {
         <SortableTable
           columns={[
             { label: "Anúncio" },
-            { label: "Curva" },
-            { label: "Estoque Full", numeric: true },
-            { label: "Trânsito", numeric: true },
-            { label: "Tendência 120→0", numeric: true },
-            { label: "Média/dia", numeric: true },
-            { label: "Cobertura", numeric: true },
+            { label: "Curva", hint: HINTS.curva },
+            { label: "Estoque Full", numeric: true, hint: HINTS.estoqueFull },
+            { label: "Trânsito", numeric: true, hint: HINTS.transito },
+            { label: "Tendência 120→0", numeric: true, hint: HINTS.tendencia },
+            { label: "Média/dia", numeric: true, hint: HINTS.mediaDia },
+            { label: "Cobertura", numeric: true, hint: HINTS.cobertura },
             { label: "Status" },
-            { label: "Margem unit.", numeric: true }
+            { label: "Margem unit.", numeric: true, hint: HINTS.margemUnit }
           ]}
           rows={coberturaRows}
           initialSort={6}
@@ -414,12 +415,12 @@ export default async function MercadoLivrePage() {
         <SortableTable
           columns={[
             { label: "Anúncio" },
-            { label: "Origem" },
-            { label: "Curva" },
+            { label: "Origem", hint: HINTS.origem },
+            { label: "Curva", hint: HINTS.curva },
             { label: "Preço", numeric: true },
             { label: "Estoque", numeric: true },
-            { label: "Capital parado", numeric: true },
-            { label: "Ação sugerida" }
+            { label: "Capital parado", numeric: true, hint: HINTS.capitalParado },
+            { label: "Ação sugerida", hint: HINTS.acaoSugerida }
           ]}
           rows={paradoRows}
           initialSort={5}

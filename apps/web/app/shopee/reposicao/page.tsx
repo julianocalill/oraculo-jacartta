@@ -5,6 +5,7 @@ import { AppShell } from "../../components/app-shell";
 import { loadActionableAlertCount } from "../../../lib/alert-count";
 import { SortableTable, type SortableCell } from "../../components/sortable-table";
 import { LojaPills, ShopeeTabs } from "../tabs";
+import { HINTS } from "../../../lib/column-hints";
 import {
   type Curve,
   brl,
@@ -371,16 +372,16 @@ export default async function ShopeeReposicaoPage({
         <SortableTable
           columns={[
             { label: "Produto e justificativa" },
-            { label: "Situação" },
-            { label: "Curva" },
-            { label: "Vendas 30/60d", numeric: true },
-            { label: "Tendência 120→0", numeric: true },
-            { label: "Média/dia", numeric: true },
-            { label: "Cobertura", numeric: true },
-            { label: "Perda/dia", numeric: true },
-            { label: "Repor", numeric: true },
-            { label: "Venda protegida", numeric: true },
-            { label: "Custo (Olist)", numeric: true }
+            { label: "Situação", hint: HINTS.situacao },
+            { label: "Curva", hint: HINTS.curva },
+            { label: "Vendas 30/60d", numeric: true, hint: HINTS.vendas3060 },
+            { label: "Tendência 120→0", numeric: true, hint: HINTS.tendencia },
+            { label: "Média/dia", numeric: true, hint: HINTS.mediaDia },
+            { label: "Cobertura", numeric: true, hint: HINTS.cobertura },
+            { label: "Perda/dia", numeric: true, hint: HINTS.perdaDia },
+            { label: "Repor", numeric: true, hint: HINTS.enviar },
+            { label: "Venda protegida", numeric: true, hint: HINTS.vendaProtegida },
+            { label: "Custo", numeric: true, hint: HINTS.custoEnvio }
           ]}
           rows={rows}
           initialSort={1}

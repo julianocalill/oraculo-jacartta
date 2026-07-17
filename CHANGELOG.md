@@ -2,6 +2,19 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-16] — Tooltips explicativos nos cabeçalhos das tabelas
+
+- `SortableColumn` ganha o campo opcional `hint`: o cabeçalho exibe uma marca
+  "?" e um tooltip com a explicação da coluna no hover (CSS puro, sem JS;
+  texto também disponível para leitores de tela via `.sr-only`).
+- Textos centralizados em `apps/web/lib/column-hints.ts` para que ML e Shopee
+  expliquem cada métrica exatamente igual. Cobre Tendência, Curva, Média/dia,
+  Perda/dia, Cobertura, Trânsito, Margem, Enviar/Repor, Venda protegida,
+  Situação, Armazém e demais colunas calculadas das 4 abas.
+- Verificado no navegador: tooltip não é cortado pelo `overflow-x` do
+  `.table-wrap` (abre para baixo, sobre as linhas), fonte sans e alinhado à
+  esquerda mesmo em colunas numéricas.
+
 ## [2026-07-16] — Reposição Shopee: filtro por loja em abas, sem kits, nomes corretos
 
 - Fix: `shopee_shops` não tinha leitura para `authenticated` (migration

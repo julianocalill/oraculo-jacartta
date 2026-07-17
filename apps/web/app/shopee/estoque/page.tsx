@@ -3,6 +3,7 @@ import { AppShell } from "../../components/app-shell";
 import { loadActionableAlertCount } from "../../../lib/alert-count";
 import { SortableTable, type SortableCell } from "../../components/sortable-table";
 import { LojaPills, ShopeeTabs } from "../tabs";
+import { HINTS } from "../../../lib/column-hints";
 import {
   type Curve,
   type ShopeeProduct,
@@ -224,11 +225,11 @@ export default async function ShopeeEstoquePage({
         <SortableTable
           columns={[
             { label: "Produto" },
-            { label: "Armazém" },
-            { label: "Vendas 30/60d", numeric: true },
-            { label: "Média/dia", numeric: true },
-            { label: "Trânsito", numeric: true },
-            { label: "Perda/dia", numeric: true }
+            { label: "Armazém", hint: HINTS.armazem },
+            { label: "Vendas 30/60d", numeric: true, hint: HINTS.vendasFbs },
+            { label: "Média/dia", numeric: true, hint: HINTS.mediaDiaFbs },
+            { label: "Trânsito", numeric: true, hint: HINTS.transito },
+            { label: "Perda/dia", numeric: true, hint: HINTS.perdaDia }
           ]}
           rows={fbsRupturaRows}
           initialSort={5}
@@ -247,11 +248,11 @@ export default async function ShopeeEstoquePage({
         <SortableTable
           columns={[
             { label: "Produto" },
-            { label: "Armazém" },
-            { label: "Vendável", numeric: true },
-            { label: "Trânsito", numeric: true },
-            { label: "Média/dia", numeric: true },
-            { label: "Cobertura", numeric: true },
+            { label: "Armazém", hint: HINTS.armazem },
+            { label: "Vendável", numeric: true, hint: "Unidades disponíveis para venda no armazém da Shopee (não conta reservado nem avariado)." },
+            { label: "Trânsito", numeric: true, hint: HINTS.transito },
+            { label: "Média/dia", numeric: true, hint: HINTS.mediaDiaFbs },
+            { label: "Cobertura", numeric: true, hint: HINTS.coberturaFbs },
             { label: "Status" }
           ]}
           rows={fbsCoberturaRows}
@@ -271,12 +272,12 @@ export default async function ShopeeEstoquePage({
         <SortableTable
           columns={[
             { label: "Produto" },
-            { label: "Curva" },
-            { label: "Vendas 30/60d", numeric: true },
-            { label: "Tendência 120→0", numeric: true },
-            { label: "Média/dia", numeric: true },
-            { label: "Perda/dia", numeric: true },
-            { label: "Última venda", numeric: true }
+            { label: "Curva", hint: HINTS.curva },
+            { label: "Vendas 30/60d", numeric: true, hint: HINTS.vendas3060 },
+            { label: "Tendência 120→0", numeric: true, hint: HINTS.tendencia },
+            { label: "Média/dia", numeric: true, hint: HINTS.mediaDia },
+            { label: "Perda/dia", numeric: true, hint: HINTS.perdaDia },
+            { label: "Última venda", numeric: true, hint: HINTS.ultimaVenda }
           ]}
           rows={localRupturaRows}
           initialSort={5}
@@ -298,11 +299,11 @@ export default async function ShopeeEstoquePage({
         <SortableTable
           columns={[
             { label: "Produto" },
-            { label: "Curva" },
+            { label: "Curva", hint: HINTS.curva },
             { label: "Preço", numeric: true },
-            { label: "Estoque", numeric: true },
-            { label: "Capital parado", numeric: true },
-            { label: "Última venda", numeric: true }
+            { label: "Estoque", numeric: true, hint: "Unidades no estoque local do anúncio (fora dos armazéns da Shopee)." },
+            { label: "Capital parado", numeric: true, hint: HINTS.capitalParado },
+            { label: "Última venda", numeric: true, hint: HINTS.ultimaVenda }
           ]}
           rows={localParadoRows}
           initialSort={4}
