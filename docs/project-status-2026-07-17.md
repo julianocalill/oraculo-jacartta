@@ -117,6 +117,8 @@ ainda não — runs em `shopee_sync_runs`).
 
 ## Referências
 
+- `docs/glossario-cards-dashboard.md` — cada card/coluna do dashboard, fórmula
+  exata e limiares, para explicar o produto à equipe.
 - `docs/mercadolivre-integration.md` · `docs/deployment-map.md`
 - `docs/product/prd-mercadolivre-analytics.md` (tese + estudo Magiic)
 - `docs/importacoes-rastreamento.md`
