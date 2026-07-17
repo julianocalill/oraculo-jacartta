@@ -2,7 +2,7 @@
 
 Histórico de entregas e mudanças significativas.
 
-## [2026-07-16] — Fix de layout: tabelas largas não arrastam mais a página
+## [2026-07-17] — Fix de layout: tabelas largas não arrastam mais a página
 
 - **Bug**: em telas com tabela larga (sugestão de envio/reposição, 11+ colunas)
   a PÁGINA INTEIRA rolava na horizontal e a sidebar saía da tela.
@@ -20,7 +20,7 @@ Histórico de entregas e mudanças significativas.
 - Verificado no navegador em 1440px e 1280px: `paginaRolaHorizontal: false`,
   sidebar em `left: 0` antes e depois de rolar a tabela até o fim.
 
-## [2026-07-16] — Export .xlsx das sugestões (ML e Shopee)
+## [2026-07-17] — Export .xlsx das sugestões (ML e Shopee)
 
 - Botão **Exportar .xlsx** nas abas de sugestão; a planilha respeita os mesmos
   parâmetros da tela (alvo, coleta/prazo, curva, loja, itens por loja).
@@ -38,7 +38,7 @@ Histórico de entregas e mudanças significativas.
   `oraculo-reposicao-shopee_oliverhome_...xlsx`.
 - Verificado gerando e relendo um arquivo real (tipos, formatos, autofiltro).
 
-## [2026-07-16] — Tooltips explicativos nos cabeçalhos das tabelas
+## [2026-07-17] — Tooltips explicativos nos cabeçalhos das tabelas
 
 - `SortableColumn` ganha o campo opcional `hint`: o cabeçalho exibe uma marca
   "?" e um tooltip com a explicação da coluna no hover (CSS puro, sem JS;

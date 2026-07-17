@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-07-16.md](docs/project-status-2026-07-16.md) **← start here** (current state)
+1. [docs/project-status-2026-07-17.md](docs/project-status-2026-07-17.md) **← start here** (current state)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
 4. [docs/project-context.md](docs/project-context.md)
@@ -45,7 +45,7 @@ oraculo/
 10. [CHANGELOG.md](CHANGELOG.md) (full history)
 11. [vault/00-home/index.md](vault/00-home/index.md)
 
-Earlier snapshots (historical, superseded): [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md), [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
+Earlier snapshots (historical, superseded): [docs/project-status-2026-07-16.md](docs/project-status-2026-07-16.md), [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md), [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
 
 ## Tooling choices
 
@@ -56,13 +56,14 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-07-14.md](
 
 ## Current production state
 
-**Last update**: `2026-07-16` (see `docs/project-status-2026-07-16.md`) —
-Mercado Livre analytics v3 + Shopee estoque/FBS multi-armazém com sugestão de
-reposição (15 itens/loja) + rastreamento de importações com mapa AIS.
+**Last update**: `2026-07-17` (see `docs/project-status-2026-07-17.md`) —
+Três marketplaces com analítica de estoque (ML Full, Shopee FBS multi-armazém,
+Olist), sugestão de reposição com export .xlsx, livro de custos por SKU e
+rastreamento de importações com mapa AIS.
 
 ### Deployment & auth
 - Production URL: `https://oraculo.oliverhome.com.br`
-- Latest Vercel deploy: `oraculo-jacartta-37k55lhgq` (2026-07-16, aba Sugestão de envio Full)
+- Latest Vercel deploy: `oraculo-jacartta-j6h9it04g` (2026-07-17, fix de layout das tabelas largas)
 - Business-data reads run under RLS via an authenticated client (anon key + user
   JWT); service-role is reserved for writes, `/usuarios` and `/status`. Migrations
   `20260710092000` and `20260710094000`.
@@ -137,7 +138,13 @@ Current product areas:
 - Read-only Shopee Donacor data.
 - Mercado Livre channel: OAuth PKCE + hourly ingestion (items, variations, Full
   stock, orders since 2026-03) + near-real-time notification processing, with the
-  `/mercado-livre` analytics tabs (Visão geral + Sugestão de envio Full).
+  `/mercado-livre` analytics tabs (Visão geral + Sugestão de envio Full, .xlsx export).
+- Shopee channel: orders/escrow (take rate) + FBS warehouse inventory (SBS) and
+  local stock, with the `/shopee` tabs (Take Rate + Estoque & FBS + Sugestão de
+  reposição, .xlsx export). All 4 shops enrolled in FBS (7 BR warehouses).
+- Imports tracking (`/importacoes`): AIS vessel map + invoice/item registry.
+- Unit cost book per marketplace SKU (`oraculo_sku_unit_cost`): manual override
+  > Olist product cost (ignoring R$ 0) > kit effective cost.
 
 Production behavior on `2026-07-03`:
 

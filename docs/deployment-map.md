@@ -185,6 +185,20 @@ select public.refresh_oraculo_sales_curve_cache();
 select public.refresh_oraculo_stock_coverage_curve_cache();
 ```
 
+## Unit cost book (per marketplace SKU)
+
+View `oraculo_sku_unit_cost` (migration `20260716240000`) resolves the unit cost
+for a marketplace SKU in priority order:
+
+1. manual override in `oraculo_margin_sku_params` (any source, active) — the
+   bulk form lives in `/shopee/reposicao`;
+2. `olist_products` (`preco_custo_medio` > `preco_custo`), **ignoring R$ 0** —
+   most ERP SKUs have zero cost, which used to be counted as "has cost";
+3. `oraculo_product_effective_cost` (kits expanded by components).
+
+Both `/mercado-livre` and `/shopee` read this same view, so margin/cost columns
+agree across channels.
+
 ## Fiscal margin layer (Financeiro rules)
 
 Migration `20260710093000_create_fiscal_margin.sql`. Applies the Financeiro fiscal

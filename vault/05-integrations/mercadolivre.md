@@ -40,18 +40,24 @@ Curva ABC 80/15/5, tendência 120→0, margem unitária via custo Olist
 `enviar = média/dia × (alvo + coleta) − Full − trânsito`, parâmetros
 ajustáveis, justificativa detalhada por item (curva, velocidade com
 tendência, situação, a conta do envio), prioriza ruptura → crítico →
-abaixo do alvo → fora do Full; cards de venda protegida e perda estancada.
+abaixo do alvo → fora do Full; cards de venda protegida e perda estancada;
+**máx. 15 itens por conta** e **export .xlsx** (mesma lógica da tela, via
+`build-suggestions.ts`).
+
+Cabeçalhos das colunas calculadas têm tooltip explicativo (`?`), com textos
+em `apps/web/lib/column-hints.ts` — os mesmos usados na Shopee.
 
 ## Travas conhecidas
 
 - **Margem**: só 20/1930 anúncios têm SKU preenchido no ML (0 variações) —
-  preencher SKUs com os códigos do ERP destrava o cruzamento de custo.
+  preencher SKUs com os códigos do ERP destrava o cruzamento com o livro de
+  custos (`oraculo_sku_unit_cost`, compartilhado com a Shopee).
 - **Variações**: nenhum anúncio com variação vendeu em 60d; a seção fica
   vazia até esse perfil mudar (rastreamento contínuo).
 
 ## Referências
 
 - `docs/mercadolivre-integration.md` (arquitetura/segurança/operação)
-- `docs/project-status-2026-07-16.md` (estado atual)
+- `docs/project-status-2026-07-17.md` (estado atual)
 - `docs/product/prd-mercadolivre-analytics.md` (tese de produto / estudo Magiic)
 - [[olist]] — padrão de sync; [[../07-decisions/decision-log]]

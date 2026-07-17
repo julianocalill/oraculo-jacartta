@@ -3,7 +3,7 @@
 > `~/full`, hoje aposentado), inspirado no estudo da plataforma Magiic
 > (magiic.com.br). A decisão registrada no decision-log foi construir a
 > analítica DENTRO do Oráculo — o que foi feito: ver
-> `docs/mercadolivre-integration.md` e `docs/project-status-2026-07-16.md`.
+> `docs/mercadolivre-integration.md` e `docs/project-status-2026-07-17.md`.
 > O documento permanece como registro da tese de produto (wedge analítico,
 > ruptura como "aha", pipeline histórico como ativo) e do roadmap original,
 > parcialmente entregue e superado pela realidade do Oráculo (custo Olist,

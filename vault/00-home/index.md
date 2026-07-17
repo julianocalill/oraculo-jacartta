@@ -21,7 +21,7 @@ Build an operational intelligence system where Supabase is the canonical backend
 - Duas abas em `/mercado-livre`: Visão geral (ruptura R$/dia com velocidade sobre
   dias-com-estoque, variações, ABC, tendência 120d, trânsito, margem via custo Olist)
   e Sugestão de envio Full (regra Magiic com justificativa por item).
-- Detalhes: [[../05-integrations/mercadolivre]] e `docs/project-status-2026-07-16.md`.
+- Detalhes: [[../05-integrations/mercadolivre]] e `docs/project-status-2026-07-17.md`.
 
 ## Current status - 2026-07-07
 

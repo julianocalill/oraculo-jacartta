@@ -40,7 +40,9 @@ assinatura com a chave errada, não token vencido).
 - **Sugestão de reposição**: `repor = média/dia × (alvo + prazo) − estoque −
   trânsito`; FBS usa selling_speed da Shopee e limita ao estoque local
   disponível para envio; justificativa por item; **máx. 15 itens por loja**
-  (regra de produto).
+  (regra de produto); **kits ficam de fora** (repõe-se o produto simples);
+  filtro de loja em pills; **export .xlsx** (mesma lógica da tela) e
+  **cadastro em massa do livro de custos por SKU** na própria aba.
 
 ## Fatos de dados (primeira carga 2026-07-16)
 
@@ -48,7 +50,9 @@ assinatura com a chave errada, não token vencido).
 - 616 produtos com venda 30d; diagnóstico inicial: 76 rupturas locais
   (≈ R$ 12,9k/dia) + 8 SKUs zerados no FBS da Oliverhome.
 - Pedidos desde 31/05 (~46 mil) — tendência 120d fica completa com o tempo.
-- Custo Olist casa pouco ainda (SKUs de lojas ≠ catálogo Olist).
+- Custo: o ERP tem custo R$ 0 na maioria dos SKUs, então o livro de custos
+  (`oraculo_sku_unit_cost`) é alimentado manualmente pela aba de reposição —
+  comece pelos 15 itens sugeridos de cada loja.
 
 ## Referências
 
