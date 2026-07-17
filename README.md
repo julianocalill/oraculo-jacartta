@@ -35,7 +35,7 @@ oraculo/
 
 1. [docs/project-status-2026-07-17.md](docs/project-status-2026-07-17.md) **← start here** (current state)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
-   — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every dashboard card/column, exact formula, PT-BR — for team walkthroughs)
+   — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every card/column/config field across the whole system — analytics, alerts, calculator, imports, params, sync status — exact formula, PT-BR, for team walkthroughs)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
 4. [docs/project-context.md](docs/project-context.md)
 5. [docs/engineering-playbook.md](docs/engineering-playbook.md)

@@ -13,13 +13,16 @@
 
 ## Como usar este documento
 
-Está organizado em duas partes:
+Cobre **todas as páginas do sistema**, em três partes:
 
 1. **Conceitos-base** — as ideias que se repetem em várias páginas (velocidade
    de venda, curva ABC, tendência, custo). Leia esta parte primeiro; ela evita
    repetir a mesma explicação em cada página.
-2. **Página por página** — cada card e cada coluna, na ordem em que aparecem
-   na tela, com a fórmula e a origem dos dados.
+2. **Páginas de análise** — Mercado Livre, Shopee, Curva de Venda/Estoque
+   (Olist), dashboard home e `/skus`: cada card e coluna, com fórmula e
+   origem dos dados.
+3. **Páginas operacionais e de configuração** — Alertas, Calculadora,
+   Importações, Parâmetros, Status do Sync, exportação fiscal e Usuários.
 
 Se alguém perguntar "por que esse número está assim?", a resposta está aqui.
 
@@ -194,7 +197,7 @@ pode passar um mês inteiro sem venda e ainda estar "vivo" no mercado.
 
 ---
 
-# PARTE 2 — Página por página
+# PARTE 2 — Páginas de análise
 
 ## 2.1. Mercado Livre → Visão Geral (`/mercado-livre`)
 
@@ -603,6 +606,296 @@ Senão                           → "saudável"
 
 ---
 
+# PARTE 3 — Páginas operacionais e de configuração
+
+Estas páginas não são "análise de estoque" — são alertas, configuração,
+ferramentas auxiliares e administração. Documentadas com o mesmo rigor.
+
+## 3.1. Alertas (`/alertas`)
+
+É a lista priorizada de "o que precisa de atenção agora", construída sobre a
+mesma base usada no badge vermelho da sidebar.
+
+**Os 5 estados possíveis de um produto (`stock_signal`):**
+```
+Não sabemos o estoque dele                    → "sem_estoque_mapeado"
+Estoque ≤ 0                                    → "ruptura"
+Estoque > 0 mas cobertura ≤ 7 dias              → "ruptura_iminente"
+Nunca vendeu                                    → "sem_venda"
+Não vende há mais de 30 dias                    → "parado"
+Nenhum dos anteriores                           → "ok" (não aparece na lista)
+```
+
+**Quem entra na lista de observação** (antes mesmo de olhar o estado acima):
+estoque ≤ 5 unidades, OU cobertura ≤ 14 dias, OU nunca vendeu, OU mais de 30
+dias sem vender. Ou seja, a lista é propositalmente ampla — pega tanto quem
+já está em problema quanto quem está "no radar".
+
+### Cards do topo
+
+- **Ruptura**: contagem exata de produtos com estoque zerado (conta o total
+  real, não só os que aparecem na tabela abaixo).
+- **Ruptura iminente**: contagem de produtos com cobertura ≤ 7 dias.
+- **Parados / sem venda**: soma de "parado" + "sem venda".
+
+> ⚠️ **Importante:** os cards contam o **total real** no banco. A tabela
+> abaixo mostra só os **120 mais urgentes** (menor cobertura primeiro). Se o
+> card disser "45 em ruptura" mas a tabela mostrar só 30 linhas com esse
+> rótulo, é porque os outros 15 estão fora da amostra dos 120 — não é erro.
+
+### Tabela "Prioridade de ação"
+
+Ordenada por cobertura (menor primeiro, os sem-estoque-mapeado ficam por
+último). Colunas: Alerta, Fonte (Shopee/Olist/Outros), SKU, Produto (link
+direto para o SKU em `/skus`), Disponível, Cobertura, Vendas 30d, Receita 30d.
+
+**Atualização:** esta lista **não é calculada na hora** — vem de uma tabela
+pré-calculada que é atualizada pelo mesmo processo horário que atualiza as
+vendas da Olist (`olist-derived-refresh`). Pode haver um atraso de até 1 hora
+entre uma venda acontecer e ela refletir aqui.
+
+---
+
+## 3.2. Calculadora de Precificação (`/calculadora`)
+
+Ferramenta de simulação — **não lê nem grava nada no banco de dados**. É só
+para testar "se eu vender por X, quanto sobra?" antes de publicar um anúncio.
+Por isso ela é **independente** da margem fiscal/operacional do resto do
+sistema — usa taxas fixas digitadas na hora, não o livro de custos real.
+
+### Como calcular o preço de venda
+
+Você escolhe um de dois modos:
+- **Por markup**: informa quantas vezes quer multiplicar o custo (ex.: 2,5×)
+  → o preço de venda sai sozinho.
+- **Por preço de venda**: informa o preço direto e a calculadora acha o
+  markup implícito.
+
+### A fórmula completa
+
+```
+Custo total = custo unitário × quantidade de unidades no anúncio
+Valor agregado = Preço de venda − Custo total
+
+Comissão do marketplace = Preço × taxa da faixa de preço (+ valor fixo da faixa)
+ICMS (MG) = Preço × 1,3%              (editável)
+DIFAL = Preço × 6%                    (editável)
+PIS/COFINS = Valor agregado × 9,25%   (editável — atenção: incide sobre o
+                                        valor agregado, não sobre o preço cheio)
+Ads = Preço × 3%                      (editável)
+Custo operacional fixo = Preço × 3%   (editável)
+Devolução média = R$ 1,00 fixo        (não é percentual)
+
+Custo total real = Custo do produto + Comissão + ICMS + DIFAL + PIS/COFINS
+                  + Ads + Operacional + Devolução média
+
+Lucro líquido = Preço de venda − Custo total real
+Margem líquida = Lucro líquido ÷ Preço de venda
+```
+
+**Selo de resultado:**
+```
+Lucro líquido negativo         → "Prejuízo" (vermelho)
+Margem líquida menor que 10%   → "Margem baixa" (amarelo)
+Caso contrário                 → "Rentável" (verde)
+```
+
+### Tabelas de comissão por marketplace (valores hardcoded na calculadora)
+
+| Marketplace | Faixa de preço | Comissão | + Fixo |
+|---|---|---|---|
+| **Shopee** | até R$79,99 | 20% | R$4,00 |
+| | até R$99,99 | 14% | R$16,00 |
+| | até R$199,99 | 14% | R$20,00 |
+| | até R$499,99 | 14% | R$26,00 |
+| | acima | 14% | R$28,00 |
+| **ML Clássico** | até R$28,99 | 13% | R$6,25 |
+| | até R$49,99 | 13% | R$6,50 |
+| | até R$78,99 | 13% | R$6,75 |
+| | acima | 13% | R$0,00 |
+| **ML Premium** | mesmas faixas do Clássico | 18% | (mesmos valores fixos) |
+| **TikTok Shop** | até R$78,99 | 6% | R$4,00 |
+| | acima | 6% | R$0,00 |
+
+> Notas do próprio sistema: itens abaixo de R$12,50 no Mercado Livre pagam
+> uma tarifa especial (50% do valor do item) que **não está modelada** aqui;
+> o programa de frete grátis da TikTok Shop (SFP, ~6% adicional, teto R$50)
+> também não está incluído. Trate os resultados da calculadora como
+> estimativa, não como o valor final exato.
+
+Todas as taxas e faixas são editáveis na tela; o botão "Restaurar padrão"
+volta aos valores acima.
+
+---
+
+## 3.3. Importações (`/importacoes` e `/importacoes/cadastro`)
+
+Rastreamento de containers marítimos vindos da China, com mapa ao vivo das
+posições dos navios (AIS).
+
+### Cards do topo
+
+- **Navios em rota** = quantidade de navios únicos identificados (depois do
+  agrupamento por nome/apelido, ver abaixo); subtítulo mostra quantos têm
+  posição de GPS conhecida.
+- **Faturas ativas** = total de faturas cadastradas (da planilha + manuais).
+- **Itens embarcados** = total de linhas de item em todas as faturas.
+- **Próxima chegada** = a data de chegada mais próxima, entre todos os
+  navios, que ainda não passou.
+
+### Como o sistema identifica "qual navio é qual"
+
+Este é o ponto mais delicado da funcionalidade: a planilha de origem escreve
+o nome do navio de formas diferentes em faturas diferentes (abreviações,
+erros de digitação). O sistema tenta casar pelo **nome oficial ou por um dos
+apelidos cadastrados** em `/importacoes/cadastro` → aba Navio. Faturas cujo
+nome não bate com nenhum navio cadastrado (nem como oficial, nem como
+apelido) viram um "navio" separado — mesmo que seja fisicamente o mesmo
+navio de outra fatura.
+
+> **Na prática:** se um navio aparece duplicado no mapa, o problema quase
+> sempre é um apelido faltando no cadastro daquele navio — não um bug.
+
+A posição no mapa (GPS) só aparece se o navio tiver um **MMSI** cadastrado —
+é esse número que liga o registro à posição de satélite (AIS). Sem MMSI, o
+navio aparece nas listas mas não no mapa.
+
+### O mapa
+
+Mostra só navios com posição conhecida. Passar o mouse (ou clicar) abre um
+balão com: destino(s), próxima chegada, número de faturas e a lista de itens
+a bordo daquele navio.
+
+### Cadastro (`/importacoes/cadastro`)
+
+Três formulários:
+- **Fatura**: número (obrigatório), datas de produção, BL, container, navio,
+  destino, data de chegada, valores (aceita `1.234,56` no formato brasileiro).
+- **Item**: descrição (obrigatória), fatura vinculada, quantidade, custo
+  unitário, quantidade de caixas, CBM (metragem cúbica) — **CBM total não é
+  calculado automaticamente**, precisa ser digitado.
+- **Navio**: nome oficial, apelidos (separados por vírgula), IMO, MMSI. É
+  aqui que se resolve o problema de "navio duplicado" citado acima.
+
+---
+
+## 3.4. Parâmetros (`/parametros`)
+
+A tela onde a equipe cadastra os dados que **não vêm automaticamente** de
+nenhuma integração — e que alimentam o cálculo de margem visto em `/skus`.
+
+### Parâmetros por canal (Olist / Shopee)
+
+| Campo | O que controla |
+|---|---|
+| Imposto (%) | Alíquota de imposto sobre a venda |
+| Comissão do marketplace (%) | Taxa cobrada pelo canal de venda |
+| Taxa de pagamento (%) | Taxa do meio de pagamento |
+| Frete subsidiado por unidade (R$) | Quanto a empresa paga de frete por unidade vendida |
+| Custo de embalagem por unidade (R$) | Custo de embalagem por unidade |
+| **Margem meta (%)** | Acima disso, o SKU é "saudável". Padrão: **25%** |
+| **Margem mínima (%)** | Abaixo disso, o SKU é "crítico". Padrão: **12%** |
+| Parâmetros configurados? | Enquanto não marcado, a margem daquele canal fica com status "configuração pendente" em vez de calcular |
+
+Estes valores são a fonte de verdade usada na fórmula de margem do `/skus`
+(ver seção 2.8).
+
+### Overrides por SKU
+
+Permite corrigir, produto a produto, o custo unitário ou as metas de margem
+— sobrepõe o valor do canal só para aquele SKU específico. Precisa estar
+marcado como "ativo" para valer.
+
+### Regras por UF (Estado)
+
+Cadastro de alíquota de ICMS (interna e interestadual), FCP e DIFAL por
+estado — as 27 UFs já vêm pré-cadastradas, com todas as alíquotas zeradas e
+marcadas como "pendente de validação fiscal" até o contador revisar.
+
+O DIFAL e a "alíquota efetiva" **são recalculados automaticamente** pelo
+banco de dados sempre que a linha é salva:
+```
+DIFAL = máximo(ICMS interno do estado − ICMS interestadual, 0)
+Alíquota efetiva = ICMS interestadual + DIFAL + FCP
+```
+
+> ⚠️ **Lacuna conhecida:** hoje esta tabela de UF **é só cadastro** — ela
+> ainda **não está conectada** ao cálculo de margem do `/skus` nem à margem
+> fiscal da home. A margem fiscal (home e `/skus`) usa uma tabela por UF
+> separada, definida direto no código SQL, não esta tela. Preencher os
+> valores aqui, hoje, não muda nenhum número do sistema — é uma frente
+> preparada para uma integração futura.
+
+### Cards do topo
+
+SKUs analisados (amostra de até 5.000 linhas), Com custo, Sem custo, e
+quantas fontes distintas (Olist/Shopee/outros) têm parâmetro cadastrado.
+
+---
+
+## 3.5. Status do Sync (`/status`)
+
+Painel técnico de saúde das integrações — "está tudo se atualizando
+sozinho?". Pensado para diagnóstico rápido, não para análise de negócio.
+
+### O que cada selo de status significa
+
+| Selo | Significado |
+|---|---|
+| 🟢 **OK** | Última execução terminou com sucesso |
+| 🟡 **Parcial** | Terminou, mas só processou parte dos dados |
+| 🟡 **Rodando** | Está em execução agora |
+| 🔴 **Falhou** | Terminou com erro (ou qualquer status não reconhecido) |
+| ⚪ **Sem execução** | Nunca rodou (ou não há registro) |
+
+### As integrações monitoradas aqui
+
+Pedidos (Olist), Estoque/produtos (Olist), Notas fiscais (Olist), Backfill de
+itens (Olist), Mercado Livre, Importações (AIS).
+
+> ⚠️ **Lacuna conhecida:** a sincronização da **Shopee** (pedidos, escrow,
+> FBS, produtos) **não aparece nesta página** — apesar de estar rodando
+> normalmente em segundo plano (ver `docs/deployment-map.md` para a cadência
+> real). Se algo parar de atualizar na Shopee, hoje **não há alerta visual**
+> aqui; é preciso checar direto no banco (`shopee_sync_runs`).
+
+### Quando um alerta vermelho aparece no topo
+
+O sistema soma vários motivos possíveis num único aviso — qualquer um destes
+liga o alerta:
+- Token de acesso à Olist vencido ou ausente
+- A Olist ou o Mercado Livre recusaram a renovação automática do acesso
+  (precisa reconectar manualmente)
+- Algum sync terminou com erro
+- O sync de **pedidos**, **estoque** ou **Mercado Livre** especificamente
+  ainda não rodou hoje (comparando pela data de São Paulo)
+
+*Nota técnica: notas fiscais, backfill e importações não têm o alerta de
+"ainda não rodou hoje" — só o alerta de erro explícito.*
+
+---
+
+## 3.6. Exportar receita fiscal (botão "Exportar" na home)
+
+Não é uma página — é um botão na tela principal que baixa um arquivo `.csv`
+com a receita faturada por dia, no mesmo período selecionado no dashboard
+(data de emissão da nota, quantidade de notas válidas, receita e ticket
+médio por dia). Usa a mesma definição de "nota fiscal válida" da seção 2.7
+(exclui canceladas e devoluções).
+
+---
+
+## 3.7. Usuários (`/usuarios`)
+
+Tela de administração de acesso — só visível para quem tem perfil
+"administrador". Permite criar contas (com senha já confirmada, sem
+necessidade de e-mail de verificação), editar e-mail/nome/perfil/senha, e
+bloquear/desbloquear o acesso de alguém. Bloquear não apaga a conta — apenas
+impede o login (por ~100 anos, na prática permanente até ser desbloqueada
+manualmente).
+
+---
+
 ## Tabela-resumo dos limiares hardcoded (para consulta rápida)
 
 | Limiar | Valor | Onde se aplica |
@@ -618,20 +911,44 @@ Senão                           → "saudável"
 | Linhas máximas nas tabelas de estoque | 150 | ML e Shopee |
 | Janela de histórico para tendência | 120 dias (4 blocos de 30) | ML e Shopee |
 | Curva ABC — corte A/B/C | 80% / 95% acumulado | ML e Shopee |
-| Margem mínima/meta padrão (SKUs) | 12% / 25% | `/skus` |
+| Margem mínima/meta padrão (SKUs) | 12% / 25% | `/skus`, `/parametros` |
 | Snapshots mínimos p/ velocidade "real" | 15 dias | Mercado Livre |
+| Entrada na lista de Alertas | estoque ≤5 OU cobertura ≤14d OU nunca vendeu OU +30d sem venda | `/alertas` |
+| Margem líquida baixa (calculadora) | < 10% | `/calculadora` |
+| Bloqueio de usuário | ~100 anos (permanente na prática) | `/usuarios` |
+| Limite de linhas em Alertas | 120 (mais urgentes; cards contam o total real) | `/alertas` |
+
+## Lacunas conhecidas (registradas para não gerar confusão)
+
+- **Regras de UF em `/parametros` não estão conectadas ao cálculo de
+  margem** — hoje é só cadastro, aguardando integração. A margem fiscal
+  real (home e `/skus`) usa uma tabela de UF definida direto no código, não
+  esta tela.
+- **A sincronização da Shopee não aparece em `/status`** — roda normalmente
+  em segundo plano, mas não há alerta visual ali se parar. Conferir direto
+  em `shopee_sync_runs` se houver suspeita de atraso.
+- **A lista de Alertas atualiza a cada hora**, não em tempo real — pode haver
+  até 1h de atraso entre uma venda e o reflexo na lista.
+- **A calculadora de precificação não modela** a tarifa especial de itens
+  baratos no Mercado Livre nem o programa de frete grátis da TikTok Shop —
+  trate o resultado como estimativa.
 
 ---
 
 ## Como manter isto atualizado
 
-Este documento foi gerado lendo o código-fonte diretamente
+Este documento foi gerado lendo o código-fonte diretamente — Parte 1/2
 (`apps/web/app/mercado-livre/`, `apps/web/app/shopee/`, `apps/web/app/page.tsx`,
-`apps/web/app/skus/`, `apps/web/app/pedidos/`, `apps/web/lib/column-hints.ts`
-e as migrations SQL das views/RPCs) em 2026-07-17. Se uma fórmula, limiar ou
-regra mudar no código, este documento **fica desatualizado** até alguém
-revisá-lo — ele não se atualiza sozinho.
+`apps/web/app/skus/`, `apps/web/app/pedidos/`, `apps/web/lib/column-hints.ts`)
+e Parte 3 (`apps/web/app/alertas/`, `apps/web/app/calculadora/`,
+`apps/web/app/importacoes/`, `apps/web/app/parametros/`,
+`apps/web/app/status/`, `apps/web/app/export-fiscal/`,
+`apps/web/app/usuarios/`), além das migrations SQL das views/RPCs — em
+2026-07-17. Se uma fórmula, limiar ou regra mudar no código, este documento
+**fica desatualizado** até alguém revisá-lo — ele não se atualiza sozinho.
 
 Sinal de que precisa revisão: qualquer PR que mexa em
 `build-suggestions.ts`, `build-estoque.ts`, `data.ts` (ML ou Shopee),
-`column-hints.ts`, ou nas migrations de views/RPC do dashboard/SKUs.
+`column-hints.ts`, `calculator.tsx`, nas migrations de
+`oraculo_margin_*`/`oraculo_state_tax_params`/`oraculo_stock_watchlist_*`,
+ou na lista de sync exibida em `/status`.
