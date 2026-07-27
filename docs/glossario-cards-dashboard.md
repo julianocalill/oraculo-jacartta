@@ -559,6 +559,36 @@ ROI fiscal = Lucro ÷ Custo
 é puramente a conta fiscal/tributária. O card mostra também "% da receita
 coberta" — nem toda nota fiscal tem o item ligado a um custo conhecido ainda.
 
+### "Cobertura SKU" / "Margem e ROI operacionais" — o gate de liberação
+
+Painel com badge **"Leitura parcial liberada"**. Mede quanto da base fiscal
+já tem os **itens (produtos) das notas** sincronizados da API da Olist — é
+esse sync que permite calcular margem/ROI por SKU. Quatro métricas:
+
+- **NFs com itens sincronizados** — % das NFs válidas do mês que já tiveram os
+  itens baixados. Sem o item, o sistema sabe a receita da nota, mas não *qual
+  produto* a gerou.
+- **Receita coberta** — fatia da receita faturada cujas NFs já têm itens (é
+  sobre ela que margem/ROI por SKU podem ser calculados).
+- **Receita sem cobertura** — receita de NFs ainda na fila de sync. Não é
+  perda nem erro: é atraso do sync, que roda via cron
+  (`oraculo-olist-invoices-15m`, a cada 15 min) e fecha o gap sozinho.
+- **SKUs identificados** — SKUs distintos já vistos nos itens sincronizados.
+  Parcial enquanto faltam NFs, por isso "não é ranking definitivo".
+
+O card não faz query ao vivo: lê o snapshot pré-computado
+`oraculo_fiscal_latest_snapshots` (chave `sku_coverage`), regravado por job
+horário. A lógica de cálculo está na migration
+`20260714150000`/`20260714120000` — desde 14/07 a cobertura é medida pelos
+itens **da própria NF** (`olist_invoice_items`), não pelos itens do pedido
+vinculado (por isso saltou de ~44% para ~98%: o método antigo subestimava).
+
+**Gate de liberação** (`docs/fiscal-sku-items-coverage.md`): margem, ROI,
+ROAS e lucro por SKU só podem ser tratados como *oficiais* quando a cobertura
+atinge **≥98% das NFs válidas OU <0,5% da receita sem cobertura**. Até lá o
+badge "Leitura parcial liberada" sinaliza estado intermediário — os números
+já aparecem ("liberada"), mas com ressalva de base incompleta ("parcial").
+
 ### "Operacional auxiliar" — pedidos, não notas fiscais
 
 Métricas como "Pedidos confirmados" e "Receita de pedidos" são **auxiliares**

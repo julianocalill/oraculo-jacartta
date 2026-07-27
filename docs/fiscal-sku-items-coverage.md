@@ -248,6 +248,99 @@ O endpoint fiscal confirmado continua sendo `notas`. `notas-fiscais` retornou `4
 - NF 348611: pedido 362900092 · 1 linhas · 1 SKUs · itens R$ 79,90 · NF R$ 44,56
 - NF 348613: pedido 362900353 · 1 linhas · 1 SKUs · itens R$ 46,90 · NF R$ 46,90
 
+## Limitacao conhecida do sync de itens de NF (2026-07-17)
+
+Contexto: em 17/07 a cobertura cruzou o gate (`98,09%` das NFs de julho), mas
+sobraram `4` NFs (`R$ 195,81`, `0,004%` da receita) que os jobs atuais **nao
+conseguem hidratar de forma confiavel**. Diagnostico da causa raiz:
+
+- A Edge Function `olist-sync-invoices` pagina **sempre `orderBy=desc`**
+  (`index.ts:325`, hardcoded) — da NF mais nova para a mais antiga dentro da
+  janela.
+- Por invocacao ela processa apenas `~6` paginas antes de estourar o tempo de
+  execucao (cada pagina hidrata `50` itens com `detailDelayMs` + latencia da
+  Olist, `~20-30s/pagina`). Verificado: um backfill com `maxPages: 100`
+  escopado em `2026-07-13` parou em `300` registros (`6` paginas) e o run
+  ficou preso em `running`.
+- Consequencia: em dias de alto volume (`~5k` NFs = `~100` paginas), a **cauda
+  antiga do dia nunca e alcancada** por backfill de janela de data. As `3` NFs
+  de `2026-07-13` sao justamente as mais antigas do dia; a de `2026-07-14`
+  esta dentro da janela de `lookbackDays=3` do cron e se auto-resolve.
+- Dois efeitos colaterais agravam: runs morrem no timeout e **ficam presos em
+  `running`** (sem `finished_at`) — ha varios orfaos na
+  `olist_invoice_sync_runs`; e a falha de fetch de detalhe e **engolida em
+  silencio** (`index.ts:508`, `catch { detailErrors += 1 }`), entao a NF entra
+  sem itens e so e re-tentada na proxima varredura.
+
+Fix recomendado (nenhum aplicado ainda — as `4` NFs sao imateriais e o gate ja
+passou):
+
+1. **Hidratacao por lista de `invoice_id`**: expor um modo que recebe IDs
+   explicitos e chama `fetchInvoiceDetail(accessToken, endpoint, invoiceId)`
+   (`index.ts:331`, ja existe internamente) direto, sem paginar. Resolve
+   qualquer NF orfa em segundos, independente da posicao na janela.
+2. **Modo `orderBy=asc` opcional**: permite varrer a cauda antiga primeiro
+   quando o objetivo e fechar dias fora da janela de `lookbackDays`.
+3. **Fechar runs orfaos**: marcar run como `failed`/`timeout` ao exceder um
+   limite de tempo, em vez de deixar `running` para sempre — e nao engolir o
+   `detailError` sem registrar o `invoice_id` afetado.
+
+Ate isso existir, NFs fora da janela de `3` dias e no fundo de um dia de alto
+volume permanecem sem itens; o impacto e desprezivel para o gate, mas quebra
+o "100% de cobertura" em auditorias pontuais.
+
+## Custo por SKU travado em ~49,5% — importacao de pedidos incompleta (2026-07-17)
+
+O card fiscal "Margem e ROI" mostra `Cobertura 49,5% da receita` — bem abaixo
+dos 98% da cobertura de itens de NF. Sao pipelines diferentes: a margem exige
+**custo**, que so existe pelo caminho `NF -> pedido Olist -> olist_order_items
+-> custo do produto`. Investigacao de 17/07:
+
+Diagnostico decisivo (SQL read-only): das `35.869` NFs de julho `unmatched`
+(sem pedido vinculado), **`0` tinham o pedido importado no banco** — todos
+`pedido_ausente`. Ou seja, nao e bug de linker nem de chave (`100%` dos pedidos
+importados de julho tem `payload.ecommerce.numeroPedidoEcommerce`): **os
+pedidos simplesmente nao foram importados**. Julho: `~37 mil` pedidos
+importados vs `~67 mil` NFs validas. Como toda NF na Olist nasce de um pedido
+(SEFAZ nao autoriza NF zerada), o pedido existe na API — falta puxar.
+
+Duas engrenagens quebradas, ambas por config desatualizada em producao:
+
+1. **Cron `oraculo-olist-orders-hourly`** roda `olist-sync-orders` com
+   `{lookbackDays:1, maxPages:1, hydrateDetails:true}`. A funcao pagina
+   `orderBy=desc` (`index.ts:224`) **sem mecanismo de resume/offset** — cada
+   rodada recomeca do `offset 0`. Efeito: por hora so ve os `100` pedidos mais
+   novos do ultimo dia e re-busca os mesmos; em horas de pico (>100
+   pedidos/h) tudo alem disso e **perdido para sempre**. Explica a queda
+   uniforme (~40-50%) em todos os canais e o colapso em dias de pico (07/07 em
+   `21,9%`).
+2. **Cron `oraculo-olist-order-items-backfill-overnight`** aponta para uma
+   janela **fixa de junho** (`startDate 2026-06-01, endDate 2026-06-19`) — nao
+   processa julho. Mesmo com pedidos importados, os itens nao sao hidratados.
+
+Fix (ordem importa; comandos no CHANGELOG de 2026-07-17):
+1. Backfill de cabecalhos de pedido para o gap via
+   `scripts/import-olist-orders-full.js` (headers-only, paginacao completa,
+   escopo por `ORDER_BACKFILL_START_DATE`/`END_DATE`). O script ganhou
+   retry/backoff (429/400/5xx/rede) e pausa entre paginas em 2026-07-17 —
+   antes abortava o backfill inteiro no primeiro tropeco da Olist.
+2. Re-vincular. ATENCAO — BUG no linker: `refresh_oraculo_fiscal_invoice_order_links`
+   filtra `existing.invoice_id is null` (migration 165843, linha 71), ou seja
+   so vincula NFs que ainda **nao tem linha** na tabela. NFs ja registradas como
+   `unmatched` (order_id null) NUNCA sao re-tentadas — a funcao roda, retorna 0
+   e nao muda nada. Foi exatamente o que travou o re-vinculo em 17/07 apos o
+   backfill de pedidos. Correcao definitiva: trocar o filtro para
+   `existing.order_id is null`. Workaround aplicado (UPDATE direto que casa as
+   linhas unmatched com `olist_orders` pela chave ecommerce): subiu a cobertura
+   de vinculo de 46,7% para 99,8% em julho.
+3. Hidratar itens: apontar o cron overnight para janela **rolante do mes
+   corrente** (nao junho fixo) e/ou rodar `olist-backfill-order-items` para o
+   periodo.
+4. **Duravel (obrigatorio para 98% em pico)**: adicionar resume/offset e escopo
+   de data a `olist-sync-orders`, desacoplar a passada de cabecalhos (frequente,
+   `maxPages` alto, sem detalhe) da de itens, e subir o throughput do cron. Sem
+   isso o gap volta a crescer a cada pico.
+
 ## Trava de produto
 
 Nao liberar margem, ROI, ROAS, lucro ou SKU fiscal oficial ate a cobertura passar no criterio de aceite.

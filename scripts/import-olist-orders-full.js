@@ -196,6 +196,10 @@ async function saveToken(env, token) {
   }
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function fetchOrdersPage(env, accessToken, startDate, endDate, limit, offset) {
   const baseUrl = env.OLIST_API_BASE_URL.endsWith("/")
     ? env.OLIST_API_BASE_URL
@@ -208,21 +212,53 @@ async function fetchOrdersPage(env, accessToken, startDate, endDate, limit, offs
   url.searchParams.set("dataInicial", startDate);
   url.searchParams.set("dataFinal", endDate);
 
-  const response = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-      [env.OLIST_API_AUTH_HEADER || "Authorization"]: env.OLIST_API_AUTH_PREFIX
-        ? `${env.OLIST_API_AUTH_PREFIX} ${accessToken}`
-        : accessToken
-    }
-  });
+  // Olist é instável: 429 (rate limit), 400 "consulta levou muito tempo" e
+  // falhas de rede são transitórias. Tenta com backoff exponencial em vez de
+  // abortar o backfill inteiro no primeiro tropeço.
+  const maxAttempts = Number(process.env.ORDER_FETCH_MAX_ATTEMPTS || "6");
+  let lastError = null;
 
-  const text = await response.text();
-  if (!response.ok) {
-    throw new Error(`Falha ao buscar pedidos da Olist (${response.status}): ${text.slice(0, 300)}`);
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          [env.OLIST_API_AUTH_HEADER || "Authorization"]: env.OLIST_API_AUTH_PREFIX
+            ? `${env.OLIST_API_AUTH_PREFIX} ${accessToken}`
+            : accessToken
+        }
+      });
+
+      const text = await response.text();
+      if (response.ok) {
+        return parseJson(text, "Falha ao buscar pedidos da Olist");
+      }
+
+      const retriable = response.status === 429 || response.status === 400 || response.status >= 500;
+      lastError = new Error(`Falha ao buscar pedidos da Olist (${response.status}): ${text.slice(0, 300)}`);
+      if (!retriable || attempt === maxAttempts) {
+        throw lastError;
+      }
+
+      const retryAfter = Number(response.headers.get("retry-after"));
+      const backoffMs = Number.isFinite(retryAfter) && retryAfter > 0
+        ? retryAfter * 1000
+        : Math.min(30000, 1000 * 2 ** (attempt - 1));
+      console.log(`  ! ${response.status} em offset=${offset} (tentativa ${attempt}/${maxAttempts}), aguardando ${Math.round(backoffMs / 1000)}s`);
+      await sleep(backoffMs);
+    } catch (error) {
+      // Erro de rede (fetch failed) — também é transitório.
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (attempt === maxAttempts) {
+        throw lastError;
+      }
+      const backoffMs = Math.min(30000, 1000 * 2 ** (attempt - 1));
+      console.log(`  ! ${lastError.message.slice(0, 60)} (tentativa ${attempt}/${maxAttempts}), aguardando ${Math.round(backoffMs / 1000)}s`);
+      await sleep(backoffMs);
+    }
   }
 
-  return parseJson(text, "Falha ao buscar pedidos da Olist");
+  throw lastError || new Error("Falha ao buscar pedidos da Olist");
 }
 
 async function upsertOrders(env, rows) {
@@ -321,6 +357,9 @@ async function main() {
         if (normalized.length < limit) {
           break;
         }
+
+        // Pausa entre páginas para aliviar o rate limit da Olist.
+        await sleep(Number(process.env.ORDER_PAGE_DELAY_MS || "350"));
       }
 
       await upsertOrders(env, rows);

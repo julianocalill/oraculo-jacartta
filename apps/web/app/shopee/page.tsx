@@ -109,30 +109,60 @@ type SkuSummary = {
   netProfit: number | null;
 };
 
+const PAGE_SIZE = 1000;
+
+// O servidor corta a resposta em 1000 linhas. A view de SKU passa disso (3.188
+// linhas num mês típico), então sem paginar os totais saem silenciosamente
+// incompletos. Diferente do fetchAllPages de data.ts, aqui o erro sobe: uma
+// falha parcial vira número errado na tela, que é pior que uma tela de erro.
+async function fetchAllRows<T>(
+  buildQuery: () => { range: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }> }
+) {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await buildQuery().range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    const page = (data ?? []) as T[];
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) break;
+  }
+  return rows;
+}
+
 async function loadTakeRate(start: string, end: string, shopFilter: string) {
   const supabase = createSupabaseAdminClient();
 
-  let shopQuery = supabase
-    .from("oraculo_shopee_take_rate_shop_daily")
-    .select("*")
-    .gte("order_date", start)
-    .lte("order_date", end);
-  let skuQuery = supabase
-    .from("oraculo_shopee_take_rate_sku_daily")
-    .select("*")
-    .gte("order_date", start)
-    .lte("order_date", end);
-  if (shopFilter !== "all") {
-    shopQuery = shopQuery.eq("shop_id", Number(shopFilter));
-    skuQuery = skuQuery.eq("shop_id", Number(shopFilter));
-  }
+  // Lê as tabelas de cache (refresh a cada 30 min via pg_cron), não as views:
+  // no compute Nano do Supabase a agregação ao vivo estoura o statement_timeout
+  // quando os créditos de CPU acabam. Ver 20260722120000_shopee_take_rate_cache.
+  // A ordenação precisa ser estável e total, senão as páginas se sobrepõem ou
+  // pulam linhas entre as requisições.
+  const buildShopQuery = () => {
+    const q = supabase
+      .from("oraculo_shopee_take_rate_shop_daily_cache")
+      .select("*")
+      .gte("order_date", start)
+      .lte("order_date", end)
+      .order("order_date")
+      .order("shop_id");
+    return shopFilter !== "all" ? q.eq("shop_id", Number(shopFilter)) : q;
+  };
+  const buildSkuQuery = () => {
+    const q = supabase
+      .from("oraculo_shopee_take_rate_sku_daily_cache")
+      .select("*")
+      .gte("order_date", start)
+      .lte("order_date", end)
+      .order("order_date")
+      .order("shop_id")
+      .order("sku");
+    return shopFilter !== "all" ? q.eq("shop_id", Number(shopFilter)) : q;
+  };
 
-  const [shopResponse, skuResponse] = await Promise.all([shopQuery, skuQuery]);
-  if (shopResponse.error) throw shopResponse.error;
-  if (skuResponse.error) throw skuResponse.error;
-
-  const shopRows = (shopResponse.data ?? []) as ShopDailyRow[];
-  const skuRows = (skuResponse.data ?? []) as SkuDailyRow[];
+  const [shopRows, skuRows] = await Promise.all([
+    fetchAllRows<ShopDailyRow>(buildShopQuery),
+    fetchAllRows<SkuDailyRow>(buildSkuQuery)
+  ]);
 
   const shopMap = new Map<number, ShopSummary>();
   for (const row of shopRows) {
