@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const MAIN_LINKS = [
   { href: "/", label: "Analytics" },
   { href: "/pedidos", label: "Pedidos" },
+  { href: "/mais-vendidos", label: "Mais Vendidos" },
   { href: "/skus", label: "SKUs" },
   { href: "/curva-de-venda", label: "Curva de Venda" },
   { href: "/curva-de-estoque", label: "Curva de Estoque" },

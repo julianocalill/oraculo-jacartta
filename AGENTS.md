@@ -26,7 +26,7 @@ Important context must live in repository files, not only in chat history.
 
 ### UI/Frontend (as of 2026-07-17)
 - **Dark theme** with token-based design: cool near-black background, ouro accent, jewel palette (indigo/violet/cyan/emerald/rose).
-- **Persistent shell**: `AppShell` + `SidebarNav` (client, `usePathname`) on every authenticated page (13 sidebar links / 18 `page.tsx`). Exact global alert badge via `lib/alert-count.ts`.
+- **Persistent shell**: `AppShell` + `SidebarNav` (client, `usePathname`) on every authenticated page (14 sidebar links / 19 `page.tsx`). Exact global alert badge via `lib/alert-count.ts`.
 - **Metric cards**: shared `MetricCard` component (in `app/page.tsx`) with sparkline + variation chip, used across the app — not a one-off dashboard element. Delta color inverts for cost/taxes (rising is bad).
 - **Sorted tables**: `/skus` has a dedicated client component (`useMemo` + `useState`); everywhere else uses the generic `app/components/sortable-table.tsx` (serializable cells: text/sort/href/badge/subtitle). Click headers to sort, click again to reverse, nulls always last.
   - Columns take an optional `hint`: renders a "?" mark + hover tooltip explaining the metric (pure CSS, `.sr-only` copy for screen readers). Hint texts are centralized in `apps/web/lib/column-hints.ts` so ML and Shopee explain the same metric with the same words — write new hints there, not inline.

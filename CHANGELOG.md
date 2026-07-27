@@ -2,6 +2,76 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-27] — Nova aba "Mais Vendidos" (ranking por quantidade, Olist)
+
+- Nova página `/mais-vendidos` no sidebar: produtos mais vendidos e lojas que
+  mais venderam, por **quantidade** (não valor), fonte Olist
+  (`olist_order_items` + embed `olist_orders`, loja via
+  `payload.ecommerce` com nome amigável de `dim_channels`).
+- Filtro de período em pills: Hoje / Últimos 3 dias / Últimos 7 dias
+  (dias corridos em America/Sao_Paulo, corte `data_criacao::date` como nas
+  views do dashboard). Pedidos cancelados (status 8) ficam fora do ranking;
+  o volume cancelado aparece à parte num card.
+- Tabelas com `SortableTable` (rank, link para `/skus`, participação % por
+  loja); paginação estrita de 1.000 em 1.000 (erro sobe, total parcial não
+  vira número na tela). Leitura via admin client — tabelas base sem grant
+  `authenticated`.
+
+## [2026-07-17] — Diagnóstico: margem fiscal travada em 49,5% (importação de pedidos)
+
+Investigação do card "Margem e ROI fiscais" (badge "Cobertura 49,5% da
+receita"). A margem exige custo, que só vem por `NF → pedido Olist →
+olist_order_items → custo do produto`.
+
+- **Achado**: não é por marketplace (cobertura ~40-52% uniforme em Shopee,
+  TikTok, ML, Amazon, Shein). Das 35.869 NFs de julho sem pedido vinculado,
+  **0 tinham o pedido importado no banco** — os pedidos não foram puxados da
+  Olist (37k importados vs 67k NFs). Como toda NF nasce de um pedido, o pedido
+  existe na API; falta importar.
+- **Duas engrenagens quebradas**: (1) cron `oraculo-olist-orders-hourly` com
+  `maxPages:1, lookbackDays:1` e função `olist-sync-orders` **sem resume**
+  (`orderBy=desc`, recomeça do offset 0) → em pico perde tudo além dos 100
+  pedidos mais novos/hora, permanentemente; (2) cron
+  `oraculo-olist-order-items-backfill-overnight` **congelado numa janela de
+  junho** (`2026-06-01→06-19`), não processa julho.
+- **Runbook do fix** (executar nesta ordem):
+  1. Backfill de cabeçalhos:
+     `ORDER_BACKFILL_START_DATE=2026-06-01 ORDER_BACKFILL_END_DATE=2026-07-17 ORDER_BACKFILL_WINDOW_DAYS=3 node scripts/import-olist-orders-full.js`
+  2. Re-vincular (SQL editor):
+     `select public.refresh_oraculo_fiscal_invoice_order_links('2026-06-01','2026-07-17');`
+  3. Hidratar itens (SQL editor):
+     `select private.invoke_oraculo_sync_function('olist-backfill-order-items','{"startDate":"2026-06-01","endDate":"2026-07-17","limit":100,"delayMs":1000,"maxRuntimeMs":180000}'::jsonb,240000);`
+     e apontar o cron overnight para janela rolante do mês corrente.
+  4. Verificar: `select oraculo_fiscal_order_item_backfill_progress('2026-07-01','2026-07-31');`
+- **Fix durável (código)**: adicionar resume/offset + escopo de data à
+  `olist-sync-orders`, desacoplar cabeçalho de itens e subir o throughput do
+  cron — obrigatório para segurar 98% em pico. Detalhes em
+  `docs/fiscal-sku-items-coverage.md` (seção "Custo por SKU travado em ~49,5%").
+
+## [2026-07-17] — Cobertura SKU cruza o gate (98%) + speed-up do sync em prod
+
+- **Diagnóstico**: o card "Cobertura SKU" mostrava 97,7% das NFs porque a
+  cobertura subia num padrão "serrote" — cruzava 98% perto da meia-noite e
+  despencava para ~92% quando as NFs do dia entravam no denominador e a
+  varredura recomeçava. Causa: o cron `oraculo-olist-invoices-15m` estava com
+  `maxPages: 2` (9,6k detalhes/dia), empatado com a demanda diária, então o
+  gate nunca segurava.
+- **Ação**: aplicado em produção o `cron.schedule` da migration
+  `20260714150000_speed_up_invoice_items_sync.sql` (`maxPages: 2 → 4`,
+  ~19,2k detalhes/dia). O ledger de migrations estava parado em 02/07 — a
+  mudança nunca tinha chegado à prod. A janela de 3 dias passa a ser varrida
+  ~4x/dia e a cobertura segura acima de 98% durante o dia.
+- **Resultado**: cobertura de julho passou de 97,7% → **98,09% das NFs**
+  (receita coberta 98,53%); o gate de liberação (≥98% das NFs) foi atendido.
+- **Residual**: 4 NFs (R$ 195,81, 0,004%) não hidrataram — a de 14/07 se
+  auto-resolve pelo cron; as 3 de 13/07 exigem fix de código (fora da janela
+  de lookback + cauda antiga de dia de alto volume). Limitação e fix
+  recomendado documentados em `docs/fiscal-sku-items-coverage.md` (seção
+  "Limitacao conhecida do sync de itens de NF").
+- **Docs**: entrada do card "Cobertura SKU / Margem e ROI operacionais"
+  adicionada ao `docs/glossario-cards-dashboard.md` (seção 2.7), que não o
+  cobria.
+
 ## [2026-07-17] — Export .xlsx também nas abas de estoque (Shopee e ML)
 
 Paridade de export entre os canais: além das sugestões, as abas de estoque
