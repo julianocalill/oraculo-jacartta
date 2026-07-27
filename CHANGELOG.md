@@ -2,20 +2,35 @@
 
 Histórico de entregas e mudanças significativas.
 
-## [2026-07-27] — Nova aba "Mais Vendidos" (ranking por quantidade, Olist)
+## [2026-07-27] — Nova aba "Mais Vendidos" + achado: itens cobrem 34% dos pedidos
 
-- Nova página `/mais-vendidos` no sidebar: produtos mais vendidos e lojas que
-  mais venderam, por **quantidade** (não valor), fonte Olist
-  (`olist_order_items` + embed `olist_orders`, loja via
-  `payload.ecommerce` com nome amigável de `dim_channels`).
-- Filtro de período em pills: Hoje / Últimos 3 dias / Últimos 7 dias
-  (dias corridos em America/Sao_Paulo, corte `data_criacao::date` como nas
-  views do dashboard). Pedidos cancelados (status 8) ficam fora do ranking;
-  o volume cancelado aparece à parte num card.
-- Tabelas com `SortableTable` (rank, link para `/skus`, participação % por
-  loja); paginação estrita de 1.000 em 1.000 (erro sobe, total parcial não
-  vira número na tela). Leitura via admin client — tabelas base sem grant
-  `authenticated`.
+Nova página `/mais-vendidos` (produtos e lojas por **quantidade**, filtro de
+1 / 3 / 7 dias). A primeira versão contava pedidos a partir de
+`olist_order_items` e devolvia 1.989 pedidos em 3 dias, contra ~6.890 contados
+na Olist. A investigação achou dois problemas reais, não um erro de tela:
+
+- **Cobertura de itens parcial.** `olist_order_items` só tem o detalhe de SKU
+  de parte dos pedidos: 26% em 21/07, 58% em 24-26/07, 34% na janela de 7 dias.
+  O backfill de itens corre atrás do importador de pedidos, que por sua vez
+  reescreve dias já passados (21/07 saiu de ~1.500 para 6.057 pedidos). Contar
+  pedidos pelos itens subestimava o volume em ~3x.
+  Agora **quantidade** vem dos itens (parcial, rotulada como piso) e **pedidos**
+  vem de `olist_orders` (completo), com a cobertura exibida num card e num aviso.
+- **Importador atrasado.** Em 27/07 o pedido mais novo da base era de 26/07 —
+  por isso o filtro "hoje" vinha vazio. As janelas agora ancoram no último dia
+  com pedidos na base e a tela avisa o atraso, em vez de mostrar tela vazia.
+
+Outros ajustes:
+
+- Ranking de **lojas veio para cima** do de produtos: ficava soterrado embaixo
+  de uma tabela de 257 linhas e o usuário não achava.
+- **Cache diário + pg_cron** (`20 * * * *`, migration `20260727120000`), no
+  padrão do take rate Shopee: a janela de 7 dias estourava o statement_timeout
+  do compute Nano (a agregação ao vivo custava 8-12s; destoastar o `payload` de
+  957 MB é o gargalo). Leitura agora é de tabela pronta, em milissegundos.
+- Colunas por loja: quantidade, pedidos, cobertura e participação — dá para ver
+  que Shopee Oliver tem mais pedidos que Donacor mas menos unidades apuradas,
+  justamente por diferença de cobertura.
 
 ## [2026-07-17] — Diagnóstico: margem fiscal travada em 49,5% (importação de pedidos)
 

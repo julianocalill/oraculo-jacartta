@@ -137,6 +137,15 @@ Active jobs in `cron.job`:
   - Skips product dimensions, stock snapshot, unified SKU cache and NF cache.
 - `oraculo-nf-cache-hourly`: `35 * * * *`
   - Runs `refresh_oraculo_nf_daily_cache` directly in Postgres.
+- `oraculo-olist-qty-cache`: `20 * * * *`
+  - Runs `refresh_oraculo_olist_qty_cache(10)` directly in Postgres (migration
+    `20260727120000`); feeds `/mais-vendidos`.
+  - Rolling 10-day window on purpose: the page's widest filter is 7 days, and
+    the orders backfill keeps rewriting recent days (21/07 grew from ~1.5k to
+    6.0k orders days after the fact). Measured cost: 10 days = 32s, 21 days =
+    106s — the payload detoast in `olist_orders` (957 MB) dominates.
+  - Dates older than the window stay frozen; re-run with a larger
+    `lookback_days` by hand after a historical reload.
 - `oraculo-olist-stock-6h`: `15 */6 * * *`
   - Calls `olist-sync-stock`.
 - `oraculo-olist-invoices-15m`: `*/15 * * * *`
@@ -191,6 +200,9 @@ Active jobs in `cron.job`:
 
 The web request path must prefer cached tables/RPCs:
 
+- `/mais-vendidos`: `oraculo_top_products_qty()` / `oraculo_top_channels_qty()` /
+  `oraculo_olist_period_coverage()` backed by `oraculo_olist_qty_sku_daily_cache`
+  and `oraculo_olist_qty_channel_daily_cache`.
 - `/curva-de-venda`: `oraculo_sales_curve()` backed by `oraculo_sales_curve_cache`.
 - `/curva-de-estoque`: `oraculo_stock_coverage_curve()` backed by `oraculo_stock_coverage_curve_cache`.
 - Home rupture card: `oraculo_stock_watchlist_unified`.
