@@ -50,9 +50,12 @@ Important context must live in repository files, not only in chat history.
   - All queries tested under `authenticated` role with 8s timeout; none exceed.
 - **RLS + auth**: business-data reads via authenticated client (anon key + user JWT); service-role reserved for writes/admin.
 - Fiscal layer: Financeiro rules (Jacarta profile, Lucro Real + RET), kit cost expansion by component, per-SKU margin/ROI with tax decomposition.
-- **Two traps that already cost real bugs**:
+- **Traps that already cost real bugs**:
   - **PostgREST caps at 1.000 rows** — channel pages paginate with `fetchAllPages`.
   - **Aggregates never come from the sync's own window** — they are recomputed from the `*_sales_daily` series by RPC; a 2-day cron window once distorted the rupture numbers.
+  - **Never count orders from `olist_order_items`** — item coverage swings by day (26% on 21/07, 100% on 26/07) because the orders importer keeps backfilling past days ahead of the items backfill. Counting there undershoots volume ~3x. Units come from items (always a floor); order counts come from `olist_orders`. Full measurement in `docs/olist-item-coverage-2026-07-28.md`.
+  - **Reading `olist_orders.payload` is the cost driver** — 329k rows / 957 MB; the channel name only exists inside the jsonb, so grouping by channel over thousands of orders detoasts it (5,0s vs 1,4s without). Heavy aggregation goes to a daily cache + `pg_cron`, never live. A `stored` generated column is not the answer — it rewrites 957 MB under `ACCESS EXCLUSIVE` and blocks the sync.
+  - **Off-marketplace orders distort quantity rankings** — a single B2B order entered straight into the ERP (empty `payload.ecommerce.nome`) carried 213.960 units, more than every marketplace combined. Quantity rankings filter to orders that have a channel; the off-market volume stays in the cache and is disclosed separately.
 
 ### Deployment
 - Vercel (auto-deploy on main push via `vercel deploy --prod`).

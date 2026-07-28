@@ -23,6 +23,8 @@ type Coverage = {
   orders_canceled: number;
   orders_with_items: number;
   units: number;
+  offmarket_orders: number;
+  offmarket_units: number;
 };
 
 type ProductRow = {
@@ -96,7 +98,9 @@ async function loadTopSellers(days: number) {
           ordersValid: n(row?.orders_valid),
           ordersCanceled: n(row?.orders_canceled),
           ordersWithItems: n(row?.orders_with_items),
-          units: n(row?.units)
+          units: n(row?.units),
+          offmarketOrders: n(row?.offmarket_orders),
+          offmarketUnits: n(row?.offmarket_units)
         };
       }),
     supabase
@@ -165,7 +169,7 @@ export default async function MaisVendidosPage({
       <header className="topbar">
         <div>
           <h1>Mais Vendidos</h1>
-          <p>Ranking por quantidade vendida (Olist) — pedidos cancelados fora da conta</p>
+          <p>Ranking de marketplace por quantidade vendida (Olist) — cancelados fora da conta</p>
         </div>
       </header>
 
@@ -190,7 +194,15 @@ export default async function MaisVendidosPage({
             as janelas acima terminam no último dia com pedidos na base, não em hoje.
           </p>
         </section>
-      ) : null}
+      ) : (
+        <section className="panel" style={{ marginBottom: 16, borderLeft: "3px solid var(--accent-amber, #d9a441)" }}>
+          <p style={{ margin: 0 }}>
+            <strong>Dia em andamento.</strong>{" "}
+            A janela termina em {formatBrDate(data.end)}, que ainda está sendo importado — os números do dia
+            são parciais e sobem ao longo do dia. Para comparar dias fechados, use 3 ou 7 dias.
+          </p>
+        </section>
+      )}
 
       <section className="metric-grid metric-grid-eight">
         <article className="metric accent-blue">
@@ -225,6 +237,18 @@ export default async function MaisVendidosPage({
             ({count(data.validOrders - data.coverage.ordersWithItems)} pedidos ainda sem detalhe de SKU).
             A coluna <em>Pedidos</em> vem da tabela de pedidos e está completa; a coluna{" "}
             <em>Quantidade</em> só enxerga os pedidos já detalhados.
+          </p>
+        </section>
+      ) : null}
+
+      {data.coverage.offmarketUnits > 0 ? (
+        <section className="panel" style={{ marginBottom: 16, borderLeft: "3px solid var(--accent-blue, #5b7cc2)" }}>
+          <p style={{ margin: 0 }}>
+            <strong>Fora dos rankings: {count(data.coverage.offmarketUnits)} unidades</strong> em{" "}
+            {count(data.coverage.offmarketOrders)}{" "}
+            {data.coverage.offmarketOrders === 1 ? "pedido sem canal" : "pedidos sem canal"} (venda B2B/atacado
+            lançada direto no ERP, sem marketplace). Ficam de fora porque distorcem o ranking por loja e por
+            produto — um único pedido de atacado chega a valer mais unidades que todos os marketplaces somados.
           </p>
         </section>
       ) : null}

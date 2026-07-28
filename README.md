@@ -89,8 +89,8 @@ rastreamento de importações com mapa AIS.
 - **Charts**: SVG server components (tax composition donut, margin/ROI gauges, daily
   revenue area with dashed average line).
 - **Sortable tables everywhere**: `/skus` (dedicated component) and a generic
-  `SortableTable` on `/alertas`, `/curva-de-venda`, `/curva-de-estoque`. Click a
-  header to sort, click again to reverse; nulls always last.
+  `SortableTable` on `/alertas`, `/curva-de-venda`, `/curva-de-estoque`,
+  `/mais-vendidos`. Click a header to sort, click again to reverse; nulls always last.
 - **Visual identity**: gold orb/iris logomark with a faceted gem center
   (`app/icon.svg`, `favicon.ico`, `apple-icon.png`, `BrandMark` component). Brand kit
   in `apps/web/public/brand/`. Guide: `docs/brand-oraculo.md`.
@@ -217,6 +217,8 @@ Recent production deployment notes:
 - `2026-07-06`: `/curva-de-estoque` added with filter/export CSV and stock coverage A/B/C rules.
 - `2026-07-06`: `/curva-de-venda` and `/curva-de-estoque` moved to cached Supabase RPCs.
 - `2026-07-07`: general performance pass deployed as `dpl_ARv9uGp7C6sF2z6ode69r6cYxyGf`; home no longer recalculates channel cache at request time, rupture reuses `oraculo_stock_watchlist_unified`, order counts use estimated count, and middleware avoids per-navigation Auth calls.
+- `2026-07-27`: `/mais-vendidos` added — quantity ranking (products and stores) with 1/3/7-day filters, backed by `oraculo_olist_qty_*_daily_cache` + `pg_cron`.
+- `2026-07-28`: quantity rankings restricted to marketplace orders and item coverage surfaced on screen. Order counts must never come from `olist_order_items` — see `docs/olist-item-coverage-2026-07-28.md`.
 
 Continue the validated run with:
 

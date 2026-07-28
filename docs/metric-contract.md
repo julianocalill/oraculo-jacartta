@@ -267,6 +267,37 @@ Fonte: itens vendidos unificados.
 
 Colunas obrigatorias: produto, SKU, canal/fonte, receita total, quantidade vendida, ticket medio por unidade e ultima venda.
 
+### Ranking por quantidade (`/mais-vendidos`)
+
+Regras fechadas em `2026-07-28`. Levantamento completo em
+`docs/olist-item-coverage-2026-07-28.md`.
+
+**Nunca contar pedidos a partir de `olist_order_items`.** A cobertura de itens
+varia por dia (26% em `21/07`, 100% em `26/07`) e contar por ali subestima o
+volume em cerca de 3x. A separacao obrigatoria e:
+
+- quantidade / unidades -> `olist_order_items`, sempre rotulada como **piso**;
+- pedidos -> `olist_orders`, completo.
+
+A cobertura (`orders_with_items / orders_valid`) e obrigatoria na tela sempre
+que a quantidade aparecer, para que nao seja lida como total fechado.
+
+**Rankings sao de marketplace.** Pedido sem `payload.ecommerce.nome` e venda
+B2B/atacado lancada direto no ERP e fica fora dos rankings — um unico pedido
+desses chegou a valer `213.960` unidades, mais que todos os marketplaces
+somados. O volume fica no cache com `has_channel = false` e e devolvido a parte
+por `oraculo_olist_period_coverage` (`offmarket_orders`, `offmarket_units`).
+
+**Janela ancora no dado, nao no calendario.** O importador de pedidos atrasa de
+forma variavel (em `27/07` o pedido mais novo era de `26/07`; em `28/07` ja
+havia `28/07`). Filtros de periodo usam `oraculo_olist_last_order_date()` e
+avisam quando esse dia e anterior a hoje.
+
+**Leitura sempre pelo cache.** Agregacao ao vivo estoura o `statement_timeout`
+do compute Nano: o nome da loja so existe dentro de `olist_orders.payload`
+(957 MB) e destoastar isso custa 5s contra 1,4s da mesma contagem sem tocar no
+payload.
+
 ### Ruptura / nao saida
 
 Fonte primaria: produto simples, nao kit.

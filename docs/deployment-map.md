@@ -138,8 +138,13 @@ Active jobs in `cron.job`:
 - `oraculo-nf-cache-hourly`: `35 * * * *`
   - Runs `refresh_oraculo_nf_daily_cache` directly in Postgres.
 - `oraculo-olist-qty-cache`: `20 * * * *`
-  - Runs `refresh_oraculo_olist_qty_cache(10)` directly in Postgres (migration
-    `20260727120000`); feeds `/mais-vendidos`.
+  - Runs `refresh_oraculo_olist_qty_cache(10)` directly in Postgres (migrations
+    `20260727120000` + `20260728120000`); feeds `/mais-vendidos`.
+  - Reads `olist_orders.payload` **once** per run into a temp table shared by
+    both caches. Reading it twice (channel cache + SKU cache) blew the
+    statement timeout.
+  - Measured: 10-day run ~30s (observed in `cron.job_run_details`), 21-day
+    populate 77s.
   - Rolling 10-day window on purpose: the page's widest filter is 7 days, and
     the orders backfill keeps rewriting recent days (21/07 grew from ~1.5k to
     6.0k orders days after the fact). Measured cost: 10 days = 32s, 21 days =

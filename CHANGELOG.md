@@ -2,6 +2,28 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-07-28] — Mais Vendidos: ranking vira de marketplace; documentação do achado
+
+- **Venda fora de canal saiu dos rankings.** O pedido `663383` (27/07) tem
+  213.960 unidades de cabide a R$ 0,84 — dado legítimo no Olist, mas venda
+  B2B/atacado lançada direto no ERP (`payload.ecommerce.nome` vazio). É 1
+  pedido em 25.365 e sozinho valia mais unidades que todos os marketplaces
+  somados, fazendo um cabide virar o produto mais vendido do dia por 200x.
+  Agora os rankings são de marketplace; o volume fora de canal continua no
+  cache (`has_channel = false`), é devolvido à parte por
+  `oraculo_olist_period_coverage` e a tela mostra quando existe.
+- **Refresh lê o `payload` uma vez só.** Com a dimensão de canal no cache de
+  SKU, o job passou a destoastar o jsonb duas vezes e estourou o
+  statement_timeout. Materializa em temp table e reusa: 21 dias caiu de 106s
+  para 77s, fazendo mais trabalho.
+- **Documentação**: novo `docs/olist-item-coverage-2026-07-28.md` com todas as
+  medições (cobertura por dia, custo do payload, análise da Shopee direta como
+  fonte alternativa de itens). Regras incorporadas ao `docs/metric-contract.md`
+  e às armadilhas do `AGENTS.md`.
+- Confirmado que o atraso do importador é variável, não permanente: em 27/07 o
+  pedido mais novo era de 26/07; em 28/07 a base já tinha 28/07. A tela segue
+  ancorando no último dia com dados.
+
 ## [2026-07-27] — Nova aba "Mais Vendidos" + achado: itens cobrem 34% dos pedidos
 
 Nova página `/mais-vendidos` (produtos e lojas por **quantidade**, filtro de
