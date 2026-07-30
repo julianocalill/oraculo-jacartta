@@ -13,3 +13,6 @@ supabase/.temp/
 supabase/supabase/
 .vercel
 tmp/
+
+# graphify (grafo gerado localmente)
+graphify-out/
