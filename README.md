@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-07-17.md](docs/project-status-2026-07-17.md) **← start here** (current state)
+1. [docs/project-status-2026-08-04.md](docs/project-status-2026-08-04.md) **← start here** (current state)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
    — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every card/column/config field across the whole system — analytics, alerts, calculator, imports, params, sync status — exact formula, PT-BR, for team walkthroughs)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
@@ -46,7 +46,7 @@ oraculo/
 10. [CHANGELOG.md](CHANGELOG.md) (full history)
 11. [vault/00-home/index.md](vault/00-home/index.md)
 
-Earlier snapshots (historical, superseded): [docs/project-status-2026-07-16.md](docs/project-status-2026-07-16.md), [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md), [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
+Earlier snapshots (historical, superseded): [docs/project-status-2026-07-17.md](docs/project-status-2026-07-17.md), [docs/project-status-2026-07-16.md](docs/project-status-2026-07-16.md), [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md), [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
 
 ## Tooling choices
 
@@ -57,14 +57,17 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-07-16.md](
 
 ## Current production state
 
-**Last update**: `2026-07-17` (see `docs/project-status-2026-07-17.md`) —
+**Last update**: `2026-08-04` (see `docs/project-status-2026-08-04.md`) —
 Três marketplaces com analítica de estoque (ML Full, Shopee FBS multi-armazém,
-Olist), sugestão de reposição com export .xlsx, livro de custos por SKU e
-rastreamento de importações com mapa AIS.
+Olist), sugestão de reposição com export .xlsx, livro de custos por SKU,
+rastreamento de importações com mapa AIS, **aba Devoluções com funil de três
+canais cruzado com a NF fiscal** e margem fiscal com comissão de marketplace.
 
 ### Deployment & auth
 - Production URL: `https://oraculo.oliverhome.com.br`
-- Latest Vercel deploy: `oraculo-jacartta-j6h9it04g` (2026-07-17, fix de layout das tabelas largas)
+- Latest Vercel deploy: `oraculo-jacartta-lq1cin08a` (2026-08-04, aba Devoluções + margem fiscal com comissão)
+- **Dois remotes**: `origin` = `Grupo-Jacartta/oraculo`, `personal` = `julianocalill/oraculo-jacartta`.
+  A Vercel escuta o **`personal`** — push só no `origin` não publica.
 - Business-data reads run under RLS via an authenticated client (anon key + user
   JWT); service-role is reserved for writes, `/usuarios` and `/status`. Migrations
   `20260710092000` and `20260710094000`.

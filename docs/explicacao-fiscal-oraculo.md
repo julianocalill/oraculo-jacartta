@@ -3,8 +3,10 @@
 Documento de apoio para explicar a camada fiscal: **de onde vem cada dado, qual é a
 fórmula, como aparece na tela e o que ainda precisa de validação do contador.**
 
-Números reais deste documento: snapshot de **04/08/2026 14:28 UTC** (mês corrente
-01–31/08) e amostra de linhas de **01/08/2026**.
+**Versão 4 · 04/08/2026.** Números reais deste documento: snapshot de
+**04/08/2026 14:28 UTC** (mês corrente 01–31/08) e amostra de linhas de
+**01/08/2026**. Versões anteriores descreviam regras já revogadas (PIS/COFINS com
+crédito de custo, DIFAL dentro de MG, base pelo valor do pedido) — descarte-as.
 
 > **Revisões de 04/08/2026** — o motor foi corrigido em duas rodadas, validado
 > contra a NF real 533740 (Shopee, MG→RJ): (1) entrou a **comissão do marketplace**,
@@ -112,18 +114,22 @@ portada do app Financeiro:
 ICMS = receita_do_item × alíquota / 100
 ```
 
-### 2.2 PIS/COFINS — 9,25% sobre a NF (débito bruto)
+### 2.2 PIS/COFINS — sobre o valor da nota fiscal, e só
 
 ```
-PIS/COFINS = base_NF × 9,25%     (PIS 1,65% + COFINS 7,60%)
+PIS    = valor da NF × 1,65%
+COFINS = valor da NF × 7,60%
+Total  = valor da NF × 9,25%
 ```
 
-Exatamente como a NF destaca (CST 01). Na NF 533740: 44,51 × 9,25% = R$ 4,11.
+**O custo do produto NÃO entra nesta conta.** Nada é subtraído da base — é o
+valor da nota, vezes a alíquota, ponto. Exatamente como a NF destaca (CST 01).
 
-Decisão do negócio: **o custo não entra em cálculo de imposto** — o crédito das
-entradas existe na apuração da empresa (Lucro Real não-cumulativo), mas não é
-simulado por linha. Consequência: o PIS/COFINS exibido é **conservador** (um pouco
-maior que o efetivamente recolhido).
+Na NF 533740: 44,51 × 1,65% = **0,73** (PIS) e 44,51 × 7,60% = **3,38** (COFINS) —
+os mesmos valores impressos na nota.
+
+O custo é dado de gestão interna e aparece uma única vez no motor: na linha do
+lucro (seção 2.5).
 
 ### 2.3 DIFAL — por dentro, só interestadual
 
@@ -206,7 +212,40 @@ ROI      = Lucro ÷ Custo
 
 ---
 
-## 3. Exemplos reais (notas de 01/08/2026, motor atual)
+## 3. Exemplos reais
+
+### O caso de referência — NF 533740, aberta no XML
+
+A nota que calibrou o motor: emitida em 04/08/2026 pela Jacartta (Tiny ERP),
+venda Shopee de MG para consumidora final no RJ, SKU 212961 (nacional), 1 un.,
+**vNF R$ 44,51**, sem desconto. Cada campo do XML contra o que o motor calcula:
+
+| Campo do XML | Na NF | No motor | Confere? |
+|---|---|---|---|
+| `vNF` (valor da nota) | 44,51 | base = 44,51 (rateio neutro: nota sem desconto) | ✓ |
+| `vPIS` (1,65%) | 0,73 | 0,73 | ✓ |
+| `vCOFINS` (7,60%) | 3,38 | 3,38 | ✓ (soma 4,11 vs 4,12 — a NF arredonda cada tributo antes de somar) |
+| `vBCUFDest` (base do DIFAL) | **57,06** | 44,51 ÷ (1 − 22%) = **57,06** | ✓ |
+| `vICMSUFDest` (DIFAL) | **7,21** | 57,06 × 22% − 44,51 × 12% = **7,21** | ✓ no centavo |
+| `pFCPUFDest` (FCP) | 0,00 | não cobrado | ✓ |
+| `vICMS` (destacado 12%) | 5,34 | **0,58** (1,3% efetivo do RET) | difere **de propósito** — nominal × efetivo (ressalva 1) |
+| IBS/CBS (teste 2026) | 0,28 | ignorado (compensável com PIS/COFINS) | ✓ sem perda |
+
+E o que a NF não mostra, o motor completa:
+
+| Componente | Conta | Valor |
+|---|---|---|
+| Impostos (motor) | 0,58 + 4,12 + 7,21 | R$ 11,91 |
+| Comissão Shopee | 44,51 × 20% + R$ 4 (unitário ≤ 79,99) | R$ 12,90 |
+| Custo do produto | SKU 212961 | R$ 32,32 |
+| **Resultado** | 44,51 − 32,32 − 11,91 − 12,90 | **− R$ 12,62** |
+
+> É o documento de auditoria do motor: pegue o DANFE desta nota, confira campo a
+> campo. O único número que difere da NF é o ICMS — e é deliberado: a NF destaca a
+> alíquota nominal (12%), o motor mede a carga efetiva do regime especial (1,3%),
+> que é o que sai do caixa após o crédito presumido.
+
+### E no dia a dia — notas de 01/08/2026
 
 Em 01/08, **215 das 302 linhas cobertas (71%) operam no prejuízo** quando medidas
 pelo valor realmente faturado. Os três exemplos abaixo são notas reais.

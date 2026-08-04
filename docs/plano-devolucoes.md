@@ -1,9 +1,10 @@
 # Plano de ação — aba "Devoluções"
 
-Status: **Fases 1, 2 e 3 entregues** (2026-08-04) — camada canônica, lado Olist e
-upload do TikTok estão em produção, com a primeira carga real conferida.
-Fases 4 (UI completa), 5 (Shopee API), 6 (ML API) e 7 (alertas) pendentes.
-Ver `CHANGELOG.md` para o que a primeira carga real revelou e corrigiu.
+Status: **Fases 1 a 6 entregues** (2026-08-04) — camada canônica, lado Olist,
+upload do TikTok, UI com funil, Shopee por API e Mercado Livre por API estão em
+produção. **Pendente só a fase 7** (alertas de devolução em `/parametros` e o
+`refreshed_at` das rotinas em `/status`).
+Estado atual e armadilhas: `docs/project-status-2026-08-04.md`.
 
 ## Objetivo
 

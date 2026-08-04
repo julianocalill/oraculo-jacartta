@@ -111,6 +111,36 @@
   - Reads the access token but NEVER refreshes it (renewal stays exclusive to
     `mercadolivre-sync`); defers the batch when the token is about to expire.
   - DevCenter topics must be enabled by the operator for events to arrive.
+- `shopee-returns-sync` (deployed 2026-08-04; crons PER SHOP every 2h, staggered)
+  - Pulls returns/refunds (`/api/v2/returns/get_return_list`) into the canonical
+    `oraculo_returns` (channel `shopee`). No per-channel staging table — the
+    Shopee response is already one row per return; the full payload lands in `raw`.
+  - Read-only on tokens (renewal stays exclusive to `shopee-sync`); signs
+    per-shop with that shop's own partner app key.
+  - **Shopee caps the `create_time` window at 15 days.** Asking for 16 returns
+    `error_param` and the whole window comes back EMPTY without failing the run —
+    the data disappears silently. The function chunks any interval into 14 days.
+  - **Scheduled per shop**: the 4 shops in one invocation exceed the edge function
+    wall clock. Measured on the first backfill — it died mid-run with no log,
+    leaving one shop out entirely and another stuck at 23/07. Same failure mode
+    as `shopee-sync-products`.
+  - Query params: `?shop_id=` (one shop), `?days=N` (default 3), `?from=&to=`
+    (backfill). Runs logged in `shopee_sync_runs` as `shopee-returns-sync:<id>`.
+- `mercadolivre-returns-sync` (deployed 2026-08-04; hourly cron `:35`)
+  - Pulls claims/returns (`/post-purchase/v1/claims/search`) into
+    `oraculo_returns` (channel `mercadolivre`). Read-only on tokens (renewal
+    stays exclusive to `mercadolivre-sync`).
+  - **The search endpoint ignores date filters and sorting.** `date_created_from`,
+    `date_created_to` and `sort=date_created,desc` are accepted with HTTP 200 and
+    have no effect — the response is always the full set starting in 2021. Only
+    `offset` works, and at least one filter (`stage`/`type`) is mandatory or the
+    API returns 400 `atLeastOneFilterProvided`. The function pages backwards from
+    the total and filters on our side.
+  - `resolution.benefited` is the won/lost signal: `["complainant"]` = buyer won,
+    `["respondent"]` = we won, `[]` = nobody (timeout/expired).
+  - Volume is tiny — one account, ~4 returns/month against Shopee's ~2.700 and
+    TikTok's 1.728. The screen always breaks down by channel so ML does not
+    vanish inside a consolidated total.
 - `importacoes-ais-sync` (deployed 2026-07-16; 6-hour cron active)
   - Fetches the last known AIS position (VesselAPI REST) for every vessel with
     MMSI referenced by `importacao_faturas` (body `{"all": true}` widens to the
@@ -215,6 +245,19 @@ Active jobs in `cron.job`:
   - Runs only in the overnight low-traffic window to reduce Olist `429` during business hours.
   - Replaced the previous hourly job `oraculo-olist-order-items-backfill-hourly` (migration `20260710090000`).
   - Processes online in Supabase and does not depend on a local terminal or Mac being on.
+- `shopee-returns-jacartta`: `12 */2 * * *`
+- `shopee-returns-espaco-de-bicho`: `24 */2 * * *`
+- `shopee-returns-donacor`: `36 */2 * * *`
+- `shopee-returns-oliverhome`: `48 */2 * * *`
+- `mercadolivre-returns-hourly`: `35 * * * *` (away from the `:55` of `mercadolivre-sync`)
+- `oraculo-returns-order-ref-cache`: `7,37 * * * *`
+  - Feeds `oraculo_olist_order_ref_cache` (sale NF -> marketplace order number).
+    Extracting that field from `raw_json` live costs **~64 s per month** (129k
+    invoices, 516 MB table, detoast) — it can never run on a page request.
+  - Day coverage is tracked in `oraculo_olist_order_ref_cache_days`, not inferred
+    from the presence of rows: a day with no invoices is a PROCESSED day. Without
+    that, May/2026 (no invoices at all) stayed forever pending and the loop spun
+    in place — 62 days processed, 0 rows, no error.
 - `oraculo-importacoes-ais-sync`: `0 0,6,12,18 * * *`
   - Calls `importacoes-ais-sync` via `private.invoke_oraculo_importacoes_ais_sync`
     (Vault secrets `oraculo_project_url` + `oraculo_importacoes_ais_job_secret`).

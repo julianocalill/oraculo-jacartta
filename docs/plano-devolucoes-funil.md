@@ -1,7 +1,13 @@
 # Funil de devoluções — avaliação da proposta e desenho recomendado
 
-Status: proposta (2026-08-04). Não implementado. Números medidos sobre a carga
-real do TikTok de julho/2026 (1.728 devoluções, 3 lojas).
+Status: **implementado** (2026-08-04) — funil em produção em `/devolucoes`, com
+os três canais. Este documento registra a avaliação da proposta original e o
+raciocínio que levou ao desenho final; os números abaixo são da primeira carga
+(só TikTok). Números atuais, com os três canais: `docs/project-status-2026-08-04.md`.
+
+**Uma correção posterior:** o funil entregue tem um estágio a mais do que o
+proposto aqui — `cancelada` (523 casos em julho). Sem ele os estágios de decisão
+somavam 2.673 contra um topo de 3.196: 16% sumindo sem explicação.
 
 ## A pergunta
 
