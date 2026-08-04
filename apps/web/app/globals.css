@@ -677,6 +677,12 @@ p {
   grid-template-columns: repeat(6, minmax(150px, 1fr));
 }
 
+/* Margem fiscal: 7 cards (comissão de marketplace entrou ao lado de impostos).
+   Com as 6 colunas do grid padrão o sétimo card ficava órfão numa linha só. */
+.metric-grid-seven {
+  grid-template-columns: repeat(7, minmax(132px, 1fr));
+}
+
 .dashboard-section {
   display: grid;
   gap: 12px;
@@ -1598,7 +1604,8 @@ h2 {
     padding: 16px;
   }
 
-  .metric-grid-eight {
+  .metric-grid-eight,
+  .metric-grid-seven {
     grid-template-columns: 1fr;
   }
 
@@ -2579,4 +2586,31 @@ h2 {
 
 .link-button:hover {
   text-decoration: underline;
+}
+
+/* Chips de filtro (período/canal em /devolucoes). Link puro — sem JS de
+   cliente, coerente com o resto das telas server-rendered. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel-soft);
+  color: var(--muted);
+  font-size: 13px;
+  text-decoration: none;
+  text-transform: capitalize;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.chip:hover {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.chip-active {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: rgba(246, 196, 83, 0.10);
 }

@@ -11,11 +11,16 @@ import {
   icmsRateForUf,
   interstateIcmsRate,
   calcDifal,
+  calcDifalPorDentro,
   calcNetCost,
   calcShopeeMarketplaceFee,
   calcPisCofins,
   calcFiscalOrder,
-  normalizeFiscalOrigin
+  normalizeFiscalOrigin,
+  marketplaceKeyForChannel,
+  calcMarketplaceFeeForLine,
+  calcMarketplaceFeeForChannel,
+  MARKETPLACE_FEE_TIERS
 } from "./fiscal.js";
 
 const closeTo = (actual, expected, tol = 1e-9) =>
@@ -210,4 +215,84 @@ test("calcFiscalOrder: fica pendente quando falta custo ou UF/origem não resolv
   const semUf = calcFiscalOrder({ gross: 100, grossCost: 40, profile: "jacarta", origin: "nacional", destState: null });
   assert.equal(semUf.fiscalPending, true);
   assert.equal(semUf.profit, null);
+});
+
+test("marketplaceKeyForChannel: rótulos reais das NFs", () => {
+  assert.equal(marketplaceKeyForChannel("Shopee Donacor"), "shopee");
+  assert.equal(marketplaceKeyForChannel("Shopee toca"), "shopee");
+  assert.equal(marketplaceKeyForChannel("Mercado Livre Fulfillment"), "mercado_livre");
+  assert.equal(marketplaceKeyForChannel("TikTok Shop Jacartta"), "tiktok");
+  assert.equal(marketplaceKeyForChannel("Amazon"), "amazon");
+  assert.equal(marketplaceKeyForChannel("Shein"), "shein");
+  assert.equal(marketplaceKeyForChannel("Kwai Donacor"), "kwai");
+  // sem faixa cadastrada
+  assert.equal(marketplaceKeyForChannel("Sem canal"), null);
+  assert.equal(marketplaceKeyForChannel(""), null);
+});
+
+test("Comissão de canal único: Amazon 15%, Shein 18%, Kwai 20% + R$ 4/un.", () => {
+  closeTo(calcMarketplaceFeeForChannel({ channelLabel: "Amazon", revenue: 200, quantity: 1 }).total, 30);
+  closeTo(calcMarketplaceFeeForChannel({ channelLabel: "Shein", revenue: 200, quantity: 1 }).total, 36);
+  // Kwai: fixo é por item, então 2 unidades pagam R$ 8
+  closeTo(calcMarketplaceFeeForChannel({ channelLabel: "Kwai Oliverhome", revenue: 200, quantity: 2 }).total, 40 + 8);
+  // nenhum dos três tem degrau: o preço não muda a alíquota
+  closeTo(calcMarketplaceFeeForChannel({ channelLabel: "Shein", revenue: 20, quantity: 1 }).total, 3.6);
+});
+
+test("calcMarketplaceFeeForLine: faixa pelo preço unitário, fixo por unidade", () => {
+  // 1 un. a R$ 43,62 na Shopee → 1ª faixa (≤ 79,99): 20% + R$ 4
+  const uma = calcMarketplaceFeeForLine({ tiers: MARKETPLACE_FEE_TIERS.shopee, revenue: 43.62, quantity: 1 });
+  closeTo(uma.total, 43.62 * 0.2 + 4);
+
+  // 2 un. a R$ 64,90 (total 129,80): a faixa é do UNITÁRIO (≤ 79,99), fixo × 2
+  const duas = calcMarketplaceFeeForLine({ tiers: MARKETPLACE_FEE_TIERS.shopee, revenue: 129.8, quantity: 2 });
+  closeTo(duas.rate, 20);
+  closeTo(duas.total, 129.8 * 0.2 + 4 * 2);
+
+  // se a faixa fosse escolhida pelo total (129,80), cairia em 14% + R$ 20 — não é o caso
+  assert.notEqual(duas.rate, 14);
+});
+
+test("calcMarketplaceFeeForLine: última faixa é aberta", () => {
+  const caro = calcMarketplaceFeeForLine({ tiers: MARKETPLACE_FEE_TIERS.shopee, revenue: 900, quantity: 1 });
+  closeTo(caro.total, 900 * 0.14 + 28);
+
+  const ml = calcMarketplaceFeeForLine({ tiers: MARKETPLACE_FEE_TIERS.mercado_livre, revenue: 149.9, quantity: 1 });
+  closeTo(ml.total, 149.9 * 0.13); // acima de 78,99 não tem custo fixo
+
+  const tiktok = calcMarketplaceFeeForLine({ tiers: MARKETPLACE_FEE_TIERS.tiktok, revenue: 40, quantity: 1 });
+  closeTo(tiktok.total, 40 * 0.06 + 4);
+});
+
+test("calcMarketplaceFeeForChannel: canal sem faixa não inventa comissão", () => {
+  const semCanal = calcMarketplaceFeeForChannel({ channelLabel: "Sem canal", revenue: 100, quantity: 1 });
+  assert.equal(semCanal.total, 0);
+  assert.equal(semCanal.feeMissing, true);
+  assert.equal(semCanal.marketplaceKey, null);
+
+  const shopee = calcMarketplaceFeeForChannel({ channelLabel: "Shopee Oliver", revenue: 100, quantity: 1 });
+  assert.equal(shopee.feeMissing, false);
+  assert.equal(shopee.marketplaceKey, "shopee");
+  closeTo(shopee.total, 100 * 0.14 + 20); // 100 > 99,99 → cai na faixa 100–199,99 (14% + R$ 20)
+});
+
+test("DIFAL por dentro: reproduz a NF real 533740 (MG→RJ nacional)", () => {
+  // vNF 44,51 · RJ interna 22% · interestadual 12% → vBCUFDest 57,06 · vICMSUFDest 7,21
+  closeTo(calcDifalPorDentro({ base: 44.51, internalRate: 22, interstateRate: 12 }), 7.21, 0.005);
+  // CE nacional: 100/(1-0,20)×20% − 100×7% = 25 − 7 = 18 (motor antigo dava 13)
+  closeTo(calcDifalPorDentro({ base: 100, internalRate: 20, interstateRate: 7 }), 18);
+  // RJ importado: 100/0,78×22% − 4 = 24,205...
+  closeTo(calcDifalPorDentro({ base: 100, internalRate: 22, interstateRate: 4 }), 100 / 0.78 * 0.22 - 4, 1e-9);
+});
+
+test("DIFAL por dentro: não existe em venda intraestadual (MG→MG)", () => {
+  assert.equal(calcDifalPorDentro({ base: 100, internalRate: 18, interstateRate: 12, intrastate: true }), 0);
+  // guardas: base/alíquota inválidas nunca explodem
+  assert.equal(calcDifalPorDentro({ base: 0, internalRate: 22, interstateRate: 12 }), 0);
+  assert.equal(calcDifalPorDentro({ base: 100, internalRate: 0, interstateRate: 12 }), 0);
+});
+
+test("PIS/COFINS do motor: débito bruto sobre a NF, sem crédito de custo", () => {
+  // NF 533740: 44,51 × 9,25% = 4,12 (NF destaca 0,73 + 3,38 = 4,11, arredondado por tributo)
+  closeTo(calcPisCofins({ base: 44.51, netCost: 32.32, rate: 9.25, creditEnabled: false }), 4.117175, 1e-6);
 });

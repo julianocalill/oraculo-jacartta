@@ -137,6 +137,27 @@ Active jobs in `cron.job`:
   - Skips product dimensions, stock snapshot, unified SKU cache and NF cache.
 - `oraculo-nf-cache-hourly`: `35 * * * *`
   - Runs `refresh_oraculo_nf_daily_cache` directly in Postgres.
+- `oraculo-unified-sku-cache`: `30 * * * *` (created 2026-08-03)
+  - Runs `refresh_oraculo_unified_sku_cache()` directly in Postgres, wrapped in
+    `set local statement_timeout = '20min'`.
+  - Feeds `oraculo_sku_current_unified_cache` **and**
+    `oraculo_stock_watchlist_unified_cache` — i.e. every SKU 30-day figure,
+    `days_until_stockout` and the whole rupture watchlist.
+  - **Why it exists**: the function had always been there, but nothing
+    scheduled it. `oraculo-olist-derived-hourly` explicitly *skips* the unified
+    SKU cache (see its entry above), so the table was populated once by hand on
+    2026-06-19 and then froze for 45 days. Symptoms while frozen: rupture alerts
+    reported 5 SKUs when the real number was 170, and `/skus` showed R$ 571k of
+    30-day revenue against R$ 8.3 mi of actual billed NF.
+  - **Runtime ~5 min — it does not fit the API gateway's 2-minute statement
+    timeout.** Calling `refresh_oraculo_unified_sku_cache()` through
+    `supabase db query` fails with `57014` and rolls back the whole function
+    (both inserts are in one transaction). Run it through `pg_cron`, never
+    through the REST/API path.
+  - Overlaps `oraculo-nf-cache-hourly` (`:35`) by design of the clock, not by
+    necessity — if a `57014` starts showing up in the `:35` job, move this one.
+  - `pg_cron` does not guard against overlapping runs. Do not schedule this
+    function more frequently than its runtime.
 - `oraculo-olist-qty-cache`: `20 * * * *`
   - Runs `refresh_oraculo_olist_qty_cache(10)` directly in Postgres (migrations
     `20260727120000` + `20260728120000`); feeds `/mais-vendidos`.

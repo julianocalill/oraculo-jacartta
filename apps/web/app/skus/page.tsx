@@ -374,6 +374,10 @@ export default async function SkusPage({
                     <strong>{money(selectedFiscal.taxesTotal)}</strong>
                   </article>
                   <article>
+                    <span>Comissão marketplace</span>
+                    <strong>{money(selectedFiscal.marketplaceFee)}</strong>
+                  </article>
+                  <article>
                     <span>Lucro fiscal</span>
                     <strong>{money(selectedFiscal.profit)}</strong>
                   </article>
@@ -387,8 +391,10 @@ export default async function SkusPage({
                   </article>
                 </div>
                 <p className="fiscal-note">
-                  Receita − custo − ICMS − PIS/COFINS − DIFAL (regras Jacarta, Lucro Real).
-                  Não inclui comissão de marketplace, frete ou ads.
+                  Receita da NF (rateada por item) − custo − ICMS − PIS/COFINS (9,25% sem
+                  crédito) − DIFAL (por dentro, só interestadual) − comissão de marketplace.
+                  A comissão vem das faixas do canal e já absorve frete, ads, embalagem e
+                  despesa operacional.
                 </p>
               </>
             ) : (

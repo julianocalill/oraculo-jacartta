@@ -43,6 +43,9 @@ type StateTaxParam = {
   difal_rate: number | null;
   effective_tax_rate: number | null;
   applies_to_source: string;
+  merchandise_origin: string;
+  /** Nulo = o motor usa a matriz Jacartta (MG 6%/14%, demais UFs 1,3%). */
+  outbound_icms_rate: number | null;
   params_configured: boolean | null;
   valid_from: string | null;
   valid_to: string | null;
@@ -179,16 +182,24 @@ async function saveStateTaxParam(formData: FormData) {
 
   const icmsRate = parseRate(formData.get("icms_rate")) ?? 0;
   const interstateIcmsRate = parseRate(formData.get("interstate_icms_rate")) ?? 0;
-  const fcpRate = parseRate(formData.get("fcp_rate")) ?? 0;
+  // FCP desativado em 04/08/2026 (não se aplica ao portfólio): a coluna existe,
+  // mas fica zerada, fora do cálculo e fora da tela.
+  const fcpRate = 0;
   const difalRate = Math.max(icmsRate - interstateIcmsRate, 0);
+  // ICMS de saída é opcional: em branco = o motor usa a matriz Jacartta
+  // (MG 6%/14%, demais UFs 1,3%). Zero explícito é um valor válido e diferente.
+  const outboundRaw = String(formData.get("outbound_icms_rate") ?? "").trim();
+  const outboundIcmsRate = outboundRaw === "" ? null : parseRate(outboundRaw) ?? null;
 
   const row = {
     uf: String(formData.get("uf") ?? "").trim().toUpperCase(),
     operation_type: String(formData.get("operation_type") || "venda_consumidor").trim() || "venda_consumidor",
     applies_to_source: String(formData.get("applies_to_source") || "*").trim().toLowerCase() || "*",
+    merchandise_origin: String(formData.get("merchandise_origin") || "*").trim().toLowerCase() || "*",
     icms_rate: icmsRate,
     interstate_icms_rate: interstateIcmsRate,
     fcp_rate: fcpRate,
+    outbound_icms_rate: outboundIcmsRate,
     difal_rate: difalRate,
     effective_tax_rate: interstateIcmsRate + difalRate + fcpRate,
     params_configured: parseBoolean(formData.get("params_configured"), false),
@@ -202,7 +213,7 @@ async function saveStateTaxParam(formData: FormData) {
     const supabase = createSupabaseAdminClient();
     const { error } = await supabase
       .from("oraculo_state_tax_params")
-      .upsert(row, { onConflict: "uf,operation_type,applies_to_source,valid_from" });
+      .upsert(row, { onConflict: "uf,operation_type,applies_to_source,merchandise_origin,valid_from" });
 
     if (error) throw error;
   }
@@ -229,6 +240,7 @@ async function loadParametros() {
       .from("oraculo_state_tax_params")
       .select("*")
       .order("uf", { ascending: true })
+      .order("merchandise_origin", { ascending: true })
       .order("applies_to_source", { ascending: true })
       .order("valid_from", { ascending: false }),
     supabase
@@ -375,6 +387,15 @@ export default async function ParametrosPage() {
             <h2>Imposto por UF</h2>
           </div>
 
+          <p className="table-note">
+            Estas alíquotas <strong>alimentam a margem fiscal</strong> do dashboard e de
+            /skus — mas só as linhas marcadas como <strong>Validado</strong> e vigentes na
+            data da NF. Linha pendente = o motor usa a regra padrão. <strong>ICMS de saída</strong>
+            {" "}em branco também cai na regra padrão (matriz Jacartta: MG 6% nacional / 14%
+            importado, demais UFs 1,3%). <strong>ICMS interno destino</strong> e{" "}
+            <strong>interestadual</strong> alimentam só o DIFAL.
+          </p>
+
           <form action={saveStateTaxParam} className="upload-form manual-form">
             <label>
               <span>UF</span>
@@ -396,8 +417,20 @@ export default async function ParametrosPage() {
               </select>
             </label>
             <label>
+              <span>Origem da mercadoria</span>
+              <select name="merchandise_origin" defaultValue="nacional">
+                <option value="nacional">Nacional</option>
+                <option value="importado">Importado</option>
+                <option value="*">Ambas</option>
+              </select>
+            </label>
+            <label>
               <span>Operação</span>
               <input name="operation_type" defaultValue="venda_consumidor" />
+            </label>
+            <label>
+              <span>ICMS de saída</span>
+              <input name="outbound_icms_rate" inputMode="decimal" placeholder="6% (vazio = matriz)" />
             </label>
             <label>
               <span>ICMS interno destino</span>
@@ -406,10 +439,6 @@ export default async function ParametrosPage() {
             <label>
               <span>ICMS interestadual</span>
               <input name="interstate_icms_rate" inputMode="decimal" placeholder="12%" />
-            </label>
-            <label>
-              <span>FCP</span>
-              <input name="fcp_rate" inputMode="decimal" placeholder="2%" />
             </label>
             <label>
               <span>Vigência início</span>
@@ -498,11 +527,11 @@ export default async function ParametrosPage() {
             <thead>
               <tr>
                 <th>UF</th>
+                <th>Origem</th>
                 <th>Fonte</th>
-                <th>Operação</th>
+                <th className="numeric">ICMS saída</th>
                 <th className="numeric">ICMS interno</th>
                 <th className="numeric">ICMS interest.</th>
-                <th className="numeric">FCP</th>
                 <th className="numeric">DIFAL</th>
                 <th className="numeric">Efetiva</th>
                 <th>Vigência</th>
@@ -512,13 +541,15 @@ export default async function ParametrosPage() {
             </thead>
             <tbody>
               {data.stateTaxes.map((row) => (
-                <tr key={`${row.uf}-${row.operation_type}-${row.applies_to_source}-${row.valid_from}`}>
+                <tr key={`${row.uf}-${row.operation_type}-${row.applies_to_source}-${row.merchandise_origin}-${row.valid_from}`}>
                   <td>{row.uf}</td>
+                  <td>{row.merchandise_origin === "*" ? "Ambas" : row.merchandise_origin}</td>
                   <td>{row.applies_to_source === "*" ? "Todas" : row.applies_to_source}</td>
-                  <td>{row.operation_type}</td>
+                  <td className="numeric">
+                    {row.outbound_icms_rate == null ? "matriz" : percent(row.outbound_icms_rate)}
+                  </td>
                   <td className="numeric">{percent(row.icms_rate)}</td>
                   <td className="numeric">{percent(row.interstate_icms_rate)}</td>
-                  <td className="numeric">{percent(row.fcp_rate)}</td>
                   <td className="numeric">{percent(row.difal_rate)}</td>
                   <td className="numeric">{percent(row.effective_tax_rate)}</td>
                   <td>{row.valid_from ?? "-"} até {row.valid_to ?? "atual"}</td>

@@ -136,6 +136,86 @@ export const SHOPEE_MARKETPLACE_TIERS = [
   { max: Infinity, rate: 14, fixed: 28 }
 ];
 
+/**
+ * Faixas de comissão por marketplace usadas na **margem fiscal** (tabela
+ * `oraculo_marketplace_fee_params`). Decisão de negócio de 04/08/2026: frete,
+ * ads, embalagem e despesa operacional são tratados como já embutidos no
+ * desconto do marketplace, em vez de virarem linhas próprias.
+ * `null` em `max` = faixa aberta (último degrau).
+ */
+export const MARKETPLACE_FEE_TIERS = {
+  shopee: SHOPEE_MARKETPLACE_TIERS,
+  mercado_livre: [
+    { max: 28.99, rate: 13, fixed: 6.25 },
+    { max: 49.99, rate: 13, fixed: 6.5 },
+    { max: 78.99, rate: 13, fixed: 6.75 },
+    { max: Infinity, rate: 13, fixed: 0 }
+  ],
+  tiktok: [
+    { max: 78.99, rate: 6, fixed: 4 },
+    { max: Infinity, rate: 6, fixed: 0 }
+  ],
+  // Comissão única, sem degrau de preço (fontes em 04/08/2026 — ver
+  // docs/fiscal-financeiro-port.md e as notas de oraculo_marketplace_fee_params).
+  amazon: [{ max: Infinity, rate: 15, fixed: 0 }],
+  shein: [{ max: Infinity, rate: 18, fixed: 0 }],
+  kwai: [{ max: Infinity, rate: 20, fixed: 4 }]
+};
+
+/**
+ * Casa o rótulo de canal da NF (`olist_invoices.fiscal_channel_label`) com a
+ * chave de marketplace. Espelha o `ilike match_pattern` do SQL, na mesma ordem
+ * de prioridade. Retorna null quando não há faixa cadastrada (venda sem canal
+ * identificado, canal novo) — aí a comissão é 0 e a linha fica `feeMissing`.
+ */
+export function marketplaceKeyForChannel(channelLabel) {
+  const label = String(channelLabel ?? "").trim().toLowerCase();
+  if (label.startsWith("shopee")) return "shopee";
+  if (label.startsWith("mercado livre")) return "mercado_livre";
+  if (label.startsWith("tiktok")) return "tiktok";
+  if (label.startsWith("amazon")) return "amazon";
+  if (label.startsWith("shein")) return "shein";
+  if (label.startsWith("kwai")) return "kwai";
+  return null;
+}
+
+/**
+ * Comissão do marketplace de uma linha de item, como o SQL calcula:
+ *   faixa    = primeira cujo `max` cobre o PREÇO UNITÁRIO (max null/Infinity = aberta)
+ *   comissão = receita × rate/100 + fixed × quantidade
+ *
+ * A faixa é escolhida pelo preço unitário — e não pelo total da linha — porque
+ * os degraus (R$ 28,99 / 49,99 / 78,99 no ML) são limites por unidade, e o fixo
+ * é cobrado por unidade vendida.
+ */
+export function calcMarketplaceFeeForLine({ tiers, revenue, quantity = 1 } = {}) {
+  if (!Array.isArray(tiers) || tiers.length === 0) {
+    return { total: 0, rate: 0, fixed: 0, feeMissing: true };
+  }
+  const rev = toNumber(revenue);
+  const qty = toNumber(quantity);
+  const unitPrice = qty > 0 ? rev / qty : rev;
+  const tier =
+    tiers.find((t) => t.max == null || !Number.isFinite(t.max) || unitPrice <= t.max) ?? tiers.at(-1);
+  return {
+    total: rev * (toRate(tier.rate) / 100) + toNumber(tier.fixed) * qty,
+    rate: toNumber(tier.rate),
+    fixed: toNumber(tier.fixed),
+    feeMissing: false
+  };
+}
+
+/**
+ * Comissão da linha a partir do rótulo de canal da NF — o caminho que a camada
+ * fiscal usa em produção. Canal sem faixa cadastrada devolve 0 + feeMissing.
+ */
+export function calcMarketplaceFeeForChannel({ channelLabel, revenue, quantity = 1 } = {}) {
+  const key = marketplaceKeyForChannel(channelLabel);
+  const tiers = key ? MARKETPLACE_FEE_TIERS[key] : null;
+  if (!tiers) return { total: 0, rate: 0, fixed: 0, feeMissing: true, marketplaceKey: null };
+  return { ...calcMarketplaceFeeForLine({ tiers, revenue, quantity }), marketplaceKey: key };
+}
+
 /** Alíquota interna de ICMS por UF de destino (para o cálculo de DIFAL). */
 export const INTERNAL_ICMS_RATES = {
   AC: 19, AL: 20, AP: 18, AM: 20, BA: 20.5, CE: 20, DF: 20, ES: 17, GO: 19,
@@ -193,8 +273,26 @@ export function interstateIcmsRate(sourceState, destState, origin) {
 }
 
 /**
- * DIFAL do Financeiro: base × max(0, ICMS interno destino − interestadual).
- * Aceita override por valor ou por alíquota explícita.
+ * DIFAL do Oráculo (decisões de 04/08/2026, validadas contra a NF real 533740):
+ *   * só existe em operação INTERESTADUAL — venda MG→MG retorna 0;
+ *   * base única "por dentro" (LC 190/2022), como a NF calcula:
+ *       base_destino = base / (1 − interna)
+ *       difal        = base_destino × interna − base × interestadual_destacada
+ * NF de referência: vNF 44,51 · RJ interna 22% · interestadual 12% →
+ * vBCUFDest 57,06 e vICMSUFDest 7,21 (o motor antigo, sem gross-up, dava 4,45).
+ */
+export function calcDifalPorDentro({ base, internalRate, interstateRate, intrastate = false } = {}) {
+  const b = toNumber(base);
+  const internal = toRate(internalRate) / 100;
+  const interstate = toRate(interstateRate) / 100;
+  if (intrastate || b <= 0 || internal <= 0 || internal >= 1) return 0;
+  return Math.max(0, (b / (1 - internal)) * internal - b * interstate);
+}
+
+/**
+ * DIFAL do Financeiro (porte histórico): base × max(0, interno − interestadual),
+ * sem gross-up e cobrando intraestadual. O motor do Oráculo NÃO usa mais esta
+ * regra — ver calcDifalPorDentro. Mantida como especificação do app original.
  */
 export function calcDifal({ base, destState, sourceState = "MG", origin = "nacional", explicitAmount, explicitRate } = {}) {
   const baseValue = toNumber(base);
@@ -250,6 +348,11 @@ export function calcShopeeMarketplaceFee(salePrice) {
 /**
  * PIS/COFINS líquido (Lucro Real, não-cumulativo): débito sobre a base fiscal
  * menos crédito sobre o custo líquido. Nunca negativo.
+ *
+ * Decisão de 04/08/2026: o motor fiscal do Oráculo usa `creditEnabled: false` —
+ * o custo do produto é gestão interna e NÃO entra em cálculo de imposto. O
+ * débito é bruto (base × 9,25%), como a NF destaca (CST 01). O crédito das
+ * entradas continua existindo na apuração da empresa, só não é simulado aqui.
  */
 export function calcPisCofins({ base, netCost, rate = 9.25, creditEnabled = true } = {}) {
   const output = toNumber(base) * (toRate(rate) / 100);

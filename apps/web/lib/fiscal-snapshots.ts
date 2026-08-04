@@ -48,6 +48,10 @@ export type FiscalMarginSummarySnapshot = {
   totalIcms: number;
   totalPisCofins: number;
   totalDifal: number;
+  /** Comissão de marketplace — absorve frete, ads, embalagem e despesa operacional. */
+  totalMarketplaceFee: number;
+  /** Receita coberta em canais sem faixa de comissão cadastrada (comissão = 0 ali). */
+  revenueWithoutFeeParams: number;
   totalProfit: number;
   marginRate: number | null;
   roi: number | null;
@@ -64,6 +68,7 @@ export type FiscalSkuMarginRow = {
   pisCofins: number;
   difal: number;
   taxesTotal: number;
+  marketplaceFee: number;
   profit: number;
   marginRate: number | null;
   roi: number | null;
@@ -193,6 +198,8 @@ export async function loadFiscalMarginSummarySnapshot(
       totalIcms: 0,
       totalPisCofins: 0,
       totalDifal: 0,
+      totalMarketplaceFee: 0,
+      revenueWithoutFeeParams: 0,
       totalProfit: 0,
       marginRate: null,
       roi: null,
@@ -211,6 +218,8 @@ export async function loadFiscalMarginSummarySnapshot(
     totalIcms: asNumber(payload.total_icms),
     totalPisCofins: asNumber(payload.total_pis_cofins),
     totalDifal: asNumber(payload.total_difal),
+    totalMarketplaceFee: asNumber(payload.total_marketplace_fee),
+    revenueWithoutFeeParams: asNumber(payload.revenue_without_fee_params),
     totalProfit: asNumber(payload.total_profit),
     marginRate: asNumberOrNull(payload.margin_rate),
     roi: asNumberOrNull(payload.roi),
@@ -239,6 +248,7 @@ export async function loadFiscalSkuMarginSnapshot(
       pisCofins: asNumber(raw.pis_cofins),
       difal: asNumber(raw.difal),
       taxesTotal: asNumber(raw.taxes_total),
+      marketplaceFee: asNumber(raw.marketplace_fee),
       profit: asNumber(raw.profit),
       marginRate: asNumberOrNull(raw.margin_rate),
       roi: asNumberOrNull(raw.roi)

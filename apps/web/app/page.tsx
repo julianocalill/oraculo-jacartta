@@ -448,6 +448,8 @@ type FiscalMarginSummary = {
   totalIcms: number;
   totalPisCofins: number;
   totalDifal: number;
+  totalMarketplaceFee: number;
+  revenueWithoutFeeParams: number;
   totalProfit: number;
   marginRate: number | null;
   roi: number | null;
@@ -463,6 +465,8 @@ const UNAVAILABLE_FISCAL_MARGIN: FiscalMarginSummary = {
   totalIcms: 0,
   totalPisCofins: 0,
   totalDifal: 0,
+  totalMarketplaceFee: 0,
+  revenueWithoutFeeParams: 0,
   totalProfit: 0,
   marginRate: null,
   roi: null,
@@ -477,6 +481,8 @@ type FiscalMarginSummaryRpcRow = {
   total_icms: number | string | null;
   total_pis_cofins: number | string | null;
   total_difal: number | string | null;
+  total_marketplace_fee: number | string | null;
+  revenue_without_fee_params: number | string | null;
   total_profit: number | string | null;
   margin_rate: number | string | null;
   roi: number | string | null;
@@ -509,6 +515,8 @@ async function loadFiscalMargin(
         totalIcms: snap.totalIcms,
         totalPisCofins: snap.totalPisCofins,
         totalDifal: snap.totalDifal,
+        totalMarketplaceFee: snap.totalMarketplaceFee,
+        revenueWithoutFeeParams: snap.revenueWithoutFeeParams,
         totalProfit: snap.totalProfit,
         marginRate: snap.marginRate,
         roi: snap.roi,
@@ -535,6 +543,8 @@ async function loadFiscalMargin(
       totalIcms: asMetricNumber(row.total_icms),
       totalPisCofins: asMetricNumber(row.total_pis_cofins),
       totalDifal: asMetricNumber(row.total_difal),
+      totalMarketplaceFee: asMetricNumber(row.total_marketplace_fee),
+      revenueWithoutFeeParams: asMetricNumber(row.revenue_without_fee_params),
       totalProfit: asMetricNumber(row.total_profit),
       marginRate: rateOrNull(row.margin_rate),
       roi: rateOrNull(row.roi),
@@ -617,6 +627,7 @@ type MarginHistoryPoint = {
   revenueWithCost: number;
   cost: number;
   taxes: number;
+  marketplaceFee: number;
 };
 
 // Última captura de cada dia do snapshot de margem (refresh horário) — alimenta
@@ -628,7 +639,7 @@ async function loadMarginHistory(
     const { data, error } = await supabase
       .from("oraculo_fiscal_snapshots")
       .select(
-        "captured_at, profit:payload->>total_profit, margin:payload->>margin_rate, roi:payload->>roi, coverage:payload->>coverage_cost_revenue_pct, revenueWithCost:payload->>revenue_with_cost, cost:payload->>total_cost, taxes:payload->>total_taxes"
+        "captured_at, profit:payload->>total_profit, margin:payload->>margin_rate, roi:payload->>roi, coverage:payload->>coverage_cost_revenue_pct, revenueWithCost:payload->>revenue_with_cost, cost:payload->>total_cost, taxes:payload->>total_taxes, marketplaceFee:payload->>total_marketplace_fee"
       )
       .eq("snapshot_key", "fiscal_margin_summary")
       .order("captured_at", { ascending: true })
@@ -647,7 +658,8 @@ async function loadMarginHistory(
         coveragePct: asMetricNumber(row.coverage),
         revenueWithCost: asMetricNumber(row.revenueWithCost),
         cost: asMetricNumber(row.cost),
-        taxes: asMetricNumber(row.taxes)
+        taxes: asMetricNumber(row.taxes),
+        marketplaceFee: asMetricNumber(row.marketplaceFee)
       });
     }
     return [...byDay.values()];
@@ -1001,6 +1013,10 @@ export default async function HomePage({
     canHistoryDelta && hFirst.taxes > 0
       ? { ...relativeDelta(hLast.taxes, hFirst.taxes, historyTitle)!, invert: true }
       : null;
+  const marketplaceFeeDelta =
+    canHistoryDelta && hFirst.marketplaceFee > 0
+      ? { ...relativeDelta(hLast.marketplaceFee, hFirst.marketplaceFee, historyTitle)!, invert: true }
+      : null;
 
   const revenueSpark = data.fiscalDailyChart.map((row) => asMetricNumber(row.billed_revenue));
   const invoicesSpark = data.fiscalDailyChart.map((row) => asMetricNumber(row.invoices_count));
@@ -1141,7 +1157,7 @@ export default async function HomePage({
             </p>
           ) : (
           <>
-          <div className="metric-grid metric-grid-eight">
+          <div className="metric-grid metric-grid-seven">
             <MetricCard
               accent="accent-blue"
               label="Receita com custo"
@@ -1170,10 +1186,19 @@ export default async function HomePage({
               sparkColor="var(--rose)"
             />
             <MetricCard
+              accent="accent-white"
+              label="Comissão marketplace"
+              value={formatCurrency(fm.totalMarketplaceFee)}
+              caption="Inclui frete, ads e embalagem"
+              delta={marketplaceFeeDelta}
+              spark={history.map((point) => point.marketplaceFee)}
+              sparkColor="#9aa8c0"
+            />
+            <MetricCard
               accent="accent-emerald"
               label="Lucro fiscal"
               value={formatCurrency(fm.totalProfit)}
-              caption="Receita − custo − impostos"
+              caption="Receita − custo − impostos − comissão"
               delta={profitDelta}
               spark={history.map((point) => point.profit)}
               sparkColor="var(--emerald)"
@@ -1237,10 +1262,20 @@ export default async function HomePage({
             </div>
           </div>
           <p className="fiscal-note">
-            Regras do Financeiro (Lucro Real com RET · perfil Jacarta): custo líquido, ICMS por UF/origem,
-            PIS/COFINS 9,25% com crédito e DIFAL. <strong>Não inclui</strong> comissão de marketplace, frete ou ads,
-            e cobre {formatDecimal(data.fiscalMargin.coverageCostRevenuePct, 1)}% da receita fiscal do período
-            (o restante ainda sem item/custo).
+            Base = <strong>valor faturado na NF</strong>, rateado por item (não o valor do pedido). ICMS efetivo
+            por UF/origem (perfil Jacarta), PIS/COFINS 9,25% sobre a NF <strong>sem crédito de custo</strong> (custo
+            é gestão interna) e DIFAL <strong>por dentro, só interestadual</strong> — venda dentro de MG não paga.
+            A <strong>comissão de marketplace</strong> entra pelas faixas de cada canal e
+            <strong> absorve frete, ads, embalagem e despesa operacional</strong>.
+            Cobre {formatDecimal(data.fiscalMargin.coverageCostRevenuePct, 1)}% da receita fiscal do período
+            (o restante ainda sem item/custo)
+            {data.fiscalMargin.revenueWithoutFeeParams > 0 ? (
+              <>
+                {" "}· {formatCurrency(data.fiscalMargin.revenueWithoutFeeParams)} em canais sem faixa cadastrada
+                (Amazon, Shein, Kwai) entram com comissão zero, então o lucro deles fica superestimado
+              </>
+            ) : null}
+            .
           </p>
           </>
           )}

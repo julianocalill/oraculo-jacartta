@@ -16,3 +16,4 @@ tmp/
 
 # graphify (grafo gerado localmente)
 graphify-out/
+.pnpm-store/

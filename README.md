@@ -241,6 +241,7 @@ Scheduling is handled inside Supabase through `pg_cron`:
 - `oraculo-olist-orders-hourly`: hourly at minute `:05`, incremental order sync.
 - `oraculo-olist-derived-hourly`: hourly at minute `:25`, derived metrics/cache sync.
 - `oraculo-nf-cache-hourly`: hourly at minute `:35`, NF cache refresh inside Postgres.
+- `oraculo-unified-sku-cache`: hourly at minute `:30`, runs `refresh_oraculo_unified_sku_cache()` inside Postgres (created 2026-08-03). Feeds the SKU 30-day figures **and** the stock rupture watchlist. Runs ~5 min, so it only works through `pg_cron` — calling it via the API path hits the 2-minute statement timeout and rolls back. See `docs/deployment-map.md` for why it did not exist before and what broke while it was missing.
 - `oraculo-olist-stock-6h`: every 6 hours, stock/product refresh.
 - `oraculo-olist-invoices-15m`: every 15 minutes, fiscal invoice sync for the recent window.
 - `oraculo-olist-invoices-monthly-headers-hourly`: hourly at minute `:45`, fiscal invoice header catch-up for the current month without item hydration.

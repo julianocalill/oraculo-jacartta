@@ -634,6 +634,60 @@ Senão                           → "saudável"
 > não passa pela cadeia de nota fiscal do Olist, então não tem esse
 > detalhamento.
 
+### ⚠️ Cobertura real da margem (medido em 2026-08-03)
+
+Os parâmetros de canal foram configurados em 2026-08-03 (antes disso a tela
+inteira mostrava "configurar_parametros"). **Mas a margem ainda cobre pouco da
+receita**, e a razão é a origem do custo, não o parâmetro:
+
+| Sinal | SKUs | Receita 30d | Margem média |
+|---|---:|---:|---:|
+| `sem_custo` | 779 | R$ 9.646.750 | não calculável |
+| `crítico` | 134 | R$ 1.125.073 | −25,3% |
+| `atenção` | 30 | R$ 512.391 | 16,4% |
+| `saudável` | 30 | R$ 749.995 | 36,9% |
+
+**~80% da receita aparece como `sem_custo`, e 99,4% disso é defeito da view,
+não custo faltando na Olist.** Decomposição dos 779 SKUs:
+
+| Causa | SKUs | Receita |
+|---|---:|---:|
+| `source='shopee'` — a CTE `olist_costs` fixa `'olist'::text AS source`, então o join `oc.source = c.source` nunca casa | 539 | R$ 7.636.908 |
+| **Kits** — a CTE filtra `tipo IS DISTINCT FROM 'K'`, mas o kit tem custo na Olist (e `oraculo_product_effective_cost` já o expande por componente) | 211 | R$ 3.605.873 |
+| SKU inexistente em `olist_stock_items` | 53 | R$ 60.722 |
+| Custo realmente ausente na Olist | 16 | R$ 15.016 |
+| `COALESCE(preco_custo_medio, preco_custo)` devolve `0` porque `preco_custo_medio` é `0` e não `NULL`, matando o fallback | 1 | R$ 200 |
+
+**Correção proposta e testada, ainda NÃO aplicada:** trocar a CTE `olist_costs`
+por **`oraculo_sku_unit_cost`** (join por `sku`, sem `source`) — o resolvedor
+canônico de custo do projeto (migration `20260716240000`), que já aplica a
+cadeia *override manual > `olist_products` ignorando R$ 0 > custo efetivo de
+kit* e que ML e Shopee já consomem. `AGENTS.md:46` é explícito: **não
+reimplementar resolução de custo por página** — foi exatamente o que a CTE
+`olist_costs` fez, e é a origem dos dois defeitos acima. Medido: leva a
+cobertura do lado Olist de ~1% para **98,8%** da receita. O lado Shopee
+continua sem casar (só 5 de 501 SKUs — a Shopee usa nomenclatura de SKU
+própria), mas isso é aceitável: a Olist emite NF de todos os canais, então
+`source='olist'` já contém a venda da Shopee. O `source='shopee'` é a mesma
+venda contada duas vezes.
+
+### ⚠️ Como NÃO ler esta tela
+
+- **A margem média mostrada não é a margem da empresa** — é a de ~20% da
+  receita, fatia não representativa.
+- **A taxa de marketplace é uma média, não a taxa do SKU.** A Shopee cobra por
+  faixa de preço (20% + R$ 4,00 até R$ 79,99; 14% + R$ 26,00 até R$ 499,99).
+  Aplicar uma taxa única faz produto barato parecer mais rentável do que é e
+  produto caro, menos. Serve para ranking grosseiro, **não para decidir preço
+  de um SKU específico**.
+- **Parte dos `crítico` é mistura de canal, não prejuízo.** SKUs com venda
+  B2B/atacado fora de marketplace entram no mesmo cálculo que a venda de varejo
+  (ex.: `213997`, cabide de veludo: 213.960 unidades a R$ 0,84 = a venda B2B já
+  documentada no `CHANGELOG.md` de 2026-07-28, margem −131%). Antes de matar
+  SKU ou mexer em preço com base nesta lista, **confira o preço médio unitário**
+  — se estiver muito abaixo do preço de anúncio, houve venda fora de canal no
+  período e a margem daquele SKU não é comparável.
+
 ---
 
 # PARTE 3 — Páginas operacionais e de configuração
@@ -830,6 +884,49 @@ nenhuma integração — e que alimentam o cálculo de margem visto em `/skus`.
 Estes valores são a fonte de verdade usada na fórmula de margem do `/skus`
 (ver seção 2.8).
 
+#### Valores em produção (gravados em 2026-08-03)
+
+Até 2026-08-03 as duas linhas (`channel_key = '*'`) estavam **zeradas e com
+`params_configured = false`** — a margem de todo o sistema mostrava
+"configurar_parametros". Valores atuais:
+
+| Campo | Olist | Shopee | Origem |
+|---|---:|---:|---|
+| Imposto | 12,59% | 12,59% | ICMS MG 1,3% + DIFAL 6% + PIS/COFINS 5,29% |
+| Comissão marketplace | 23,51% | **28,83%** | ver abaixo |
+| Taxa de pagamento | 6,00% | 6,00% | Ads 3% + custo fixo operacional 3% |
+| Frete por unidade | R$ 1,00 | R$ 1,00 | reembolso médio da calculadora |
+| Embalagem por unidade | 0 | 0 | já embutido no custo do produto |
+| Margem meta / mínima | 25% / 12% | 25% / 12% | mantido |
+
+Três decisões de modelagem que **não são óbvias ao ler a tela**:
+
+1. **PIS/COFINS foi convertido de base.** A regra real (e a `/calculadora`,
+   `apps/web/app/calculadora/calculator.tsx:9`) aplica 9,25% sobre o **valor
+   agregado**, mas a view só sabe multiplicar `receita × taxa`. O valor
+   agregado medido no catálogo foi **57,15%** (markup 2,33×), logo
+   9,25% × 57,15% = **5,29%** sobre a receita. **Se o markup médio da operação
+   mudar, esse número precisa ser refeito.**
+
+2. **A comissão da Shopee (28,83%) é medida, não tabelada.** Vem do escrow real
+   (`shopee_order_escrow`, jun–ago/2026): R$ 791.643 retidos sobre R$ 2.745.680
+   pagos pelo comprador. Por loja varia de 26,53% (Oliverhome) a 30,98%
+   (Espaço de Bicho). A tabela da `/calculadora` para o ticket médio da casa
+   (R$ 66,76 → faixa 20% + R$ 4,00) daria ~26,0%; a diferença de ~2,8pp é
+   provavelmente o frete grátis (SFP), que a calculadora não modela.
+
+3. **A comissão do Olist (23,51%) é média ponderada, não uma taxa real.** Mix
+   fiscal de jul/2026: Shopee 70,0% @ 28,83% (medido) · TikTok 18,5% @ 11,99% ·
+   "Sem canal" 6,4% @ 0% · Mercado Livre 4,2% @ 23,11% · Amazon 0,65% @ 15%
+   (**único valor estimado**, peso irrelevante). Ver a advertência em 2.8 sobre
+   não usar isso para decidir preço de SKU individual.
+
+> ⚠️ **O campo "Taxa de pagamento" não é taxa de pagamento.** A view não tem
+> campo para Ads nem para custo operacional, então os 6% ali são
+> `Ads 3% + custo fixo operacional 3%`. Está registrado no campo `notes` das
+> duas linhas. Se alguém for cadastrar taxa de meio de pagamento de verdade,
+> **somar, não substituir** — ou criar colunas próprias na tabela.
+
 ### Overrides por SKU
 
 Permite corrigir, produto a produto, o custo unitário ou as metas de margem
@@ -963,6 +1060,42 @@ manualmente).
   baratos no Mercado Livre nem o programa de frete grátis da TikTok Shop —
   trate o resultado como estimativa.
 
+### Achados de 2026-08-03 (auditoria dos dados de margem/estoque)
+
+- **`oraculo_fiscal_channel_sales` não retorna nenhuma linha de Shopee.**
+  Medido: a view devolve R$ 5,09 mi em 180 dias, enquanto
+  `oraculo_fiscal_invoices_valid` agrupada por `channel_label` devolve
+  R$ 14,6 mi com a Shopee sendo ~70%. **Qualquer tela que use essa view para
+  mix de canal está escondendo a maior parte do faturamento.** Para mix de
+  canal, usar `oraculo_fiscal_invoices_valid`.
+- **Venda B2B fora de canal distorce preço médio unitário e margem.** O SKU
+  `213997` (cabide de veludo) aparece com 213.960 unidades por R$ 179.726 —
+  R$ 0,84/unidade, e margem calculada de −131%. **Não é dado corrompido**: é a
+  venda B2B/atacado do pedido `663383` (27/07), já documentada no
+  `CHANGELOG.md` de 2026-07-28 e isolada nos rankings de `/mais-vendidos` via
+  `has_channel = false`. O cálculo de margem do `/skus`, porém, **não faz essa
+  separação** — mistura preço de atacado com preço de varejo no mesmo SKU e
+  devolve margem negativa que não representa a operação de marketplace.
+  Mesma origem do bloco "Sem canal" (R$ 1,1 mi em jun–jul/2026, 64 NFs, ticket
+  médio R$ 17.213) que aparece como terceira maior linha de receita no mix
+  fiscal. **Antes de agir sobre um SKU "crítico", verificar se ele teve venda
+  fora de canal no período.**
+- **Catálogo duplicado entre `source`.** `olist` (2.888 registros) e `shopee`
+  (562) contêm o mesmo produto com SKU diferente (`214013` vs
+  `CABIDE VELUDO-50UN-PRETO`). Somar receita das duas fontes dupla-conta: 30
+  dias dão R$ 12,7 mi somados contra R$ 8,27 mi de NF real. **A Olist emite NF
+  de todos os canais — o `source='shopee'` é a mesma venda de novo.**
+- **Status de produto não normalizado** — `A`/`E` (Olist) convivem com
+  `MODEL_NORMAL`/`NORMAL`/`UNLIST`/`SOLD_HISTORY` (Shopee). Não existe um campo
+  único "ativo" que funcione para as duas fontes.
+- **Módulo de importação praticamente vazio** — 9 faturas e 30 itens em
+  `importacao_*`, para uma operação que importa contêineres. O custo landed
+  real por SKU não está sendo capturado.
+- **`oraculo_state_tax_params` tem as 27 UFs zeradas** e nenhuma com
+  `params_configured = true` (coerente com a lacuna de UF acima).
+- **O histórico fiscal começa em 2026-06-01.** Não existe comparativo ano a
+  ano — não inferir sazonalidade a partir desta base.
+
 ---
 
 ## Como manter isto atualizado
@@ -974,7 +1107,9 @@ e Parte 3 (`apps/web/app/alertas/`, `apps/web/app/calculadora/`,
 `apps/web/app/importacoes/`, `apps/web/app/parametros/`,
 `apps/web/app/status/`, `apps/web/app/export-fiscal/`,
 `apps/web/app/usuarios/`), além das migrations SQL das views/RPCs — em
-2026-07-17. Se uma fórmula, limiar ou regra mudar no código, este documento
+2026-07-17, com revisão em **2026-08-03** (seções 2.8, 3.4 e "Achados de
+2026-08-03", escritas a partir de medição direta no banco de produção).
+Se uma fórmula, limiar ou regra mudar no código, este documento
 **fica desatualizado** até alguém revisá-lo — ele não se atualiza sozinho.
 
 Sinal de que precisa revisão: qualquer PR que mexa em

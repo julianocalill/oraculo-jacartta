@@ -12,6 +12,7 @@ const MAIN_LINKS = [
   { href: "/curva-de-estoque", label: "Curva de Estoque" },
   { href: "/shopee", label: "Shopee" },
   { href: "/mercado-livre", label: "Mercado Livre" },
+  { href: "/devolucoes", label: "Devoluções" },
   { href: "/importacoes", label: "Importações" },
   { href: "/calculadora", label: "Calculadora" },
   { href: "/alertas", label: "Alertas" },

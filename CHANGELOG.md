@@ -2,6 +2,250 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-04] — Motor fiscal passa a calcular como a NF: base faturada, DIFAL por dentro, custo fora dos impostos
+
+Origem: análise contábil da NF real 533740 (Shopee, MG→RJ, SKU 212961) contra o
+que o motor produzia. Migration `20260804190000`; espelho JS
+`calcDifalPorDentro` + testes com os números da própria NF (30 no total).
+
+- **Base = valor faturado na NF, rateado por item.** O motor usava o valor do
+  pedido; 30% das NFs de 01/08 divergem (cupom do vendedor fica no pedido pelo
+  preço cheio, a NF sai pelo pago) e a receita estava **inflada 6,95%**. Caso
+  extremo: pedido R$ 149,90 → NF R$ 51,89. O item da NF não serve de base
+  direta (kit vira componentes; item da NF também é preço cheio com desconto só
+  no `vDesc` do total), então o `vNF` é rateado pela participação de cada item
+  do pedido — o que também conserta pedido com 2 NFs (contava em dobro).
+- **Custo não entra em imposto** (decisão do negócio: custo é gestão interna).
+  PIS/COFINS deixa de ser `max(0, base − custo) × 9,25%` e vira **débito bruto
+  `base_NF × 9,25%`**, como a NF destaca. Conservador por construção: o crédito
+  das entradas existe na apuração, só não é simulado por linha.
+- **DIFAL só interestadual** — venda MG→MG zera (era a ressalva nº 1 do doc de
+  explicação: 6/14% indevidos dentro de MG).
+- **DIFAL por dentro** (base única, LC 190/2022), como a NF calcula:
+  `vNF/(1−interna)×interna − vNF×interestadual`. A NF 533740 prova: 44,51/0,78
+  = 57,06 × 22% − 5,34 = **7,21**; o motor antigo dava 4,45 (−40%).
+- **Impostos não dependem mais de custo** — linhas sem custo confiável agora
+  têm ICMS/PIS/COFINS/DIFAL calculados; só o lucro segue exigindo custo. As
+  somas do resumo filtram por `cost is not null` para manter os cards coerentes
+  com a base "Receita com custo".
+- **Verificado no centavo** em 3 NFs reais: MG zera DIFAL (42 linhas), RJ
+  reproduz o gross-up do XML, CE idem. Efeito no mês coberto (01–04/08):
+  receita R$ 48,5k → 44,5k, impostos R$ 9,8k → 12,1k, lucro **+R$ 3,6k →
+  −R$ 2,4k, margem −5,5%** — a base coberta (tíquete baixo, Shopee-pesada)
+  opera no prejuízo quando medida pelos valores realmente faturados.
+- Pendências contábeis registradas: Tema 69/STF (exclusão do ICMS destacado da
+  base de PIS/COFINS — reduziria o débito) e confirmação do crédito presumido
+  RET que sustenta o ICMS efetivo 1,3%/6%/14%.
+
+## [2026-08-04] — Devoluções: Shopee e ML por API, e o dashboard em funil
+
+- **Três canais na mesma camada canônica.** `shopee-returns-sync` e
+  `mercadolivre-returns-sync` (novas edge functions) gravam em `oraculo_returns`
+  junto com o upload do TikTok. A tela lê só da canônica — trocar upload por API
+  não mexe na UI.
+- **Volume medido em julho/2026 — três ordens de grandeza:** Shopee ~2.700 ·
+  TikTok 1.728 · **Mercado Livre 4**. A tela sempre abre por canal; um
+  consolidado apagaria o ML por completo. Volume baixo no ML é volume de venda
+  menor no canal, não qualidade melhor.
+- **Funil de 8 estágios** (`oraculo_returns_funnel`), SVG server-rendered.
+  Os quatro estágios de decisão somam o topo exatamente; os recuados e
+  tracejados são recorte, não nova fatia. Julho, três canais:
+  3.196 abertas → 464 aguardando · 523 canceladas · 650 recusadas ·
+  1.559 concedidas → 843 com produto voltando → **540 sem NF de devolução
+  (R$ 28.922)**.
+
+### Armadilhas medidas contra a API real
+
+- **Shopee limita a janela `create_time` a 15 dias.** Pedir 16 devolve
+  `error_param` e a janela inteira volta vazia **sem falhar o processo** — o
+  dado some em silêncio. A função quebra qualquer intervalo em blocos de 14 dias.
+- **Shopee: 4 lojas numa invocação estouram o teto da edge function.** O
+  backfill de julho morreu no meio, sem log, deixando a Donacor de fora e a
+  Oliverhome parada em 23/07. Mesma causa do `shopee-sync-products`; mesma
+  solução: cron **por loja**, escalonado (`20260804210000`).
+- **O `/claims/search` do ML ignora filtro de data e ordenação.**
+  `date_created_from`, `date_created_to` e `sort=date_created,desc` retornam
+  HTTP 200 e não têm efeito: o conjunto vem sempre completo, começando em 2021.
+  Só `offset` funciona, e a API exige ao menos um filtro (`stage`/`type`), senão
+  400 `atLeastOneFilterProvided`. A função pagina de trás para frente e filtra do
+  nosso lado.
+- **O funil não fechava**: 464 + 650 + 1.559 = 2.673 contra um topo de 3.196.
+  Faltava o estágio `cancelada` (523 — comprador desistiu ou o prazo expirou).
+  Perder 16% do topo sem dizer para onde foi é exatamente o que torna funil
+  enganoso; corrigido em `20260804200000`.
+- **Nenhum dos dois syncs renova token** — renovadores exclusivos seguem sendo
+  `shopee-sync` e `mercadolivre-sync`.
+
+Ressalvas escritas na própria tela: é distribuição de estado e não coorte;
+"sem NF de venda" não é furo (a base de NFs começa em junho/2026); o casamento
+com a NF de devolução é heurístico (CPF + SKU + 90 dias); e reembolso recusado é
+vitória financeira, não necessariamente vitória com o cliente.
+
+## [2026-08-04] — Aba Devoluções: camada canônica, upload do TikTok e cruzamento com a NF da Olist
+
+- **A NF de devolução sempre esteve no banco — descartada de propósito.**
+  `oraculo_fiscal_invoices_valid` exclui NF de entrada desde
+  `20260622180146`. Nova view `oraculo_olist_devolucoes` a resgata. **O filtro
+  é `fiscal_origin_type='devolucao'`, nunca `fiscal_invoice_type='E'`**: em
+  julho/2026 a origem dá 4.074 NFs / R$ 296.171, o tipo dá 5.446 / R$ 5,58 mi
+  porque arrasta compra e importação — 18x de inflação.
+- **Camada canônica `oraculo_returns`** (migration `20260803120000`), PK
+  `(channel, return_id)`: reimportar atualiza, nunca duplica. Shopee e ML
+  entram por API nas próximas fases gravando na mesma tabela; a UI lê só dela.
+- **Upload da planilha do TikTok** em `/devolucoes` (`lib/returns-import.ts`).
+  Primeira carga real: **1.728 linhas, 3 lojas, 0 erros, 0 duplicadas**.
+  As abas têm layouts diferentes (19 vs 25 colunas), então o parser mapeia por
+  **nome de cabeçalho**, nunca por posição.
+- **`Refund rejected` não é perda** — 635 das 1.728 linhas (37%). Contá-las
+  infla a devolução em ~60%. `oraculo_return_counts_as_loss()` deixa só
+  `aberta`/`aceita` nos agregados. `refund_only` (474 linhas) também não gera
+  NF de devolução: sinalizá-las produziria 474 falsos "sem NF".
+- **Cruzamento em dois saltos**: devolução → NF de **venda** por
+  `ecommerce.numeroPedidoEcommerce` (exato) → NF de **devolução** por CPF +
+  SKU + 90 dias (heurístico, com `match_score`). A NF de devolução tem
+  `order_id`/`order_number` **zerados** e bloco `ecommerce` vazio — não existe
+  chave direta.
+- **Cache `oraculo_olist_order_ref_cache` + cron** (`:07`/`:37`): extrair o
+  número do pedido do `raw_json` ao vivo custa **~64 s por mês** (129k NFs,
+  tabela de 516 MB, detoast). Nunca pode ir para a tela.
+
+### Três defeitos encontrados e corrigidos pela primeira carga real
+
+- **SKU do canal não casa com o da NF** (`20260804120000`): só 21 de 108 SKUs
+  do TikTok existem em `olist_invoice_items` (19%) — a mesma armadilha já
+  documentada para a Shopee. Resultado: zero matches exatos e custo unitário
+  nulo. Correção: o SKU Olist vem da **NF de venda já casada**, que em 1.084 de
+  1.111 casos (97,6%) tem SKU único. Matches exatos: 0 → 277.
+- **Cache travava em dia vazio** (`20260804150000`): a função inferia "dia
+  processado" pela existência de linhas. Maio/2026 não tem NF (a base começa em
+  junho), então todo dia de maio ficava eternamente pendente e o laço girava em
+  falso — 62 dias processados, 0 linhas. O cron horário travaria igual, do jeito
+  mais caro: rodando, sem erro, sem avançar. Correção: tabela de controle
+  `oraculo_olist_order_ref_cache_days`, onde dia sem NF é dia processado.
+- **Comparação de valor contra a coluna errada** (`20260804170000`): usava
+  `olist_invoice_items.total_value` (preço cheio do item) em vez de
+  `olist_invoices.total_amount` (valor da NF). Mediana da razão exatamente
+  2,003 — assinatura de erro sistemático. `divergencia_valor`: 327 → 25. Contra
+  o `total_amount` o valor bate no centavo, o que confirma o casamento por CPF.
+
+Julho/2026, TikTok: 1.090 devoluções contam como perda, R$ 51.708 estornados.
+**334 sem NF de devolução (R$ 16.053)** — o número acionável. 262 sem NF de
+venda porque a base de NFs começa em junho e a venda é anterior.
+
+## [2026-08-04] — `/parametros` deixa de ser decorativa: as alíquotas passam a valer
+
+- **`oraculo_state_tax_params` era escrita pela tela e lida por ninguém.** As
+  alíquotas de ICMS estavam fixas dentro de `oraculo_fiscal_margin_lines`;
+  trocar uma exigia migration e deploy. Agora o motor consulta a tabela por
+  linha (**UF + origem da mercadoria + data de emissão da NF**) e usa o
+  parâmetro quando `params_configured = true` e a vigência cobre a data.
+  Migration `20260804160000`.
+- **Duas colunas novas, porque a tabela não conseguia expressar as regras:**
+  `merchandise_origin` (entrou na PK — a alíquota interestadual depende da
+  origem: importado 4% vs nacional 7/12%; sem essa dimensão, uma linha por UF
+  aplicaria a do nacional no importado) e `outbound_icms_rate` (o ICMS de
+  **saída** não tinha campo — `icms_rate` sempre foi a alíquota **interna do
+  destino**, que só alimenta o DIFAL).
+- **FCP ligado e desligado no mesmo dia.** Chegou a somar ao DIFAL nesta
+  migration; por decisão do negócio (não se aplica ao portfólio) saiu do cálculo
+  e da tela em `20260804180000`. Estava 0% nas 27 UFs, então nenhum número
+  mudou nas duas direções — verificado. A coluna fica no banco, zerada, porque
+  o trigger `calculate_oraculo_state_tax_difal` a usa em `effective_tax_rate` e
+  a volta atrás sai barata.
+- **Custo de importado por transferência: pendência fechada, não implementada.**
+  A regra `×0,8425` do app Financeiro (crédito de 4% ICMS + 11,75% PIS/COFINS
+  na NF de transferência) **não se aplica** — mercadoria que entra por
+  transferência e vai para o estoque geral tem o mesmo custo do produto normal.
+  O custo cheio que o motor usa está correto. Era o item apontado como maior
+  distorção em aberto; não era.
+- **27 UFs × 2 origens semeadas com os valores que o motor já aplicava**, como
+  `Pendente` — a tela mostrava 27 linhas zeradas que não diziam nada. Validar
+  agora é revisar e marcar, não digitar do zero. As linhas placeholder antigas
+  (todas zeradas e não configuradas) foram removidas.
+- **Verificação em produção:** (1) aplicar a migration não mudou nenhum número;
+  (2) validar uma linha semeada produz resultado **idêntico** à regra fixa, o
+  que prova que a semente reproduz o motor; (3) mudar ICMS de saída 6→10% e FCP
+  0→2% em MG/nacional alterou impostos só nas linhas de MG/nacional, no valor
+  exato esperado; (4) revertido, voltou ao baseline.
+- Tela `/parametros`: campos **Origem da mercadoria** e **ICMS de saída**,
+  coluna `ICMS saída` na tabela (mostra "matriz" quando nulo) e nota explicando
+  que só linha `Validado` vale.
+
+## [2026-08-04] — Comissão de marketplace entra na margem fiscal
+
+- **A margem fiscal deixa de ser só tributária.** Até aqui era
+  `receita − custo − impostos`; comissão, frete, ads e embalagem ficavam de
+  fora, então o número exibido era estruturalmente otimista. Decisão do
+  negócio: tratar **frete, ads, embalagem e despesa operacional como já
+  embutidos no desconto do marketplace**, em vez de criar uma linha para cada
+  um. Migration `20260804140000`.
+- **Efeito medido (01/08, 302 linhas com custo):** margem fiscal de **32,3% →
+  5,3%**, ROI de 69,4% → 11,5%, com R$ 5.072 de comissão (27,0% da receita).
+  Não é piora do negócio — é o número que sempre esteve faltando.
+- **`oraculo_marketplace_fee_params`**: faixas como **dado editável**, não
+  código. Casadas com `olist_invoices.fiscal_channel_label` via `ilike`
+  (menor `match_priority` vence). Shopee 20/14% + fixo por faixa · ML Clássico
+  13% + fixo até R$ 78,99 · TikTok 6% + R$ 4 · Amazon 15% · Shein 18% ·
+  Kwai 20% + R$ 4. Fontes e ressalvas de cada alíquota em
+  `docs/fiscal-financeiro-port.md`.
+- **A faixa é escolhida pelo preço UNITÁRIO, não pelo total da linha**, e o
+  fixo multiplica a quantidade — nos três marketplaces com degrau o fixo é
+  cobrado por unidade e os limites (R$ 28,99 / 49,99 / 78,99 no ML) são por
+  unidade. Escolher pela linha jogaria 2 un. de R$ 64,90 na faixa errada.
+- **Validado contra dado real:** o escrow da Shopee
+  (`oraculo_shopee_take_rate_shop_daily_cache`) mostra take rate de **27% a
+  34%** por loja/dia; as faixas produzem 28,5% no mix real de 01/08 — dentro do
+  observado e conservador, já que o escrow não inclui ads nem subsídio de frete.
+- **Canal sem faixa não inventa comissão**: fica em 0 com `fee_missing = true`
+  e a receita é reportada em `revenue_without_fee_params`, com aviso no
+  dashboard de que o lucro dessas linhas está superestimado. Hoje o campo está
+  zerado (todos os canais ativos têm faixa).
+- **Dashboard**: card "Comissão marketplace" (grid de margem fiscal foi para 7
+  colunas, `.metric-grid-seven`), lucro passa a descontar comissão e a nota de
+  rodapé foi reescrita. `/skus` ganhou a linha de comissão no painel do SKU.
+- `packages/domain/fiscal.js`: `MARKETPLACE_FEE_TIERS`,
+  `marketplaceKeyForChannel`, `calcMarketplaceFeeForLine` e
+  `calcMarketplaceFeeForChannel`, com 5 testes novos (27 no total).
+
+## [2026-08-03] — Cache de SKU estava congelado há 45 dias; margem sai do zero
+
+- **`oraculo-unified-sku-cache` criado (`30 * * * *`).** A função
+  `refresh_oraculo_unified_sku_cache()` sempre existiu, mas **nenhum job a
+  chamava** — `oraculo-olist-derived-hourly` a pula explicitamente. O cache
+  tinha sido populado à mão em **2026-06-19** e ficou parado 45 dias.
+  Consequência medida: o alerta de ruptura reportava **5 SKUs** quando eram
+  **170**, com **R$ 2,07 mi/mês (17,2% da receita)** em risco — chaleira
+  elétrica com 1,5 dia de estoque, as duas balanças zeradas (R$ 335 mil/mês) e
+  o kit `213992` com saldo negativo. `/skus`, `/alertas`, a home e a curva de
+  estoque liam junho. Roda ~5 min: **só funciona por `pg_cron`**, o caminho da
+  API estoura o statement timeout de 2 min e faz rollback da função inteira
+  (os dois inserts estão na mesma transação).
+- **`oraculo_margin_channel_params` configurada** (2 linhas, `channel_key='*'`,
+  antes zeradas com `params_configured = false`): imposto 12,59%, comissão
+  23,51% (olist) / 28,83% (shopee), taxa de pagamento 6%, frete R$ 1,00/un,
+  embalagem 0. A comissão da Shopee é **medida no escrow real**, não tabelada.
+  Fonte das alíquotas: `apps/web/app/calculadora/calculator.tsx:9`. Detalhes e
+  advertências de leitura em `docs/glossario-cards-dashboard.md` §3.4.
+- **Diagnóstico: 80% da receita aparece como `sem_custo`, e 99,4% disso é
+  defeito da view, não custo faltando na Olist.** A CTE `olist_costs` fixa
+  `'olist'::text AS source` (539 SKUs / R$ 7,64 mi da Shopee nunca casam) e
+  filtra `tipo IS DISTINCT FROM 'K'` (211 SKUs / R$ 3,61 mi de kits, que têm
+  custo na Olist). Só R$ 15 mil está genuinamente sem custo. A CTE reimplementou
+  resolução de custo em vez de usar `oraculo_sku_unit_cost`, contrariando
+  `AGENTS.md:46`. Correção testada — trocar pelo resolvedor canônico leva a
+  cobertura do lado Olist de ~1% para **98,8%** — **proposta, ainda NÃO
+  aplicada**.
+- **Achados de auditoria** documentados em
+  `docs/glossario-cards-dashboard.md` ("Achados de 2026-08-03"):
+  `oraculo_fiscal_channel_sales` não devolve nenhuma linha de Shopee (esconde
+  ~70% do faturamento em qualquer mix de canal); catálogo duplicado entre
+  `source` olist/shopee dupla-conta receita; status de produto não normalizado
+  entre as duas fontes; `importacao_*` praticamente vazio; histórico fiscal só
+  desde 2026-06-01.
+- ⚠️ **Dívida registrada:** o cron e os parâmetros foram aplicados direto no
+  banco e **não têm arquivo de migration**, somando ao histórico já
+  dessincronizado de `supabase_migrations`.
+
 ## [2026-07-28] — Mais Vendidos: ranking vira de marketplace; documentação do achado
 
 - **Venda fora de canal saiu dos rankings.** O pedido `663383` (27/07) tem
