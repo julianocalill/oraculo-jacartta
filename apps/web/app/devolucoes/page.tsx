@@ -1,4 +1,6 @@
-// Aba Devoluções — funil, valores e cruzamento com a NF da Olist.
+// Aba Devoluções — funil horizontal por canal, com a mesma linguagem de
+// analytics do dashboard principal (cards com sparkline e variação, área
+// diária, donut de motivos).
 //
 // Shopee e Mercado Livre entram por API (shopee-returns-sync /
 // mercadolivre-returns-sync); TikTok entra pelo upload de planilha desta
@@ -11,7 +13,10 @@ import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { requireCurrentUser } from "../../lib/auth/session";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 import { AppShell } from "../components/app-shell";
-import { ReturnsFunnel, type FunnelStage } from "../components/returns-funnel";
+import { MetricCard, type MetricDelta } from "../components/metric-card";
+import { TaxDonut, RevenueArea } from "../components/fiscal-charts";
+import { ReturnsFunnel, DecisionBar, type FunnelStep, type DecisionSlice } from "../components/returns-funnel";
+import { DevolucoesTabs } from "./tabs";
 import { importTikTokReturns } from "../../lib/returns-upload";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +38,17 @@ const REASON_LABEL: Record<string, string> = {
   outros: "Outros"
 };
 
+const REASON_COLOR: Record<string, string> = {
+  produto_com_defeito: "#fb6f84",
+  avaria_transporte: "#f6c453",
+  nao_recebido: "#6d8bff",
+  item_errado: "#a97bff",
+  arrependimento: "#3ecfd6",
+  divergencia_anuncio: "#34d399",
+  atraso: "#e3a93a",
+  outros: "#5d6980"
+};
+
 const DISPUTE_LABEL: Record<string, string> = {
   ganhamos: "Ganhamos",
   perdemos: "Perdemos",
@@ -40,15 +56,7 @@ const DISPUTE_LABEL: Record<string, string> = {
   em_aberto: "Em aberto"
 };
 
-type FunnelRow = {
-  channel: string;
-  stage: string;
-  stage_order: number;
-  returns_count: number;
-  units: number | null;
-  amount: number | null;
-};
-
+type FunnelRow = { channel: string; stage: string; returns_count: number; amount: number | null };
 type SummaryRow = {
   channel: string;
   returns_total: number;
@@ -61,17 +69,9 @@ type SummaryRow = {
   sem_nf_amount: number | null;
   divergencia_count: number;
 };
-
-type ReasonRow = {
-  reason_group: string;
-  returns_count: number;
-  units: number | null;
-  refund_amount: number | null;
-};
-
+type ReasonRow = { reason_group: string; returns_count: number; refund_amount: number | null };
 type SkuRow = {
   sku: string | null;
-  sku_channel: string | null;
   product_name: string | null;
   returns_count: number;
   units: number | null;
@@ -80,11 +80,10 @@ type SkuRow = {
   cost_lost: number | null;
   sem_nf_count: number;
 };
-
 type DisputeRow = { channel: string; outcome: string; returns_count: number; amount: number | null };
-
+type DailyRow = { day: string; returns_count: number; loss_count: number; amount: number | null };
+type ChannelRow = { channel: string; returns_count: number };
 type Batch = {
-  id: string;
   file_name: string;
   uploaded_at: string;
   sheet_names: string[] | null;
@@ -103,23 +102,18 @@ async function uploadReturns(formData: FormData) {
   revalidatePath("/devolucoes");
 }
 
-function count(value: number | null | undefined) {
-  return new Intl.NumberFormat("pt-BR").format(value ?? 0);
-}
+const nf = new Intl.NumberFormat("pt-BR");
+const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const brlShort = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  maximumFractionDigits: 0
+});
 
-function money(value: number | null | undefined) {
-  if (value == null) return "—";
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
-}
-
-function moneyShort(value: number | null | undefined) {
-  if (value == null) return "—";
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0
-  }).format(value);
-}
+const count = (v: number | null | undefined) => nf.format(v ?? 0);
+const money = (v: number | null | undefined) => (v == null ? "—" : brl.format(v));
+const moneyShort = (v: number | null | undefined) => (v == null ? "—" : brlShort.format(v));
+const pct = (v: number) => `${v.toFixed(1).replace(".", ",")}%`;
 
 function dateTime(value: string | null) {
   if (!value) return "—";
@@ -135,32 +129,56 @@ function monthWindow(monthParam?: string) {
   const [y, m] = monthParam?.match(/^\d{4}-\d{2}$/)
     ? monthParam.split("-").map(Number)
     : [now.getUTCFullYear(), now.getUTCMonth() + 1];
-  const from = new Date(Date.UTC(y, m - 1, 1));
-  const to = new Date(Date.UTC(y, m, 1));
   return {
-    from: from.toISOString(),
-    to: to.toISOString(),
-    label: new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }).format(from),
-    value: `${y}-${String(m).padStart(2, "0")}`
+    from: new Date(Date.UTC(y, m - 1, 1)).toISOString(),
+    to: new Date(Date.UTC(y, m, 1)).toISOString(),
+    prevFrom: new Date(Date.UTC(y, m - 2, 1)).toISOString(),
+    prevTo: new Date(Date.UTC(y, m - 1, 1)).toISOString(),
+    label: new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }).format(
+      new Date(Date.UTC(y, m - 1, 1))
+    ),
+    value: `${y}-${String(m).padStart(2, "0")}`,
+    isCurrent: y === now.getUTCFullYear() && m === now.getUTCMonth() + 1
   };
 }
 
-async function loadData(from: string, to: string, channel: string | null) {
-  const supabase = createSupabaseAdminClient();
-  const args = { p_from: from, p_to: to, p_channel: channel };
+/** Variação percentual entre períodos. `invert` marca métrica onde subir é ruim. */
+function delta(current: number, previous: number, invert = true): MetricDelta {
+  if (!previous) return null;
+  const change = ((current - previous) / previous) * 100;
+  if (!Number.isFinite(change) || Math.abs(change) < 0.05) return null;
+  return {
+    direction: change >= 0 ? "up" : "down",
+    text: `${Math.abs(change).toFixed(1).replace(".", ",")}%`,
+    title: `Mês anterior: ${nf.format(previous)}`,
+    invert
+  };
+}
 
-  const [funnel, summary, reasons, skus, disputes, batches] = await Promise.all([
-    supabase.rpc("oraculo_returns_funnel", args),
-    supabase.rpc("oraculo_returns_summary", args),
-    supabase.rpc("oraculo_returns_by_reason", args),
-    supabase.rpc("oraculo_returns_by_sku", { ...args, p_limit: 25 }),
-    supabase.rpc("oraculo_returns_disputes", args),
-    supabase
-      .from("oraculo_returns_upload_batches")
-      .select("id, file_name, uploaded_at, sheet_names, rows_read, rows_inserted, rows_rejected, notes")
-      .order("uploaded_at", { ascending: false })
-      .limit(1)
-  ]);
+async function loadData(win: ReturnType<typeof monthWindow>, channel: string | null) {
+  const supabase = createSupabaseAdminClient();
+  const args = { p_from: win.from, p_to: win.to, p_channel: channel };
+
+  const [funnel, summary, reasons, skus, disputes, daily, channels, prevSummary, batches] =
+    await Promise.all([
+      supabase.rpc("oraculo_returns_funnel", args),
+      supabase.rpc("oraculo_returns_summary", args),
+      supabase.rpc("oraculo_returns_by_reason", args),
+      supabase.rpc("oraculo_returns_by_sku", { ...args, p_limit: 25 }),
+      supabase.rpc("oraculo_returns_disputes", args),
+      supabase.rpc("oraculo_returns_daily", args),
+      supabase.rpc("oraculo_returns_channels", { p_from: win.from, p_to: win.to }),
+      supabase.rpc("oraculo_returns_summary", {
+        p_from: win.prevFrom,
+        p_to: win.prevTo,
+        p_channel: channel
+      }),
+      supabase
+        .from("oraculo_returns_upload_batches")
+        .select("file_name, uploaded_at, sheet_names, rows_read, rows_inserted, rows_rejected, notes")
+        .order("uploaded_at", { ascending: false })
+        .limit(1)
+    ]);
 
   return {
     funnel: (funnel.data ?? []) as FunnelRow[],
@@ -168,78 +186,62 @@ async function loadData(from: string, to: string, channel: string | null) {
     reasons: (reasons.data ?? []) as ReasonRow[],
     skus: (skus.data ?? []) as SkuRow[],
     disputes: (disputes.data ?? []) as DisputeRow[],
+    daily: (daily.data ?? []) as DailyRow[],
+    channels: (channels.data ?? []) as ChannelRow[],
+    prevSummary: (prevSummary.data ?? []) as SummaryRow[],
     batch: ((batches.data ?? [])[0] ?? null) as Batch | null
   };
 }
 
-const STAGE_META: Record<string, { label: string; hint: string; tone: FunnelStage["tone"]; nested?: boolean }> = {
-  abertas: {
-    label: "Devoluções abertas",
-    hint: "tudo que o comprador solicitou no período",
-    tone: "neutral"
-  },
-  aguardando_decisao: {
-    label: "Aguardando decisão",
-    hint: "ainda vão virar concedido ou recusado",
-    tone: "warn"
-  },
-  cancelada: {
-    label: "Cancelada",
-    hint: "comprador desistiu ou o prazo expirou — nunca virou reembolso",
-    tone: "neutral"
-  },
-  reembolso_recusado: {
-    label: "Reembolso recusado",
-    hint: "dinheiro retido — vitória financeira, não necessariamente com o cliente",
-    tone: "good"
-  },
-  reembolso_concedido: {
-    label: "Reembolso concedido",
-    hint: "pagamos de volta ao comprador",
-    tone: "bad"
-  },
-  produto_retorna: {
-    label: "…com produto retornando",
-    hint: "exclui refund only, onde a mercadoria não volta",
-    tone: "bad",
-    nested: true
-  },
-  nf_devolucao_confere: {
-    label: "…NF de devolução confere",
-    hint: "entrou na Olist, valor e quantidade batem",
-    tone: "good",
-    nested: true
-  },
-  sem_nf_devolucao: {
-    label: "…SEM NF de devolução",
-    hint: "produto voltou e não deu entrada — é aqui que há dinheiro a recuperar",
-    tone: "bad",
-    nested: true
-  }
-};
+/** Soma um estágio do funil entre canais (a RPC devolve uma linha por canal). */
+function stageTotal(rows: FunnelRow[], stage: string) {
+  return rows
+    .filter((r) => r.stage === stage)
+    .reduce(
+      (acc, r) => ({
+        count: acc.count + Number(r.returns_count ?? 0),
+        amount: acc.amount + Number(r.amount ?? 0)
+      }),
+      { count: 0, amount: 0 }
+    );
+}
 
-function buildStages(rows: FunnelRow[]): FunnelStage[] {
-  const totals = new Map<string, { count: number; amount: number }>();
-  for (const row of rows) {
-    const acc = totals.get(row.stage) ?? { count: 0, amount: 0 };
-    acc.count += Number(row.returns_count ?? 0);
-    acc.amount += Number(row.amount ?? 0);
-    totals.set(row.stage, acc);
-  }
-  return Object.entries(STAGE_META)
-    .map(([key, meta]) => {
-      const acc = totals.get(key);
-      return {
-        key,
-        label: meta.label,
-        hint: meta.hint,
-        tone: meta.tone,
-        nested: meta.nested,
-        count: acc?.count ?? 0,
-        amount: acc?.amount ?? null
-      };
-    })
-    .filter((stage) => stage.count > 0 || stage.key === "abertas");
+// A cadeia do funil: cada passo é subconjunto ESTRITO do anterior.
+//   abertas ⊃ decididas ⊃ concedidas ⊃ produto retorna ⊃ NF confere
+// "Decididas" não vem da RPC — é o topo menos as que ainda aguardam decisão.
+function buildSteps(rows: FunnelRow[]): FunnelStep[] {
+  const abertas = stageTotal(rows, "abertas");
+  const aguardando = stageTotal(rows, "aguardando_decisao");
+  const cancelada = stageTotal(rows, "cancelada");
+  const recusado = stageTotal(rows, "reembolso_recusado");
+  const concedido = stageTotal(rows, "reembolso_concedido");
+  const retorna = stageTotal(rows, "produto_retorna");
+  const confere = stageTotal(rows, "nf_devolucao_confere");
+
+  const decididas = {
+    count: abertas.count - aguardando.count,
+    amount: abertas.amount - aguardando.amount
+  };
+
+  return [
+    { key: "abertas", label: "Abertas", count: abertas.count, amount: abertas.amount, tone: "neutral", dropLabel: "aguardando decisão" },
+    { key: "decididas", label: "Decididas", count: decididas.count, amount: decididas.amount, tone: "neutral", dropLabel: `recusadas + canceladas (${nf.format(recusado.count + cancelada.count)})` },
+    { key: "concedido", label: "Reembolso concedido", count: concedido.count, amount: concedido.amount, tone: "bad", dropLabel: "refund only (produto não volta)" },
+    { key: "retorna", label: "Produto retorna", count: retorna.count, amount: retorna.amount, tone: "warn", dropLabel: "sem NF, divergência ou sem lastro" },
+    { key: "confere", label: "NF de devolução confere", count: confere.count, amount: confere.amount, tone: "good" }
+  ];
+}
+
+function buildDecision(rows: FunnelRow[]): { slices: DecisionSlice[]; total: number } {
+  const get = (stage: string) => stageTotal(rows, stage);
+  const slices: DecisionSlice[] = [
+    { key: "aguardando", label: "Aguardando decisão", ...get("aguardando_decisao"), color: "#f6c453" },
+    { key: "cancelada", label: "Cancelada pelo comprador", ...get("cancelada"), color: "#5d6980" },
+    { key: "recusado", label: "Reembolso recusado", ...get("reembolso_recusado"), color: "#34d399" },
+    { key: "concedido", label: "Reembolso concedido", ...get("reembolso_concedido"), color: "#fb6f84" }
+  ].map((s) => ({ key: s.key, label: s.label, count: s.count, amount: s.amount, color: s.color }));
+
+  return { slices, total: get("abertas").count };
 }
 
 export default async function DevolucoesPage({
@@ -250,91 +252,122 @@ export default async function DevolucoesPage({
   await requireCurrentUser();
   const params = await searchParams;
   const alertCount = await loadActionableAlertCount();
-  const window = monthWindow(params.mes);
-  const channel = params.canal && params.canal !== "todos" ? params.canal : null;
+  const win = monthWindow(params.mes);
+  const activeTab = params.canal ?? "todos";
+  const channel = activeTab !== "todos" ? activeTab : null;
 
-  const { funnel, summary, reasons, skus, disputes, batch } = await loadData(
-    window.from,
-    window.to,
-    channel
-  );
+  const data = await loadData(win, channel);
 
-  const stages = buildStages(funnel);
-  const totalReturns = summary.reduce((sum, r) => sum + Number(r.returns_total ?? 0), 0);
-  const totalRefund = summary.reduce((sum, r) => sum + Number(r.refund_amount ?? 0), 0);
-  const totalSemNf = summary.reduce((sum, r) => sum + Number(r.sem_nf_count ?? 0), 0);
-  const totalSemNfAmount = summary.reduce((sum, r) => sum + Number(r.sem_nf_amount ?? 0), 0);
-  const totalCostLost = skus.reduce((sum, r) => sum + Number(r.cost_lost ?? 0), 0);
+  const steps = buildSteps(data.funnel);
+  const decision = buildDecision(data.funnel);
+
+  const sum = (rows: SummaryRow[], key: keyof SummaryRow) =>
+    rows.reduce((acc, r) => acc + Number(r[key] ?? 0), 0);
+
+  const totalReturns = sum(data.summary, "returns_total");
+  const totalLoss = sum(data.summary, "returns_loss");
+  const totalRefund = sum(data.summary, "refund_amount");
+  const totalSemNf = sum(data.summary, "sem_nf_count");
+  const totalSemNfAmount = sum(data.summary, "sem_nf_amount");
+  const totalFromNf = sum(data.summary, "amount_from_nf");
+  const totalCostLost = data.skus.reduce((acc, r) => acc + Number(r.cost_lost ?? 0), 0);
+
+  const prevReturns = sum(data.prevSummary, "returns_total");
+  const prevRefund = sum(data.prevSummary, "refund_amount");
+  const prevSemNf = sum(data.prevSummary, "sem_nf_count");
+
+  const sparkCount = data.daily.map((d) => Number(d.returns_count ?? 0));
+  const sparkAmount = data.daily.map((d) => Number(d.amount ?? 0));
+  const areaPoints = data.daily.map((d) => ({ label: d.day, value: Number(d.returns_count ?? 0) }));
+
+  const donutSlices = data.reasons
+    .filter((r) => Number(r.returns_count ?? 0) > 0)
+    .map((r) => ({
+      label: REASON_LABEL[r.reason_group] ?? r.reason_group,
+      value: Number(r.returns_count ?? 0),
+      color: REASON_COLOR[r.reason_group] ?? "#5d6980"
+    }));
 
   const now = new Date();
-  const months = Array.from({ length: 6 }, (_, index) => {
-    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - index, 1));
+  const months = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
     return monthWindow(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`);
   });
 
-  const channels = ["todos", "shopee", "tiktok", "mercadolivre"];
-  const link = (mes: string, canal: string) => `/devolucoes?mes=${mes}&canal=${canal}`;
-  const currentChannel = params.canal ?? "todos";
+  const tabChannels = data.channels.map((c) => ({
+    key: c.channel,
+    label: CHANNEL_LABEL[c.channel] ?? c.channel,
+    count: Number(c.returns_count ?? 0)
+  }));
+
+  const lossRate = totalReturns > 0 ? (totalLoss / totalReturns) * 100 : 0;
+  const channelName = channel ? (CHANNEL_LABEL[channel] ?? channel) : "todos os canais";
 
   return (
     <AppShell alertCount={alertCount}>
       <header className="topbar">
         <div>
           <h1>Devoluções</h1>
-          <p>Funil por canal, cruzado com a NF de devolução da Olist</p>
-        </div>
-      </header>
-
-      <section className="panel">
-        <div className="section-head">
-          <p className="eyebrow">Período e canal</p>
-          <h2>{window.label}</h2>
+          <p>
+            Funil por canal cruzado com a NF de devolução da Olist · {win.label} · {channelName}
+          </p>
         </div>
         <div className="filter-row">
           {months.map((m) => (
             <a
               key={m.value}
-              href={link(m.value, currentChannel)}
-              className={m.value === window.value ? "chip chip-active" : "chip"}
+              href={`/devolucoes?mes=${m.value}&canal=${activeTab}`}
+              className={m.value === win.value ? "chip chip-active" : "chip"}
             >
               {m.label}
             </a>
           ))}
         </div>
-        <div className="filter-row">
-          {channels.map((c) => (
-            <a
-              key={c}
-              href={link(window.value, c)}
-              className={c === currentChannel ? "chip chip-active" : "chip"}
-            >
-              {c === "todos" ? "Todos os canais" : CHANNEL_LABEL[c] ?? c}
-            </a>
-          ))}
-        </div>
-      </section>
+      </header>
+
+      <DevolucoesTabs active={activeTab} month={win.value} channels={tabChannels} />
+
+      {win.isCurrent ? (
+        <section className="status-alerts">
+          <div className="status-alert">
+            Mês em curso: o topo do funil sempre parece inflado em relação ao fundo, porque as
+            devoluções ainda vão ser decididas. Compare meses fechados.
+          </div>
+        </section>
+      ) : null}
 
       <section className="metric-grid">
-        <article className="metric accent-blue">
-          <span className="label">Devoluções abertas</span>
-          <strong>{count(totalReturns)}</strong>
-          <small>solicitadas no período</small>
-        </article>
-        <article className="metric accent-red">
-          <span className="label">Estornado</span>
-          <strong>{moneyShort(totalRefund)}</strong>
-          <small>somando todos os estágios</small>
-        </article>
-        <article className="metric accent-yellow">
-          <span className="label">Sem NF de devolução</span>
-          <strong>{count(totalSemNf)}</strong>
-          <small>{moneyShort(totalSemNfAmount)} sem entrada na Olist</small>
-        </article>
-        <article className="metric accent-violet">
-          <span className="label">Custo do produto perdido</span>
-          <strong>{moneyShort(totalCostLost)}</strong>
-          <small>top 25 SKUs, a custo unitário</small>
-        </article>
+        <MetricCard
+          accent="accent-blue"
+          label="Devoluções abertas"
+          value={count(totalReturns)}
+          caption={`${pct(lossRate)} contam como perda`}
+          delta={delta(totalReturns, prevReturns)}
+          spark={sparkCount}
+          sparkColor="#6d8bff"
+        />
+        <MetricCard
+          accent="accent-red"
+          label="Estornado"
+          value={moneyShort(totalRefund)}
+          caption={totalFromNf > 0 ? `${count(totalFromNf)} com valor estimado pela NF` : "valor informado pelos canais"}
+          delta={delta(totalRefund, prevRefund)}
+          spark={sparkAmount}
+          sparkColor="#fb6f84"
+        />
+        <MetricCard
+          accent="accent-yellow"
+          label="Sem NF de devolução"
+          value={count(totalSemNf)}
+          caption={`${moneyShort(totalSemNfAmount)} sem entrada na Olist`}
+          delta={delta(totalSemNf, prevSemNf)}
+        />
+        <MetricCard
+          accent="accent-violet"
+          label="Custo do produto perdido"
+          value={moneyShort(totalCostLost)}
+          caption="top 25 SKUs, a custo unitário"
+        />
       </section>
 
       <section className="panel">
@@ -343,141 +376,122 @@ export default async function DevolucoesPage({
           <h2>Do pedido de devolução ao dinheiro</h2>
         </div>
         <p className="muted">
-          Os quatro estágios de decisão (aguardando, cancelada, recusado, concedido) somam o topo —
-          toda devolução está em exatamente um deles.
-          Os estágios recuados e tracejados são recorte do estágio acima, não uma nova fatia.
+          Cada passo é um subconjunto estrito do anterior — é isso que autoriza o formato de funil.
+          Acima de cada fita, quantas devoluções não avançaram e por quê.
         </p>
-        <ReturnsFunnel stages={stages} />
+        <ReturnsFunnel steps={steps} />
       </section>
 
       <section className="panel">
         <div className="section-head">
-          <p className="eyebrow">Por canal</p>
-          <h2>Onde estão as devoluções</h2>
+          <p className="eyebrow">Decisão</p>
+          <h2>Para onde foram as devoluções</h2>
         </div>
         <p className="muted">
-          Os canais têm ordens de grandeza diferentes — em julho a Shopee teve ~2.700 devoluções,
-          o TikTok 1.728 e o Mercado Livre 4. Volume baixo no ML é volume de venda menor no canal,
-          não qualidade melhor. O Mercado Livre <strong>não informa o valor do
-          reembolso</strong>: nesses casos o valor vem da NF de venda — é o total do
-          <em> pedido</em>, então um estorno parcial aparece maior do que foi. A coluna
-          &ldquo;valor estimado pela NF&rdquo; conta quantas linhas estão nessa condição.
+          Estas quatro fatias somam o topo do funil, exatamente. Reembolso recusado é dinheiro
+          retido — vitória financeira, não necessariamente vitória com o cliente.
         </p>
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Canal</th>
-                <th className="numeric">Devoluções</th>
-                <th className="numeric">Contam como perda</th>
-                <th className="numeric">Unidades</th>
-                <th className="numeric">Estornado</th>
-                <th className="numeric">Valor estimado pela NF</th>
-                <th className="numeric">Sem NF de venda</th>
-                <th className="numeric">Sem NF de devolução</th>
-                <th className="numeric">R$ sem NF</th>
-                <th className="numeric">Divergências</th>
-              </tr>
-            </thead>
-            <tbody>
-              {summary.length === 0 ? (
-                <tr>
-                  <td colSpan={10}>Nenhuma devolução no período.</td>
-                </tr>
-              ) : (
-                summary.map((row) => (
-                  <tr key={row.channel}>
-                    <td>{CHANNEL_LABEL[row.channel] ?? row.channel}</td>
-                    <td className="numeric">{count(row.returns_total)}</td>
-                    <td className="numeric">{count(row.returns_loss)}</td>
-                    <td className="numeric">{count(row.units)}</td>
-                    <td className="numeric">{money(row.refund_amount)}</td>
-                    <td className="numeric">{count(row.amount_from_nf)}</td>
-                    <td className="numeric">{count(row.sem_nf_venda_count)}</td>
-                    <td className="numeric">{count(row.sem_nf_count)}</td>
-                    <td className="numeric">{money(row.sem_nf_amount)}</td>
-                    <td className="numeric">{count(row.divergencia_count)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DecisionBar slices={decision.slices} total={decision.total} />
       </section>
 
-      <section className="settings-grid">
+      <section className="dashboard-section">
+        <article className="panel">
+          <div className="section-head">
+            <p className="eyebrow">Ritmo</p>
+            <h2>Devoluções abertas por dia</h2>
+          </div>
+          <RevenueArea points={areaPoints} />
+        </article>
+
         <article className="panel">
           <div className="section-head">
             <p className="eyebrow">Motivos</p>
             <h2>Por que devolveram</h2>
           </div>
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Motivo</th>
-                  <th className="numeric">Devoluções</th>
-                  <th className="numeric">Estornado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reasons.length === 0 ? (
-                  <tr>
-                    <td colSpan={3}>Sem dados no período.</td>
-                  </tr>
-                ) : (
-                  reasons.map((row) => (
-                    <tr key={row.reason_group}>
-                      <td>{REASON_LABEL[row.reason_group] ?? row.reason_group}</td>
-                      <td className="numeric">{count(row.returns_count)}</td>
-                      <td className="numeric">{money(row.refund_amount)}</td>
+          {donutSlices.length > 0 ? (
+            <>
+              <TaxDonut slices={donutSlices} centerLabel="devoluções" />
+              <div className="table-wrap">
+                <table className="data-table dense-table">
+                  <thead>
+                    <tr>
+                      <th>Motivo</th>
+                      <th className="numeric">Casos</th>
+                      <th className="numeric">Estornado</th>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody>
+                    {data.reasons.map((r) => (
+                      <tr key={r.reason_group}>
+                        <td>{REASON_LABEL[r.reason_group] ?? r.reason_group}</td>
+                        <td className="numeric">{count(r.returns_count)}</td>
+                        <td className="numeric">{money(r.refund_amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            <p className="empty-state">Sem motivos classificados no período.</p>
+          )}
         </article>
+      </section>
 
-        <article className="panel">
+      {activeTab === "todos" ? (
+        <section className="panel">
           <div className="section-head">
-            <p className="eyebrow">Disputas</p>
-            <h2>Ganhamos e perdemos</h2>
+            <p className="eyebrow">Comparativo</p>
+            <h2>Canais lado a lado</h2>
           </div>
           <p className="muted">
-            Disputa é desvio, não etapa: em julho só 5,5% das devoluções do TikTok passaram por
-            disputa. Com poucas dezenas por mês, leia a tendência, não o número isolado.
+            Ordens de grandeza diferentes: em julho a Shopee teve ~3.400 devoluções, o TikTok 1.725
+            e o Mercado Livre 4. Volume baixo no ML é volume de venda menor no canal, não qualidade
+            melhor. O ML <strong>não informa o valor do reembolso</strong> — ali o valor vem da NF de
+            venda, que é o total do <em>pedido</em>, então estorno parcial aparece maior do que foi.
           </p>
           <div className="table-wrap">
             <table className="data-table">
               <thead>
                 <tr>
                   <th>Canal</th>
-                  <th>Resultado</th>
-                  <th className="numeric">Casos</th>
-                  <th className="numeric">Valor</th>
+                  <th className="numeric">Devoluções</th>
+                  <th className="numeric">Contam como perda</th>
+                  <th className="numeric">Unidades</th>
+                  <th className="numeric">Estornado</th>
+                  <th className="numeric">Valor estimado pela NF</th>
+                  <th className="numeric">Sem NF de venda</th>
+                  <th className="numeric">Sem NF de devolução</th>
+                  <th className="numeric">R$ sem NF</th>
+                  <th className="numeric">Divergências</th>
                 </tr>
               </thead>
               <tbody>
-                {disputes.length === 0 ? (
+                {data.summary.length === 0 ? (
                   <tr>
-                    <td colSpan={4}>Nenhuma disputa no período.</td>
+                    <td colSpan={10}>Nenhuma devolução no período.</td>
                   </tr>
                 ) : (
-                  disputes.map((row) => (
-                    <tr key={`${row.channel}-${row.outcome}`}>
+                  data.summary.map((row) => (
+                    <tr key={row.channel}>
                       <td>{CHANNEL_LABEL[row.channel] ?? row.channel}</td>
-                      <td>{DISPUTE_LABEL[row.outcome] ?? row.outcome}</td>
-                      <td className="numeric">{count(row.returns_count)}</td>
-                      <td className="numeric">{money(row.amount)}</td>
+                      <td className="numeric">{count(row.returns_total)}</td>
+                      <td className="numeric">{count(row.returns_loss)}</td>
+                      <td className="numeric">{count(row.units)}</td>
+                      <td className="numeric">{money(row.refund_amount)}</td>
+                      <td className="numeric">{count(row.amount_from_nf)}</td>
+                      <td className="numeric">{count(row.sem_nf_venda_count)}</td>
+                      <td className="numeric">{count(row.sem_nf_count)}</td>
+                      <td className="numeric">{money(row.sem_nf_amount)}</td>
+                      <td className="numeric">{count(row.divergencia_count)}</td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
-        </article>
-      </section>
+        </section>
+      ) : null}
 
       <section className="panel">
         <div className="section-head">
@@ -499,13 +513,13 @@ export default async function DevolucoesPage({
               </tr>
             </thead>
             <tbody>
-              {skus.length === 0 ? (
+              {data.skus.length === 0 ? (
                 <tr>
                   <td colSpan={8}>Sem dados no período.</td>
                 </tr>
               ) : (
-                skus.map((row, index) => (
-                  <tr key={`${row.sku ?? "sem-sku"}-${index}`}>
+                data.skus.map((row, i) => (
+                  <tr key={`${row.sku ?? "sem-sku"}-${i}`}>
                     <td>{row.sku ?? "—"}</td>
                     <td>{row.product_name ?? "—"}</td>
                     <td className="numeric">{count(row.returns_count)}</td>
@@ -522,33 +536,70 @@ export default async function DevolucoesPage({
         </div>
       </section>
 
-      <section className="panel">
-        <div className="section-head">
-          <p className="eyebrow">Ingestão</p>
-          <h2>Planilha do TikTok Shop</h2>
-        </div>
-        <p className="muted">
-          Shopee e Mercado Livre entram sozinhos por API. O TikTok é por upload: exportação de
-          <em> Pedidos de devolução/reembolso</em> (.xlsx), uma aba por loja. As colunas são lidas
-          pelo nome do cabeçalho, então abas com layouts diferentes funcionam. Subir o mesmo
-          arquivo de novo <strong>atualiza</strong>, não duplica.
-        </p>
-        <form action={uploadReturns} className="upload-form">
-          <label>
-            <span>Arquivo .xlsx</span>
-            <input type="file" name="file" accept=".xlsx" required />
-          </label>
-          <button type="submit">Importar</button>
-        </form>
-        {batch ? (
+      {data.disputes.length > 0 ? (
+        <section className="panel">
+          <div className="section-head">
+            <p className="eyebrow">Disputas</p>
+            <h2>Ganhamos e perdemos</h2>
+          </div>
           <p className="muted">
-            Último lote: <strong>{batch.file_name}</strong> · {dateTime(batch.uploaded_at)} ·{" "}
-            {count(batch.rows_read)} lidas, {count(batch.rows_inserted)} gravadas,{" "}
-            {count(batch.rows_rejected)} descartadas
-            {batch.notes ? ` · ${batch.notes}` : ""}
+            Disputa é desvio, não etapa: em julho só 5,5% das devoluções do TikTok passaram por
+            disputa. Com poucas dezenas por mês, leia a tendência, não o número isolado.
           </p>
-        ) : null}
-      </section>
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Canal</th>
+                  <th>Resultado</th>
+                  <th className="numeric">Casos</th>
+                  <th className="numeric">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.disputes.map((row) => (
+                  <tr key={`${row.channel}-${row.outcome}`}>
+                    <td>{CHANNEL_LABEL[row.channel] ?? row.channel}</td>
+                    <td>{DISPUTE_LABEL[row.outcome] ?? row.outcome}</td>
+                    <td className="numeric">{count(row.returns_count)}</td>
+                    <td className="numeric">{money(row.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
+      {activeTab === "todos" || activeTab === "tiktok" ? (
+        <section className="panel">
+          <div className="section-head">
+            <p className="eyebrow">Ingestão</p>
+            <h2>Planilha do TikTok Shop</h2>
+          </div>
+          <p className="muted">
+            Shopee e Mercado Livre entram sozinhos por API. O TikTok é por upload: exportação de
+            <em> Pedidos de devolução/reembolso</em> (.xlsx), uma aba por loja. As colunas são lidas
+            pelo nome do cabeçalho, então abas com layouts diferentes funcionam. Subir o mesmo
+            arquivo de novo <strong>atualiza</strong>, não duplica.
+          </p>
+          <form action={uploadReturns} className="upload-form">
+            <label>
+              <span>Arquivo .xlsx</span>
+              <input type="file" name="file" accept=".xlsx" required />
+            </label>
+            <button type="submit">Importar</button>
+          </form>
+          {data.batch ? (
+            <p className="muted">
+              Último lote: <strong>{data.batch.file_name}</strong> · {dateTime(data.batch.uploaded_at)} ·{" "}
+              {count(data.batch.rows_read)} lidas, {count(data.batch.rows_inserted)} gravadas,{" "}
+              {count(data.batch.rows_rejected)} descartadas
+              {data.batch.notes ? ` · ${data.batch.notes}` : ""}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="panel">
         <div className="section-head">
@@ -558,8 +609,7 @@ export default async function DevolucoesPage({
         <ul className="muted">
           <li>
             <strong>É distribuição de estado, não coorte.</strong> As devoluções aguardando decisão
-            ainda vão virar concedido ou recusado — no mês corrente o topo sempre parece inflado
-            em relação ao fundo. Compare meses fechados.
+            ainda vão virar concedido ou recusado. Compare meses fechados.
           </li>
           <li>
             <strong>&ldquo;Sem NF de venda&rdquo; não é furo.</strong> A base de notas da Olist
@@ -571,14 +621,9 @@ export default async function DevolucoesPage({
             uma amostra antes de cobrar alguém.
           </li>
           <li>
-            <strong>Reembolso recusado é vitória financeira</strong>, não necessariamente vitória
-            com o cliente — pode virar disputa ou má avaliação depois.
-          </li>
-          <li>
-            <strong>Valor estimado pela NF não é o estorno.</strong> Quando o canal não
-            informa o valor (hoje só o Mercado Livre), usa-se o total da NF de venda. Em
-            devolução parcial isso superestima. A coluna por canal mostra quantas linhas
-            estão assim.
+            <strong>Valor estimado pela NF não é o estorno.</strong> Quando o canal não informa o
+            valor (hoje só o Mercado Livre), usa-se o total da NF de venda; em devolução parcial
+            isso superestima.
           </li>
         </ul>
       </section>

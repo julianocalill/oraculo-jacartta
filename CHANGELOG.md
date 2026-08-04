@@ -2,6 +2,41 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-04] — Devoluções: funil horizontal, uma aba por canal e analytics
+
+- **Uma aba por canal** (`DevolucoesTabs`), com contador de volume. Só aparecem
+  canais que têm dado no período — aba vazia sugere que o canal não devolve nada.
+- **Funil horizontal** reconstruído sobre uma cadeia que se contém de verdade:
+  `Abertas ⊃ Decididas ⊃ Reembolso concedido ⊃ Produto retorna ⊃ NF confere`.
+  Cada fita afunila proporcionalmente e o que NÃO avançou é rotulado acima dela.
+  Um "funil" cujos estágios não se contêm é um gráfico de barras mentindo sobre
+  causalidade — por isso a partição (aguardando/cancelada/recusado/concedido, que
+  soma o topo exatamente) virou uma **barra de decisão** separada em vez de
+  estágios da mesma cadeia.
+- **Analytics no padrão do dashboard principal**: `MetricCard` extraído de
+  `app/page.tsx` para `components/metric-card.tsx` (duas cópias divergiriam na
+  primeira mudança de design), com sparkline e variação contra o mês anterior;
+  área de devoluções por dia; donut de motivos. RPCs novas
+  `oraculo_returns_daily` e `oraculo_returns_channels` (`20260804240000`).
+  A série diária agrega em **America/Sao_Paulo**: em UTC, tudo aberto após as 21h
+  cairia no dia seguinte — ~12% das linhas do TikTok.
+
+### O bug que a comparação entre canais revelou
+
+- **`return_solution` da Shopee estava invertido.** 0 é `RETURN_REFUND` (o produto
+  volta) e 1 é `REFUND_ONLY`; o código tinha o contrário. Confirmado no dado: os
+  2.534 casos com `solution=0` têm `needs_logistics=true`.
+- Efeito: as devoluções **com produto retornando** entravam como `refund_only`,
+  que por definição não exige NF de devolução — então o cruzamento fiscal
+  simplesmente **não as cobrava**. A Shopee aparecia com 4 casos "NF confere"
+  contra 658; ao lado do TikTok (253 de 554) o número era absurdo.
+- Corrigido na função e nas 3.803 linhas já gravadas. Shopee: "NF confere"
+  **4 → 494**, "sem NF de devolução" 558 → 419.
+
+Julho/2026, três canais, depois da correção: 5.089 devoluções abertas
+(R$ 306.614) → 2.519 concedidas → 1.650 com produto retornando → **753 sem NF de
+devolução (R$ 39.998)**.
+
 ## [2026-08-04] — Devoluções: `/status`, valor do ML e janela quente do cache
 
 - **As rotinas de devolução aparecem em `/status`**: Devoluções Shopee,

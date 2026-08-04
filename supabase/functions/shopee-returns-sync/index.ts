@@ -79,11 +79,18 @@ const STATUS_MAP: Record<string, string> = {
   CANCELLED: "cancelada"
 };
 
-// return_solution: 1 = devolução com produto, 0 = só reembolso.
+// return_solution da Shopee: 0 = RETURN_REFUND (produto volta), 1 = REFUND_ONLY.
+// Conferido contra o dado: os 2.534 casos com solution=0 têm needs_logistics=true,
+// ou seja, há logística de retorno — o produto volta mesmo.
+// Já esteve invertido aqui, e o efeito foi silencioso e caro: as devoluções com
+// produto entravam como refund_only (que por definição não gera NF de devolução),
+// então o cruzamento fiscal simplesmente não as cobrava. A Shopee aparecia com
+// 4 casos "NF confere" contra 658 — número absurdo que só apareceu ao comparar
+// com o TikTok.
 function returnType(solution: unknown): string | null {
   const n = Number(solution);
   if (!Number.isFinite(n)) return null;
-  return n === 1 ? "return_and_refund" : "refund_only";
+  return n === 0 ? "return_and_refund" : "refund_only";
 }
 
 function isoOrNull(epochSeconds: unknown): string | null {

@@ -11,6 +11,7 @@ import { requireCurrentUser } from "../lib/auth/session";
 import { createSupabaseUserClient } from "../lib/supabase/user";
 import { TaxDonut, MarginGauge, RevenueArea, Sparkline } from "./components/fiscal-charts";
 import { AppShell } from "./components/app-shell";
+import { MetricCard, type MetricDelta } from "./components/metric-card";
 import { loadActionableAlertCount } from "../lib/alert-count";
 
 export const dynamic = "force-dynamic";
@@ -702,56 +703,6 @@ async function loadPreviousMonthTotals(
     console.error("loadPreviousMonthTotals failed; hiding deltas", err);
     return null;
   }
-}
-
-type MetricDelta = { direction: "up" | "down"; text: string; title: string; invert?: boolean } | null;
-
-// Card de métrica com o design aprovado: valor grande em mono, chip de variação
-// (▲/▼) e curva de crescimento (sparkline) quando há série real por trás.
-function MetricCard({
-  accent,
-  href,
-  label,
-  value,
-  caption,
-  delta,
-  spark,
-  sparkColor
-}: {
-  accent: string;
-  href?: string;
-  label: string;
-  value: React.ReactNode;
-  caption: React.ReactNode;
-  delta?: MetricDelta;
-  spark?: number[];
-  sparkColor?: string;
-}) {
-  const body = (
-    <>
-      <span className="label">{label}</span>
-      <strong>{value}</strong>
-      {delta ? (
-        <span
-          className={`metric-delta ${delta.direction}${delta.invert ? " invert" : ""}`}
-          title={delta.title}
-        >
-          {delta.direction === "up" ? "▲" : "▼"} {delta.text}
-        </span>
-      ) : null}
-      <small>{caption}</small>
-      {spark && spark.length >= 2 && sparkColor ? <Sparkline values={spark} color={sparkColor} /> : null}
-    </>
-  );
-
-  if (href) {
-    return (
-      <Link className={`metric metric-link ${accent}`} href={href}>
-        {body}
-      </Link>
-    );
-  }
-  return <div className={`metric ${accent}`}>{body}</div>;
 }
 
 async function loadDashboard(filters: DashboardFilters) {
