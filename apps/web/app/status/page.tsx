@@ -87,10 +87,66 @@ async function latestRun(
   return (data as SyncRun | null) ?? null;
 }
 
+// shopee_sync_runs é multi-fonte (source = 'shopee-returns-sync:<shop_id>' etc.),
+// então a última execução de uma rotina específica precisa do filtro por prefixo.
+async function latestRunBySource(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  table: string,
+  columns: string,
+  sourcePrefix: string
+): Promise<SyncRun | null> {
+  const { data, error } = await supabase
+    .from(table)
+    .select(columns)
+    .like("source", `${sourcePrefix}%`)
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) return null;
+  return (data as SyncRun | null) ?? null;
+}
+
+// mercadolivre_sync_runs é compartilhada com o sync principal e não tem coluna
+// `source`; a rotina de devoluções se identifica em meta->>'source'.
+async function latestReturnsRunML(supabase: ReturnType<typeof createSupabaseAdminClient>) {
+  const { data, error } = await supabase
+    .from("mercadolivre_sync_runs")
+    .select("started_at, finished_at, status, orders_count, error_message")
+    .eq("meta->>source", "mercadolivre-returns-sync")
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) return null;
+  return (data as SyncRun | null) ?? null;
+}
+
+// O cache de NF de venda não tem tabela de runs: a saúde dele é o dia mais
+// recente marcado como processado (oraculo_olist_order_ref_cache_days).
+async function latestCacheDay(supabase: ReturnType<typeof createSupabaseAdminClient>) {
+  const { data, error } = await supabase
+    .from("oraculo_olist_order_ref_cache_days")
+    .select("day, rows_upserted, refreshed_at")
+    .order("day", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  const row = data as { day: string; rows_upserted: number; refreshed_at: string };
+  return {
+    started_at: row.refreshed_at,
+    finished_at: row.refreshed_at,
+    status: "success",
+    records_upserted: row.rows_upserted,
+    error_message: null
+  } as SyncRun;
+}
+
 async function loadStatus() {
   const supabase = createSupabaseAdminClient();
 
-  const [tokenResult, ordersRun, stockRun, invoicesRun, backfillRun, mercadolivreRun, importacoesAisRun] = await Promise.all([
+  const [
+    tokenResult, ordersRun, stockRun, invoicesRun, backfillRun, mercadolivreRun,
+    importacoesAisRun, shopeeReturnsRun, mercadolivreReturnsRun, returnsCacheRun
+  ] = await Promise.all([
     supabase
       .from("olist_oauth_tokens")
       .select("updated_at, expires_at, token_type, scope")
@@ -101,7 +157,10 @@ async function loadStatus() {
     latestRun(supabase, "olist_invoice_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, items_upserted, error_message"),
     latestRun(supabase, "olist_order_items_backfill_runs", "started_at, finished_at, status, orders_processed, orders_with_error, items_upserted, error_message"),
     latestRun(supabase, "mercadolivre_sync_runs", "started_at, finished_at, status, items_count, orders_count, error_message"),
-    latestRun(supabase, "importacao_ais_sync_runs", "started_at, finished_at, status, vessels_targeted, positions_updated, error_message")
+    latestRun(supabase, "importacao_ais_sync_runs", "started_at, finished_at, status, vessels_targeted, positions_updated, error_message"),
+    latestRunBySource(supabase, "shopee_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message", "shopee-returns-sync"),
+    latestReturnsRunML(supabase),
+    latestCacheDay(supabase)
   ]);
 
   const token = (tokenResult.data as TokenRow | null) ?? null;
@@ -132,6 +191,12 @@ async function loadStatus() {
     stockNotRunToday ? "Sync de estoque ainda não rodou hoje." : "",
     brtDate(mercadolivreRun?.started_at) !== today
       ? "Sync do Mercado Livre ainda não rodou hoje."
+      : "",
+    runFailed(shopeeReturnsRun) ? `Devoluções Shopee falharam: ${shopeeReturnsRun?.error_message ?? "sem mensagem"}` : "",
+    // Cache parado é falha silenciosa — a página segue servindo dado velho sem
+    // erro nenhum. Já custou 45 dias de número errado neste projeto.
+    brtDate(returnsCacheRun?.started_at) !== today
+      ? "Cache de NF de venda (devoluções) não foi atualizado hoje."
       : ""
   ].filter(Boolean);
 
@@ -148,7 +213,10 @@ async function loadStatus() {
       { key: "invoices", label: "Notas fiscais", run: invoicesRun },
       { key: "backfill", label: "Backfill de itens", run: backfillRun },
       { key: "mercadolivre", label: "Mercado Livre (Full)", run: mercadolivreRun },
-      { key: "importacoes-ais", label: "Importações (AIS)", run: importacoesAisRun }
+      { key: "importacoes-ais", label: "Importações (AIS)", run: importacoesAisRun },
+      { key: "shopee-returns", label: "Devoluções Shopee", run: shopeeReturnsRun },
+      { key: "mercadolivre-returns", label: "Devoluções / claims ML", run: mercadolivreReturnsRun },
+      { key: "returns-cache", label: "Cache NF de venda (devoluções)", run: returnsCacheRun }
     ]
   };
 }

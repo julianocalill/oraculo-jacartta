@@ -45,7 +45,7 @@ bloco `ecommerce` vazio — não existe chave direta. Daí o `match_score`
 |---|---|---|
 | Shopee (4 lojas) | 3.358 | R$ 223.602 |
 | TikTok (3 lojas) | 1.725 | R$ 82.669 |
-| Mercado Livre | 4 | — (a API não devolveu valor) |
+| Mercado Livre | 4 | R$ 66 (valor da NF de venda — a API do ML não informa) |
 
 Funil consolidado — **os quatro estágios de decisão somam o topo**:
 
@@ -61,11 +61,12 @@ devolução** · 612 sem NF de venda · 269 divergência de quantidade · 67 de 
 - `oraculo_returns` (canônica) · `oraculo_return_reason_map` (de-para como
   **dado**) · `oraculo_returns_upload_batches`
 - `oraculo_olist_devolucoes` (view) · `oraculo_returns_reconciled` (view)
-- `oraculo_olist_order_ref_cache` + `_days` (controle) — cron `:07`/`:37`
+- `oraculo_olist_order_ref_cache` + `_days` (controle) — cron `:07`/`:37`;
+  janela quente de 1h para os 3 dias mais recentes, imutável para dias fechados
 - RPCs: `oraculo_returns_funnel`, `_summary`, `_by_reason`, `_by_sku`, `_disputes`
 
 Migrations `20260803120000`, `20260804120000`, `_150000`, `_170000`, `_190000`,
-`_200000`, `_210000`.
+`_200000`, `_210000`, `_220000` (fallback de valor), `_230000` (janela quente).
 
 ## Armadilhas medidas (as que custariam caro)
 
@@ -111,17 +112,18 @@ ICMS de verdade.
 
 ## Pendências conhecidas
 
-1. **ML não traz valor de reembolso** — o endpoint de detalhe não devolveu o
-   campo nos casos existentes. Com 4 casos não move o total; se o canal crescer,
-   precisa ser resolvido.
-2. **`refreshed_at` das rotinas de devolução não está em `/status`** — a regra do
-   repositório pede, e ainda não foi feito.
-3. **Alertas de devolução** (SKU acima de X% com volume relevante; devolução sem
-   NF há mais de N dias) não existem; o parâmetro caberia em `/parametros`.
+1. ~~ML não traz valor de reembolso~~ — **resolvido**: o valor vem da NF de venda
+   casada pelo número do pedido (`refund_amount_effective`), com a origem marcada
+   em `refund_amount_source`. É o valor do **pedido**, não do estorno; em
+   devolução parcial superestima, e a tela avisa.
+2. ~~`refreshed_at` em `/status`~~ — **resolvido**: as três rotinas de devolução
+   aparecem lá, com alerta para cache não atualizado no dia.
+3. **Alertas de devolução** — decisão do negócio: **não haverá** por ora.
 4. **"Sem NF de venda" (612 casos)** é limitação de lastro, não furo: a base de
    NFs da Olist começa em junho/2026. Fechar exige puxar NFs anteriores.
 5. **O casamento da NF de devolução é heurístico** — conferir uma amostra antes
-   de tratar os 892 "sem NF" como verdade operacional.
+   de tratar os 892 "sem NF" como verdade operacional. **Em aberto por decisão:
+   o time vai verificar antes de qualquer ação.**
 
 ## Deploy
 

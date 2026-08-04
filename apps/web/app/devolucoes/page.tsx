@@ -55,6 +55,7 @@ type SummaryRow = {
   returns_loss: number;
   units: number | null;
   refund_amount: number | null;
+  amount_from_nf: number;
   sem_nf_venda_count: number;
   sem_nf_count: number;
   sem_nf_amount: number | null;
@@ -357,7 +358,10 @@ export default async function DevolucoesPage({
         <p className="muted">
           Os canais têm ordens de grandeza diferentes — em julho a Shopee teve ~2.700 devoluções,
           o TikTok 1.728 e o Mercado Livre 4. Volume baixo no ML é volume de venda menor no canal,
-          não qualidade melhor.
+          não qualidade melhor. O Mercado Livre <strong>não informa o valor do
+          reembolso</strong>: nesses casos o valor vem da NF de venda — é o total do
+          <em> pedido</em>, então um estorno parcial aparece maior do que foi. A coluna
+          &ldquo;valor estimado pela NF&rdquo; conta quantas linhas estão nessa condição.
         </p>
         <div className="table-wrap">
           <table className="data-table">
@@ -368,6 +372,7 @@ export default async function DevolucoesPage({
                 <th className="numeric">Contam como perda</th>
                 <th className="numeric">Unidades</th>
                 <th className="numeric">Estornado</th>
+                <th className="numeric">Valor estimado pela NF</th>
                 <th className="numeric">Sem NF de venda</th>
                 <th className="numeric">Sem NF de devolução</th>
                 <th className="numeric">R$ sem NF</th>
@@ -377,7 +382,7 @@ export default async function DevolucoesPage({
             <tbody>
               {summary.length === 0 ? (
                 <tr>
-                  <td colSpan={9}>Nenhuma devolução no período.</td>
+                  <td colSpan={10}>Nenhuma devolução no período.</td>
                 </tr>
               ) : (
                 summary.map((row) => (
@@ -387,6 +392,7 @@ export default async function DevolucoesPage({
                     <td className="numeric">{count(row.returns_loss)}</td>
                     <td className="numeric">{count(row.units)}</td>
                     <td className="numeric">{money(row.refund_amount)}</td>
+                    <td className="numeric">{count(row.amount_from_nf)}</td>
                     <td className="numeric">{count(row.sem_nf_venda_count)}</td>
                     <td className="numeric">{count(row.sem_nf_count)}</td>
                     <td className="numeric">{money(row.sem_nf_amount)}</td>
@@ -567,6 +573,12 @@ export default async function DevolucoesPage({
           <li>
             <strong>Reembolso recusado é vitória financeira</strong>, não necessariamente vitória
             com o cliente — pode virar disputa ou má avaliação depois.
+          </li>
+          <li>
+            <strong>Valor estimado pela NF não é o estorno.</strong> Quando o canal não
+            informa o valor (hoje só o Mercado Livre), usa-se o total da NF de venda. Em
+            devolução parcial isso superestima. A coluna por canal mostra quantas linhas
+            estão assim.
           </li>
         </ul>
       </section>

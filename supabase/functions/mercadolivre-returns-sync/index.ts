@@ -213,11 +213,15 @@ Deno.serve(async (req) => {
       if (offset === 0) break;
     }
 
+    // mercadolivre_sync_runs é compartilhada com o mercadolivre-sync e não tem
+    // coluna `source` — sem a marca em `meta`, /status mostraria a execução do
+    // sync principal como se fosse esta.
     await supabase.from("mercadolivre_sync_runs").insert({
       started_at: startedAt,
       finished_at: new Date().toISOString(),
       status: "success",
-      orders_count: upserted
+      orders_count: upserted,
+      meta: { source: "mercadolivre-returns-sync", scanned, total }
     });
 
     return new Response(
@@ -229,7 +233,8 @@ Deno.serve(async (req) => {
       started_at: startedAt,
       finished_at: new Date().toISOString(),
       status: "error",
-      error_message: String((error as Error).message ?? error)
+      error_message: String((error as Error).message ?? error),
+      meta: { source: "mercadolivre-returns-sync" }
     });
     return new Response(
       JSON.stringify({ error: String((error as Error).message ?? error), upserted }),

@@ -2,6 +2,32 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-04] — Devoluções: `/status`, valor do ML e janela quente do cache
+
+- **As rotinas de devolução aparecem em `/status`**: Devoluções Shopee,
+  Devoluções/claims ML e o cache de NF de venda. Duas armadilhas resolvidas no
+  caminho: `shopee_sync_runs` é multi-fonte (filtro por prefixo de `source`) e
+  `mercadolivre_sync_runs` **não tem coluna `source`** — a rotina de devoluções
+  passou a se marcar em `meta->>'source'`, senão `/status` mostraria a execução
+  do sync principal como se fosse a dela. Alerta novo para cache não atualizado
+  no dia: cache parado é falha silenciosa, já custou 45 dias neste projeto.
+- **O Mercado Livre não informa valor de reembolso** — o `/claims/search` não traz
+  e o `/claims/{id}/returns` falhou nos 4 casos. Em vez de insistir na API, o
+  valor vem da **NF de venda já casada pelo número do pedido** (R$ 65,90 e
+  R$ 139,90 nos casos conferidos). O ML deixou de sumir dos totais em R$.
+  `refund_amount` (o que o canal informou) nunca é sobrescrito: o fallback entra
+  em `refund_amount_effective`, com `refund_amount_source` dizendo a origem e a
+  tela contando quantas linhas são estimadas. **É o valor do pedido, não do
+  estorno** — em devolução parcial superestima, e isso está escrito na tela.
+  A checagem de `divergencia_valor` continua usando só o valor informado pelo
+  canal. Migration `20260804220000`.
+- **Janela quente do cache de NF de venda: 20h → 1h** (`20260804230000`). A regra
+  antiga só reprocessava um dia depois de 20 horas — correto para dia fechado,
+  errado para o dia corrente, que recebe NF o tempo todo. Uma venda emitida após
+  a passagem do cron ficava fora do cache até o dia seguinte, e uma devolução
+  sobre ela cairia em `sem_nf_venda`: falso positivo que manda o time procurar
+  nota que existe. Ao aplicar, 8.164 NFs de 02–03/08 que estavam paradas entraram.
+
 ## [2026-08-04] — Motor fiscal passa a calcular como a NF: base faturada, DIFAL por dentro, custo fora dos impostos
 
 Origem: análise contábil da NF real 533740 (Shopee, MG→RJ, SKU 212961) contra o
