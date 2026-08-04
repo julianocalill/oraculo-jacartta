@@ -136,6 +136,15 @@
     `offset` works, and at least one filter (`stage`/`type`) is mandatory or the
     API returns 400 `atLeastOneFilterProvided`. The function pages backwards from
     the total and filters on our side.
+  - **`mercadolivre_sync_runs` has no `source` column** and is shared with
+    `mercadolivre-sync`. This function tags itself in `meta->>'source'`; without
+    that, `/status` shows the main sync's run as if it were this one.
+  - **The ML never returns a refund amount** — neither `/claims/search` nor
+    `/claims/{id}/returns` (which failed on all existing cases). The value comes
+    from the **sale NF already matched by order number**, exposed as
+    `refund_amount_effective` with `refund_amount_source` ∈ {`canal`,`nf_venda`}.
+    `refund_amount` is never overwritten. It is the ORDER total, not the refund —
+    a partial return overstates, and the screen says so.
   - `resolution.benefited` is the won/lost signal: `["complainant"]` = buyer won,
     `["respondent"]` = we won, `[]` = nobody (timeout/expired).
   - Volume is tiny — one account, ~4 returns/month against Shopee's ~2.700 and
@@ -258,6 +267,15 @@ Active jobs in `cron.job`:
     from the presence of rows: a day with no invoices is a PROCESSED day. Without
     that, May/2026 (no invoices at all) stayed forever pending and the loop spun
     in place — 62 days processed, 0 rows, no error.
+  - **Hot window of 1 hour for the 3 most recent days** (migration `20260804230000`);
+    closed days are processed once and never revisited. The first rule used 20h for
+    everything — right for a closed day, wrong for the CURRENT one, which keeps
+    receiving invoices: a sale issued after the cron pass stayed out of the cache
+    until the next day, and a return against it landed on a false `sem_nf_venda`,
+    sending the team looking for an invoice that exists. Applying the fix pulled in
+    8.164 stranded invoices from 02–03/08.
+  - Surfaced on `/status` as "Cache NF de venda (devoluções)", with an alert when it
+    has not refreshed today.
 - `oraculo-importacoes-ais-sync`: `0 0,6,12,18 * * *`
   - Calls `importacoes-ais-sync` via `private.invoke_oraculo_importacoes_ais_sync`
     (Vault secrets `oraculo_project_url` + `oraculo_importacoes_ais_job_secret`).
