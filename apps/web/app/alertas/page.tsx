@@ -1,5 +1,6 @@
 import { createSupabaseUserClient } from "../../lib/supabase/user";
-import { requireCurrentUser } from "../../lib/auth/session";
+import { requireTabAccess } from "../../lib/auth/access";
+import { NoAccess } from "../components/no-access";
 import { AppShell } from "../components/app-shell";
 import { SortableTable } from "../components/sortable-table";
 
@@ -112,7 +113,9 @@ async function loadAlertas() {
 }
 
 export default async function AlertasPage() {
-  await requireCurrentUser();
+  const { allowed } = await requireTabAccess("alertas");
+  if (!allowed) return <NoAccess tab="alertas" />;
+
   const data = await loadAlertas();
 
   return (

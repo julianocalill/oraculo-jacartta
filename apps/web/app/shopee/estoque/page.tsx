@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { requireCurrentUser } from "../../../lib/auth/session";
+import { requireTabAccess } from "../../../lib/auth/access";
+import { NoAccess } from "../../components/no-access";
 import { AppShell } from "../../components/app-shell";
 import { loadActionableAlertCount } from "../../../lib/alert-count";
 import { SortableTable, type SortableCell } from "../../components/sortable-table";
@@ -54,12 +55,15 @@ export default async function ShopeeEstoquePage({
 }: {
   searchParams?: Promise<{ loja?: string }>;
 }) {
-  await requireCurrentUser();
-  const alertCount = await loadActionableAlertCount();
   const params = await searchParams;
   const lojaFiltro = Number(params?.loja) || null;
 
-  const data = await loadShopeeData();
+  const [{ allowed }, alertCount, data] = await Promise.all([
+    requireTabAccess("shopee"),
+    loadActionableAlertCount(),
+    loadShopeeData()
+  ]);
+  if (!allowed) return <NoAccess tab="shopee" />;
   if (!data) {
     return (
       <AppShell alertCount={alertCount}>

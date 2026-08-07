@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
-import { requireCurrentUser } from "../../../lib/auth/session";
+import { assertTabAccess, requireTabAccess } from "../../../lib/auth/access";
+import { NoAccess } from "../../components/no-access";
 import { loadActionableAlertCount } from "../../../lib/alert-count";
 import { AppShell } from "../../components/app-shell";
 import { ImportacoesTabs } from "../tabs";
@@ -32,6 +33,7 @@ function identifier(value: unknown) {
 
 async function saveFatura(formData: FormData) {
   "use server";
+  await assertTabAccess("importacoes");
 
   const invoiceNumber = text(formData.get("invoice_number"));
   if (!invoiceNumber) return;
@@ -69,6 +71,7 @@ async function saveFatura(formData: FormData) {
 
 async function saveItem(formData: FormData) {
   "use server";
+  await assertTabAccess("importacoes");
 
   const invoiceNumber = text(formData.get("invoice_number"));
   const description = text(formData.get("description"));
@@ -96,6 +99,7 @@ async function saveItem(formData: FormData) {
 
 async function deleteItem(formData: FormData) {
   "use server";
+  await assertTabAccess("importacoes");
 
   const id = parseNumber(formData.get("id"));
   if (id == null) return;
@@ -110,6 +114,7 @@ async function deleteItem(formData: FormData) {
 
 async function saveNavio(formData: FormData) {
   "use server";
+  await assertTabAccess("importacoes");
 
   const name = text(formData.get("name"))?.toUpperCase();
   if (!name) return;
@@ -140,7 +145,9 @@ function count(value: number) {
 }
 
 export default async function ImportacoesCadastroPage() {
-  await requireCurrentUser();
+  const { allowed } = await requireTabAccess("importacoes");
+  if (!allowed) return <NoAccess tab="importacoes" />;
+
   const alertCount = await loadActionableAlertCount();
   const { faturas, itens, navios } = await loadImportacoes();
 

@@ -1,5 +1,7 @@
+import { unstable_cache } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
-import { requireCurrentUser } from "../../lib/auth/session";
+import { requireTabAccess } from "../../lib/auth/access";
+import { NoAccess } from "../components/no-access";
 import { AppShell } from "../components/app-shell";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 
@@ -140,7 +142,14 @@ async function latestCacheDay(supabase: ReturnType<typeof createSupabaseAdminCli
   } as SyncRun;
 }
 
-async function loadStatus() {
+// Cache curto (60s): é página de monitoramento, mas as rotinas rodam em
+// escala de minutos/horas — 60s de defasagem não muda nenhum selo, e evita
+// refazer as 10 queries a cada F5 do operador.
+const loadStatus = unstable_cache(loadStatusUncached, ["status-panel"], {
+  revalidate: 60
+});
+
+async function loadStatusUncached() {
   const supabase = createSupabaseAdminClient();
 
   const [
@@ -230,9 +239,12 @@ function runBadge(run: SyncRun | null) {
 }
 
 export default async function StatusPage() {
-  await requireCurrentUser();
-  const alertCount = await loadActionableAlertCount();
-  const data = await loadStatus();
+  const [{ allowed }, alertCount, data] = await Promise.all([
+    requireTabAccess("status"),
+    loadActionableAlertCount(),
+    loadStatus()
+  ]);
+  if (!allowed) return <NoAccess tab="status" />;
 
   return (
     <AppShell alertCount={alertCount}>

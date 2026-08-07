@@ -1,4 +1,5 @@
-import { requireCurrentUser } from "../../lib/auth/session";
+import { requireTabAccess } from "../../lib/auth/access";
+import { NoAccess } from "../components/no-access";
 import { AppShell } from "../components/app-shell";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 import { PricingCalculator } from "./calculator";
@@ -6,7 +7,9 @@ import { PricingCalculator } from "./calculator";
 export const dynamic = "force-dynamic";
 
 export default async function CalculadoraPage() {
-  await requireCurrentUser();
+  const { allowed } = await requireTabAccess("calculadora");
+  if (!allowed) return <NoAccess tab="calculadora" />;
+
   const alertCount = await loadActionableAlertCount();
 
   return (

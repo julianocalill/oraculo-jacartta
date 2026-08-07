@@ -17,3 +17,9 @@ tmp/
 # graphify (grafo gerado localmente)
 graphify-out/
 .pnpm-store/
+
+# Dumps de dados e artefatos locais — nunca versionar (repo público)
+output/
+outputs/
+logs/
+tmp/

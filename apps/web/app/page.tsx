@@ -7,7 +7,10 @@ import {
   type FiscalDashboardSnapshot
 } from "../lib/fiscal-snapshots";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireCurrentUser } from "../lib/auth/session";
+import { canAccess, firstAllowedHref } from "../lib/auth/access";
+import { NoAccess } from "./components/no-access";
 import { createSupabaseUserClient } from "../lib/supabase/user";
 import { TaxDonut, MarginGauge, RevenueArea, Sparkline } from "./components/fiscal-charts";
 import { AppShell } from "./components/app-shell";
@@ -893,7 +896,15 @@ export default async function HomePage({
 }: {
   searchParams?: Promise<DashboardSearchParams>;
 }) {
-  await requireCurrentUser();
+  // Landing pós-login: quem não tem a aba Analytics cai na primeira aba liberada
+  // em vez de ver a tela de "sem acesso".
+  const user = await requireCurrentUser();
+  if (!canAccess(user, "analytics")) {
+    const fallback = firstAllowedHref(user);
+    if (fallback) redirect(fallback);
+    return <NoAccess hasAnyTab={false} />;
+  }
+
   const filters = getDashboardFilters(await searchParams);
   const [data, alertCount] = await Promise.all([loadDashboard(filters), loadActionableAlertCount()]);
   const filterQuery = `?start=${encodeURIComponent(filters.start)}&end=${encodeURIComponent(filters.end)}`;

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { requireCurrentUser } from "../../lib/auth/session";
+import { requireTabAccess } from "../../lib/auth/access";
+import { NoAccess } from "../components/no-access";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 import { AppShell } from "../components/app-shell";
 import { SortableTable, type SortableCell } from "../components/sortable-table";
@@ -29,9 +30,12 @@ function shortDate(value: string | null) {
 }
 
 export default async function ImportacoesPage() {
-  await requireCurrentUser();
-  const alertCount = await loadActionableAlertCount();
-  const { faturas, itens, navios, posicoes } = await loadImportacoes();
+  const [{ allowed }, alertCount, { faturas, itens, navios, posicoes }] = await Promise.all([
+    requireTabAccess("importacoes"),
+    loadActionableAlertCount(),
+    loadImportacoes()
+  ]);
+  if (!allowed) return <NoAccess tab="importacoes" />;
   const vessels = buildMapVessels(faturas, itens, navios, posicoes);
 
   const positioned = vessels.filter((vessel) => vessel.latitude != null);

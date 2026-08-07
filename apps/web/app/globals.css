@@ -12,7 +12,10 @@
   --line-strong: #33405a;
   --text: #eef1f8;
   --muted: #93a0b7;
-  --faint: #5d6980;
+  /* Rótulos secundários (th de tabela, labels de card, eyebrows). #5d6980
+     dava ~3.3:1 de contraste sobre --panel — abaixo do mínimo legível de
+     4.5:1 — e forçava o usuário a decorar a ordem das colunas. */
+  --faint: #8593ab;
 
   /* Assinatura (ouro) — usada com parcimônia. --amber = alias histórico. */
   --gold: #f6c453;
@@ -222,9 +225,16 @@ p {
   border-right: 1px solid var(--line);
   background: var(--sidebar);
   padding: 18px 12px;
-  display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  display: flex;
+  flex-direction: column;
   gap: 22px;
+}
+
+/* O grupo Admin fica colado no rodapé; quando ele não é renderizado (usuário
+   sem essas abas), quem desce é o próprio rodapé — senão ele estica. */
+.sidebar > .nav-admin,
+.sidebar > .nav-group:not(.nav-admin) + .sidebar-footer {
+  margin-top: auto;
 }
 
 .brand {
@@ -545,7 +555,7 @@ p {
   background: var(--panel-soft);
   display: grid;
   gap: 10px;
-  grid-template-columns: 1.2fr 1.4fr 1fr 0.8fr 0.8fr 1.4fr auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: end;
   padding: 12px;
 }
@@ -592,6 +602,109 @@ p {
 .user-meta {
   display: grid;
   gap: 6px;
+}
+
+/* Matriz de acesso por aba (caixinhas em /usuarios) */
+.upload-form .tab-access,
+.user-edit-card .tab-access,
+.user-edit-card .user-meta,
+.user-edit-card button {
+  grid-column: 1 / -1;
+}
+
+.user-edit-card .user-meta {
+  grid-auto-flow: column;
+  justify-content: start;
+  gap: 16px;
+}
+
+.tab-access {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+  display: grid;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.tab-access-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tab-access > span,
+.tab-access-head > span {
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.tab-access-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.tab-access-actions button {
+  min-height: 24px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 10px;
+}
+
+.tab-access-actions button:hover {
+  color: var(--text);
+  border-color: var(--amber);
+}
+
+.tab-access-group {
+  display: grid;
+  gap: 6px;
+}
+
+.tab-access-group small {
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.tab-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px 12px;
+}
+
+.tab-check {
+  display: flex !important;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.tab-check input {
+  min-height: 0 !important;
+  width: 15px;
+  height: 15px;
+  padding: 0 !important;
+  accent-color: var(--amber);
+  cursor: pointer;
+}
+
+.tab-access-master p {
+  color: var(--faint);
+  font-size: 12px;
+  margin: 0;
 }
 
 .source-summary-card {
@@ -733,18 +846,26 @@ p {
 .panel {
   border: 1px solid var(--line);
   background: var(--panel);
-  box-shadow: var(--shadow-sm);
   border-radius: var(--radius);
 }
 
 .metric {
-  min-height: 152px;
-  padding: 46px 18px 16px;
+  /* 152px de altura com 46px de padding-top (reservado ao hero-spark, que só
+     existe nos cards da home) empurravam o primeiro dado acionável para
+     ~400px de rolagem. O espaço do spark agora é reservado só quando ele
+     está presente (:has abaixo). */
+  min-height: 92px;
+  padding: 14px 16px;
   display: grid;
   align-content: flex-end;
-  gap: 7px;
+  gap: 6px;
   position: relative;
   overflow: hidden;
+}
+
+.metric:has(.hero-spark) {
+  min-height: 132px;
+  padding-top: 46px;
 }
 
 .metric-link,
@@ -774,16 +895,9 @@ p {
   background: var(--accent, var(--line-strong));
 }
 
-/* Brilho sutil da cor do acento, ancorado no topo */
-.metric::after {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 70%;
-  pointer-events: none;
-  opacity: 0.6;
-  background: radial-gradient(120% 120% at 12% -20%, color-mix(in srgb, var(--accent, #ffffff) 16%, transparent) 0%, transparent 60%);
-}
+/* O glow radial por card (::after) foi removido: com 4-16 cards por página,
+   a soma de gradientes deixava tudo visualmente pesado. O trilho de acento
+   (::before) já identifica a métrica. */
 
 .metric.accent-white   { --accent: #9aa8c0; }
 .metric.accent-yellow  { --accent: var(--gold); }
@@ -1158,14 +1272,39 @@ h2 {
   font-weight: 750;
   letter-spacing: 0;
   text-transform: uppercase;
+  /* Só tem efeito quando o wrapper rola verticalmente (o overflow-x do
+     .table-wrap limita o sticky a ele), mas é inofensivo nos demais casos. */
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  z-index: 1;
 }
 
 .data-table td {
   font-size: 13px;
 }
 
+/* Zebra + hover: com 10-16 colunas nowrap, sem guia de linha o olho perde a
+   posição no scroll horizontal. */
+.data-table tbody tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.data-table tbody tr:hover td {
+  background: rgba(109, 139, 255, 0.06);
+}
+
 .table-empty {
   margin: 6px 8px;
+}
+
+/* Texto explicativo secundário. A classe era usada em /devolucoes (7 blocos)
+   sem definição nenhuma — renderizava em 16px na cor cheia, mais pesado que
+   os próprios dados da página. */
+.muted {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .numeric {
@@ -1460,9 +1599,13 @@ h2 {
   .sidebar {
     position: static;
     height: auto;
-    grid-template-rows: auto auto auto;
     gap: 10px;
     padding: 12px;
+  }
+
+  .sidebar > .nav-admin,
+  .sidebar > .nav-group:not(.nav-admin) + .sidebar-footer {
+    margin-top: 0;
   }
 
   .sidebar-footer {
@@ -1519,6 +1662,11 @@ h2 {
 
   .user-edit-card {
     grid-template-columns: 1fr;
+  }
+
+  .user-edit-card .user-meta {
+    grid-auto-flow: row;
+    gap: 6px;
   }
 
   .sku-detail {

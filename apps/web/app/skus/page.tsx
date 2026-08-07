@@ -4,7 +4,8 @@ import {
   loadFiscalSkuMarginSnapshot,
   type FiscalSkuMarginRow
 } from "../../lib/fiscal-snapshots";
-import { requireCurrentUser } from "../../lib/auth/session";
+import { requireTabAccess } from "../../lib/auth/access";
+import { NoAccess } from "../components/no-access";
 import { formatBrDate, getSaoPauloMonthRange } from "../../lib/date";
 import { SkuTable, type SkuTableRow } from "./sku-table";
 import { AppShell } from "../components/app-shell";
@@ -194,12 +195,15 @@ export default async function SkusPage({
 }: {
   searchParams?: Promise<{ sku?: string; source?: string }>;
 }) {
-  await requireCurrentUser();
-  const alertCount = await loadActionableAlertCount();
   const params = await searchParams;
   const selectedSku = params?.sku;
   const source = asSource(params?.source);
-  const data = await loadSkus(selectedSku, source);
+  const [{ allowed }, alertCount, data] = await Promise.all([
+    requireTabAccess("skus"),
+    loadActionableAlertCount(),
+    loadSkus(selectedSku, source)
+  ]);
+  if (!allowed) return <NoAccess tab="skus" />;
   const selected = data.selected ?? data.rows[0] ?? null;
   const selectedFiscal = selected ? fiscalFor(data.fiscalMargins, selected) : null;
   const fiscalPeriodLabel = `${date(data.fiscalPeriod.start)} – ${date(data.fiscalPeriod.end)}`;

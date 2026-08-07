@@ -2,6 +2,7 @@
 // mesmos parâmetros da URL — a planilha é exatamente o que está na tela.
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "../../../../lib/auth/session";
+import { canAccess } from "../../../../lib/auth/access";
 import { buildXlsx, fileStamp, xlsxResponse, type XlsxColumn } from "../../../../lib/xlsx";
 import { loadMlData, trendText } from "../../data";
 import {
@@ -42,6 +43,7 @@ const COLUMNS: XlsxColumn[] = [
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return new Response("Não autorizado", { status: 401 });
+  if (!canAccess(user, "mercado-livre")) return new Response("Sem acesso a esta aba", { status: 403 });
 
   const sp = req.nextUrl.searchParams;
   const alvo = clampInt(sp.get("alvo"), 30, 7, 90);

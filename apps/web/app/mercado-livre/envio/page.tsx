@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { requireCurrentUser } from "../../../lib/auth/session";
+import { requireTabAccess } from "../../../lib/auth/access";
+import { NoAccess } from "../../components/no-access";
 import { AppShell } from "../../components/app-shell";
 import { loadActionableAlertCount } from "../../../lib/alert-count";
 import { SortableTable, type SortableCell } from "../../components/sortable-table";
@@ -27,15 +28,18 @@ export default async function EnvioFullPage({
 }: {
   searchParams?: Promise<{ alvo?: string; coleta?: string; curva?: string; limite?: string }>;
 }) {
-  await requireCurrentUser();
-  const alertCount = await loadActionableAlertCount();
   const params = await searchParams;
   const alvo = clampInt(params?.alvo, 30, 7, 90);
   const coleta = clampInt(params?.coleta, 5, 0, 30);
   const limite = clampInt(params?.limite, SUGESTOES_POR_LOJA, 1, 100);
   const curvaFiltro = parseCurva(params?.curva);
 
-  const data = await loadMlData();
+  const [{ allowed }, alertCount, data] = await Promise.all([
+    requireTabAccess("mercado-livre"),
+    loadActionableAlertCount(),
+    loadMlData()
+  ]);
+  if (!allowed) return <NoAccess tab="mercado-livre" />;
   if (!data) {
     return (
       <AppShell alertCount={alertCount}>

@@ -1,6 +1,7 @@
 // Camada de dados compartilhada das abas do canal Mercado Livre
 // (Visão geral e Sugestão de Envio Full).
-import { createSupabaseUserClient } from "../../lib/supabase/user";
+import { unstable_cache } from "next/cache";
+import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 
 export const PAGE_SIZE = 1000; // PostgREST corta em 1000 linhas — sempre paginar
 
@@ -180,8 +181,17 @@ export type MlData = {
   lastRun: SyncRun | null;
 };
 
-export async function loadMlData(): Promise<MlData | null> {
-  const supabase = await createSupabaseUserClient();
+// Cache de 5min compartilhado: o load pagina as tabelas inteiras do ML
+// (items + 120d de vendas) e as duas abas do canal refaziam TUDO a cada
+// navegação. Dado global, muda no ritmo do sync horário. unstable_cache não
+// pode ler cookies(), por isso o client é o admin. Se o payload passar de
+// ~2MB o Next não armazena (fail-open: comportamento igual ao de antes).
+export const loadMlData = unstable_cache(loadMlDataUncached, ["ml-data"], {
+  revalidate: 300
+});
+
+async function loadMlDataUncached(): Promise<MlData | null> {
+  const supabase = createSupabaseAdminClient();
 
   const items = await fetchAllPages<MlItem>((from, to) =>
     supabase

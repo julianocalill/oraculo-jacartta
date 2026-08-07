@@ -1,5 +1,6 @@
 // Camada de dados das abas de estoque/reposição do canal Shopee.
-import { createSupabaseUserClient } from "../../lib/supabase/user";
+import { unstable_cache } from "next/cache";
+import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 
 export const PAGE_SIZE = 1000; // PostgREST corta em 1000 linhas — sempre paginar
 
@@ -181,8 +182,16 @@ export type ShopeeData = {
   costs: CostRow[];
 };
 
-export async function loadShopeeData(): Promise<ShopeeData | null> {
-  const supabase = await createSupabaseUserClient();
+// Cache de 5min compartilhado — mesmo racional do loadMlData: paginação de
+// tabelas inteiras refeita a cada troca de aba, dado global, sync periódico.
+// Client admin porque unstable_cache não pode ler cookies(). Payload >~2MB
+// não é armazenado pelo Next (fail-open).
+export const loadShopeeData = unstable_cache(loadShopeeDataUncached, ["shopee-data"], {
+  revalidate: 300
+});
+
+async function loadShopeeDataUncached(): Promise<ShopeeData | null> {
+  const supabase = createSupabaseAdminClient();
 
   const products = await fetchAllPages<ShopeeProduct>((from, to) =>
     supabase

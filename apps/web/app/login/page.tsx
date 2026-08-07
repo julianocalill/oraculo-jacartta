@@ -6,6 +6,8 @@ import {
   getCurrentUser,
   setAuthCookies
 } from "../../lib/auth/session";
+import { firstAllowedHref, isAllowedPath } from "../../lib/auth/access";
+import { ALL_TAB_KEYS } from "../../lib/auth/tabs";
 
 import { BrandMark } from "../components/brand-mark";
 import { PasswordField } from "./password-field";
@@ -39,7 +41,12 @@ async function login(formData: FormData) {
   }
 
   await setAuthCookies(data.session.access_token, data.session.refresh_token);
-  redirect(next.startsWith("/") ? next : "/");
+
+  // Manda para `next` só se a aba estiver liberada; senão, primeira aba do usuário.
+  const target = next.startsWith("/") ? next : "/";
+  const targetPath = target.split("?")[0] ?? "/";
+  if (isAllowedPath(data.user, targetPath)) redirect(target);
+  redirect(firstAllowedHref(data.user) ?? "/");
 }
 
 async function createFirstAdmin(formData: FormData) {
@@ -59,7 +66,7 @@ async function createFirstAdmin(formData: FormData) {
     password,
     email_confirm: true,
     user_metadata: { full_name: fullName },
-    app_metadata: { role: "admin" }
+    app_metadata: { tabs: ALL_TAB_KEYS }
   });
 
   if (error) {

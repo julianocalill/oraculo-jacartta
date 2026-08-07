@@ -10,7 +10,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
-import { requireCurrentUser } from "../../lib/auth/session";
+import { assertTabAccess, requireTabAccess } from "../../lib/auth/access";
+import { NoAccess } from "../components/no-access";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 import { AppShell } from "../components/app-shell";
 import { MetricCard, type MetricDelta } from "../components/metric-card";
@@ -95,7 +96,7 @@ type Batch = {
 
 async function uploadReturns(formData: FormData) {
   "use server";
-  const user = await requireCurrentUser();
+  const user = await assertTabAccess("devolucoes");
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return;
   await importTikTokReturns(file, user.id ?? null);
@@ -249,14 +250,17 @@ export default async function DevolucoesPage({
 }: {
   searchParams: Promise<{ mes?: string; canal?: string }>;
 }) {
-  await requireCurrentUser();
   const params = await searchParams;
-  const alertCount = await loadActionableAlertCount();
   const win = monthWindow(params.mes);
   const activeTab = params.canal ?? "todos";
   const channel = activeTab !== "todos" ? activeTab : null;
 
-  const data = await loadData(win, channel);
+  const [{ allowed }, alertCount, data] = await Promise.all([
+    requireTabAccess("devolucoes"),
+    loadActionableAlertCount(),
+    loadData(win, channel)
+  ]);
+  if (!allowed) return <NoAccess tab="devolucoes" />;
 
   const steps = buildSteps(data.funnel);
   const decision = buildDecision(data.funnel);

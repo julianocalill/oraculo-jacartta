@@ -71,11 +71,22 @@ canais cruzado com a NF fiscal** e margem fiscal com comissão de marketplace.
 - Business-data reads run under RLS via an authenticated client (anon key + user
   JWT); service-role is reserved for writes, `/usuarios` and `/status`. Migrations
   `20260710092000` and `20260710094000`.
+- **Acesso por aba, sem perfis nomeados**: cada usuário carrega em
+  `app_metadata.tabs` a lista de abas que pode abrir (caixinhas em `/usuarios`).
+  O registro das abas fica em `lib/auth/tabs.ts`; as checagens em
+  `lib/auth/access.ts` (`requireTabAccess` nas páginas, `assertTabAccess` nas
+  Server Actions, `canAccess` nos route handlers de export → 403). Sub-rotas e
+  exports herdam a aba-mãe. Aba não liberada some da sidebar.
+- Administradores são fixos por email (`juliano@oliverhome.com.br`,
+  `oliveiros_cardoso@hotmail.com`, sobrescrevíveis por `ORACULO_ADMIN_EMAILS`):
+  acesso total e únicos a editar as caixinhas. Em dev, `ORACULO_DEV_TABS`
+  simula um usuário restrito.
 - Sync health page at `/status`.
 
 ### Navigation
-- Persistent sidebar (`AppShell` + `SidebarNav`) on every authenticated page
-  (13 links: 11 under Principal + 2 under Admin). Active link auto-highlighted
+- Persistent sidebar (`AppShell` + `SidebarNav`) on every authenticated page,
+  filtrada pelas abas liberadas do usuário (15 no total: 13 em Principal + 2 em
+  Admin, definidas em `lib/auth/tabs.ts`). Active link auto-highlighted
   via `usePathname`.
 - Exact, global alert badge (`loadActionableAlertCount()`) — same number on every
   page, not just the dashboard's truncated fetch.

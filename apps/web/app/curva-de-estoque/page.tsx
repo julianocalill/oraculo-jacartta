@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { createSupabaseUserClient } from "../../lib/supabase/user";
-import { requireCurrentUser } from "../../lib/auth/session";
+import { unstable_cache } from "next/cache";
+import { createSupabaseAdminClient } from "../../lib/supabase/admin";
+import { requireTabAccess } from "../../lib/auth/access";
+import { NoAccess } from "../components/no-access";
 import { AppShell } from "../components/app-shell";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 import { SortableTable } from "../components/sortable-table";
@@ -74,8 +76,14 @@ function coverageLabel(value: number | null) {
   return `${decimal(value, 1)} meses`;
 }
 
-async function loadStockCurve() {
-  const supabase = await createSupabaseUserClient();
+// Cache de 5min compartilhado entre usuários — mesmo racional da curva de
+// venda: RPC global, resultado igual para todos, muda no ritmo dos syncs.
+const loadStockCurve = unstable_cache(loadStockCurveUncached, ["stock-curve"], {
+  revalidate: 300
+});
+
+async function loadStockCurveUncached() {
+  const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase.rpc("oraculo_stock_coverage_curve");
   if (error) throw error;
   const items = (data ?? []) as StockCurveItem[];
@@ -107,11 +115,14 @@ export default async function CurvaDeEstoquePage({
 }: {
   searchParams?: Promise<{ curva?: string }>;
 }) {
-  await requireCurrentUser();
-  const alertCount = await loadActionableAlertCount();
   const params = await searchParams;
   const selectedCurve = asCurveFilter(params?.curva);
-  const data = await loadStockCurve();
+  const [{ allowed }, alertCount, data] = await Promise.all([
+    requireTabAccess("curva-de-estoque"),
+    loadActionableAlertCount(),
+    loadStockCurve()
+  ]);
+  if (!allowed) return <NoAccess tab="curva-de-estoque" />;
   const visibleItems = selectedCurve === "all"
     ? data.items
     : data.items.filter((item) => item.curve === selectedCurve);

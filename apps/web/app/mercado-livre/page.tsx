@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
-import { requireCurrentUser } from "../../lib/auth/session";
+import { assertTabAccess, requireTabAccess } from "../../lib/auth/access";
+import { NoAccess } from "../components/no-access";
 import { AppShell } from "../components/app-shell";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 import { SortableTable, type SortableCell } from "../components/sortable-table";
@@ -35,7 +36,7 @@ const PARADO_MAX_ROWS = 150;
 // ---- Server action: estoque em trânsito (escrita via service-role) ----
 async function saveTransit(formData: FormData) {
   "use server";
-  await requireCurrentUser();
+  await assertTabAccess("mercado-livre");
   const admin = createSupabaseAdminClient();
   const { data: accounts } = await admin
     .from("mercadolivre_accounts")
@@ -112,9 +113,12 @@ function marginCell(price: number, cost: number | undefined): SortableCell {
 }
 
 export default async function MercadoLivrePage() {
-  await requireCurrentUser();
-  const alertCount = await loadActionableAlertCount();
-  const data = await loadMlData();
+  const [{ allowed }, alertCount, data] = await Promise.all([
+    requireTabAccess("mercado-livre"),
+    loadActionableAlertCount(),
+    loadMlData()
+  ]);
+  if (!allowed) return <NoAccess tab="mercado-livre" />;
 
   if (!data) {
     return (

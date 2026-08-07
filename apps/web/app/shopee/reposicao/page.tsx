@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
-import { requireCurrentUser } from "../../../lib/auth/session";
+import { assertTabAccess, requireTabAccess } from "../../../lib/auth/access";
+import { NoAccess } from "../../components/no-access";
 import { AppShell } from "../../components/app-shell";
 import { loadActionableAlertCount } from "../../../lib/alert-count";
 import { SortableTable, type SortableCell } from "../../components/sortable-table";
@@ -22,7 +23,7 @@ export const dynamic = "force-dynamic";
 // livro de custos passa a ser mantido aqui, com prioridade sobre o Olist).
 async function saveCustos(formData: FormData) {
   "use server";
-  await requireCurrentUser();
+  await assertTabAccess("shopee");
   const raw = String(formData.get("linhas") ?? "");
   const rows = raw
     .split("\n")
@@ -72,15 +73,18 @@ export default async function ShopeeReposicaoPage({
 }: {
   searchParams?: Promise<{ alvo?: string; prazo?: string; loja?: string; limite?: string }>;
 }) {
-  await requireCurrentUser();
-  const alertCount = await loadActionableAlertCount();
   const params = await searchParams;
   const alvo = clampInt(params?.alvo, 30, 7, 90);
   const prazo = clampInt(params?.prazo, 7, 0, 30);
   const limite = clampInt(params?.limite, SUGESTOES_POR_LOJA, 1, 100);
   const lojaFiltro = Number(params?.loja) || null;
 
-  const data = await loadShopeeData();
+  const [{ allowed }, alertCount, data] = await Promise.all([
+    requireTabAccess("shopee"),
+    loadActionableAlertCount(),
+    loadShopeeData()
+  ]);
+  if (!allowed) return <NoAccess tab="shopee" />;
   if (!data) {
     return (
       <AppShell alertCount={alertCount}>

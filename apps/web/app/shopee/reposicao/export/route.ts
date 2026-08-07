@@ -3,6 +3,7 @@
 // Uma aba por loja + uma aba "Todas" quando o filtro está em "Todas as lojas".
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "../../../../lib/auth/session";
+import { canAccess } from "../../../../lib/auth/access";
 import { buildXlsx, fileStamp, xlsxResponse, type XlsxColumn } from "../../../../lib/xlsx";
 import { loadShopeeData, trendText } from "../../data";
 import { SUGESTOES_POR_LOJA, buildReposicaoSuggestions, clampInt, situacaoMeta } from "../build-suggestions";
@@ -39,6 +40,7 @@ const COLUMNS: XlsxColumn[] = [
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return new Response("Não autorizado", { status: 401 });
+  if (!canAccess(user, "shopee")) return new Response("Sem acesso a esta aba", { status: 403 });
 
   const sp = req.nextUrl.searchParams;
   const alvo = clampInt(sp.get("alvo"), 30, 7, 90);

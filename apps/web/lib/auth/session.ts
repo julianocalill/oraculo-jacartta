@@ -3,11 +3,22 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { cache } from "react";
 
 const ACCESS_COOKIE = "oraculo_access_token";
 const REFRESH_COOKIE = "oraculo_refresh_token";
 
+// O parse do .env da raiz é I/O síncrono no event loop; sem memoização ele
+// rodava a cada readEnvValue de var ausente, várias vezes por request.
+let fallbackEnvCache: Record<string, string> | null = null;
+
 function readFallbackEnv() {
+  if (fallbackEnvCache) return fallbackEnvCache;
+  fallbackEnvCache = loadFallbackEnv();
+  return fallbackEnvCache;
+}
+
+function loadFallbackEnv() {
   try {
     const candidate = join(process.cwd(), "..", "..", ".env");
     if (!existsSync(candidate)) return {};
@@ -29,16 +40,20 @@ function readFallbackEnv() {
   }
 }
 
+// Lê uma variável de ambiente caindo no .env da raiz do monorepo quando
+// process.env não está populado (dev fora do next dev, scripts, etc).
+export function readEnvValue(name: string) {
+  return process.env[name] ?? readFallbackEnv()[name];
+}
+
 export function getSupabaseUrl() {
-  const fallbackEnv = readFallbackEnv();
-  const url = process.env.SUPABASE_URL ?? fallbackEnv.SUPABASE_URL;
+  const url = readEnvValue("SUPABASE_URL");
   if (!url) throw new Error("SUPABASE_URL is not set.");
   return url;
 }
 
 export function getSupabaseAnonKey() {
-  const fallbackEnv = readFallbackEnv();
-  const key = process.env.SUPABASE_ANON_KEY ?? fallbackEnv.SUPABASE_ANON_KEY;
+  const key = readEnvValue("SUPABASE_ANON_KEY");
   if (!key) throw new Error("SUPABASE_ANON_KEY is not set.");
   return key;
 }
@@ -79,16 +94,22 @@ export async function clearAuthCookies() {
   store.delete(REFRESH_COOKIE);
 }
 
-export async function getCurrentUser() {
+// React.cache: deduplica por request — a página (via requireTabAccess) e o
+// AppShell chamam getCurrentUser de forma independente, e sem isto cada
+// chamada custava 2 round-trips à API de auth do Supabase.
+export const getCurrentUser = cache(async () => {
   const store = await cookies();
   const accessToken = store.get(ACCESS_COOKIE)?.value;
   const refreshToken = store.get(REFRESH_COOKIE)?.value;
 
+  // Em dev não há login: o mock abaixo é tratado como administrador por
+  // `isMaster` (lib/auth/access.ts). Para testar o bloqueio por aba localmente,
+  // defina ORACULO_DEV_TABS no .env da raiz.
   if (process.env.NODE_ENV !== "production" && (!accessToken || !refreshToken)) {
     return {
       id: "local-dev",
       email: "localhost@oraculo.local",
-      app_metadata: { role: "admin" },
+      app_metadata: {},
       user_metadata: { full_name: "Localhost" }
     };
   }
@@ -107,16 +128,12 @@ export async function getCurrentUser() {
   if (error) return null;
 
   return data.user;
-}
+});
 
 export async function requireCurrentUser() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   return user;
-}
-
-export function isAdmin(user: { app_metadata?: Record<string, unknown> } | null) {
-  return user?.app_metadata?.role === "admin";
 }
 
 export { ACCESS_COOKIE, REFRESH_COOKIE };

@@ -1,10 +1,10 @@
-import { AppShell } from "./components/app-shell";
+import { AppShellSkeleton } from "./components/app-shell";
 
 // Skeleton global: aparece instantaneamente ao navegar entre páginas
 // (todas são force-dynamic), mantendo a sidebar sólida e o conteúdo em shimmer.
 export default function Loading() {
   return (
-    <AppShell>
+    <AppShellSkeleton>
       <header className="topbar">
         <div>
           <div className="skeleton" style={{ width: 260, height: 32 }} />
@@ -26,6 +26,6 @@ export default function Loading() {
         <div className="skeleton" style={{ width: 220, height: 18, marginBottom: 14 }} />
         <div className="skeleton" style={{ width: "100%", height: 180 }} />
       </section>
-    </AppShell>
+    </AppShellSkeleton>
   );
 }

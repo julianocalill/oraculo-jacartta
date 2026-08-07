@@ -2,68 +2,54 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const MAIN_LINKS = [
-  { href: "/", label: "Analytics" },
-  { href: "/pedidos", label: "Pedidos" },
-  { href: "/mais-vendidos", label: "Mais Vendidos" },
-  { href: "/skus", label: "SKUs" },
-  { href: "/curva-de-venda", label: "Curva de Venda" },
-  { href: "/curva-de-estoque", label: "Curva de Estoque" },
-  { href: "/shopee", label: "Shopee" },
-  { href: "/mercado-livre", label: "Mercado Livre" },
-  { href: "/devolucoes", label: "Devoluções" },
-  { href: "/importacoes", label: "Importações" },
-  { href: "/calculadora", label: "Calculadora" },
-  { href: "/alertas", label: "Alertas" },
-  { href: "/parametros", label: "Parâmetros" }
-];
-
-const ADMIN_LINKS = [
-  { href: "/usuarios", label: "Usuários" },
-  { href: "/status", label: "Status sync" }
-];
+import { TABS, type TabKey } from "../../lib/auth/tabs";
 
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function SidebarNav({ alertCount }: { alertCount?: number }) {
+export function SidebarNav({ alertCount, tabs }: { alertCount?: number; tabs: TabKey[] }) {
   const pathname = usePathname() ?? "/";
+  const granted = new Set<string>(tabs);
+
+  const mainLinks = TABS.filter((tab) => tab.group === "main" && granted.has(tab.key));
+  const adminLinks = TABS.filter((tab) => tab.group === "admin" && granted.has(tab.key));
 
   return (
     <>
-      <nav className="nav-group" aria-label="Principal">
-        <span>Principal</span>
-        {MAIN_LINKS.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={isActive(pathname, link.href) ? "nav-active" : undefined}
-            aria-current={isActive(pathname, link.href) ? "page" : undefined}
-          >
-            {link.label}
-            {link.href === "/alertas" && alertCount != null && alertCount > 0 ? (
-              <b>{alertCount}</b>
-            ) : null}
-          </Link>
-        ))}
-      </nav>
+      {mainLinks.length > 0 ? (
+        <nav className="nav-group" aria-label="Principal">
+          <span>Principal</span>
+          {mainLinks.map((tab) => (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className={isActive(pathname, tab.href) ? "nav-active" : undefined}
+              aria-current={isActive(pathname, tab.href) ? "page" : undefined}
+            >
+              {tab.label}
+              {tab.href === "/alertas" && alertCount != null && alertCount > 0 ? <b>{alertCount}</b> : null}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
 
-      <nav className="nav-group nav-admin" aria-label="Admin">
-        <span>Admin</span>
-        {ADMIN_LINKS.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={isActive(pathname, link.href) ? "nav-active" : undefined}
-            aria-current={isActive(pathname, link.href) ? "page" : undefined}
-          >
-            {link.label}
-          </Link>
-        ))}
-      </nav>
+      {adminLinks.length > 0 ? (
+        <nav className="nav-group nav-admin" aria-label="Admin">
+          <span>Admin</span>
+          {adminLinks.map((tab) => (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className={isActive(pathname, tab.href) ? "nav-active" : undefined}
+              aria-current={isActive(pathname, tab.href) ? "page" : undefined}
+            >
+              {tab.label}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
     </>
   );
 }

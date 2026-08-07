@@ -2,6 +2,110 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-07] — Rodada de peso: gru1, cache, paralelização e visual
+
+Diagnóstico completo em `reports/analise-projeto-2026-08-07.md`. Três causas
+do app "pesado", três frentes:
+
+- **Functions da Vercel em gru1** (`vercel.json`): rodavam em iad1 (Washington)
+  com o banco em sa-east-1 — ~140ms por ida ao banco, várias em série por
+  página. Agora ~2ms.
+- **Índice parcial fiscal** (`20260807150000`): as views fiscais da home
+  faziam seq scan de olist_invoices inteira (2,4-8s por chamada, a query dos
+  incidentes de 05-06/08). Com o índice: 60ms.
+- **Sessão deduplicada**: `getCurrentUser` em `React.cache` — página e
+  AppShell compartilham a validação (antes: 4 round-trips de auth por
+  navegação). Leitura do `.env` fallback memoizada (era I/O síncrono
+  repetido no request path).
+- **Waterfall paralelizado em 15 páginas**: `requireTabAccess`, contador de
+  alertas e load de dados agora vão em `Promise.all` (eram 3 esperas em fila).
+- **Cache de leitura** (`unstable_cache`): badge de alertas (60s), curvas de
+  venda/estoque (5min), `/status` (60s) e `loadMlData`/`loadShopeeData` (5min
+  — troca de aba ML/Shopee não refaz mais a paginação da tabela inteira).
+  Fetch interno passa ao admin client (cache não lê cookies; dado é global).
+- **Visual**: metric card 152→92px sem o padding morto do sparkline e sem o
+  glow radial; `--faint` de 3.3:1 para contraste legível; tabelas com zebra,
+  hover e th sticky; `.muted` definida (7 blocos de /devolucoes renderizavam
+  em 16px branco); `accent-purple`→`accent-violet` em /mais-vendidos.
+
+## [2026-08-04] — Acesso por aba: uma caixinha por aba, por usuário
+
+Antes disto o Oráculo só distinguia **logado** e **não logado**: as 18 páginas
+chamavam `requireCurrentUser()` e liberavam tudo. O campo `app_metadata.role`
+existia mas era lido num único lugar (`/usuarios`), e mesmo lá o gate era só na
+renderização — um POST direto nas Server Actions `createUser`/`updateUser`
+passava. `/status`, que expõe tokens e saúde das integrações, aparecia no grupo
+Admin da sidebar sem checar nada além da sessão.
+
+No lugar dos perfis nomeados entrou uma matriz explícita: **uma caixinha por
+aba, por usuário**, marcada em `/usuarios` e gravada em `app_metadata.tabs`
+(sem migration — mesmo padrão que o `role` usava; o RLS `authenticated read`
+de `20260710092000` segue valendo, o controle aqui é de navegação).
+
+- **`lib/auth/tabs.ts`** é a fonte única das 15 abas (chave, label, href, grupo
+  e os `paths` que cada uma governa). Substitui os arrays `MAIN_LINKS`/
+  `ADMIN_LINKS` que viviam soltos no `sidebar-nav.tsx`. Sub-rotas e exports
+  herdam a aba-mãe: `/shopee` cobre `/shopee/estoque/export`.
+- **`lib/auth/access.ts`** concentra as checagens: `requireTabAccess` nas
+  páginas (renderiza `<NoAccess />`, sem redirect para não dar loop na home),
+  `assertTabAccess`/`assertMaster` nas Server Actions (lança — fecha o furo do
+  POST direto) e `canAccess` nos 7 route handlers de export (403).
+- **Administradores são fixos por email** (`juliano@oliverhome.com.br` e
+  `oliveiros_cardoso@hotmail.com` — a conta que o Oliveiros usa de fato;
+  ajustáveis por `ORACULO_ADMIN_EMAILS`): acesso total e únicos que editam as
+  caixinhas.
+  A linha deles em `/usuarios` mostra "Administrador — acesso total" no lugar
+  das caixas, para ninguém se trancar do lado de fora.
+- **A sidebar lista só o que a pessoa pode abrir.** `AppShell` virou async e
+  resolve as abas uma vez; o skeleton do `loading.tsx` passou a usar
+  `AppShellSkeleton` com o mesmo formato de árvore (um `<nav>` de forma
+  diferente deixava nó órfão na sidebar depois do swap do Suspense). A
+  `.sidebar` virou flex para o rodapé não esticar quando sobram poucos links.
+- **`/` redireciona** para a primeira aba liberada quando Analytics não está
+  marcada, e o `next=` do login só é honrado se a aba for permitida.
+- **`scripts/backfill-tab-access.js`** (rodar uma vez, aceita `--dry-run`) dá as
+  13 abas de Principal a quem ainda não tem a chave — exatamente o que essas
+  pessoas já enxergavam. Sem ele, todo mundo ficaria trancado no primeiro deploy.
+
+## [2026-08-04] — Cobertura NF→pedido travada em 6%: três causas empilhadas
+
+Diagnóstico a partir de "por que minha cobertura está em 6%?". O card lê
+`order_link_invoice_pct` — % de NFs válidas com pedido vinculado. Agosto marcava
+**708 de 11.687 NFs (6,06%)**. O dado existia: numa amostra de 300 links
+`unmatched` de agosto, **251 (84%) já tinham o pedido importado**; em julho,
+300/300. A cobertura de *itens* da NF seguia sadia (99,98%) — o gargalo era só o
+vínculo. Três causas independentes, todas necessárias para o número voltar:
+
+- **O linker era insert-only.** `refresh_oraculo_fiscal_invoice_order_links`
+  gravava `unmatched` quando o pedido ainda não existia e nunca reavaliava
+  (`on conflict do nothing`). Agora os candidatos incluem os links com
+  `order_id null` e o upsert promove unmatched → matched, com guard no `where`
+  do `DO UPDATE` para nunca sobrescrever nem desfazer um vínculo bom
+  (`20260804180000`). Dispensa o `DELETE` que o runbook de 17/07 exigia.
+- **O sync de pedidos rodava a 1/8 da vazão necessária.** O cron
+  `oraculo-olist-orders-hourly` usava `maxPages:1` = 100 pedidos/hora (2.400/dia)
+  contra ~7.000-9.000/dia reportados pela Olist — o de NFs faz 800/hora. Por isso
+  a NF chegava antes do pedido. Vai a `maxPages:6` (600/h, ~2x o volume; o loop
+  para sozinho em `completed`) e `lookbackDays` 1 → 3, porque com janela de 1 dia
+  um pedido perdido nunca mais era revisitado (`20260804180100`).
+- **Regressão do mesmo dia.** `20260804140000_marketplace_fee_in_fiscal_margin`
+  recriou `oraculo_capture_fiscal_margin_snapshots()` para levar comissão ao
+  payload e copiou a função **sem o bloco final** que `20260713120000` havia
+  acrescentado — o que atualiza os vínculos e grava o snapshot `sku_coverage`.
+  O snapshot vinha sendo capturado 24x/dia e **parou em 04/08 12:15**, enquanto
+  `fiscal_margin_summary` seguiu normal. Sem isso, nenhuma correção de vínculo
+  apareceria no card. Restaurado em `20260804180200`.
+
+Aplicação: `docs/runbook-fix-fiscal-coverage-2026-08-04.sql` (as três migrations
++ reconciliação de junho a agosto + regravação do snapshot + conferência).
+
+Pendência conhecida: `supabase/functions/olist-sync-orders/index.ts` está
+**atrás do que roda em produção** — a versão deployada tem resume por
+`next_offset` (tabela `olist_order_sync_runs`), a do repo pagina sempre do
+offset 0. O bundle em produção é minificado; o fonte precisa ser reconstruído a
+partir do que está publicado antes do próximo deploy dessa função, senão um
+`supabase functions deploy` reverte o resume.
+
 ## [2026-08-04] — Devoluções: funil horizontal, uma aba por canal e analytics
 
 - **Uma aba por canal** (`DevolucoesTabs`), com contador de volume. Só aparecem

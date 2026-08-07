@@ -1,5 +1,6 @@
 import { createSupabaseUserClient } from "../../../lib/supabase/user";
 import { getCurrentUser } from "../../../lib/auth/session";
+import { canAccess } from "../../../lib/auth/access";
 import { formatBrDate } from "../../../lib/date";
 
 type Curve = "A" | "B" | "C";
@@ -40,6 +41,7 @@ async function loadItems(curveFilter: CurveFilter) {
 export async function GET(request: Request) {
   const user = await getCurrentUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
+  if (!canAccess(user, "curva-de-venda")) return new Response("Sem acesso a esta aba", { status: 403 });
 
   const url = new URL(request.url);
   const curveFilter = asCurveFilter(url.searchParams.get("curva"));

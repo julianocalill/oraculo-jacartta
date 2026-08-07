@@ -1,5 +1,6 @@
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
-import { requireCurrentUser } from "../../lib/auth/session";
+import { requireTabAccess } from "../../lib/auth/access";
+import { NoAccess } from "../components/no-access";
 import { AppShell } from "../components/app-shell";
 import { ShopeeTabs } from "./tabs";
 import { loadActionableAlertCount } from "../../lib/alert-count";
@@ -243,14 +244,17 @@ export default async function ShopeeTakeRatePage({
 }: {
   searchParams?: Promise<{ inicio?: string; fim?: string; loja?: string }>;
 }) {
-  await requireCurrentUser();
-  const alertCount = await loadActionableAlertCount();
   const params = await searchParams;
   const start = asDate(params?.inicio, monthStartIso());
   const end = asDate(params?.fim, todayIso());
   const shopFilter = params?.loja && /^\d+$/.test(params.loja) ? params.loja : "all";
 
-  const data = await loadTakeRate(start, end, shopFilter);
+  const [{ allowed }, alertCount, data] = await Promise.all([
+    requireTabAccess("shopee"),
+    loadActionableAlertCount(),
+    loadTakeRate(start, end, shopFilter)
+  ]);
+  if (!allowed) return <NoAccess tab="shopee" />;
   const takeRate = data.totals.gross > 0 ? (100 * data.totals.fees) / data.totals.gross : null;
   const profitWithCost = data.skusWithCost.reduce((sum, sku) => sum + n(sku.netProfit), 0);
   const costWithCost = data.skusWithCost.reduce((sum, sku) => sum + n(sku.costTotal), 0);

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
-import { requireCurrentUser } from "../../lib/auth/session";
+import { requireTabAccess } from "../../lib/auth/access";
+import { NoAccess } from "../components/no-access";
 import { formatBrDate } from "../../lib/date";
 import { AppShell } from "../components/app-shell";
 import { loadActionableAlertCount } from "../../lib/alert-count";
@@ -134,12 +135,15 @@ export default async function MaisVendidosPage({
 }: {
   searchParams?: Promise<{ periodo?: string }>;
 }) {
-  await requireCurrentUser();
-  const alertCount = await loadActionableAlertCount();
   const params = await searchParams;
   const periodo = asPeriodo(params?.periodo);
   const config = PERIODOS.find((option) => option.key === periodo) ?? PERIODOS[0];
-  const data = await loadTopSellers(config.days);
+  const [{ allowed }, alertCount, data] = await Promise.all([
+    requireTabAccess("mais-vendidos"),
+    loadActionableAlertCount(),
+    loadTopSellers(config.days)
+  ]);
+  if (!allowed) return <NoAccess tab="mais-vendidos" />;
 
   if (!data) {
     return (
@@ -220,7 +224,7 @@ export default async function MaisVendidosPage({
           <strong>{count(data.coverage.units)}</strong>
           <small>Unidades nos pedidos com itens importados</small>
         </article>
-        <article className="metric accent-purple">
+        <article className="metric accent-violet">
           <span className="label">Cobertura de itens</span>
           <strong>{pct(data.itemCoverageRate)}</strong>
           <small>

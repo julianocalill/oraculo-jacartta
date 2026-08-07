@@ -1,6 +1,7 @@
 // Export .xlsx da aba Visão geral do Mercado Livre. Cada relatório da tela
 // vira uma aba: Ruptura · Ruptura variações · Cobertura Full · Estoque parado.
 import { getCurrentUser } from "../../../lib/auth/session";
+import { canAccess } from "../../../lib/auth/access";
 import { buildXlsxWorkbook, fileStamp, xlsxResponse, type XlsxColumn } from "../../../lib/xlsx";
 import {
   buildCostIndex,
@@ -83,6 +84,7 @@ const PARADO: XlsxColumn[] = [
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return new Response("Não autorizado", { status: 401 });
+  if (!canAccess(user, "mercado-livre")) return new Response("Sem acesso a esta aba", { status: 403 });
 
   const data = await loadMlData();
   if (!data) return new Response("Sem dados sincronizados", { status: 404 });

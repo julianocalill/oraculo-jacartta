@@ -1,6 +1,7 @@
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
-import { requireCurrentUser } from "../../lib/auth/session";
+import { requireTabAccess } from "../../lib/auth/access";
+import { NoAccess } from "../components/no-access";
 import { AppShell } from "../components/app-shell";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 
@@ -296,10 +297,15 @@ export default async function PedidosPage({
 }: {
   searchParams?: Promise<PedidosSearchParams>;
 }) {
-  await requireCurrentUser();
-  const alertCount = await loadActionableAlertCount();
   const filters = getFilters(await searchParams);
-  const data = await loadPedidos(filters);
+  // Permissão, badge e dados não dependem entre si — em série cada um pagava
+  // um round-trip inteiro ao Supabase antes do próximo começar.
+  const [{ allowed }, alertCount, data] = await Promise.all([
+    requireTabAccess("pedidos"),
+    loadActionableAlertCount(),
+    loadPedidos(filters)
+  ]);
+  if (!allowed) return <NoAccess tab="pedidos" />;
   const chart = data.daily.slice(-20);
   const max = Math.max(...chart.map((row) => n(row.orders_count)), 1);
 

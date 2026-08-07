@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { createSupabaseUserClient } from "../../lib/supabase/user";
-import { requireCurrentUser } from "../../lib/auth/session";
+import { unstable_cache } from "next/cache";
+import { createSupabaseAdminClient } from "../../lib/supabase/admin";
+import { requireTabAccess } from "../../lib/auth/access";
+import { NoAccess } from "../components/no-access";
 import { formatBrDate } from "../../lib/date";
 import { AppShell } from "../components/app-shell";
 import { loadActionableAlertCount } from "../../lib/alert-count";
@@ -64,8 +66,15 @@ function asCurveFilter(value: string | undefined): CurveFilter {
   return "all";
 }
 
-async function loadSalesCurve() {
-  const supabase = await createSupabaseUserClient();
+// Cache de 5min compartilhado entre usuários: a curva vem de RPC global (mesmo
+// resultado para todo mundo) e muda no ritmo dos syncs, não por navegação.
+// unstable_cache não pode ler cookies(), por isso o client aqui é o admin.
+const loadSalesCurve = unstable_cache(loadSalesCurveUncached, ["sales-curve"], {
+  revalidate: 300
+});
+
+async function loadSalesCurveUncached() {
+  const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase.rpc("oraculo_sales_curve");
   if (error) throw error;
   const items = (data ?? []) as CurveItem[];
@@ -96,11 +105,14 @@ export default async function CurvaDeVendaPage({
 }: {
   searchParams?: Promise<{ curva?: string }>;
 }) {
-  await requireCurrentUser();
-  const alertCount = await loadActionableAlertCount();
   const params = await searchParams;
   const selectedCurve = asCurveFilter(params?.curva);
-  const data = await loadSalesCurve();
+  const [{ allowed }, alertCount, data] = await Promise.all([
+    requireTabAccess("curva-de-venda"),
+    loadActionableAlertCount(),
+    loadSalesCurve()
+  ]);
+  if (!allowed) return <NoAccess tab="curva-de-venda" />;
   const visibleItems = selectedCurve === "all"
     ? data.items
     : data.items.filter((item) => item.curve === selectedCurve);

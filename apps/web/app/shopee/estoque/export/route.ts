@@ -3,6 +3,7 @@
 // Ruptura FBS · Cobertura FBS · Parado FBS · Ruptura local · Parado local.
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "../../../../lib/auth/session";
+import { canAccess } from "../../../../lib/auth/access";
 import { buildXlsxWorkbook, fileStamp, xlsxResponse, type XlsxColumn } from "../../../../lib/xlsx";
 import { loadShopeeData, n, priceOf, skuOf, stockOf, daysSince, trendText } from "../../data";
 import { buildEstoqueReports } from "../build-estoque";
@@ -78,6 +79,7 @@ const LOCAL_PARADO: XlsxColumn[] = [
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return new Response("Não autorizado", { status: 401 });
+  if (!canAccess(user, "shopee")) return new Response("Sem acesso a esta aba", { status: 403 });
 
   const loja = Number(req.nextUrl.searchParams.get("loja")) || null;
   const data = await loadShopeeData();

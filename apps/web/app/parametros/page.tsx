@@ -2,7 +2,8 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
-import { requireCurrentUser } from "../../lib/auth/session";
+import { assertTabAccess, requireTabAccess } from "../../lib/auth/access";
+import { NoAccess } from "../components/no-access";
 import { AppShell } from "../components/app-shell";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 
@@ -120,6 +121,7 @@ function parseDateValue(value: unknown) {
 
 async function saveChannelParam(formData: FormData) {
   "use server";
+  await assertTabAccess("parametros");
 
   const row = {
     source: String(formData.get("source") ?? "").trim().toLowerCase(),
@@ -152,6 +154,7 @@ async function saveChannelParam(formData: FormData) {
 
 async function saveSkuParam(formData: FormData) {
   "use server";
+  await assertTabAccess("parametros");
 
   const row = {
     source: String(formData.get("source") ?? "").trim().toLowerCase(),
@@ -179,6 +182,7 @@ async function saveSkuParam(formData: FormData) {
 
 async function saveStateTaxParam(formData: FormData) {
   "use server";
+  await assertTabAccess("parametros");
 
   const icmsRate = parseRate(formData.get("icms_rate")) ?? 0;
   const interstateIcmsRate = parseRate(formData.get("interstate_icms_rate")) ?? 0;
@@ -276,9 +280,12 @@ async function loadParametros() {
 }
 
 export default async function ParametrosPage() {
-  await requireCurrentUser();
-  const alertCount = await loadActionableAlertCount();
-  const data = await loadParametros();
+  const [{ allowed }, alertCount, data] = await Promise.all([
+    requireTabAccess("parametros"),
+    loadActionableAlertCount(),
+    loadParametros()
+  ]);
+  if (!allowed) return <NoAccess tab="parametros" />;
 
   return (
     <AppShell alertCount={alertCount}>
