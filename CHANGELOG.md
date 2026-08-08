@@ -2,6 +2,28 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-07] — Relatório IA de Shopee Ads no n8n
+
+- Edge Function `shopee-ads-report-data`: coleta read-only por loja, 30 dias de
+  desempenho e settings das campanhas ativas; nunca renova token.
+- Camada idempotente `shopee_ads_*` para campanhas, série diária, runs e
+  mensagens; RPCs service-role-only isolam o n8n do banco/segredos.
+- Workflow n8n `Oráculo - Relatório IA Shopee Ads 3d` (`YpzBJxJkHeMLsunB`):
+  08:00 BRT, trava persistente de três dias, regras determinísticas, Ollama Chat
+  com schema estruturado, fallback e Evolution API.
+- Preview real das quatro lojas: 163 campanhas ativas, 4.890 linhas diárias,
+  nove partes abaixo de 3.400 caracteres e zero envios.
+- Workflow mantido inativo até o preview final. O nó Ollama legado retornava
+  texto vazio; foi substituído por `lmChatOllama` com `qwen2.5-coder:7b` e
+  filtros contra causas inventadas. Gemma4/qwen3.5 excederam a memória segura da
+  VPS; o qwen2.5 passou no JSON estruturado com payload real.
+- Ollama ficou restrito ao resumo da loja; diagnóstico e ação por campanha são
+  determinísticos. Resumo com número ou tendência incompatível é descartado.
+  Montagem validada sobre a execução `16358`: nove mensagens, máximo 3.379
+  caracteres, sem envio pela Evolution.
+- Contrato e operação: `docs/shopee-ads-ai-report.md`; prompt:
+  `docs/prompts/shopee-ads-analysis-agent.md`.
+
 ## [2026-08-07] — Rodada de peso: gru1, cache, paralelização e visual
 
 Diagnóstico completo em `reports/analise-projeto-2026-08-07.md`. Três causas

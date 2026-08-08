@@ -126,6 +126,16 @@
     as `shopee-sync-products`.
   - Query params: `?shop_id=` (one shop), `?days=N` (default 3), `?from=&to=`
     (backfill). Runs logged in `shopee_sync_runs` as `shopee-returns-sync:<id>`.
+- `shopee-ads-report-data` (deployed 2026-08-07; acionada pelo n8n)
+  - Coleta settings e 30 dias de performance diária de Ads, uma loja por
+    invocação, e grava `shopee_ads_campaigns` / `shopee_ads_daily`.
+  - Read-only no token; `shopee-sync` continua como único renovador. Adia a loja
+    com menos de 10 minutos de validade.
+  - O n8n chama RPCs service-role-only, que enfileiram a função por `pg_net` sem
+    expor partner key ou token na execução.
+  - Workflow: `Oráculo - Relatório IA Shopee Ads 3d` (`YpzBJxJkHeMLsunB`),
+    08:00 BRT com trava de três dias. Está inativo até um preview completo
+    validar a redação pelo Ollama Chat (`qwen2.5-coder:7b`).
 - `mercadolivre-returns-sync` (deployed 2026-08-04; hourly cron `:35`)
   - Pulls claims/returns (`/post-purchase/v1/claims/search`) into
     `oraculo_returns` (channel `mercadolivre`). Read-only on tokens (renewal

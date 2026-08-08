@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-08-04.md](docs/project-status-2026-08-04.md) **← start here** (current state)
+1. [docs/project-status-2026-08-07.md](docs/project-status-2026-08-07.md) **← start here** (current state)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
    — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every card/column/config field across the whole system — analytics, alerts, calculator, imports, params, sync status — exact formula, PT-BR, for team walkthroughs)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
@@ -57,11 +57,13 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-07-17.md](
 
 ## Current production state
 
-**Last update**: `2026-08-04` (see `docs/project-status-2026-08-04.md`) —
+**Last update**: `2026-08-07` (see `docs/project-status-2026-08-07.md`) —
 Três marketplaces com analítica de estoque (ML Full, Shopee FBS multi-armazém,
 Olist), sugestão de reposição com export .xlsx, livro de custos por SKU,
 rastreamento de importações com mapa AIS, **aba Devoluções com funil de três
-canais cruzado com a NF fiscal** e margem fiscal com comissão de marketplace.
+canais cruzado com a NF fiscal**, margem fiscal com comissão de marketplace e
+relatório periódico de Shopee Ads por IA local (implementado; aguardando o
+preview final do Ollama antes da ativação).
 
 ### Deployment & auth
 - Production URL: `https://oraculo.oliverhome.com.br`
