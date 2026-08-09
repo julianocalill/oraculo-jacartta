@@ -54,7 +54,7 @@ Origem: `olist_products.payload->>'origem' = '1'` → importado, senão nacional
 
 `ICMS = base × alíquota / 100`, base = valor do item.
 
-## Base fiscal: valor da NF, rateado por item (04/08/2026)
+## Base fiscal: valor da NF, rateado por item (04/08 e 09/08/2026)
 
 A base de todos os tributos e da comissão é o **valor faturado na NF**
 (`olist_invoices.fiscal_amount` = `vNF`), não o valor do pedido. Medido em
@@ -63,9 +63,15 @@ preço cheio; a NF sai pelo pago) e a receita estava inflada 6,95%.
 
 O item da NF não serve de base direta — kit do pedido vira componentes na NF, e
 o item da NF também carrega preço cheio (o desconto fica em `vDesc`, no total).
-Por isso o `vNF` é **rateado** pelas linhas do pedido proporcionalmente ao valor
-de cada item. O rateio também conserta pedido com duas NFs (antes contava a
-receita em dobro). Sem `vNF`, a linha cai no valor do pedido.
+Por isso o `vNF` é **rateado** pelas linhas proporcionalmente ao valor de cada
+item. Desde 09/08, a precedência por NF é: item do pedido quando existe; item
+fiscal como fallback. A fonte híbrida elevou a cobertura sem duplicar NFs e foi
+validada pela igualdade de custo nas NFs onde ambas existem. NF com `vNF = 0`
+permanece com receita zero; não reaparece pelo preço do pedido.
+
+No fallback fiscal, um kit aparece aberto em componentes. O percentual da
+comissão acompanha a receita rateada, mas o fixo do marketplace incide uma vez
+por NF e também é rateado — nunca uma vez por componente.
 
 ## PIS/COFINS 9,25% — débito bruto (sem crédito de custo)
 
@@ -200,7 +206,8 @@ resolve ICMS.
 
 ## Cobertura (contrato de honestidade)
 
-A camada só produz margem para NFs válidas com pedido + item + custo confiável.
+A camada só produz margem para NFs válidas com item e custo confiável. O item
+vem do pedido quando disponível e da própria NF como fallback.
 `oraculo_fiscal_margin_summary` expõe:
 - `revenue_with_item` / `coverage_item_revenue_pct` — receita com item;
 - `revenue_with_cost` / `coverage_cost_revenue_pct` — receita com custo confiável
@@ -208,3 +215,8 @@ A camada só produz margem para NFs válidas com pedido + item + custo confiáve
 
 Junho 01–19 (referência): cobertura de custo 61,5% da receita fiscal após expandir
 kits; custo/receita ~37%; margem fiscal ~42%.
+
+Auditoria de 09/08/2026: o motor passou a usar item fiscal quando o item do
+pedido falta. Em agosto, a cobertura de itens foi de 81,45% para 95,95% e a de
+custo de 79,71% para 93,43%. Relatório completo:
+`docs/fiscal-audit-jacartta-2026-08-09.md`.

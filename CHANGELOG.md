@@ -2,6 +2,22 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-09] — Auditoria fiscal e cobertura híbrida da margem
+
+- Auditoria do CNPJ Jacartta, planilhas fiscais de Shopee/Amazon/ML, NFs Olist,
+  custo médio, DIFAL, RET, FCP, CBS/IBS 2026 e escrow Shopee documentada em
+  `docs/fiscal-audit-jacartta-2026-08-09.md`.
+- `oraculo_fiscal_margin_lines` agora parte exclusivamente de
+  `oraculo_fiscal_invoices_valid`: uma NF residual status 3 deixou de entrar.
+- Fonte híbrida por NF: item do pedido primeiro; item fiscal como fallback.
+  Receita continua sendo `vNF` rateado, NF zero permanece zero e a taxa fixa
+  do marketplace não multiplica pelos componentes fiscais de um kit.
+- Cobertura de agosto: itens 81,45% → 95,95%; custo 79,71% → 93,43%.
+  A margem ampliada ficou -4,92%, praticamente igual aos -4,93% anteriores:
+  o negativo foi confirmado, não criado pela cobertura parcial.
+- Migration `20260809120000` aplicada em produção e snapshot regravado. Os 30
+  testes do domínio fiscal seguem passando.
+
 ## [2026-08-07] — Relatório IA de Shopee Ads no n8n
 
 - Edge Function `shopee-ads-report-data`: coleta read-only por loja, 30 dias de
