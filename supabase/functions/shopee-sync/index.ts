@@ -22,7 +22,7 @@ const DEFAULT_WINDOW_MINUTES = 45; // janela incremental padrão (sobreposição
 const MAX_ORDERS_PER_RUN = 800; // teto por execução, respeita o limite de tempo da edge function
 const PAGE_SIZE = 50;
 const ORDER_FIELDS =
-  "order_status,create_time,update_time,pay_time,total_amount,currency,buyer_user_id,buyer_username,recipient_address,item_list,estimated_shipping_fee,actual_shipping_fee,days_to_ship,note";
+  "order_status,create_time,update_time,pay_time,total_amount,currency,buyer_user_id,buyer_username,recipient_address,item_list,estimated_shipping_fee,actual_shipping_fee,days_to_ship,note,ship_by_date,package_list,shipping_carrier";
 
 type Shop = { shop_id: number; partner_id: number; shop_name: string | null };
 type TokenRow = {
@@ -117,6 +117,106 @@ function tsToIso(v: unknown): string | null {
   return Number.isFinite(n) && n > 0 ? new Date(n * 1000).toISOString() : null;
 }
 
+function carrierHasCollected(logisticsStatus: unknown): boolean {
+  return [
+    "LOGISTICS_PICKUP_DONE",
+    "LOGISTICS_DELIVERY_DONE"
+  ].includes(String(logisticsStatus ?? "").toUpperCase());
+}
+
+// deno-lint-ignore no-explicit-any
+async function upsertPackages(
+  supabase: any,
+  shop: Shop,
+  orders: any[],
+  partnerKey: string,
+  accessToken: string
+): Promise<number> {
+  const candidates = orders.flatMap((order: any) =>
+    (order.package_list ?? []).map((pkg: any) => ({ order, pkg }))
+  ).filter(({ pkg }: any) => pkg.package_number);
+  if (!candidates.length) return 0;
+
+  const ids = candidates.map(({ pkg }: any) => `${shop.shop_id}-${pkg.package_number}`);
+  const { data: existingRows, error: existingError } = await supabase
+    .from("shopee_fulfillment_packages")
+    .select("id,tracking_number,logistics_status,logistics_status_changed_at,carrier_collected_at")
+    .in("id", ids);
+  if (existingError) throw new Error(`read fulfillment packages ${shop.shop_id}: ${existingError.message}`);
+
+  const existingById = new Map((existingRows ?? []).map((row: any) => [row.id, row]));
+  const trackingById = new Map<string, string>();
+  const needsTracking = candidates.filter(({ pkg }: any) => {
+    const id = `${shop.shop_id}-${pkg.package_number}`;
+    const existing = existingById.get(id);
+    // Um pacote LOGISTICS_READY pode ganhar rastreio quando a etiqueta é
+    // preparada sem mudar imediatamente de status. A janela incremental só
+    // traz pedidos atualizados, então a consulta vazia não vira varredura global.
+    return !existing?.tracking_number;
+  });
+
+  for (let index = 0; index < needsTracking.length; index += 5) {
+    const chunk = needsTracking.slice(index, index + 5);
+    const resolved = await Promise.all(chunk.map(async ({ order, pkg }: any) => {
+      try {
+        const response = await shopGet(
+          "/api/v2/logistics/get_tracking_number",
+          shop.partner_id,
+          partnerKey,
+          shop.shop_id,
+          accessToken,
+          { order_sn: String(order.order_sn), package_number: String(pkg.package_number) }
+        );
+        return {
+          id: `${shop.shop_id}-${pkg.package_number}`,
+          trackingNumber: String(response.response?.tracking_number ?? "").trim()
+        };
+      } catch {
+        // O sync de pedidos não deve falhar por uma etiqueta ainda indisponível.
+        return { id: `${shop.shop_id}-${pkg.package_number}`, trackingNumber: "" };
+      }
+    }));
+    for (const item of resolved) {
+      if (item.trackingNumber) trackingById.set(item.id, item.trackingNumber);
+    }
+  }
+
+  const nowIso = new Date().toISOString();
+  const rows = candidates.map(({ order, pkg }: any) => {
+    const id = `${shop.shop_id}-${pkg.package_number}`;
+    const existing = existingById.get(id);
+    const currentStatus = pkg.logistics_status ?? null;
+    const statusChanged = String(existing?.logistics_status ?? "") !== String(currentStatus ?? "");
+    return {
+      id,
+      shop_id: shop.shop_id,
+      shop_name: shop.shop_name,
+      order_sn: String(order.order_sn),
+      package_number: String(pkg.package_number),
+      tracking_number: trackingById.get(id) || existing?.tracking_number || null,
+      shipping_carrier: pkg.shipping_carrier ?? order.shipping_carrier ?? null,
+      logistics_channel_id: pkg.logistics_channel_id ?? null,
+      order_status: order.order_status ?? null,
+      logistics_status: currentStatus,
+      ship_by_at: tsToIso(order.ship_by_date),
+      logistics_status_changed_at: statusChanged
+        ? nowIso
+        : existing?.logistics_status_changed_at ?? nowIso,
+      carrier_collected_at: existing?.carrier_collected_at
+        ?? (carrierHasCollected(currentStatus) ? nowIso : null),
+      raw_json: pkg,
+      synced_at: nowIso,
+      updated_at: nowIso
+    };
+  });
+
+  const { error } = await supabase
+    .from("shopee_fulfillment_packages")
+    .upsert(rows, { onConflict: "id" });
+  if (error) throw new Error(`upsert fulfillment packages ${shop.shop_id}: ${error.message}`);
+  return rows.length;
+}
+
 // deno-lint-ignore no-explicit-any
 async function upsertOrders(supabase: any, shop: Shop, orders: any[]): Promise<number> {
   if (!orders.length) return 0;
@@ -181,7 +281,7 @@ async function syncShop(
   shop: Shop,
   keyByPartner: Map<number, string>,
   windowMinutes: number
-): Promise<{ fetched: number; upserted: number; capped: boolean }> {
+): Promise<{ fetched: number; upserted: number; packagesUpserted: number; capped: boolean }> {
   const partnerKey = keyByPartner.get(shop.partner_id);
   if (!partnerKey) throw new Error(`sem partner_key para partner_id ${shop.partner_id} (loja ${shop.shop_id})`);
 
@@ -218,6 +318,7 @@ async function syncShop(
   let cursor = "";
   let fetched = 0;
   let upserted = 0;
+  let packagesUpserted = 0;
   let capped = false;
   do {
     const list = await shopGet("/api/v2/order/get_order_list", shop.partner_id, partnerKey, shop.shop_id, accessToken, {
@@ -235,7 +336,9 @@ async function syncShop(
         order_sn_list: sns.join(","),
         response_optional_fields: ORDER_FIELDS
       });
-      upserted += await upsertOrders(supabase, shop, detail.response?.order_list ?? []);
+      const orderDetails = detail.response?.order_list ?? [];
+      upserted += await upsertOrders(supabase, shop, orderDetails);
+      packagesUpserted += await upsertPackages(supabase, shop, orderDetails, partnerKey, accessToken);
       fetched += sns.length;
     }
     cursor = list.response?.more ? list.response?.next_cursor ?? "" : "";
@@ -245,7 +348,7 @@ async function syncShop(
     }
   } while (cursor);
 
-  return { fetched, upserted, capped };
+  return { fetched, upserted, packagesUpserted, capped };
 }
 
 Deno.serve(async (req) => {
@@ -282,7 +385,7 @@ Deno.serve(async (req) => {
   for (const shop of (shops ?? []) as Shop[]) {
     const startedAt = new Date().toISOString();
     try {
-      const { fetched, upserted, capped } = await syncShop(supabase, shop, keyByPartner, windowMinutes);
+      const { fetched, upserted, packagesUpserted, capped } = await syncShop(supabase, shop, keyByPartner, windowMinutes);
       await supabase.from("shopee_sync_runs").insert({
         source: `shopee-sync:${shop.shop_id}`,
         started_at: startedAt,
@@ -290,16 +393,16 @@ Deno.serve(async (req) => {
         status: "success",
         records_fetched: fetched,
         records_upserted: upserted,
-        meta: { shop_id: shop.shop_id, shop_name: shop.shop_name, window_minutes: windowMinutes, capped }
+        meta: { shop_id: shop.shop_id, shop_name: shop.shop_name, window_minutes: windowMinutes, packages_upserted: packagesUpserted, capped }
       });
-      results.push({ shop_id: shop.shop_id, shop_name: shop.shop_name, fetched, upserted, capped, status: "success" });
+      results.push({ shop_id: shop.shop_id, shop_name: shop.shop_name, fetched, upserted, packages_upserted: packagesUpserted, capped, status: "success" });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       await supabase.from("shopee_sync_runs").insert({
         source: `shopee-sync:${shop.shop_id}`,
         started_at: startedAt,
         finished_at: new Date().toISOString(),
-        status: "error",
+        status: "failed",
         error_message: message,
         meta: { shop_id: shop.shop_id, shop_name: shop.shop_name }
       });

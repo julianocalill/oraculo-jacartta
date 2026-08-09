@@ -144,7 +144,7 @@ async function latestCacheDay(supabase: ReturnType<typeof createSupabaseAdminCli
 
 // Cache curto (60s): é página de monitoramento, mas as rotinas rodam em
 // escala de minutos/horas — 60s de defasagem não muda nenhum selo, e evita
-// refazer as 10 queries a cada F5 do operador.
+// refazer as queries a cada F5 do operador.
 const loadStatus = unstable_cache(loadStatusUncached, ["status-panel"], {
   revalidate: 60
 });
@@ -154,7 +154,8 @@ async function loadStatusUncached() {
 
   const [
     tokenResult, ordersRun, stockRun, invoicesRun, backfillRun, mercadolivreRun,
-    importacoesAisRun, shopeeReturnsRun, mercadolivreReturnsRun, returnsCacheRun
+    importacoesAisRun, shopeeReturnsRun, mercadolivreReturnsRun, returnsCacheRun,
+    bipFulfillmentRun
   ] = await Promise.all([
     supabase
       .from("olist_oauth_tokens")
@@ -169,7 +170,8 @@ async function loadStatusUncached() {
     latestRun(supabase, "importacao_ais_sync_runs", "started_at, finished_at, status, vessels_targeted, positions_updated, error_message"),
     latestRunBySource(supabase, "shopee_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message", "shopee-returns-sync"),
     latestReturnsRunML(supabase),
-    latestCacheDay(supabase)
+    latestCacheDay(supabase),
+    latestRun(supabase, "bip_fulfillment_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message")
   ]);
 
   const token = (tokenResult.data as TokenRow | null) ?? null;
@@ -202,6 +204,10 @@ async function loadStatusUncached() {
       ? "Sync do Mercado Livre ainda não rodou hoje."
       : "",
     runFailed(shopeeReturnsRun) ? `Devoluções Shopee falharam: ${shopeeReturnsRun?.error_message ?? "sem mensagem"}` : "",
+    runFailed(bipFulfillmentRun) ? `Espelho do Bip falhou: ${bipFulfillmentRun?.error_message ?? "sem mensagem"}` : "",
+    brtDate(bipFulfillmentRun?.started_at) !== today
+      ? "Espelho de expedição do Bip ainda não rodou hoje."
+      : "",
     // Cache parado é falha silenciosa — a página segue servindo dado velho sem
     // erro nenhum. Já custou 45 dias de número errado neste projeto.
     brtDate(returnsCacheRun?.started_at) !== today
@@ -225,7 +231,8 @@ async function loadStatusUncached() {
       { key: "importacoes-ais", label: "Importações (AIS)", run: importacoesAisRun },
       { key: "shopee-returns", label: "Devoluções Shopee", run: shopeeReturnsRun },
       { key: "mercadolivre-returns", label: "Devoluções / claims ML", run: mercadolivreReturnsRun },
-      { key: "returns-cache", label: "Cache NF de venda (devoluções)", run: returnsCacheRun }
+      { key: "returns-cache", label: "Cache NF de venda (devoluções)", run: returnsCacheRun },
+      { key: "bip-fulfillment", label: "Expedição · espelho do Bip", run: bipFulfillmentRun }
     ]
   };
 }

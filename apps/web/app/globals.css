@@ -796,6 +796,98 @@ p {
   grid-template-columns: repeat(7, minmax(132px, 1fr));
 }
 
+.fulfillment-metric-grid {
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
+}
+
+.fulfillment-funnel-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.fulfillment-funnel {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fulfillment-step {
+  position: relative;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-soft);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+
+.fulfillment-step:not(:last-child)::after {
+  content: "›";
+  position: absolute;
+  z-index: 2;
+  right: -9px;
+  color: var(--amber);
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.fulfillment-step > span {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--info-soft);
+  color: var(--indigo);
+  font-weight: 900;
+}
+
+.fulfillment-step div { min-width: 0; display: grid; gap: 3px; }
+.fulfillment-step small { color: var(--faint); font-weight: 750; text-transform: uppercase; }
+.fulfillment-step strong { font-family: var(--mono); font-size: 28px; }
+.fulfillment-step em { color: var(--muted); font-size: 12px; font-style: normal; }
+
+.fulfillment-two-columns {
+  display: grid;
+  grid-template-columns: minmax(300px, .7fr) minmax(520px, 1.3fr);
+  gap: 12px;
+}
+
+.fulfillment-sla-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.fulfillment-sla-grid div {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-soft);
+  display: grid;
+  gap: 7px;
+  padding: 16px;
+}
+
+.fulfillment-sla-grid span { color: var(--muted); font-size: 12px; }
+.fulfillment-sla-grid strong { font-family: var(--mono); font-size: 25px; }
+
+@media (max-width: 1180px) {
+  .fulfillment-metric-grid { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
+  .fulfillment-funnel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fulfillment-step::after { display: none; }
+  .fulfillment-two-columns { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 680px) {
+  .fulfillment-metric-grid,
+  .fulfillment-funnel,
+  .fulfillment-sla-grid { grid-template-columns: 1fr; }
+}
+
 .dashboard-section {
   display: grid;
   gap: 12px;

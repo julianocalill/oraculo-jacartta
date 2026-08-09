@@ -20,7 +20,8 @@ assinatura com a chave errada, não token vencido).
 ## Sincronizações
 
 - `shopee-sync` (15 min/loja): pedidos + itens; **renovador único** do token
-  (refresh rotativo — nenhuma outra função renova).
+  (refresh rotativo — nenhuma outra função renova). Desde 2026-08-09 também
+  materializa pacotes, prazo, rastreio e status da expedição.
 - `shopee-escrow-sync` (30 min/loja): comissão/taxas/líquido por pedido.
 - `shopee-sync-sbs` (horário, :42): inventário FBS por SKU × armazém via
   `/api/v2/sbs/get_current_inventory` — a Shopee entrega vendável/reservado,
@@ -43,6 +44,17 @@ assinatura com a chave errada, não token vencido).
   (regra de produto); **kits ficam de fora** (repõe-se o produto simples);
   filtro de loja em pills; **export .xlsx** (mesma lógica da tela) e
   **cadastro em massa do livro de custos por SKU** na própria aba.
+
+## Expedição Shopee × Bip
+
+- Oráculo guarda um registro por pacote em `shopee_fulfillment_packages`.
+- `bip-fulfillment-sync` espelha a cada dois minutos os bipes Comercial e
+  Logística, sem gravar de volta nem bloquear o scanner.
+- A conciliação usa `tracking_number` e alimenta `/expedicao` no Oráculo e as
+  TVs operacionais do Bip.
+- `LOGISTICS_PICKUP_DONE` é a confirmação de coleta; `LOGISTICS_DELIVERY_DONE`
+  também implica coleta concluída.
+- Contrato completo e ativação: `docs/fulfillment-pipeline.md`.
 
 ## Fatos de dados (primeira carga 2026-07-16)
 

@@ -2,6 +2,19 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-09] — Funil de expedição Shopee × Bip
+
+- `shopee-sync` passa a materializar pacote, prazo, rastreio e status logístico
+  sem criar um segundo renovador de token.
+- Confirmação real validada: `LOGISTICS_PICKUP_DONE`; entrega concluída também
+  prova que a coleta ocorreu. O rastreio vem de `get_tracking_number`.
+- Espelho incremental e idempotente dos bipes Comercial/Logística, sem
+  dual-write no scanner e com saúde visível em `/status`.
+- Nova aba estratégica `/expedicao` e TVs reais do Bip para Comercial e
+  Logística, com simulação local como contingência antes da configuração.
+- Contrato, segredos, ativação e rollback documentados em
+  `docs/fulfillment-pipeline.md`; decisão estrutural em ADR-002.
+
 ## [2026-08-09] — Auditoria fiscal e cobertura híbrida da margem
 
 - Auditoria do CNPJ Jacartta, planilhas fiscais de Shopee/Amazon/ML, NFs Olist,

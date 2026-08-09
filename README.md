@@ -159,6 +159,10 @@ Current product areas:
 - Shopee channel: orders/escrow (take rate) + FBS warehouse inventory (SBS) and
   local stock, with the `/shopee` tabs (Take Rate + Estoque & FBS + Sugestão de
   reposição, .xlsx export). All 4 shops enrolled in FBS (7 BR warehouses).
+- Fulfillment pipeline (`/expedicao`): reconciles Shopee packages with the Bip's
+  Commercial scan, internal Logistics receipt and Shopee pickup confirmation;
+  operational TV views remain in the Bip. Contract and activation runbook:
+  `docs/fulfillment-pipeline.md`.
 - Imports tracking (`/importacoes`): AIS vessel map + invoice/item registry.
 - Unit cost book per marketplace SKU (`oraculo_sku_unit_cost`): manual override
   > Olist product cost (ignoring R$ 0) > kit effective cost.

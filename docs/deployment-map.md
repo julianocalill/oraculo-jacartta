@@ -68,6 +68,8 @@
   - Topics remain disabled until the data ingestion scope is approved.
 - `shopee-sync` (per-shop cron every 15 min)
   - Pulls Shopee orders + items for each shop into `shopee_orders`/`shopee_order_items`.
+  - Também materializa `package_list`, prazo, rastreio e status logístico em
+    `shopee_fulfillment_packages`; `LOGISTICS_PICKUP_DONE` confirma a coleta.
   - **Sole owner of the Shopee token renewal** (rotating refresh token): every
     other Shopee function only READS the token and defers the shop when it is
     about to expire. Any new Shopee function MUST respect this.
@@ -77,6 +79,14 @@
 - `shopee-escrow-sync` (per-shop cron every 30 min)
   - Pulls escrow detail per order (commission, fees, net) — the source of the
     take rate / net ROI on `/shopee`. Read-only on tokens.
+- `bip-fulfillment-sync` (cron every 2 min)
+  - Pulls the Bip's protected incremental export and upserts
+    `bip_fulfillment_events`; it never writes back to the Bip.
+  - Protected by `BIP_FULFILLMENT_SYNC_JOB_SECRET`; the Bip endpoint uses a
+    separate `BIP_FULFILLMENT_EXPORT_SECRET`.
+- `fulfillment-dashboard`
+  - Read-only aggregate for the Bip TVs. Returns no buyer/address/raw payload.
+  - Protected by `FULFILLMENT_DASHBOARD_SECRET` and called only by the Bip backend.
 - `shopee-sync-sbs` (deployed 2026-07-16; hourly cron `:42`)
   - Materializes FBS warehouse inventory (`/api/v2/sbs/get_current_inventory`,
     region BR) into `shopee_sbs_inventory` + daily snapshots. Shopee provides
@@ -234,6 +244,8 @@ Active jobs in `cron.job`:
 - `shopee-sync-{donacor,espaco-de-bicho,oliverhome,jacartta}`:
   `0/3/6/9-59/15 * * * *` — per-shop `shopee-sync` every 15 min, staggered by
   3 min so the shops never sign at the same minute. Migration `20260713160000`.
+- `oraculo-bip-fulfillment-2m`: `*/2 * * * *`
+  - Calls `bip-fulfillment-sync`; run health is shown on `/status`.
 - `shopee-escrow-{donacor,espaco-de-bicho,oliverhome,jacartta}`:
   `11/13/17/19-59/30 * * * *` — per-shop `shopee-escrow-sync` every 30 min,
   offset from the order sync so escrow reads orders that already landed.
