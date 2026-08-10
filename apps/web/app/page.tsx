@@ -3,8 +3,10 @@ import {
   loadFiscalDashboardSnapshot,
   loadFiscalSkuCoverageSnapshot,
   loadFiscalMarginSummarySnapshot,
+  loadFiscalSkuMarginSnapshot,
   loadFiscalChannelMetricsSnapshot,
-  type FiscalDashboardSnapshot
+  type FiscalDashboardSnapshot,
+  type FiscalSkuMarginRow
 } from "../lib/fiscal-snapshots";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -731,6 +733,7 @@ async function loadDashboard(filters: DashboardFilters) {
     fiscalChannelResponse,
     fiscalCoverageResponse,
     fiscalMargin,
+    fiscalSkuMarginSnapshot,
     marginHistory,
   ] = await Promise.all([
     dailyQuery,
@@ -763,6 +766,9 @@ async function loadDashboard(filters: DashboardFilters) {
     loadFiscalChannels(supabase, filters),
     loadFiscalCoverage(supabase, filters),
     loadFiscalMargin(supabase, filters),
+    isCurrentMonthWindow(filters)
+      ? loadFiscalSkuMarginSnapshot(supabase)
+      : Promise.resolve({ available: false, periodStart: null, periodEnd: null, rows: [] }),
     loadMarginHistory(supabase)
   ]);
 
@@ -779,6 +785,27 @@ async function loadDashboard(filters: DashboardFilters) {
     (left, right) => asMetricNumber(right.billed_revenue) - asMetricNumber(left.billed_revenue)
   );
   const fiscalCoverage = fiscalCoverageResponse;
+  const fiscalLossRows = fiscalSkuMarginSnapshot.rows
+    .filter((row: FiscalSkuMarginRow) => row.profit < 0)
+    .sort((left: FiscalSkuMarginRow, right: FiscalSkuMarginRow) => left.profit - right.profit);
+  const fiscalLossCandidates = fiscalLossRows.slice(0, 30);
+  const worstFiscalSkuNames = new Map<string, string>();
+  if (fiscalLossCandidates.length > 0) {
+    const { data: productNames, error: productNamesError } = await supabase
+      .from("olist_products")
+      .select("sku, nome")
+      .in("sku", fiscalLossCandidates.map((row: FiscalSkuMarginRow) => row.sku));
+    if (productNamesError) {
+      console.error("load fiscal loss driver names failed; showing SKU only", productNamesError);
+    } else {
+      for (const product of productNames ?? []) {
+        if (product.sku && product.nome) worstFiscalSkuNames.set(product.sku, product.nome);
+      }
+    }
+  }
+  const isRugFiscalSku = (row: FiscalSkuMarginRow) =>
+    /tapete|good pad|higi[eê]nico/i.test(worstFiscalSkuNames.get(row.sku) ?? "");
+  const worstFiscalSkus = fiscalLossCandidates.filter((row) => !isRugFiscalSku(row)).slice(0, 5);
   const skuRows = ((skuSalesResponse.data ?? []) as SkuCurrent[]).map((sku) => ({
     source: sku.source,
     sku: sku.sku,
@@ -869,6 +896,10 @@ async function loadDashboard(filters: DashboardFilters) {
     fiscalMetrics,
     fiscalCoverage,
     fiscalMargin,
+    fiscalLossDrivers: worstFiscalSkus.map((row: FiscalSkuMarginRow) => ({
+      ...row,
+      productName: worstFiscalSkuNames.get(row.sku) ?? null
+    })),
     marginHistory,
     previousMonthTotals,
     lastDataDay,
@@ -944,6 +975,24 @@ export default async function HomePage({
   };
 
   const fm = data.fiscalMargin;
+  const fiscalExpenseTotal = fm.totalCost + fm.totalTaxes + fm.totalMarketplaceFee;
+  const fiscalShareOfRevenue = (value: number) =>
+    fm.revenueWithCost > 0 ? value / fm.revenueWithCost : 0;
+  const fiscalExpenseShare = fiscalShareOfRevenue(fiscalExpenseTotal);
+  const fiscalLossPerHundred = Math.max((fiscalExpenseShare - 1) * 100, 0);
+  const fiscalDiagnosisItems = [
+    { label: "Custo do produto", value: fm.totalCost, color: "var(--cyan)" },
+    { label: "Impostos", value: fm.totalTaxes, color: "var(--rose)" },
+    { label: "Marketplace", value: fm.totalMarketplaceFee, color: "#9aa8c0" }
+  ];
+  const fiscalChannelRevenue = data.fiscalChannels.reduce(
+    (sum, channel) => sum + asMetricNumber(channel.billed_revenue),
+    0
+  );
+  const shopeeFiscalRevenue = data.fiscalChannels
+    .filter((channel) => (channel.channel_label ?? "").toLocaleLowerCase("pt-BR").includes("shopee"))
+    .reduce((sum, channel) => sum + asMetricNumber(channel.billed_revenue), 0);
+  const shopeeFiscalShare = fiscalChannelRevenue > 0 ? shopeeFiscalRevenue / fiscalChannelRevenue : 0;
   const totals = data.previousMonthTotals;
   const prevTicket = totals && totals.invoices > 0 ? totals.revenue / totals.invoices : null;
 
@@ -1184,6 +1233,86 @@ export default async function HomePage({
               sparkColor="var(--violet)"
             />
           </div>
+          {fm.totalProfit < 0 && fm.revenueWithCost > 0 ? (
+            <aside className="fiscal-diagnosis" aria-labelledby="fiscal-diagnosis-title">
+              <div className="fiscal-diagnosis-copy">
+                <p className="eyebrow">Diagnóstico do resultado</p>
+                <h3 id="fiscal-diagnosis-title">Por que está negativo?</h3>
+                <p>
+                  Na receita com custo confiável, produto, impostos e marketplace consomem juntos
+                  <strong> {formatDecimal(fiscalExpenseShare * 100, 1)}% do faturamento</strong>.
+                  A cada R$ 100 vendidos, faltam <strong>R$ {formatDecimal(fiscalLossPerHundred, 1)}</strong> para
+                  fechar a conta, gerando o prejuízo de <strong>{formatCurrency(Math.abs(fm.totalProfit))}</strong>.
+                  {fm.roi != null ? (
+                    <> No ROI, isso significa perder <strong>R$ {formatDecimal(Math.abs(fm.roi) * 100, 1)}</strong> a
+                    cada R$ 100 aplicados no custo dos produtos.</>
+                  ) : null}
+                </p>
+                {shopeeFiscalShare > 0 ? (
+                  <p className="fiscal-diagnosis-channel">
+                    <strong>Shopee concentra {formatDecimal(shopeeFiscalShare * 100, 1)}% da receita fiscal</strong> do
+                    período. Como suas faixas ficam próximas de 28%, esse mix amplia o peso do marketplace e é o
+                    principal foco para revisão de preço e promoção.
+                  </p>
+                ) : null}
+              </div>
+              <div className="fiscal-diagnosis-breakdown" aria-label="Despesas como percentual da receita coberta">
+                {fiscalDiagnosisItems.map((item) => {
+                  const share = fiscalShareOfRevenue(item.value);
+                  return (
+                    <div className="fiscal-diagnosis-item" key={item.label}>
+                      <div className="fiscal-diagnosis-label">
+                        <span>{item.label}</span>
+                        <strong>{formatCurrency(item.value)} · {formatDecimal(share * 100, 1)}%</strong>
+                      </div>
+                      <div className="fiscal-diagnosis-track" aria-hidden="true">
+                        <span style={{ width: `${Math.min(Math.max(share * 100, 0), 100)}%`, background: item.color }} />
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="fiscal-diagnosis-equation">
+                  <span>Total consumido</span>
+                  <strong>{formatCurrency(fiscalExpenseTotal)} · {formatDecimal(fiscalExpenseShare * 100, 1)}%</strong>
+                </div>
+              </div>
+              {data.fiscalLossDrivers.length > 0 ? (
+                <div className="fiscal-loss-drivers">
+                  <div className="fiscal-loss-drivers-head">
+                    <div>
+                      <p className="eyebrow">Maiores destruidores de resultado</p>
+                      <h4>Outros SKUs que mais geram prejuízo · sem tapetes</h4>
+                    </div>
+                    <Link href={`/skus${filterQuery}`}>Ver análise de SKUs →</Link>
+                  </div>
+                  <div className="fiscal-loss-driver-list">
+                    {data.fiscalLossDrivers.map((row, index) => (
+                      <article className="fiscal-loss-driver" key={row.sku}>
+                        <span className="fiscal-loss-rank">{index + 1}</span>
+                        <div className="fiscal-loss-product">
+                          <strong>{row.productName ?? `SKU ${row.sku}`}</strong>
+                          <small>SKU {row.sku} · receita {formatCurrency(row.revenue)}</small>
+                          {row.units > 0 ? (
+                            <small className="fiscal-loss-unit-economics">
+                              Por un.: venda {formatCurrency(row.revenue / row.units)} · custo {formatCurrency(row.cost / row.units)}
+                              {" · "}tributos {formatCurrency(row.taxesTotal / row.units)} · marketplace {formatCurrency(row.marketplaceFee / row.units)}
+                            </small>
+                          ) : null}
+                        </div>
+                        <div className="fiscal-loss-result">
+                          <strong>−{formatCurrency(Math.abs(row.profit))}</strong>
+                          <small>
+                            margem {row.marginRate == null ? "-" : `${formatDecimal(row.marginRate * 100, 1)}%`}
+                            {row.roi == null ? "" : ` · ROI ${formatDecimal(row.roi * 100, 1)}%`}
+                          </small>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </aside>
+          ) : null}
           <div className="fiscal-viz-row">
             <div className="viz-card">
               <div className="viz-head">
