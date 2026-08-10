@@ -24,10 +24,26 @@ function formatDate(value: string | null) {
   return `${day}/${month}/${year}`;
 }
 
+// Acima disso a posição vira histórico, não localização atual (mesmo limite de
+// data.ts — o mapa não pode contar uma história diferente da página).
+const STALE_HOURS = 48;
+
+function ageLabel(hours: number | null) {
+  if (hours == null) return "sem posição";
+  if (hours < 1) return "agora há pouco";
+  if (hours < STALE_HOURS) return `há ${hours} h`;
+  return `há ${Math.round(hours / 24)} dias`;
+}
+
 function tooltipHtml(vessel: MapVessel) {
+  const isStale = vessel.positionAgeHours == null || vessel.positionAgeHours > STALE_HOURS;
+  const position = `Posição: ${formatDate(vessel.observedAt) ?? "-"} (${ageLabel(vessel.positionAgeHours)})`;
+
   const meta = [
     vessel.destinations.length > 0 ? `Destino: ${escapeHtml(vessel.destinations.join(", "))}` : null,
     vessel.nextArrival ? `Chegada: ${formatDate(vessel.nextArrival)}` : null,
+    position,
+    isStale ? "<b>Posição antiga — o navio já se moveu desde então</b>" : null,
     `Faturas: ${escapeHtml(vessel.invoiceNumbers.join(", "))}`
   ]
     .filter(Boolean)
@@ -72,10 +88,15 @@ export default function LeafletMap({ vessels }: { vessels: MapVessel[] }) {
       const point: L.LatLngExpression = [vessel.latitude as number, vessel.longitude as number];
       points.push(point);
 
+      // Marcador esmaecido quando a posição é antiga: o mapa precisa mostrar na
+      // própria pinta que aquilo é o último avistamento, não onde o navio está.
+      const isStale =
+        vessel.positionAgeHours == null || vessel.positionAgeHours > STALE_HOURS;
+
       const marker = L.marker(point, {
         icon: L.divIcon({
           className: "vessel-marker-wrap",
-          html: `<div class="vessel-marker"><span class="vessel-marker-dot"></span><span class="vessel-marker-name">${escapeHtml(vessel.name)}</span></div>`,
+          html: `<div class="vessel-marker${isStale ? " vessel-marker-stale" : ""}"><span class="vessel-marker-dot"></span><span class="vessel-marker-name">${escapeHtml(vessel.name)}${isStale ? ` · ${ageLabel(vessel.positionAgeHours)}` : ""}</span></div>`,
           iconSize: [0, 0],
           iconAnchor: [0, 0]
         })

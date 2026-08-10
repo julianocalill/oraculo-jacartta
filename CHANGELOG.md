@@ -2,6 +2,35 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-10] — Importações: AIS congelado e contêiner entregue no mapa
+
+- **Diagnóstico**: o sync AIS falhava desde 19/07 (86 runs seguidos) com
+  `API monthly quota exceeded` — o plano gratuito da VesselAPI dá 150
+  chamadas/mês e o sync consumia ~360 (3 navios × 4x/dia). As posições
+  ficaram congeladas por 22 dias: o mapa mostrava o EVER OPUS na costa da
+  China com os contêineres já entregues em Itapoá.
+- **Segundo problema, independente da API**: não existia conceito de entrega.
+  O mapa plotava todo navio com fatura, para sempre — contêiner entregue em
+  23/07 continuava seguindo um navio que já estava em outra viagem. Isso não
+  se resolveria pagando API nenhuma.
+- **Troca de provedor**: `importacoes-ais-sync` migrou de VesselAPI (REST)
+  para **aisstream.io (WebSocket, gratuito e sem cota)**, que tem a mesma
+  cobertura terrestre da paga. A função assina os MMSIs, escuta uma janela de
+  75s e encerra; navio sem sinal (alto-mar) conta como pulado, não como falha.
+  Chave inválida agora é diagnosticada pelo tempo até o socket cair, em vez de
+  virar um genérico "falha na conexão".
+- **Status de entrega** (migration `20260810140000`): `delivery_status`
+  auto/entregue/em_transito com a regra em
+  `importacao_fatura_entregue()` + view `importacao_faturas_status`. O padrão
+  segue a chegada prevista; o painel "Entrega dos contêineres" cobre os
+  desvios (navio atrasado volta ao mapa, contêiner retirado antes sai). Navio
+  sem carga a bordo deixa de ser rastreado.
+- **A tela para de mentir**: idade de cada posição no mapa e na lista,
+  marcador em rose tracejado acima de 48h, e o alerta de saúde do AIS agora
+  aparece na própria `/importacoes` — antes só existia em `/status`.
+- Novo `scripts/deploy-edge-function.js` (Management API multipart), que o
+  repositório não tinha.
+
 ## [2026-08-10] — Aba Agenda: tarefas compartilhadas entre usuários
 
 - Nova aba `/agenda`: cada usuário cria tarefas (título, descrição, prazo),

@@ -72,6 +72,34 @@ tarefa veem os detalhes read-only e interagem só com a checklist.
   reabrir, excluir com cascade conferido no banco); RLS testada com
   `set_config('request.jwt.claims', ...)`.
 
+## Importações — AIS congelado e entrega do contêiner
+
+Investigação do relato "contêiner já entregue mostra localização errada".
+Eram dois problemas somados:
+
+1. **Cota da API estourada.** O sync AIS falhava desde 19/07 (86 runs) com
+   `API monthly quota exceeded`: o free tier da VesselAPI dá 150 chamadas/mês
+   e o sync consumia ~360. Posições congeladas por 22 dias — EVER LEADING
+   parado no Cabo da Boa Esperança (29 dias) com carga entregue havia 18,
+   EVER OPUS na costa da China com contêiner desembarcado no dia anterior.
+2. **Não existia entrega.** Sem status na fatura, o mapa seguia o navio para
+   sempre; depois do desembarque a posição vira a viagem seguinte do navio,
+   não a carga. Nenhuma troca de API resolveria isso.
+
+Correções: provedor trocado para **aisstream.io** (WebSocket, gratuito, sem
+cota, mesma cobertura terrestre — nenhuma opção barata cobre alto-mar);
+`delivery_status` auto/entregue/em_transito com regra única no banco
+(`importacao_fatura_entregue` + view `importacao_faturas_status`), rastreando
+só navio com carga a bordo; e a tela passou a mostrar a idade de cada posição,
+marcador esmaecido acima de 48h e o alerta do AIS na própria `/importacoes`.
+Detalhes em `docs/importacoes-rastreamento.md`.
+
+**Pendente**: a `AISSTREAM_API_KEY` fornecida está sendo rejeitada pelo
+serviço (socket derrubado ~1s após a subscription, testado também fora da
+Edge Function). O rastreamento só volta a atualizar posições com uma chave
+válida; o resto da correção já está em produção e o run registra o
+diagnóstico exato.
+
 ## Pendências herdadas
 
 - Workflow n8n de Shopee Ads segue inativo aguardando preview final.

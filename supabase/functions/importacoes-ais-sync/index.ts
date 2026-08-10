@@ -1,25 +1,47 @@
-// Sync de posições AIS dos navios das importações via VesselAPI.
+// Sync de posições AIS dos navios das importações via aisstream.io.
 //
-// Substitui a coleta local do MVP rastreamento-importacoes: busca a última
-// posição conhecida (LastKnownPosition) de cada navio com MMSI referenciado
-// pelas faturas ativas e faz upsert em importacao_posicoes — somente quando a
-// posição recebida é mais recente que a armazenada, como no MVP.
+// TROCA DE PROVEDOR (2026-08-10): antes usava a VesselAPI por REST. O plano
+// gratuito dela dá 150 chamadas/mês e o sync consome ~360 (3 navios × 4x/dia),
+// então a cota estourou em 19/07 e as posições ficaram congeladas por 22 dias
+// mostrando navio na China com contêiner já entregue no Brasil. A aisstream é
+// gratuita e sem cota, com a MESMA cobertura terrestre da VesselAPI paga.
 //
-// Body opcional (POST JSON): { "all": true } sincroniza todos os navios do
-// registro com MMSI, não só os referenciados por faturas.
+// Consequência do modelo: aisstream é STREAM, não request/response. Não existe
+// "me dá a última posição do MMSI X" — a gente abre o WebSocket, assina os
+// MMSIs de interesse e espera o navio transmitir. Por isso:
+//   * a função escuta uma janela fixa (listenSeconds) e encerra;
+//   * navio fora do alcance das antenas costeiras (~200 km) simplesmente não
+//     transmite na janela — isso é NORMAL, não é falha. Um run que não recebeu
+//     nada é 'success' com positions_skipped, senão o /status passaria a gritar
+//     falso positivo toda vez que a frota estivesse em alto-mar.
+//
+// Só rastreia navio com carga a bordo: MMSIs vêm das faturas NÃO entregues
+// (view importacao_faturas_status, migration 20260810140000). Contêiner
+// entregue = navio deixa de ser assunto nosso.
+//
+// Body opcional (POST JSON):
+//   { "all": true }          — todos os navios do registro com MMSI
+//   { "listenSeconds": 90 }  — tamanho da janela de escuta (padrão 75s)
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const env = {
   supabaseUrl: Deno.env.get('SUPABASE_URL') ?? '',
   supabaseServiceRoleKey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-  vesselApiKey: Deno.env.get('VESSELAPI_API_KEY') ?? '',
-  vesselApiBaseUrl: Deno.env.get('VESSELAPI_BASE_URL') ?? 'https://api.vesselapi.com/v1',
+  aisStreamApiKey: Deno.env.get('AISSTREAM_API_KEY') ?? '',
+  aisStreamUrl: Deno.env.get('AISSTREAM_URL') ?? 'wss://stream.aisstream.io/v0/stream',
   jobSecret: Deno.env.get('IMPORTACOES_AIS_JOB_SECRET') ?? ''
 };
 
+// Janela de escuta. Precisa caber no wall clock da Edge Function com folga
+// para o upsert e o log do run.
+const DEFAULT_LISTEN_SECONDS = 75;
+const MAX_LISTEN_SECONDS = 120;
+// Limite documentado da aisstream: no máximo 50 MMSIs por subscription.
+const MAX_MMSI_FILTERS = 50;
+
 type Navio = { name: string; aliases: string[] | null; mmsi: string | null };
-type Fatura = { vessel_name: string | null };
+type Fatura = { vessel_name: string | null; entregue: boolean | null };
 
 type Position = {
   mmsi: string;
@@ -52,42 +74,162 @@ function normalizeName(value: string | null | undefined) {
   return (value ?? '').toUpperCase().replace(/\s+/g, ' ').trim();
 }
 
-async function fetchLastPosition(mmsi: string): Promise<Position | null> {
-  const url = new URL(`${env.vesselApiBaseUrl.replace(/\/$/, '')}/vessel/${encodeURIComponent(mmsi)}/position`);
-  url.searchParams.set('filter.idType', 'mmsi');
+/**
+ * A aisstream manda o timestamp no formato do Go
+ * ("2026-08-10 12:00:00.000000000 +0000 UTC"), que `new Date()` não entende.
+ * Extrai a parte estável e devolve ISO; se não casar, cai para null e o
+ * chamador usa o horário de recebimento.
+ */
+function parseAisTimestamp(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
 
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${env.vesselApiKey}`, Accept: 'application/json' }
+  const match = value.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/);
+  if (!match) {
+    const direct = new Date(value);
+    return Number.isNaN(direct.getTime()) ? null : direct.toISOString();
+  }
+
+  const parsed = new Date(`${match[1]}T${match[2]}Z`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+function finiteOrNull(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/**
+ * Abre o WebSocket, assina os MMSIs e coleta a posição mais recente de cada um
+ * durante a janela. Encerra assim que todos reportarem (caso feliz) ou quando
+ * a janela expira. Nunca rejeita por silêncio: devolve o que conseguiu.
+ */
+function collectPositions(mmsis: string[], listenSeconds: number): Promise<{
+  positions: Map<string, Position>;
+  connectError: string | null;
+}> {
+  return new Promise((resolve) => {
+    const positions = new Map<string, Position>();
+    const pending = new Set(mmsis);
+    const startedAt = Date.now();
+    let settled = false;
+    let connectError: string | null = null;
+    let subscribedAt = 0;
+    let socket: WebSocket;
+
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(windowTimer);
+      try {
+        socket?.close();
+      } catch {
+        // socket já pode ter fechado sozinho
+      }
+      resolve({ positions, connectError });
+    };
+
+    const windowTimer = setTimeout(finish, listenSeconds * 1000);
+
+    try {
+      socket = new WebSocket(env.aisStreamUrl);
+    } catch (error) {
+      connectError = error instanceof Error ? error.message : String(error);
+      finish();
+      return;
+    }
+
+    socket.onopen = () => {
+      // A subscription precisa chegar em até 3s da conexão, senão o servidor
+      // derruba. BoundingBoxes é obrigatório mesmo filtrando por MMSI — o
+      // mundo inteiro é o filtro neutro aqui.
+      socket.send(
+        JSON.stringify({
+          APIKey: env.aisStreamApiKey,
+          BoundingBoxes: [[[-90, -180], [90, 180]]],
+          FiltersShipMMSI: mmsis,
+          FilterMessageTypes: ['PositionReport', 'StandardClassBPositionReport']
+        })
+      );
+      subscribedAt = Date.now();
+    };
+
+    socket.onmessage = (event) => {
+      let payload: Record<string, unknown>;
+      try {
+        payload = JSON.parse(String(event.data));
+      } catch {
+        return;
+      }
+
+      // Erro de autenticação/subscription vem como texto, não como posição.
+      if (typeof payload.error === 'string' && payload.error) {
+        connectError = payload.error;
+        finish();
+        return;
+      }
+
+      const metadata = (payload.MetaData ?? payload.Metadata) as Record<string, unknown> | undefined;
+      if (!metadata) return;
+
+      const mmsi = String(metadata.MMSI ?? '');
+      if (!mmsi || !pending.has(mmsi)) return;
+
+      const messageType = String(payload.MessageType ?? '');
+      const message = (payload.Message as Record<string, unknown> | undefined)?.[messageType] as
+        | Record<string, unknown>
+        | undefined;
+
+      const latitude = finiteOrNull(message?.Latitude ?? metadata.latitude);
+      const longitude = finiteOrNull(message?.Longitude ?? metadata.longitude);
+      if (latitude == null || longitude == null) return;
+
+      const observedAt = parseAisTimestamp(metadata.time_utc);
+      const now = new Date().toISOString();
+
+      positions.set(mmsi, {
+        mmsi,
+        vessel_name: typeof metadata.ShipName === 'string' ? metadata.ShipName.trim() || null : null,
+        latitude,
+        longitude,
+        speed_knots: finiteOrNull(message?.Sog),
+        course_degrees: finiteOrNull(message?.Cog),
+        heading_degrees: finiteOrNull(message?.TrueHeading),
+        provider: 'aisstream',
+        observed_at: observedAt ?? now,
+        received_at: now,
+        updated_at: now
+      });
+
+      // Cada navio transmite várias vezes por minuto; a primeira já serve.
+      pending.delete(mmsi);
+      if (pending.size === 0) finish();
+    };
+
+    // A aisstream não manda mensagem de erro quando a chave é inválida: ela
+    // simplesmente derruba o socket (close 1006) ~1s depois da subscription.
+    // Sem essa distinção, chave errada e navio em alto-mar viram o mesmo
+    // "falha na conexão" e a investigação recomeça do zero toda vez.
+    const diagnoseClose = () => {
+      if (connectError || positions.size > 0) return;
+      const elapsed = Date.now() - startedAt;
+      if (subscribedAt > 0 && Date.now() - subscribedAt < 5_000) {
+        connectError =
+          'aisstream rejeitou a conexão logo após a subscription — normalmente AISSTREAM_API_KEY inválida ou não ativada';
+      } else if (elapsed < listenSeconds * 900) {
+        connectError = `aisstream encerrou a conexão após ${Math.round(elapsed / 1000)}s`;
+      }
+    };
+
+    socket.onerror = () => {
+      diagnoseClose();
+      finish();
+    };
+
+    socket.onclose = () => {
+      diagnoseClose();
+      finish();
+    };
   });
-
-  if (response.status === 404) return null;
-
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(
-      body?.error?.message || `VesselAPI respondeu com HTTP ${response.status} para MMSI ${mmsi}`
-    );
-  }
-
-  const data = body.vesselPosition || body.vessel_position || body.data || body;
-  if (!data || !Number.isFinite(Number(data.latitude)) || !Number.isFinite(Number(data.longitude))) {
-    return null;
-  }
-
-  const now = new Date().toISOString();
-  return {
-    mmsi: String(data.mmsi ?? mmsi),
-    vessel_name: data.vessel_name || null,
-    latitude: Number(data.latitude),
-    longitude: Number(data.longitude),
-    speed_knots: data.sog == null ? null : Number(data.sog),
-    course_degrees: data.cog == null ? null : Number(data.cog),
-    heading_degrees: data.heading == null ? null : Number(data.heading),
-    provider: 'vesselapi',
-    observed_at: data.timestamp || null,
-    received_at: now,
-    updated_at: now
-  };
 }
 
 function isNewer(incoming: Position, existing: { observed_at: string | null } | undefined) {
@@ -103,7 +245,7 @@ Deno.serve(async (req) => {
   try {
     requireValue('SUPABASE_URL', env.supabaseUrl);
     requireValue('SUPABASE_SERVICE_ROLE_KEY', env.supabaseServiceRoleKey);
-    requireValue('VESSELAPI_API_KEY', env.vesselApiKey);
+    requireValue('AISSTREAM_API_KEY', env.aisStreamApiKey);
     requireValue('IMPORTACOES_AIS_JOB_SECRET', env.jobSecret);
 
     if (req.method !== 'POST') {
@@ -122,10 +264,14 @@ Deno.serve(async (req) => {
       ? await req.json().catch(() => ({}))
       : {};
     const syncAll = Boolean((requestBody as { all?: boolean }).all);
+    const listenSeconds = Math.min(
+      MAX_LISTEN_SECONDS,
+      Math.max(15, Number((requestBody as { listenSeconds?: number }).listenSeconds) || DEFAULT_LISTEN_SECONDS)
+    );
 
     const [naviosResponse, faturasResponse] = await Promise.all([
       supabase.from('importacao_navios').select('name, aliases, mmsi'),
-      supabase.from('importacao_faturas').select('vessel_name')
+      supabase.from('importacao_faturas_status').select('vessel_name, entregue')
     ]);
 
     if (naviosResponse.error) throw naviosResponse.error;
@@ -134,9 +280,12 @@ Deno.serve(async (req) => {
     const navios = (naviosResponse.data ?? []) as Navio[];
     const faturas = (faturasResponse.data ?? []) as Fatura[];
 
-    // Nomes de navio citados nas faturas (forma manual da planilha/cadastro)
+    // Só navios com carga a bordo: fatura entregue não gera rastreamento.
     const referencedNames = new Set(
-      faturas.map((fatura) => normalizeName(fatura.vessel_name)).filter(Boolean)
+      faturas
+        .filter((fatura) => !fatura.entregue)
+        .map((fatura) => normalizeName(fatura.vessel_name))
+        .filter(Boolean)
     );
 
     const targets = navios.filter((navio) => {
@@ -146,45 +295,71 @@ Deno.serve(async (req) => {
       return (navio.aliases ?? []).some((alias) => referencedNames.has(normalizeName(alias)));
     });
 
-    const mmsis = [...new Set(targets.map((navio) => navio.mmsi as string))];
+    const mmsis = [...new Set(targets.map((navio) => navio.mmsi as string))].slice(0, MAX_MMSI_FILTERS);
+
+    // Sem navio em trânsito não há o que escutar — e abrir o socket à toa só
+    // gera ruído no log. Run de sucesso com zero alvos é o estado correto.
+    if (mmsis.length === 0) {
+      await supabase.from('importacao_ais_sync_runs').insert({
+        started_at: startedAt,
+        finished_at: new Date().toISOString(),
+        status: 'success',
+        vessels_targeted: 0,
+        positions_updated: 0,
+        positions_skipped: 0,
+        error_message: null
+      });
+
+      return jsonResponse({ ok: true, targeted: 0, updated: 0, skipped: 0, silent: [] });
+    }
 
     const { data: existingRows, error: existingError } = await supabase
       .from('importacao_posicoes')
       .select('mmsi, observed_at')
-      .in('mmsi', mmsis.length > 0 ? mmsis : ['-']);
+      .in('mmsi', mmsis);
 
     if (existingError) throw existingError;
     const existingByMmsi = new Map(
       (existingRows ?? []).map((row) => [row.mmsi as string, row as { observed_at: string | null }])
     );
 
+    const { positions, connectError } = await collectPositions(mmsis, listenSeconds);
+
     let updated = 0;
     let skipped = 0;
     const errors: string[] = [];
 
-    for (const mmsi of mmsis) {
-      try {
-        const position = await fetchLastPosition(mmsi);
-        if (!position || !isNewer(position, existingByMmsi.get(mmsi))) {
-          skipped += 1;
-          continue;
-        }
-
-        const { error } = await supabase
-          .from('importacao_posicoes')
-          .upsert(position, { onConflict: 'mmsi' });
-
-        if (error) throw error;
-        updated += 1;
-      } catch (error) {
-        errors.push(`${mmsi}: ${error instanceof Error ? error.message : String(error)}`);
+    for (const [mmsi, position] of positions) {
+      if (!isNewer(position, existingByMmsi.get(mmsi))) {
+        skipped += 1;
+        continue;
       }
 
-      // gentileza com o rate limit do plano gratuito
-      await new Promise((resolve) => setTimeout(resolve, 250));
+      const { error } = await supabase
+        .from('importacao_posicoes')
+        .upsert(position, { onConflict: 'mmsi' });
+
+      if (error) {
+        errors.push(`${mmsi}: ${error.message}`);
+        continue;
+      }
+      updated += 1;
     }
 
+    // Navio que não transmitiu na janela: fora do alcance costeiro, fundeado
+    // com AIS ocioso ou simplesmente sem estação por perto. Conta como pulado,
+    // nunca como erro — é o comportamento esperado de AIS terrestre.
+    const silent = mmsis.filter((mmsi) => !positions.has(mmsi));
+    skipped += silent.length;
+
+    if (connectError) errors.push(connectError);
+
     const status = errors.length === 0 ? 'success' : updated > 0 ? 'partial' : 'error';
+    const notes = [
+      silent.length > 0 ? `sem sinal na janela: ${silent.join(', ')}` : '',
+      ...errors
+    ].filter(Boolean);
+
     const { error: logError } = await supabase.from('importacao_ais_sync_runs').insert({
       started_at: startedAt,
       finished_at: new Date().toISOString(),
@@ -192,7 +367,9 @@ Deno.serve(async (req) => {
       vessels_targeted: mmsis.length,
       positions_updated: updated,
       positions_skipped: skipped,
-      error_message: errors.length > 0 ? errors.join(' | ').slice(0, 2000) : null
+      // Mesmo em 'success' o detalhe fica registrado: "quem não deu sinal" é a
+      // pergunta que se faz quando o mapa parece velho.
+      error_message: notes.length > 0 ? notes.join(' | ').slice(0, 2000) : null
     });
 
     if (logError) throw logError;
@@ -202,6 +379,8 @@ Deno.serve(async (req) => {
       targeted: mmsis.length,
       updated,
       skipped,
+      silent,
+      listenSeconds,
       errors
     });
   } catch (error) {

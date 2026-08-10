@@ -20,6 +20,10 @@ export type Fatura = {
   origin: string;
   source_first_row: number | null;
   updated_at: string | null;
+  delivery_status: "auto" | "entregue" | "em_transito";
+  delivered_at: string | null;
+  /** Regra do banco (importacao_fatura_entregue): manual vence a data prevista. */
+  entregue: boolean;
 };
 
 export type Item = {
@@ -62,35 +66,61 @@ export type MapVessel = {
   longitude: number | null;
   speedKnots: number | null;
   observedAt: string | null;
+  /** Idade da posição em horas — calculada no servidor para o mapa e a página
+   *  contarem a mesma história. null quando não há posição. */
+  positionAgeHours: number | null;
   destinations: string[];
   nextArrival: string | null;
   invoiceNumbers: string[];
   items: { description: string; quantity: number | null }[];
 };
 
+/** Acima disso a posição não descreve mais onde o navio está de fato. */
+export const STALE_POSITION_HOURS = 48;
+
+/** Saúde do sync AIS — a página avisa quando a posição parou de chegar. */
+export type AisRun = {
+  status: string;
+  started_at: string | null;
+  positions_updated: number | null;
+  error_message: string | null;
+};
+
 export async function loadImportacoes() {
   const supabase = await createSupabaseUserClient();
 
-  const [faturasResponse, itensResponse, naviosResponse, posicoesResponse] = await Promise.all([
-    supabase
-      .from("importacao_faturas")
-      .select("*")
-      .order("port_arrival", { ascending: true, nullsFirst: false }),
-    supabase.from("importacao_itens").select("*").order("source_row", { ascending: true }),
-    supabase.from("importacao_navios").select("name, aliases, imo, mmsi"),
-    supabase.from("importacao_posicoes").select("mmsi, vessel_name, latitude, longitude, speed_knots, observed_at")
-  ]);
+  const [faturasResponse, itensResponse, naviosResponse, posicoesResponse, aisRunResponse] =
+    await Promise.all([
+      // View, não tabela: traz a flag `entregue` já resolvida pela regra do banco.
+      supabase
+        .from("importacao_faturas_status")
+        .select("*")
+        .order("port_arrival", { ascending: true, nullsFirst: false }),
+      supabase.from("importacao_itens").select("*").order("source_row", { ascending: true }),
+      supabase.from("importacao_navios").select("name, aliases, imo, mmsi"),
+      supabase
+        .from("importacao_posicoes")
+        .select("mmsi, vessel_name, latitude, longitude, speed_knots, observed_at"),
+      supabase
+        .from("importacao_ais_sync_runs")
+        .select("status, started_at, positions_updated, error_message")
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    ]);
 
   if (faturasResponse.error) throw faturasResponse.error;
   if (itensResponse.error) throw itensResponse.error;
   if (naviosResponse.error) throw naviosResponse.error;
   if (posicoesResponse.error) throw posicoesResponse.error;
+  if (aisRunResponse.error) throw aisRunResponse.error;
 
   return {
     faturas: (faturasResponse.data ?? []) as Fatura[],
     itens: (itensResponse.data ?? []) as Item[],
     navios: (naviosResponse.data ?? []) as Navio[],
-    posicoes: (posicoesResponse.data ?? []) as Posicao[]
+    posicoes: (posicoesResponse.data ?? []) as Posicao[],
+    aisRun: (aisRunResponse.data ?? null) as AisRun | null
   };
 }
 
@@ -101,6 +131,10 @@ function normalizeName(value: string | null | undefined) {
 /**
  * Agrupa as faturas por navio, resolve IMO/MMSI pelo registro (nome ou alias,
  * como no buildFleet do MVP local) e anexa a última posição AIS conhecida.
+ *
+ * Só entram faturas NÃO entregues: depois que o contêiner desembarca, a posição
+ * do navio deixa de representar a carga — ele segue viagem e o mapa passaria a
+ * mostrar a "localização" do embarque em outro oceano.
  */
 export function buildMapVessels(
   faturas: Fatura[],
@@ -108,6 +142,7 @@ export function buildMapVessels(
   navios: Navio[],
   posicoes: Posicao[]
 ): MapVessel[] {
+  const emTransito = faturas.filter((fatura) => !fatura.entregue);
   const registryByName = new Map<string, Navio>();
   for (const navio of navios) {
     registryByName.set(normalizeName(navio.name), navio);
@@ -125,7 +160,7 @@ export function buildMapVessels(
   }
 
   const groups = new Map<string, { registry: Navio | null; manualNames: Set<string>; faturas: Fatura[] }>();
-  for (const fatura of faturas) {
+  for (const fatura of emTransito) {
     const manualName = normalizeName(fatura.vessel_name);
     if (!manualName) continue;
     const registry = registryByName.get(manualName) ?? null;
@@ -137,10 +172,15 @@ export function buildMapVessels(
   }
 
   const today = new Date().toISOString().slice(0, 10);
+  const now = Date.now();
 
   const vessels = Array.from(groups.values()).map((group) => {
     const mmsi = group.registry?.mmsi ?? null;
     const position = mmsi ? positionByMmsi.get(mmsi) ?? null : null;
+    const observedTime = position?.observed_at ? new Date(position.observed_at).getTime() : NaN;
+    const positionAgeHours = Number.isNaN(observedTime)
+      ? null
+      : Math.max(0, Math.round((now - observedTime) / 3_600_000));
     const destinations = Array.from(
       new Set(group.faturas.map((fatura) => fatura.destination).filter((value): value is string => Boolean(value)))
     );
@@ -164,6 +204,7 @@ export function buildMapVessels(
       longitude: position?.longitude ?? null,
       speedKnots: position?.speed_knots ?? null,
       observedAt: position?.observed_at ?? null,
+      positionAgeHours,
       destinations,
       nextArrival: arrivals.find((arrival) => arrival >= today) ?? arrivals[arrivals.length - 1] ?? null,
       invoiceNumbers,

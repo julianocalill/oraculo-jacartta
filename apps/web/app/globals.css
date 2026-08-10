@@ -2972,6 +2972,50 @@ h2 {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
+/* Posição antiga: o marcador precisa parecer histórico, não posição atual.
+   Ponto sem brilho, em rose, e o rótulo carrega a idade junto do nome. */
+.vessel-marker-stale .vessel-marker-dot {
+  background: var(--rose);
+  box-shadow: 0 0 0 4px rgba(251, 111, 132, 0.18), 0 2px 6px rgba(0, 0, 0, 0.5);
+  opacity: 0.85;
+}
+
+.vessel-marker-stale .vessel-marker-name {
+  color: var(--muted);
+  border-style: dashed;
+}
+
+/* Aviso de saúde do AIS na própria página de Importações — antes só existia
+   em /status, onde ninguém olha até o número parecer estranho. */
+.ais-warning {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--crit-line);
+  border-radius: var(--radius-sm);
+  background: var(--crit-soft);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.ais-position-list {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.ais-position-list li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ais-position-list small {
+  color: var(--faint);
+}
+
 /* Popup (hover) com os itens embarcados. Popup em vez de tooltip para ter
    autoPan (reposiciona o mapa) e rolagem interna — nunca corta na borda.
    Especificidade dupla para vencer o CSS padrão do Leaflet. */
