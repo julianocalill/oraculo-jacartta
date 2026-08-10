@@ -9,7 +9,10 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function SidebarNav({ alertCount, tabs }: { alertCount?: number; tabs: TabKey[] }) {
+// `badges` mapeia href da aba → contador exibido ao lado do label (some quando
+// zero/undefined). Hoje: /alertas (rupturas, global) e /agenda (tarefas
+// pendentes do usuário), ambos montados pelo AppShell.
+export function SidebarNav({ badges, tabs }: { badges?: Record<string, number | undefined>; tabs: TabKey[] }) {
   const pathname = usePathname() ?? "/";
   const granted = new Set<string>(tabs);
 
@@ -21,17 +24,20 @@ export function SidebarNav({ alertCount, tabs }: { alertCount?: number; tabs: Ta
       {mainLinks.length > 0 ? (
         <nav className="nav-group" aria-label="Principal">
           <span>Principal</span>
-          {mainLinks.map((tab) => (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              className={isActive(pathname, tab.href) ? "nav-active" : undefined}
-              aria-current={isActive(pathname, tab.href) ? "page" : undefined}
-            >
-              {tab.label}
-              {tab.href === "/alertas" && alertCount != null && alertCount > 0 ? <b>{alertCount}</b> : null}
-            </Link>
-          ))}
+          {mainLinks.map((tab) => {
+            const badge = badges?.[tab.href];
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className={isActive(pathname, tab.href) ? "nav-active" : undefined}
+                aria-current={isActive(pathname, tab.href) ? "page" : undefined}
+              >
+                {tab.label}
+                {badge != null && badge > 0 ? <b>{badge}</b> : null}
+              </Link>
+            );
+          })}
         </nav>
       ) : null}
 

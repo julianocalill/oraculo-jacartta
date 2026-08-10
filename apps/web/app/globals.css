@@ -2038,6 +2038,202 @@ h2 {
 
 /* ============================ Gráficos fiscais ============================ */
 
+.fiscal-diagnosis {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
+  gap: 24px;
+  margin-bottom: 12px;
+  padding: 18px 20px;
+  border: 1px solid var(--crit-line);
+  border-left: 3px solid var(--red);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--crit-soft), var(--panel));
+  box-shadow: var(--shadow-sm);
+}
+
+.fiscal-diagnosis:has(.fiscal-loss-drivers) {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
+}
+
+.fiscal-diagnosis-copy {
+  align-self: center;
+}
+
+.fiscal-diagnosis-copy .eyebrow {
+  margin-bottom: 5px;
+  color: var(--red);
+}
+
+.fiscal-diagnosis-copy h3 {
+  margin-bottom: 8px;
+  font-size: 18px;
+}
+
+.fiscal-diagnosis-copy > p:last-child {
+  max-width: 720px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.fiscal-diagnosis-channel {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--crit-line);
+}
+
+.fiscal-diagnosis-copy strong {
+  color: var(--text);
+}
+
+.fiscal-diagnosis-breakdown {
+  display: grid;
+  gap: 9px;
+}
+
+.fiscal-diagnosis-item {
+  display: grid;
+  gap: 5px;
+}
+
+.fiscal-diagnosis-label,
+.fiscal-diagnosis-equation {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.fiscal-loss-drivers {
+  grid-column: 1 / -1;
+  padding-top: 16px;
+  border-top: 1px solid var(--crit-line);
+}
+
+.fiscal-loss-drivers-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.fiscal-loss-drivers-head .eyebrow {
+  margin-bottom: 4px;
+  color: var(--red);
+}
+
+.fiscal-loss-drivers-head h4 {
+  font-size: 14px;
+}
+
+.fiscal-loss-drivers-head a {
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.fiscal-loss-driver-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.fiscal-loss-driver {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 9px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--panel-soft) 88%, transparent);
+}
+
+.fiscal-loss-rank {
+  display: grid;
+  grid-row: 1 / 3;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--crit-soft);
+  color: var(--red);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.fiscal-loss-product,
+.fiscal-loss-result {
+  min-width: 0;
+}
+
+.fiscal-loss-product strong {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 11.5px;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.fiscal-loss-product small,
+.fiscal-loss-result small {
+  display: block;
+  margin-top: 3px;
+  color: var(--faint);
+  font-size: 10px;
+}
+
+.fiscal-loss-product .fiscal-loss-unit-economics {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.fiscal-loss-result {
+  grid-column: 2;
+  margin-top: 4px;
+}
+
+.fiscal-loss-result strong {
+  color: var(--red);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.fiscal-diagnosis-label strong,
+.fiscal-diagnosis-equation strong {
+  color: var(--text);
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fiscal-diagnosis-track {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.fiscal-diagnosis-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.fiscal-diagnosis-equation {
+  margin-top: 2px;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+  font-weight: 700;
+}
+
 .fiscal-viz-row {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
@@ -2225,7 +2421,38 @@ h2 {
 }
 
 @media (max-width: 1080px) {
+  .fiscal-diagnosis {
+    grid-template-columns: 1fr;
+  }
+
   .fiscal-viz-row {
+    grid-template-columns: 1fr;
+  }
+
+  .fiscal-loss-driver-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .fiscal-diagnosis {
+    padding: 16px;
+  }
+
+  .fiscal-diagnosis-label,
+  .fiscal-diagnosis-equation {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .fiscal-loss-drivers-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .fiscal-loss-driver-list {
     grid-template-columns: 1fr;
   }
 }
@@ -2903,4 +3130,128 @@ h2 {
   background: rgba(255, 255, 255, 0.07);
   font-family: var(--mono);
   font-size: 11px;
+}
+
+/* ---------------------------------------------------------------------------
+   Agenda — calendário mensal de tarefas compartilhadas (/agenda).
+   Grade server-rendered de 7 colunas; chips linkam para o painel ?editar=.
+--------------------------------------------------------------------------- */
+
+.agenda-month-nav {
+  align-items: center;
+}
+
+.agenda-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.agenda-weekday {
+  padding: 2px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+}
+
+.agenda-day {
+  min-height: 96px;
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--field);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agenda-day-out {
+  opacity: 0.38;
+}
+
+.agenda-day-today {
+  border-color: var(--gold);
+  box-shadow: inset 0 0 0 1px rgba(246, 196, 83, 0.35);
+}
+
+.agenda-day-number {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.agenda-day-today .agenda-day-number {
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.agenda-chip {
+  display: block;
+  padding: 3px 7px;
+  border: 1px solid var(--warn-line);
+  border-radius: 6px;
+  background: var(--warn-soft);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.3;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agenda-chip:hover {
+  border-color: var(--gold);
+}
+
+.agenda-chip-late {
+  border-color: var(--crit-line);
+  background: var(--crit-soft);
+}
+
+.agenda-chip-done {
+  border-color: var(--line);
+  background: var(--neutral-soft);
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.agenda-description-field textarea {
+  resize: vertical;
+}
+
+.agenda-form-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.agenda-edit-footer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.agenda-actions {
+  white-space: nowrap;
+}
+
+.agenda-actions form {
+  display: inline;
+}
+
+.agenda-actions .link-button + .link-button,
+.agenda-actions form + .link-button {
+  margin-left: 10px;
+}
+
+@media (max-width: 900px) {
+  .agenda-day {
+    min-height: 64px;
+  }
 }

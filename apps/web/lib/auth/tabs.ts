@@ -31,6 +31,7 @@ export const TABS = [
   { key: "devolucoes", label: "Devoluções", href: "/devolucoes", group: "main", paths: ["/devolucoes"] },
   { key: "importacoes", label: "Importações", href: "/importacoes", group: "main", paths: ["/importacoes"] },
   { key: "calculadora", label: "Calculadora", href: "/calculadora", group: "main", paths: ["/calculadora"] },
+  { key: "agenda", label: "Agenda", href: "/agenda", group: "main", paths: ["/agenda"] },
   { key: "alertas", label: "Alertas", href: "/alertas", group: "main", paths: ["/alertas"] },
   { key: "parametros", label: "Parâmetros", href: "/parametros", group: "main", paths: ["/parametros"] },
   { key: "usuarios", label: "Usuários", href: "/usuarios", group: "admin", paths: ["/usuarios"] },

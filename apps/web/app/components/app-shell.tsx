@@ -3,6 +3,8 @@ import { SidebarNav } from "./sidebar-nav";
 import { BrandMark } from "./brand-mark";
 import { getCurrentUser } from "../../lib/auth/session";
 import { allowedTabs } from "../../lib/auth/access";
+import { loadAgendaPendingCount } from "../../lib/agenda-count";
+import { effectiveUserId } from "../../lib/users";
 
 // Casca visual compartilhada. Fica separada do AppShell porque o skeleton
 // (app/loading.tsx) não pode ser async — fallback de Suspense é sempre síncrono.
@@ -51,8 +53,18 @@ export async function AppShell({
   const user = await getCurrentUser();
   const tabs = allowedTabs(user);
 
+  // O badge da Agenda é por usuário, então é o próprio shell que o carrega —
+  // as páginas continuam passando só o alertCount (global) que já recebiam.
+  const agendaCount =
+    user && tabs.includes("agenda")
+      ? await loadAgendaPendingCount(effectiveUserId(user))
+      : undefined;
+
   return (
-    <Frame nav={<SidebarNav alertCount={alertCount} tabs={tabs} />} footer={footer}>
+    <Frame
+      nav={<SidebarNav badges={{ "/alertas": alertCount, "/agenda": agendaCount }} tabs={tabs} />}
+      footer={footer}
+    >
       {children}
     </Frame>
   );

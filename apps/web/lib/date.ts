@@ -36,6 +36,56 @@ export function getSaoPauloMonthRange(now: Date = new Date()): { start: string; 
   };
 }
 
+/** Data de hoje (YYYY-MM-DD) em America/Sao_Paulo. */
+export function getSaoPauloToday(now: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(now);
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+const MONTH_PARAM = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/**
+ * Resolve o parâmetro ?mes=YYYY-MM da Agenda para os limites do mês.
+ * Valor ausente ou inválido cai no mês corrente em America/Sao_Paulo.
+ * `endExclusive` é o dia 1 do mês seguinte (janela [start, endExclusive)).
+ */
+export function parseMonthParam(mes?: string): {
+  year: number;
+  month: number;
+  start: string;
+  endExclusive: string;
+} {
+  let year: number;
+  let month: number;
+
+  if (mes && MONTH_PARAM.test(mes)) {
+    year = Number(mes.slice(0, 4));
+    month = Number(mes.slice(5, 7));
+  } else {
+    const today = getSaoPauloToday();
+    year = Number(today.slice(0, 4));
+    month = Number(today.slice(5, 7));
+  }
+
+  const mm = String(month).padStart(2, "0");
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+
+  return {
+    year,
+    month,
+    start: `${year}-${mm}-01`,
+    endExclusive: `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`
+  };
+}
+
 export function formatBrDate(value: string | null | undefined, fallback = "-"): string {
   if (!value) return fallback;
 

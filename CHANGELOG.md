@@ -2,6 +2,44 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-10] — Aba Agenda: tarefas compartilhadas entre usuários
+
+- Nova aba `/agenda`: cada usuário cria tarefas (título, descrição, prazo),
+  inclui outros usuários cadastrados como participantes, e a tarefa aparece na
+  agenda de todos os envolvidos. Calendário mensal navegável (`?mes=YYYY-MM`)
+  + lista de próximas tarefas, tudo server-rendered no padrão do app.
+- Primeira feature com dados por usuário: `oraculo_agenda_tasks` +
+  `oraculo_agenda_task_participants` com RLS por linha (só participantes leem,
+  via helper `security definer` que evita recursão de policy). Escrita segue o
+  padrão do projeto: service-role em Server Actions com autorização no
+  TypeScript. Migration `20260810120000` aplicada em produção.
+- Aviso in-app: badge por usuário na sidebar contando tarefas pendentes com
+  prazo até hoje (`lib/agenda-count.ts`, sem `unstable_cache` — chave global
+  vazaria a contagem entre usuários). O badge de `/alertas` foi generalizado
+  para um mapa `badges` em `SidebarNav`, sem tocar as páginas existentes.
+- Diretório de usuários (`lib/users.ts`): id/nome/email via auth admin API com
+  cache de 5 min, exposto a qualquer usuário com a aba Agenda; abas e logins
+  continuam restritos ao gate master de `/usuarios`. Mock de dev usa uuid
+  sentinela (`local-dev` não existe em `auth.users`).
+- Regras: quem cria edita/exclui (masters também); qualquer participante
+  conclui/reabre. Sem cron, sem WhatsApp — aviso é o badge, por decisão.
+- Verificado: build + 30 testes fiscais, CRUD completo no dev server, RLS
+  provada no banco (participante vê 1, intruso vê 0). Após o deploy, marcar a
+  caixinha "Agenda" em `/usuarios` para os usuários existentes.
+
+## [2026-08-10] — Diagnóstico visível da margem fiscal negativa
+
+- O bloco `Margem e ROI fiscais` agora explica o prejuízo quando o resultado é
+  negativo: mostra quanto custo, impostos e marketplace consomem da receita
+  coberta, o total comprometido e quanto falta a cada R$ 100 faturados.
+- O diagnóstico usa os valores do período/filtro ativo e mantém explícito que a
+  leitura se refere somente à receita com custo confiável.
+- No mês corrente, a justificativa também mostra a participação da Shopee no
+  faturamento fiscal e os cinco SKUs que mais geram prejuízo, com receita,
+  perda e margem individual, usando o snapshot fiscal já materializado.
+- A lista acionável exclui tapetes — já reconhecidos pelo negócio — e detalha
+  por unidade a venda, custo, tributos e marketplace dos demais ofensores.
+
 ## [2026-08-09] — Funil de expedição Shopee × Bip
 
 - `shopee-sync` passa a materializar pacote, prazo, rastreio e status logístico
