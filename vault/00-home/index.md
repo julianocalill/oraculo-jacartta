@@ -38,6 +38,16 @@ Build an operational intelligence system where Supabase is the canonical backend
   e itens; posições atualizadas na nuvem a cada 6h (nada roda local).
 - Retrato completo: `docs/project-status-2026-07-17.md`.
 
+## Update 2026-08-10 — Agenda de tarefas compartilhadas
+
+- Nova aba `/agenda`: tarefas com prazo, participantes e sub-tarefas
+  colaborativas; calendário mensal server-rendered + pop-up de tarefa +
+  badge pessoal na sidebar (pendentes com prazo até hoje).
+- Primeira feature com dados por usuário e RLS por linha (só participantes
+  leem; escrita segue service-role com autorização no TypeScript).
+- Sem cron e sem notificação externa por decisão — o aviso é o badge.
+- Retrato completo: `docs/project-status-2026-08-10.md`.
+
 ## Olist/fiscal foundation — validado em 2026-07-07
 
 Bloco histórico da era Olist/fiscal. As regras seguem valendo; os números são

@@ -1023,6 +1023,69 @@ manualmente).
 
 ---
 
+## 3.8. Agenda (`/agenda`)
+
+Tarefas compartilhadas da equipe — a única tela do Oráculo onde cada pessoa vê
+dados **próprios** (só as tarefas em que participa), e não os números globais
+do negócio.
+
+### Calendário do mês
+
+Grade de domingo a sábado do mês escolhido (`?mes=`, setas no topo). Cada
+tarefa vira uma etiqueta no dia do prazo:
+
+| Cor da etiqueta | Significado |
+|---|---|
+| Dourada | Pendente dentro do prazo |
+| Vermelha | Pendente e atrasada (prazo antes de hoje) |
+| Cinza riscada | Concluída |
+
+O dia de hoje tem contorno dourado (fuso de São Paulo). Clicar numa etiqueta
+abre a janela (pop-up) da tarefa.
+
+### Janela da tarefa (pop-up)
+
+- **Quem criou (e administradores)**: edita título, data, descrição e a lista
+  de participantes; pode excluir a tarefa. O criador é participante sempre —
+  a caixinha dele vem marcada e travada.
+- **Demais participantes**: veem prazo, descrição e participantes
+  (somente leitura) e usam a checklist de sub-tarefas normalmente.
+- **Sub-tarefas**: qualquer participante adiciona, marca como feita (fica
+  registrado quem concluiu), reabre e remove. Concluir todas **não** conclui a
+  tarefa-mãe — o status da tarefa é sempre um clique manual na lista.
+- Fechar: no ×, em "Fechar sem salvar" ou clicando fora da janela.
+
+### Lista "Próximas tarefas"
+
+Pendentes ordenadas por prazo (atrasadas primeiro) + as 10 concluídas mais
+recentes. Colunas:
+
+| Coluna | O que mostra |
+|---|---|
+| Tarefa | Título; descrição e progresso das sub-tarefas ("2/5") como subtítulo |
+| Prazo | Data da tarefa (dd/mm/aaaa) |
+| Participantes | Dois primeiros nomes + "+N" (lista completa no hover) |
+| Status | pendente (âmbar) / atrasada (vermelho) / concluída (verde, com quem concluiu) |
+| Ações | concluir/reabrir (qualquer participante) e editar (abre o pop-up) |
+
+### Badge no menu
+
+O número ao lado de "Agenda" na sidebar é **pessoal**: tarefas pendentes em
+que a pessoa participa com prazo até hoje (atrasadas + do dia). Tarefa futura
+não conta. É o análogo por usuário do badge global de Alertas.
+
+### Regras de permissão (resumo)
+
+| Ação | Quem pode |
+|---|---|
+| Criar tarefa | Qualquer usuário com a aba Agenda |
+| Editar detalhes / excluir | Criador ou administrador |
+| Concluir / reabrir tarefa | Qualquer participante |
+| Sub-tarefas (criar/concluir/reabrir/remover) | Qualquer participante |
+| Ver a tarefa | Só participantes |
+
+---
+
 ## Tabela-resumo dos limiares hardcoded (para consulta rápida)
 
 | Limiar | Valor | Onde se aplica |

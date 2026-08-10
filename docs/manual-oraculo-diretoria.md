@@ -32,6 +32,7 @@ O Oráculo é a plataforma de inteligência de vendas do Grupo Jacartta. Ele re�
 | **Curva de Venda** | Classificação A/B/C por giro (tempo desde a última venda) |
 | **Curva de Estoque** | Classificação A/B/C por cobertura (meses de estoque) |
 | **Calculadora** | Simulador de precificação por marketplace |
+| **Agenda** | Tarefas da equipe com prazo, participantes e sub-tarefas |
 | **Alertas** | Produtos que exigem ação: ruptura, risco de ruptura, parados |
 | **Parâmetros** | Cadastro manual de custos e taxas por canal/SKU/UF |
 | **Usuários / Status** | Administração de acessos e saúde da sincronização |
@@ -120,7 +121,31 @@ A página lista os produtos que exigem ação, do mais urgente para o menos:
 
 O **número vermelho ao lado de "Alertas" no menu** é a contagem de itens acionáveis (ruptura + iminente) — o mesmo número em todas as telas.
 
-## 9. Fórmulas — resumo de bolso
+## 9. Agenda — tarefas da equipe
+
+Cada pessoa cria tarefas com **título, descrição e prazo** e marca quem mais
+participa. A tarefa aparece na agenda de **todos os marcados** — quem cria
+entra automaticamente.
+
+- **Calendário do mês**: cada tarefa vira uma etiqueta no dia do prazo.
+  Dourada = pendente, vermelha = atrasada, riscada = concluída. O dia de hoje
+  tem contorno dourado; as setas no topo navegam entre os meses.
+- **Clicar na tarefa abre a janela dela**: quem criou edita título, prazo,
+  descrição e participantes, e pode excluir; os demais participantes veem os
+  detalhes.
+- **Sub-tarefas**: dentro da janela, uma checklist compartilhada. **Qualquer
+  participante** adiciona itens, marca como feito (fica registrado quem fez) e
+  reabre. Fechar todas as sub-tarefas **não** conclui a tarefa — concluir é um
+  clique separado, na lista.
+- **Próximas tarefas**: lista com prazo, participantes e status (pendente /
+  atrasada / concluída), com o progresso das sub-tarefas ("2/5") e os botões
+  **concluir/reabrir**.
+- O **número dourado ao lado de "Agenda" no menu** é pessoal: conta as SUAS
+  tarefas pendentes com prazo até hoje (atrasadas + do dia). Tarefa futura não
+  gera aviso.
+- Só participantes enxergam cada tarefa — não existe agenda pública.
+
+## 10. Fórmulas — resumo de bolso
 
 | Indicador | Cálculo |
 |---|---|
@@ -136,7 +161,7 @@ O **número vermelho ao lado de "Alertas" no menu** é a contagem de itens acion
 | Lucro (calculadora) | Preço − custo − comissão − impostos − ads − fixos − reembolso |
 | Variação (▲/▼) | Mês atual vs mesmo trecho do mês anterior |
 
-## 10. Checklist de leitura (reunião semanal)
+## 11. Checklist de leitura (reunião semanal)
 
 1. O selo **"Sync fiscal saudável"** está verde? (Se não, os números param na data indicada.)
 2. **Receita faturada** e a setinha: crescendo contra o mesmo trecho do mês passado?

@@ -7,11 +7,11 @@
 - Framework: `Next.js`
 - Data access: business-data reads use an authenticated server client (anon key + user JWT) under RLS via `createSupabaseUserClient()`; the `SUPABASE_SERVICE_ROLE_KEY` client is reserved for writes, `/usuarios` (auth.admin) and `/status` (sensitive tokens). See migration `20260710092000_rls_authenticated_read.sql`.
 - Production domain: `https://oraculo.oliverhome.com.br`
-- Latest documented production deploy: `dpl_AKM7ayoqYWc9uHGV38ZyUjhpJYVo`
+- Latest documented production deploy: `dpl_CBW4rgtFNL6fHksfxtWJbj7RgiK2` (2026-08-10, Agenda)
 - Primary GitHub repository: `https://github.com/Grupo-Jacartta/oraculo.git`
 - Personal mirror: `https://github.com/julianocalill/oraculo-jacartta`
 - Current deployment mode: production deploys through Vercel CLI/GitHub integration.
-- Auth: Supabase Auth protects every app route — `/`, `/pedidos`, `/skus`, `/curva-de-venda`, `/curva-de-estoque`, `/shopee` (+ `/shopee/estoque`, `/shopee/reposicao`), `/mercado-livre` (+ `/mercado-livre/envio`), `/importacoes` (+ `/importacoes/cadastro`), `/calculadora`, `/alertas`, `/parametros`, `/usuarios`, `/status`. `/login` is public.
+- Auth: Supabase Auth protects every app route — `/`, `/pedidos`, `/skus`, `/curva-de-venda`, `/curva-de-estoque`, `/shopee` (+ `/shopee/estoque`, `/shopee/reposicao`), `/mercado-livre` (+ `/mercado-livre/envio`), `/importacoes` (+ `/importacoes/cadastro`), `/calculadora`, `/agenda`, `/alertas`, `/parametros`, `/usuarios`, `/status`. `/login` is public.
 - Defense in depth: besides the middleware, every protected page calls `requireCurrentUser()` at the top of its server component, and every export route returns `401` when there is no authenticated user — CSV (`/curva-de-venda/export`, `/curva-de-estoque/export`) and `.xlsx` (`/mercado-livre/envio/export`, `/shopee/reposicao/export`). Pages use the service-role client, so this page-level check is the second barrier if the middleware is ever bypassed.
 - Gotcha when verifying a new route: the middleware redirects anonymous requests to `/login`, so an external `curl` returns `307` even for a route that does not exist — a `307` proves nothing. Confirm new routes in the deploy build output instead.
 - Middleware rule: when a local JWT is still valid, do not call Supabase Auth on every request; refresh only near token expiration to keep navigation light.
@@ -370,6 +370,21 @@ instead of the shop name (fixed in `20260716250000_shopee_shops_authenticated_re
 **Checklist for every new table read by a page**: `grant select ... to authenticated`
 *and* a `for select to authenticated` policy — otherwise the page degrades
 quietly instead of failing loudly.
+
+## Agenda — first per-row RLS (exception to the `using (true)` model)
+
+The Agenda tables (`oraculo_agenda_tasks`, `oraculo_agenda_task_participants`,
+`oraculo_agenda_subtasks` — migrations `20260810120000` / `20260810130000`) are
+the only tables with **per-user row filtering**: the `for select to
+authenticated` policies call `public.oraculo_agenda_is_participant(task_id)`, a
+`security definer` helper that checks `auth.uid()` against the participants
+table (a direct self-referencing policy on participants would recurse). Writes
+remain service-role-only from Server Actions, with authorization in TypeScript —
+there are no write policies for `authenticated`. App loaders additionally filter
+by user id explicitly, because in dev the user client falls back to the admin
+client (no RLS) and the mock user maps to the sentinel uuid in
+`apps/web/lib/users.ts`. No cron, no Edge Function: the sidebar badge is
+computed per request.
 
 ## Manual Validation Commands
 

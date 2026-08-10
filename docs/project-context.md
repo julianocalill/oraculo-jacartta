@@ -22,6 +22,21 @@ The current product direction is practical executive intelligence for the operat
 - `Obsidian` can store durable project memory, but repository docs are the source of truth.
 - `AI agents` assist architecture, coding, review and documentation, but repository files remain the source of truth.
 
+## Current state on 2026-08-10
+
+See `docs/project-status-2026-08-10.md` (and the chain of status docs it
+supersedes) for the full write-up. Highlights since July:
+
+- Expedição funnel (Shopee × Bip), Devoluções funnel, fiscal margin with
+  marketplace commission and the negative-margin diagnostic on the dashboard.
+- **Agenda** (`/agenda`): shared team tasks with participants, monthly
+  calendar, task pop-up and collaborative subtasks — the first feature with
+  per-user data and per-row RLS. In-app badge per user; no cron, no external
+  notifications by decision.
+- Tab-based access control in production (`app_metadata.tabs`, registry in
+  `lib/auth/tabs.ts`), Vercel functions in `gru1`, DB compute upgraded to
+  Small.
+
 ## Current state on 2026-07-10
 
 See `docs/project-status-2026-07-10.md` for the full write-up. Highlights:

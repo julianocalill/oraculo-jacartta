@@ -70,7 +70,7 @@ linha).
 
 ### Deployment & auth
 - Production URL: `https://oraculo.oliverhome.com.br`
-- Latest Vercel deploy: `oraculo-jacartta-lq1cin08a` (2026-08-04, aba Devoluções + margem fiscal com comissão)
+- Latest Vercel deploy: `oraculo-jacartta-2ummky4j2` (2026-08-10, aba Agenda com pop-up e sub-tarefas)
 - **Dois remotes**: `origin` = `Grupo-Jacartta/oraculo`, `personal` = `julianocalill/oraculo-jacartta`.
   A Vercel escuta o **`personal`** — push só no `origin` não publica.
 - Business-data reads run under RLS via an authenticated client (anon key + user
