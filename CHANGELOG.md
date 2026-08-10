@@ -26,6 +26,15 @@ Histórico de entregas e mudanças significativas.
 - Verificado: build + 30 testes fiscais, CRUD completo no dev server, RLS
   provada no banco (participante vê 1, intruso vê 0). Após o deploy, marcar a
   caixinha "Agenda" em `/usuarios` para os usuários existentes.
+- **Pop-up e sub-tarefas** (mesmo dia, a pedido): abrir uma tarefa agora exibe
+  um modal sobreposto (overlay server-rendered, sem JS de cliente — o backdrop
+  é um link que fecha ao clicar fora) em vez do painel abaixo do calendário.
+  Dentro do pop-up, checklist de sub-tarefas colaborativa
+  (`oraculo_agenda_subtasks`, migration `20260810130000`, mesma RLS por
+  participante): qualquer participante adiciona, conclui/reabre e remove
+  sub-tarefas, com autor da conclusão registrado e progresso `x/y` na lista.
+  Participantes não-criadores veem os detalhes e interagem com a checklist no
+  mesmo pop-up.
 
 ## [2026-08-10] — Diagnóstico visível da margem fiscal negativa
 

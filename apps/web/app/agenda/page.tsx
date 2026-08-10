@@ -199,6 +199,112 @@ async function deleteTask(formData: FormData) {
   redirect(backHref(formData));
 }
 
+// Sub-tarefas: checklist colaborativa — qualquer participante da tarefa-mãe
+// cria, conclui/reabre e remove. Sem redirect: o pop-up continua aberto.
+
+async function assertTaskParticipant(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  taskId: string,
+  userId: string
+) {
+  const { data, error } = await supabase
+    .from("oraculo_agenda_task_participants")
+    .select("task_id")
+    .eq("task_id", taskId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Só participantes da tarefa podem mexer nas sub-tarefas.");
+}
+
+async function addSubtask(formData: FormData) {
+  "use server";
+  const user = await assertTabAccess("agenda");
+  const me = effectiveUserId(user);
+
+  const taskId = String(formData.get("task_id") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  if (!UUID.test(taskId)) throw new Error("Tarefa inválida.");
+  if (!title) throw new Error("A sub-tarefa precisa de um título.");
+
+  const supabase = createSupabaseAdminClient();
+  await assertTaskParticipant(supabase, taskId, me);
+
+  const { data: last, error: lastError } = await supabase
+    .from("oraculo_agenda_subtasks")
+    .select("position")
+    .eq("task_id", taskId)
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (lastError) throw lastError;
+
+  const { error } = await supabase
+    .from("oraculo_agenda_subtasks")
+    .insert({ task_id: taskId, title, position: (last?.position ?? 0) + 1 });
+  if (error) throw error;
+
+  revalidatePath("/agenda");
+}
+
+async function toggleSubtask(formData: FormData) {
+  "use server";
+  const user = await assertTabAccess("agenda");
+  const me = effectiveUserId(user);
+
+  const subtaskId = String(formData.get("subtask_id") ?? "");
+  const nextDone = String(formData.get("next_done") ?? "") === "true";
+  if (!UUID.test(subtaskId)) throw new Error("Sub-tarefa inválida.");
+
+  const supabase = createSupabaseAdminClient();
+  const { data: subtask, error: loadError } = await supabase
+    .from("oraculo_agenda_subtasks")
+    .select("id,task_id")
+    .eq("id", subtaskId)
+    .maybeSingle();
+  if (loadError) throw loadError;
+  if (!subtask) throw new Error("Sub-tarefa não encontrada.");
+
+  await assertTaskParticipant(supabase, subtask.task_id, me);
+
+  const patch = nextDone
+    ? { done: true, done_at: new Date().toISOString(), done_by: me }
+    : { done: false, done_at: null, done_by: null };
+
+  const { error } = await supabase
+    .from("oraculo_agenda_subtasks")
+    .update(patch)
+    .eq("id", subtaskId);
+  if (error) throw error;
+
+  revalidatePath("/agenda");
+}
+
+async function deleteSubtask(formData: FormData) {
+  "use server";
+  const user = await assertTabAccess("agenda");
+  const me = effectiveUserId(user);
+
+  const subtaskId = String(formData.get("subtask_id") ?? "");
+  if (!UUID.test(subtaskId)) throw new Error("Sub-tarefa inválida.");
+
+  const supabase = createSupabaseAdminClient();
+  const { data: subtask, error: loadError } = await supabase
+    .from("oraculo_agenda_subtasks")
+    .select("id,task_id")
+    .eq("id", subtaskId)
+    .maybeSingle();
+  if (loadError) throw loadError;
+  if (!subtask) throw new Error("Sub-tarefa não encontrada.");
+
+  await assertTaskParticipant(supabase, subtask.task_id, me);
+
+  const { error } = await supabase.from("oraculo_agenda_subtasks").delete().eq("id", subtaskId);
+  if (error) throw error;
+
+  revalidatePath("/agenda");
+}
+
 // ---------------------------------------------------------------------------
 // Helpers de apresentação
 // ---------------------------------------------------------------------------
@@ -309,6 +415,72 @@ function ParticipantChecks({
   );
 }
 
+// Checklist de sub-tarefas dentro do pop-up. Cada linha tem seu próprio form
+// de toggle/remover (não pode ficar aninhada no form de edição da tarefa).
+function SubtaskChecklist({
+  task,
+  usersById
+}: {
+  task: AgendaTask;
+  usersById: Map<string, OraculoUser>;
+}) {
+  const doneCount = task.subtasks.filter((subtask) => subtask.done).length;
+
+  return (
+    <div className="agenda-subtasks">
+      <div className="tab-access-head">
+        <span>
+          Sub-tarefas
+          {task.subtasks.length > 0 ? ` — ${doneCount}/${task.subtasks.length}` : ""}
+        </span>
+      </div>
+
+      {task.subtasks.length === 0 ? (
+        <p className="agenda-form-note">Nenhuma sub-tarefa ainda. Adicione a primeira abaixo.</p>
+      ) : (
+        <ul className="agenda-subtask-list">
+          {task.subtasks.map((subtask) => (
+            <li
+              key={subtask.id}
+              className={subtask.done ? "agenda-subtask agenda-subtask-done" : "agenda-subtask"}
+            >
+              <form action={toggleSubtask}>
+                <input type="hidden" name="subtask_id" value={subtask.id} />
+                <input type="hidden" name="next_done" value={subtask.done ? "false" : "true"} />
+                <button
+                  type="submit"
+                  className="agenda-subtask-toggle"
+                  title={subtask.done ? "Reabrir sub-tarefa" : "Concluir sub-tarefa"}
+                >
+                  {subtask.done ? "✓" : ""}
+                </button>
+              </form>
+              <span className="agenda-subtask-title">
+                {subtask.title}
+                {subtask.done && subtask.done_by ? (
+                  <small> — {usersById.get(subtask.done_by)?.name ?? "usuário removido"}</small>
+                ) : null}
+              </span>
+              <form action={deleteSubtask}>
+                <input type="hidden" name="subtask_id" value={subtask.id} />
+                <button type="submit" className="link-button">
+                  remover
+                </button>
+              </form>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <form action={addSubtask} className="agenda-subtask-add">
+        <input type="hidden" name="task_id" value={task.id} />
+        <input name="title" placeholder="Nova sub-tarefa" required />
+        <button type="submit">Adicionar</button>
+      </form>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Página
 // ---------------------------------------------------------------------------
@@ -410,77 +582,101 @@ export default async function AgendaPage({
         </div>
       </section>
 
-      {editId && !editTask ? (
-        <section className="panel settings-panel">
-          <div className="section-head">
-            <p className="eyebrow">Editar tarefa</p>
-            <h2>Tarefa não encontrada</h2>
-          </div>
-          <p className="empty-state">
-            A tarefa não existe mais ou você não participa dela.{" "}
-            <Link href={`/agenda?mes=${mes}`}>Voltar para a agenda</Link>.
-          </p>
-        </section>
-      ) : null}
+      {editId ? (
+        <div className="agenda-modal-overlay">
+          {/* O backdrop é um link de fechar: clicar fora do pop-up volta para a agenda. */}
+          <Link
+            href={`/agenda?mes=${mes}`}
+            className="agenda-modal-backdrop"
+            aria-label="Fechar"
+          />
+          <section className="agenda-modal" role="dialog" aria-modal="true">
+            <div className="agenda-modal-head">
+              <div>
+                <p className="eyebrow">Editar tarefa</p>
+                <h2>{editTask ? editTask.title : "Tarefa não encontrada"}</h2>
+              </div>
+              <Link className="agenda-modal-close" href={`/agenda?mes=${mes}`} aria-label="Fechar">
+                ×
+              </Link>
+            </div>
 
-      {editTask ? (
-        <section className="panel settings-panel">
-          <div className="section-head">
-            <p className="eyebrow">Editar tarefa</p>
-            <h2>{editTask.title}</h2>
-          </div>
-
-          {editTask.created_by === me || master ? (
-            <>
-              <form action={updateTask} className="upload-form user-form">
-                <input type="hidden" name="task_id" value={editTask.id} />
-                <input type="hidden" name="mes" value={mes} />
-                <label>
-                  <span>Título</span>
-                  <input name="title" defaultValue={editTask.title} required />
-                </label>
-                <label>
-                  <span>Data</span>
-                  <input name="due_day" type="date" defaultValue={editTask.due_day} required />
-                </label>
-                <label className="agenda-description-field">
-                  <span>Descrição</span>
-                  <textarea name="description" rows={3} defaultValue={editTask.description ?? ""} />
-                </label>
-                <ParticipantChecks
-                  directory={directory}
-                  selected={editTask.participant_ids}
-                  creatorId={editTask.created_by}
-                  idPrefix="edit"
-                />
-                <button type="submit">Salvar alterações</button>
-              </form>
-
-              <div className="agenda-edit-footer">
-                <form action={deleteTask}>
+            {!editTask ? (
+              <p className="empty-state">
+                A tarefa não existe mais ou você não participa dela.
+              </p>
+            ) : editTask.created_by === me || master ? (
+              <>
+                <form action={updateTask} className="upload-form user-form">
                   <input type="hidden" name="task_id" value={editTask.id} />
                   <input type="hidden" name="mes" value={mes} />
-                  <button type="submit" className="link-button">
-                    Excluir tarefa
-                  </button>
+                  <label>
+                    <span>Título</span>
+                    <input name="title" defaultValue={editTask.title} required />
+                  </label>
+                  <label>
+                    <span>Data</span>
+                    <input name="due_day" type="date" defaultValue={editTask.due_day} required />
+                  </label>
+                  <label className="agenda-description-field">
+                    <span>Descrição</span>
+                    <textarea name="description" rows={3} defaultValue={editTask.description ?? ""} />
+                  </label>
+                  <ParticipantChecks
+                    directory={directory}
+                    selected={editTask.participant_ids}
+                    creatorId={editTask.created_by}
+                    idPrefix="edit"
+                  />
+                  <button type="submit">Salvar alterações</button>
                 </form>
+
+                <SubtaskChecklist task={editTask} usersById={usersById} />
+
+                <div className="agenda-edit-footer">
+                  <form action={deleteTask}>
+                    <input type="hidden" name="task_id" value={editTask.id} />
+                    <input type="hidden" name="mes" value={mes} />
+                    <button type="submit" className="link-button">
+                      Excluir tarefa
+                    </button>
+                  </form>
+                  <Link className="link-button" href={`/agenda?mes=${mes}`}>
+                    Fechar sem salvar
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="agenda-task-info">
+                  <p>
+                    <span>Prazo:</span> {formatBrDate(editTask.due_day)}
+                  </p>
+                  {editTask.description ? (
+                    <p>
+                      <span>Descrição:</span> {editTask.description}
+                    </p>
+                  ) : null}
+                  <p>
+                    <span>Participantes:</span>{" "}
+                    {participantNames(editTask, usersById).join(", ")}
+                  </p>
+                  <p className="agenda-form-note">
+                    Só quem criou a tarefa (
+                    {usersById.get(editTask.created_by)?.name ?? "usuário removido"}) edita os
+                    detalhes. Concluir ou reabrir a tarefa fica na lista de próximas tarefas.
+                  </p>
+                </div>
+
+                <SubtaskChecklist task={editTask} usersById={usersById} />
+
                 <Link className="link-button" href={`/agenda?mes=${mes}`}>
-                  Fechar sem salvar
+                  Fechar
                 </Link>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="empty-state">
-                Só quem criou a tarefa ({usersById.get(editTask.created_by)?.name ?? "usuário removido"})
-                pode editar os detalhes. Você pode concluí-la ou reabri-la na lista abaixo.
-              </p>
-              <Link className="link-button" href={`/agenda?mes=${mes}`}>
-                Fechar
-              </Link>
-            </>
-          )}
-        </section>
+              </>
+            )}
+          </section>
+        </div>
       ) : null}
 
       <section className="panel settings-panel">
@@ -549,6 +745,12 @@ export default async function AgendaPage({
                         {task.title}
                         {task.description ? (
                           <span className="row-subtitle">{task.description}</span>
+                        ) : null}
+                        {task.subtasks.length > 0 ? (
+                          <span className="row-subtitle">
+                            {task.subtasks.filter((subtask) => subtask.done).length}/
+                            {task.subtasks.length} sub-tarefas
+                          </span>
                         ) : null}
                       </td>
                       <td>{formatBrDate(task.due_day)}</td>

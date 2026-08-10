@@ -64,8 +64,9 @@ rastreamento de importações com mapa AIS, **aba Devoluções com funil de trê
 canais cruzado com a NF fiscal**, margem fiscal com comissão de marketplace,
 relatório periódico de Shopee Ads por IA local (implementado; aguardando o
 preview final do Ollama antes da ativação) e **aba Agenda de tarefas
-compartilhadas entre usuários** (calendário mensal + badge por usuário;
-primeira feature com RLS por linha).
+compartilhadas entre usuários** (calendário mensal, pop-up de tarefa com
+sub-tarefas colaborativas e badge por usuário; primeira feature com RLS por
+linha).
 
 ### Deployment & auth
 - Production URL: `https://oraculo.oliverhome.com.br`

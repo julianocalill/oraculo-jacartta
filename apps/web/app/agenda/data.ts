@@ -11,6 +11,14 @@ import { createSupabaseUserClient } from "../../lib/supabase/user";
 
 export type AgendaTaskStatus = "pendente" | "concluida";
 
+export type AgendaSubtask = {
+  id: string;
+  title: string;
+  done: boolean;
+  done_by: string | null;
+  position: number;
+};
+
 export type AgendaTask = {
   id: string;
   title: string;
@@ -21,10 +29,13 @@ export type AgendaTask = {
   completed_at: string | null;
   completed_by: string | null;
   participant_ids: string[];
+  subtasks: AgendaSubtask[];
 };
 
 const TASK_COLUMNS =
-  "id,title,description,due_day,status,created_by,completed_at,completed_by,oraculo_agenda_task_participants(user_id)";
+  "id,title,description,due_day,status,created_by,completed_at,completed_by," +
+  "oraculo_agenda_task_participants(user_id)," +
+  "oraculo_agenda_subtasks(id,title,done,done_by,position)";
 
 type TaskRow = {
   id: string;
@@ -36,6 +47,7 @@ type TaskRow = {
   completed_at: string | null;
   completed_by: string | null;
   oraculo_agenda_task_participants: { user_id: string }[];
+  oraculo_agenda_subtasks: AgendaSubtask[];
 };
 
 function toTask(row: TaskRow): AgendaTask {
@@ -48,7 +60,10 @@ function toTask(row: TaskRow): AgendaTask {
     created_by: row.created_by,
     completed_at: row.completed_at,
     completed_by: row.completed_by,
-    participant_ids: (row.oraculo_agenda_task_participants ?? []).map((p) => p.user_id)
+    participant_ids: (row.oraculo_agenda_task_participants ?? []).map((p) => p.user_id),
+    subtasks: [...(row.oraculo_agenda_subtasks ?? [])].sort(
+      (left, right) => left.position - right.position || left.title.localeCompare(right.title)
+    )
   };
 }
 

@@ -11,8 +11,17 @@ cadastrados como participantes, e a tarefa aparece na agenda de todos os
 envolvidos. A visualização é um calendário mensal server-rendered navegável
 por `?mes=YYYY-MM` (hoje com contorno ouro, atrasadas em rose, concluídas
 riscadas) mais a lista "Próximas tarefas" com ações de concluir/reabrir em
-formulários de um botão. Edição em painel endereçável por URL
-(`?editar=<id>`), sem modal, no padrão do repositório.
+formulários de um botão. Abrir uma tarefa (`?editar=<id>`) exibe um **pop-up**
+— overlay server-rendered sem JS de cliente, primeiro modal do repositório; o
+backdrop é um `<Link>` que fecha ao clicar fora.
+
+Dentro do pop-up existe a checklist de **sub-tarefas** colaborativa
+(`oraculo_agenda_subtasks`, migration `20260810130000`, mesma RLS por
+participante da tarefa-mãe): qualquer participante adiciona, conclui/reabre e
+remove sub-tarefas; a conclusão registra quem concluiu e a lista de próximas
+tarefas mostra o progresso `x/y`. Concluir todas as sub-tarefas não conclui a
+tarefa-mãe — o fechamento continua manual. Participantes que não criaram a
+tarefa veem os detalhes read-only e interagem só com a checklist.
 
 ### Modelo de dados e segurança
 
