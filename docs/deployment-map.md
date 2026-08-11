@@ -386,6 +386,24 @@ client (no RLS) and the mock user maps to the sentinel uuid in
 `apps/web/lib/users.ts`. No cron, no Edge Function: the sidebar badge is
 computed per request.
 
+## Logística — pallet labels (no cron, no Edge Function)
+
+`logistica_paletes` and `logistica_palete_itens` (migration `20260811210000`)
+store every pallet label generated on `/logistica/etiqueta`. Plain
+`using (true)` select policies for `authenticated` (the repo's default model,
+not the Agenda's per-row exception); writes are service-role-only from the
+Server Action, authorized in TypeScript via `assertTabAccess("logistica")`.
+
+No background job of any kind: rows are written on demand and read back by the
+QR Code target `/logistica/palete/<code>`. Product options come straight from
+`olist_products` (active rows), so the tab inherits the Olist stock sync's
+freshness — it does not fetch the ERP itself.
+
+Only new runtime dependency: `qrcode` (SVG rendered server-side; no canvas, no
+network call at print time). Label geometry is pure CSS
+(`@page { size: 100mm 150mm }`) — no PDF toolchain to install or keep alive on
+Vercel. See `docs/logistica-etiquetas.md`.
+
 ## Manual Validation Commands
 
 Verify a page's data path as the authenticated role before deploying RLS changes:

@@ -30,6 +30,9 @@ export const TABS = [
   { key: "expedicao", label: "Expedição", href: "/expedicao", group: "main", paths: ["/expedicao"] },
   { key: "devolucoes", label: "Devoluções", href: "/devolucoes", group: "main", paths: ["/devolucoes"] },
   { key: "importacoes", label: "Importações", href: "/importacoes", group: "main", paths: ["/importacoes"] },
+  // href aponta para a sub-aba porque /logistica não tem página própria; o
+  // destaque do menu casa por prefixo (sidebar-nav) e `paths` cobre toda a área.
+  { key: "logistica", label: "Logística", href: "/logistica/etiqueta", group: "main", paths: ["/logistica"] },
   { key: "calculadora", label: "Calculadora", href: "/calculadora", group: "main", paths: ["/calculadora"] },
   { key: "agenda", label: "Agenda", href: "/agenda", group: "main", paths: ["/agenda"] },
   { key: "alertas", label: "Alertas", href: "/alertas", group: "main", paths: ["/alertas"] },

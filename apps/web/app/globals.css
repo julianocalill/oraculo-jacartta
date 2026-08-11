@@ -3489,3 +3489,150 @@ h2 {
     min-height: 64px;
   }
 }
+
+/* ---------- Logística · Etiqueta ---------- */
+
+.etiqueta-erro {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--crit-line);
+  border-radius: 10px;
+  background: var(--crit-soft);
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* O formulário da etiqueta é uma coluna só: as variações já são uma grade
+   interna de 3 colunas e ficariam ilegíveis espremidas em meia largura. */
+.etiqueta-form {
+  grid-template-columns: minmax(0, 560px);
+}
+
+.etiqueta-form label small {
+  color: var(--faint);
+  font-size: 11px;
+}
+
+.etiqueta-variacoes {
+  grid-column: 1 / -1;
+  margin: 4px 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-soft);
+}
+
+.etiqueta-variacoes legend {
+  padding: 0 6px;
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.etiqueta-hint {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.etiqueta-hint b {
+  color: var(--text);
+}
+
+.etiqueta-variacao-head,
+.etiqueta-variacao-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) minmax(0, 0.8fr);
+  gap: 8px;
+}
+
+.etiqueta-variacao-head {
+  margin-bottom: 6px;
+}
+
+.etiqueta-variacao-head span {
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.etiqueta-variacao-row + .etiqueta-variacao-row {
+  margin-top: 8px;
+}
+
+.etiqueta-variacao-row input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  min-height: 36px;
+  padding: 0 10px;
+}
+
+/* ---------- Logística · Ficha do palete ---------- */
+
+.palete-linhas {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.palete-linhas li {
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-soft);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.palete-linhas small {
+  display: block;
+  margin-top: 2px;
+  color: var(--faint);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.palete-dados {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.palete-dados dt {
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.palete-dados dd {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.palete-acoes {
+  margin: 20px 0 0;
+}
+
+@media (max-width: 720px) {
+  .etiqueta-variacao-head {
+    display: none;
+  }
+
+  .etiqueta-variacao-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

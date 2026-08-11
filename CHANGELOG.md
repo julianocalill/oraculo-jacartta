@@ -2,6 +2,27 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-11] — Logística: etiqueta de palete com QR Code
+
+- Nova aba **Logística**, primeira sub-aba **Etiqueta**: formulário com produto,
+  até 4 variações com quantidade, NF, quantidade de etiquetas e caixas por
+  palete. Gera etiquetas 100×150 mm (impressora térmica) já com a caixa de
+  impressão aberta. Linha impressa no formato `Pote de Vidro 640ml - 10 unid.`
+- **O QR abre a ficha do palete** em `/logistica/palete/<code>` (exige login e a
+  aba liberada). Cada palete fica registrado em `logistica_paletes` +
+  `logistica_palete_itens` (migration `20260811210000`) — base para cruzar com
+  expedição depois.
+- **A Olist não tem variação estruturada**: `olist_products` é plana, 1 SKU = 1
+  linha, e "640ml" só existe dentro do texto. Por isso cada variação é um SKU
+  real do cadastro, escolhido por `<datalist>`, e o rótulo impresso é derivado
+  do **SKU** e não do `nome` — o `nome` é o título do anúncio ("Kit 10 Potes de
+  Vidro 370ml Hermético Marmita Fit com Tampa 4 Travas - 10 Potes - Azul"), que
+  não cabe em etiqueta. O rótulo é editável porque a derivação é um chute.
+- Sem lib de PDF: a impressão usa `@page { size: 100mm 150mm }` e o navegador
+  salva como PDF quando preciso. Única dependência nova é `qrcode`, gerando SVG
+  inline no servidor (PNG sai serrilhado em térmica de 203/300 dpi).
+- Detalhes e armadilhas em `docs/logistica-etiquetas.md`.
+
 ## [2026-08-10] — Importações: AIS congelado e contêiner entregue no mapa
 
 - **Diagnóstico**: o sync AIS falhava desde 19/07 (86 runs seguidos) com
