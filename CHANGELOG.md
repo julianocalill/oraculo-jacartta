@@ -2,6 +2,21 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-13] — Etiqueta de palete: texto livre, sem vínculo com o cadastro
+
+- Produto e variações passam a ser **digitados à mão**. Saíram o `<datalist>` de
+  produtos da Olist, a coluna "Produto / SKU" do formulário e a derivação
+  automática do rótulo. O formulário virou o que foi pedido no início: produto,
+  4 variações com quantidade, NF, etiquetas e caixas por palete.
+- **Por que**: o primeiro palete de verdade (NF 67554) saiu com
+  `Kit pote 10 un 370ml azul 370 - 10 unid.` quando o esperado era
+  `Pote de Vidro 370ml - 10 unid.`. O vocabulário do ERP é de anúncio de
+  marketplace — nem o `nome` (título de anúncio) nem o `sku` servem como nome de
+  produto físico numa etiqueta. O vínculo dava rigor aparente e texto errado.
+- `logistica_palete_itens.sku` e `.olist_product_id` viram **colunas legadas**:
+  não são mais escritas nem lidas, e ficam no schema apenas para preservar os
+  paletes gerados antes da mudança. Sem migration.
+
 ## [2026-08-11] — Logística: etiqueta de palete com QR Code
 
 - Nova aba **Logística**, primeira sub-aba **Etiqueta**: formulário com produto,

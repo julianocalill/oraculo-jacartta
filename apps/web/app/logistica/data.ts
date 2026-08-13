@@ -1,15 +1,7 @@
 import { createSupabaseUserClient } from "../../lib/supabase/user";
 
-export type ProdutoOption = {
-  id: string;
-  sku: string;
-  nome: string;
-};
-
 export type PaleteItem = {
   position: number;
-  olist_product_id: string | null;
-  sku: string | null;
   variation_label: string;
   quantity: number;
 };
@@ -57,36 +49,13 @@ function normalize(value: string) {
     .trim();
 }
 
-/**
- * Rótulo da variação a partir do SKU escolhido, quando o operador não digitou um.
- *
- * Usa o SKU e não o `nome` de propósito: na Olist o nome é o título do anúncio
- * ("Kit 10 Potes de Vidro 370ml Hermético Marmita Fit com Tampa 4 Travas - 10
- * Potes - Azul"), que não cabe numa etiqueta. O SKU é o apelido curto que o
- * estoque já usa ("Kit pote 10 un 370ml azul").
- *
- * A derivação é um chute educado — por isso o campo na tela é editável.
- */
-export function deriveVariationLabel(productLabel: string, sku: string) {
-  const cleanSku = sku.trim().replace(/\s+/g, " ");
-  const product = normalize(productLabel);
-  if (!product) return cleanSku;
-
-  const normalizedSku = normalize(cleanSku);
-  if (!normalizedSku.startsWith(product)) return cleanSku;
-
-  // Corta o prefixo pelo tamanho normalizado e limpa o separador que sobrou.
-  const rest = cleanSku.slice(product.length).replace(/^[\s\-–—:,.]+/, "").trim();
-  return rest.length > 0 ? rest : cleanSku;
-}
-
 const quantityFormatter = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 });
 
 /**
  * A linha que sai impressa: `Pote de Vidro 640ml - 10 unid.`
  *
- * Não repete o produto quando a variação já o contém — sem isso, escolher um
- * SKU cujo texto já é completo produziria "Pote de Vidro Pote de Vidro 640ml".
+ * Não repete o produto quando a variação já o contém — sem isso, digitar a
+ * variação completa produziria "Pote de Vidro Pote de Vidro 640ml".
  */
 export function formatLabelLine(productLabel: string, variationLabel: string, quantity: number) {
   const product = productLabel.trim().replace(/\s+/g, " ");
@@ -105,36 +74,13 @@ export function formatLabelLine(productLabel: string, variationLabel: string, qu
 }
 
 /**
- * Produtos ativos da Olist para o datalist do formulário.
+ * Palete + itens pelo código do QR. `null` quando o código não existe.
  *
- * Kits não são filtrados: aqui o produto é o que vai fisicamente no palete, e
- * um kit é um item expedível como qualquer outro (o filtro `tipo <> 'K'` que
- * existe nas views de custo serve para não contar custo duas vezes, o que não
- * se aplica a etiqueta). Hoje são ~300 produtos ativos — cabe no HTML sem
- * paginação, e o limite existe só como guarda contra o cadastro crescer.
+ * As colunas `sku`/`olist_product_id` da tabela de itens não são lidas: a
+ * etiqueta deixou de ter vínculo com o cadastro da Olist (2026-08-13) e o texto
+ * é digitado livre. Elas continuam no schema só para não descartar os paletes
+ * gerados antes da mudança.
  */
-export async function loadProdutoOptions(): Promise<ProdutoOption[]> {
-  const supabase = await createSupabaseUserClient();
-  const { data, error } = await supabase
-    .from("olist_products")
-    .select("id, sku, nome")
-    .eq("active", true)
-    .not("sku", "is", null)
-    .order("sku", { ascending: true })
-    .limit(900);
-
-  if (error) throw error;
-
-  return (data ?? [])
-    .filter((row) => String(row.sku ?? "").trim().length > 0)
-    .map((row) => ({
-      id: String(row.id),
-      sku: String(row.sku),
-      nome: String(row.nome ?? "")
-    }));
-}
-
-/** Palete + itens pelo código do QR. `null` quando o código não existe. */
 export async function loadPaleteByCode(code: string): Promise<Palete | null> {
   const supabase = await createSupabaseUserClient();
 
@@ -149,7 +95,7 @@ export async function loadPaleteByCode(code: string): Promise<Palete | null> {
 
   const { data: itens, error: itensError } = await supabase
     .from("logistica_palete_itens")
-    .select("position, olist_product_id, sku, variation_label, quantity")
+    .select("position, variation_label, quantity")
     .eq("palete_id", palete.id)
     .order("position", { ascending: true });
 
@@ -165,8 +111,6 @@ export async function loadPaleteByCode(code: string): Promise<Palete | null> {
     created_at: String(palete.created_at),
     itens: (itens ?? []).map((item) => ({
       position: Number(item.position),
-      olist_product_id: item.olist_product_id ? String(item.olist_product_id) : null,
-      sku: item.sku ? String(item.sku) : null,
       variation_label: String(item.variation_label),
       quantity: Number(item.quantity)
     }))

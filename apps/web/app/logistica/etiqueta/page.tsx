@@ -6,13 +6,7 @@ import { NoAccess } from "../../components/no-access";
 import { loadActionableAlertCount } from "../../../lib/alert-count";
 import { AppShell } from "../../components/app-shell";
 import { LogisticaTabs } from "../tabs";
-import {
-  MAX_VARIACOES,
-  deriveVariationLabel,
-  generatePaleteCode,
-  loadProdutoOptions,
-  type ProdutoOption
-} from "../data";
+import { MAX_VARIACOES, generatePaleteCode } from "../data";
 
 export const dynamic = "force-dynamic";
 
@@ -55,51 +49,24 @@ async function gerarEtiqueta(formData: FormData) {
   const boxesPerPallet = parseInteger(formData.get("boxes_per_pallet"));
   if (boxesPerPallet != null && boxesPerPallet < 1) fail("Caixas por palete deve ser maior que zero.");
 
-  const itens: {
-    position: number;
-    sku: string | null;
-    variation_label: string;
-    quantity: number;
-  }[] = [];
+  const itens: { position: number; variation_label: string; quantity: number }[] = [];
 
   for (const position of POSITIONS) {
-    const sku = text(formData.get(`sku_${position}`));
     const label = text(formData.get(`variacao_${position}`));
     const quantity = parseNumber(formData.get(`quantidade_${position}`));
 
     // Linha totalmente vazia é normal — o formulário sempre mostra as 4.
-    if (!sku && !label && quantity == null) continue;
+    if (!label && quantity == null) continue;
 
-    if (quantity == null || quantity <= 0) {
-      fail(`Informe a quantidade da variação ${position}.`);
-    }
-    if (!sku && !label) {
-      fail(`Informe o produto ou o rótulo da variação ${position}.`);
-    }
+    if (!label) fail(`Informe a variação ${position}.`);
+    if (quantity == null || quantity <= 0) fail(`Informe a quantidade da variação ${position}.`);
 
-    itens.push({
-      position,
-      sku,
-      variation_label: label ?? deriveVariationLabel(productLabel, sku ?? ""),
-      quantity
-    });
+    itens.push({ position, variation_label: label, quantity });
   }
 
   if (itens.length === 0) fail("Informe ao menos uma variação com quantidade.");
 
   const supabase = createSupabaseAdminClient();
-
-  // Resolve o id da Olist a partir do SKU digitado. Não achar não é erro: o
-  // campo aceita texto livre para o caso de um item que ainda não está no ERP.
-  const skus = itens.map((item) => item.sku).filter((sku): sku is string => Boolean(sku));
-  const produtoIdBySku = new Map<string, string>();
-  if (skus.length > 0) {
-    const { data, error } = await supabase.from("olist_products").select("id, sku").in("sku", skus);
-    if (error) throw error;
-    for (const row of data ?? []) {
-      produtoIdBySku.set(String(row.sku), String(row.id));
-    }
-  }
 
   const code = generatePaleteCode();
   const { data: palete, error } = await supabase
@@ -120,8 +87,6 @@ async function gerarEtiqueta(formData: FormData) {
     itens.map((item) => ({
       palete_id: palete.id,
       position: item.position,
-      olist_product_id: item.sku ? produtoIdBySku.get(item.sku) ?? null : null,
-      sku: item.sku,
       variation_label: item.variation_label,
       quantity: item.quantity
     }))
@@ -129,20 +94,6 @@ async function gerarEtiqueta(formData: FormData) {
   if (itensError) throw itensError;
 
   redirect(`/logistica/etiqueta/imprimir?code=${code}`);
-}
-
-function ProdutoDatalist({ produtos }: { produtos: ProdutoOption[] }) {
-  return (
-    <datalist id="olist-produtos">
-      {produtos.map((produto) => (
-        // value = SKU (curto, é o apelido que o estoque usa); o rótulo mostra o
-        // título do anúncio truncado só para desambiguar SKUs parecidos.
-        <option key={produto.id} value={produto.sku}>
-          {produto.nome.length > 70 ? `${produto.nome.slice(0, 70)}…` : produto.nome}
-        </option>
-      ))}
-    </datalist>
-  );
 }
 
 export default async function EtiquetaPage({
@@ -156,8 +107,6 @@ export default async function EtiquetaPage({
     loadActionableAlertCount()
   ]);
   if (!allowed) return <NoAccess tab="logistica" />;
-
-  const produtos = await loadProdutoOptions();
 
   return (
     <AppShell alertCount={alertCount}>
@@ -185,44 +134,29 @@ export default async function EtiquetaPage({
         <form action={gerarEtiqueta} className="upload-form manual-form etiqueta-form">
           <label>
             <span>Produto *</span>
-            <input
-              name="product_label"
-              required
-              list="olist-produtos"
-              placeholder="Pote de Vidro"
-              autoComplete="off"
-            />
-            <small>Nome que abre a etiqueta. Pode escolher um SKU da Olist ou digitar livre.</small>
+            <input name="product_label" required placeholder="Pote de Vidro" autoComplete="off" />
+            <small>Nome que abre a etiqueta e prefixa cada linha.</small>
           </label>
 
           <fieldset className="etiqueta-variacoes">
             <legend>Variações</legend>
             <p className="etiqueta-hint">
-              Cada variação é um produto da Olist. O rótulo é o que sai impresso — deixe em branco
-              para usar o SKU, ou escreva algo curto como <b>640ml</b>. A linha final fica{" "}
-              <b>Pote de Vidro 640ml - 10 unid.</b>
+              Escreva a variação como ela deve sair impressa — <b>640ml</b>, <b>1L</b>, <b>Azul</b>.
+              A linha final fica <b>Pote de Vidro 640ml - 10 unid.</b>
             </p>
 
             <div className="etiqueta-variacao-head">
-              <span>Produto / SKU da Olist</span>
-              <span>Rótulo na etiqueta</span>
+              <span>Variação</span>
               <span>Quantidade</span>
             </div>
 
             {POSITIONS.map((position) => (
               <div className="etiqueta-variacao-row" key={position}>
                 <input
-                  name={`sku_${position}`}
-                  list="olist-produtos"
-                  placeholder={position === 1 ? "Busque pelo SKU" : ""}
-                  autoComplete="off"
-                  aria-label={`Produto da variação ${position}`}
-                />
-                <input
                   name={`variacao_${position}`}
                   placeholder={position === 1 ? "640ml" : ""}
                   autoComplete="off"
-                  aria-label={`Rótulo da variação ${position}`}
+                  aria-label={`Variação ${position}`}
                 />
                 <input
                   name={`quantidade_${position}`}
@@ -249,8 +183,6 @@ export default async function EtiquetaPage({
 
           <button type="submit">Gerar Etiqueta</button>
         </form>
-
-        <ProdutoDatalist produtos={produtos} />
       </section>
     </AppShell>
   );

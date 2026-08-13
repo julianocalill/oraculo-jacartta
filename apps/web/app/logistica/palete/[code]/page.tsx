@@ -69,7 +69,6 @@ export default async function PaletePage({ params }: { params: Promise<{ code: s
           {palete.itens.map((item) => (
             <li key={item.position}>
               {formatLabelLine(palete.product_label, item.variation_label, item.quantity)}
-              {item.sku ? <small>SKU {item.sku}</small> : null}
             </li>
           ))}
         </ul>

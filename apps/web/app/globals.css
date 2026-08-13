@@ -3545,7 +3545,7 @@ h2 {
 .etiqueta-variacao-head,
 .etiqueta-variacao-row {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) minmax(0, 0.8fr);
+  grid-template-columns: minmax(0, 2.4fr) minmax(0, 1fr);
   gap: 8px;
 }
 

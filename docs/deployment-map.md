@@ -395,9 +395,11 @@ not the Agenda's per-row exception); writes are service-role-only from the
 Server Action, authorized in TypeScript via `assertTabAccess("logistica")`.
 
 No background job of any kind: rows are written on demand and read back by the
-QR Code target `/logistica/palete/<code>`. Product options come straight from
-`olist_products` (active rows), so the tab inherits the Olist stock sync's
-freshness — it does not fetch the ERP itself.
+QR Code target `/logistica/palete/<code>`. **The tab reads no other table**:
+product and variations are free text (2026-08-13 — it briefly read
+`olist_products` for a `<datalist>`; see `docs/logistica-etiquetas.md` for why
+that was removed). The `sku` / `olist_product_id` columns on
+`logistica_palete_itens` are legacy leftovers, neither written nor read.
 
 Only new runtime dependency: `qrcode` (SVG rendered server-side; no canvas, no
 network call at print time). Label geometry is pure CSS
