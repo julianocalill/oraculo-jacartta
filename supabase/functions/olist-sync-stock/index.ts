@@ -296,6 +296,34 @@ async function fetchProductPage(accessToken: string, limit: number, offset: numb
   return { products, total };
 }
 
+type SweepState = {
+  batch_id: string | null;
+  next_offset: number;
+  total: number | null;
+  sweep_started_at: string | null;
+  records_fetched: number;
+  records_upserted: number;
+};
+
+async function loadSweepState(supabase: ReturnType<typeof createClient>) {
+  const { data, error } = await supabase
+    .from('olist_stock_sync_state')
+    .select('batch_id,next_offset,total,sweep_started_at,records_fetched,records_upserted')
+    .eq('id', 1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data ?? null) as SweepState | null;
+}
+
+async function saveSweepState(supabase: ReturnType<typeof createClient>, state: SweepState) {
+  const { error } = await supabase
+    .from('olist_stock_sync_state')
+    .upsert({ id: 1, ...state, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+
+  if (error) throw error;
+}
+
 Deno.serve(async (req) => {
   try {
     requireValue('SUPABASE_URL', env.supabaseUrl);
@@ -318,35 +346,54 @@ Deno.serve(async (req) => {
       }
     });
 
-    const batchId = crypto.randomUUID();
-    const startedAt = new Date().toISOString();
     const accessToken = await getAccessToken(supabase);
     const requestBody = req.headers.get('content-type')?.includes('application/json')
       ? await req.json().catch(() => ({}))
       : {};
     const typedBody = requestBody as {
+      pagesPerRun?: number;
       maxPages?: number;
       detailConcurrency?: number;
       detailDelayMs?: number;
+      reset?: boolean;
     };
     const limit = 100;
-    const maxPages = Number.isFinite(Number(typedBody.maxPages)) ? Number(typedBody.maxPages) : 1000;
+    // A varredura completa (~29 min) não cabe no limite da Edge Function:
+    // o gateway corta a resposta em 150s (IDLE_TIMEOUT) e o runtime morre
+    // logo depois. Uma página (~70s) por invocação; o cursor retoma o resto.
+    const pagesPerRun = Number.isFinite(Number(typedBody.pagesPerRun ?? typedBody.maxPages))
+      ? Math.max(1, Math.min(10, Number(typedBody.pagesPerRun ?? typedBody.maxPages)))
+      : 1;
     const detailConcurrency = Number.isFinite(Number(typedBody.detailConcurrency))
       ? Math.max(1, Math.min(2, Number(typedBody.detailConcurrency)))
       : 1;
     const detailDelayMs = Number.isFinite(Number(typedBody.detailDelayMs))
       ? Math.max(0, Number(typedBody.detailDelayMs))
       : 300;
-    let offset = 0;
+
+    const stored = typedBody.reset === true ? null : await loadSweepState(supabase);
+    const state: SweepState = stored?.batch_id
+      ? { ...stored }
+      : {
+        batch_id: crypto.randomUUID(),
+        next_offset: 0,
+        total: null,
+        sweep_started_at: new Date().toISOString(),
+        records_fetched: 0,
+        records_upserted: 0
+      };
+    const batchId = state.batch_id as string;
+
+    let sweepCompleted = false;
     let fetched = 0;
     let upserted = 0;
-    let total = 0;
 
-    for (let page = 0; page < maxPages; page += 1) {
-      const productPage = await fetchProductPage(accessToken, limit, offset);
-      total = productPage.total;
+    for (let page = 0; page < pagesPerRun; page += 1) {
+      const productPage = await fetchProductPage(accessToken, limit, state.next_offset);
+      state.total = productPage.total;
 
       if (productPage.products.length === 0) {
+        sweepCompleted = true;
         break;
       }
 
@@ -367,38 +414,59 @@ Deno.serve(async (req) => {
         upserted += group.length;
       }
 
-      offset += productPage.products.length;
-      if (offset >= total) {
+      state.next_offset += productPage.products.length;
+      state.records_fetched += productPage.products.length;
+      state.records_upserted += details.length;
+      await saveSweepState(supabase, state);
+
+      if (state.next_offset >= state.total) {
+        sweepCompleted = true;
         break;
       }
     }
 
-    const { error: staleError } = await supabase
-      .from('olist_stock_items')
-      .update({ active: false })
-      .neq('sync_batch_id', batchId);
+    if (sweepCompleted) {
+      const { error: staleError } = await supabase
+        .from('olist_stock_items')
+        .update({ active: false })
+        .neq('sync_batch_id', batchId);
 
-    if (staleError) throw staleError;
+      if (staleError) throw staleError;
 
-    const { error: logError } = await supabase
-      .from('olist_stock_sync_runs')
-      .insert({
-        batch_id: batchId,
-        started_at: startedAt,
-        finished_at: new Date().toISOString(),
-        status: 'success',
-        records_fetched: fetched,
-        records_upserted: upserted,
-        error_message: null
+      const { error: logError } = await supabase
+        .from('olist_stock_sync_runs')
+        .insert({
+          batch_id: batchId,
+          started_at: state.sweep_started_at ?? new Date().toISOString(),
+          finished_at: new Date().toISOString(),
+          status: 'success',
+          records_fetched: state.records_fetched,
+          records_upserted: state.records_upserted,
+          error_message: null
+        });
+
+      if (logError) throw logError;
+
+      await saveSweepState(supabase, {
+        batch_id: null,
+        next_offset: 0,
+        total: null,
+        sweep_started_at: null,
+        records_fetched: 0,
+        records_upserted: 0
       });
-
-    if (logError) throw logError;
+    }
 
     return jsonResponse({
       ok: true,
       batch_id: batchId,
+      sweep_completed: sweepCompleted,
+      next_offset: sweepCompleted ? 0 : state.next_offset,
+      total: state.total,
       fetched,
-      upserted
+      upserted,
+      sweep_fetched: state.records_fetched,
+      sweep_upserted: state.records_upserted
     });
   } catch (error) {
     console.error(error);
