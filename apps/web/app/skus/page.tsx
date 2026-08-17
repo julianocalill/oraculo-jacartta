@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
 import {
   loadFiscalSkuCoverageSnapshot,
@@ -245,6 +246,9 @@ export default async function SkusPage({
             </select>
           </label>
           <button type="submit">Aplicar</button>
+          <Link className="button-link" href="/skus/de-para/export" prefetch={false}>
+            De-para de SKUs (.xlsx)
+          </Link>
         </form>
       </header>
 
@@ -324,7 +328,7 @@ export default async function SkusPage({
               <strong>{selected?.margin_amount_30d == null ? "-" : money(selected.margin_amount_30d)}</strong>
             </article>
             <article>
-              <span>Custo unit.</span>
+              <span title="Líquido dos créditos recuperáveis: −9,25% nacional, −11,75% importado.">Custo unit. líquido</span>
               <strong>{selected?.unit_cost == null ? "-" : money(selected.unit_cost)}</strong>
             </article>
             <article>
@@ -395,8 +399,9 @@ export default async function SkusPage({
                   </article>
                 </div>
                 <p className="fiscal-note">
-                  Receita da NF (rateada por item) − custo − ICMS − PIS/COFINS (9,25% sem
-                  crédito) − DIFAL (por dentro, só interestadual) − comissão de marketplace.
+                  Receita da NF (rateada por item) − custo (líquido de créditos: −9,25%
+                  nacional, −11,75% importado) − ICMS − PIS/COFINS (9,25% sem
+                  crédito) − DIFAL (diferença de alíquotas, só interestadual) − comissão de marketplace.
                   A comissão vem das faixas do canal e já absorve frete, ads, embalagem e
                   despesa operacional.
                 </p>
