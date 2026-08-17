@@ -6,6 +6,7 @@ import { getCurrentUser } from "../../../../lib/auth/session";
 import { canAccess } from "../../../../lib/auth/access";
 import { buildXlsx, fileStamp, xlsxResponse, type XlsxColumn } from "../../../../lib/xlsx";
 import {
+  agrupaPorSku,
   aplicaBusca,
   aplicaFiltro,
   chaveVenda,
@@ -16,6 +17,22 @@ import {
 } from "../data";
 
 export const dynamic = "force-dynamic";
+
+const SKU_COLUMNS: XlsxColumn[] = [
+  { header: "SKU Olist", key: "skuOlist", width: 20 },
+  { header: "Produto Olist", key: "produtoOlist", width: 44 },
+  { header: "Anúncios", key: "anuncios", width: 10, type: "number" },
+  { header: "Lojas", key: "lojas", width: 34 },
+  { header: "Preço mín.", key: "precoMin", width: 11, type: "money" },
+  { header: "Preço máx.", key: "precoMax", width: 11, type: "money" },
+  { header: "Custo unit.", key: "unitCost", width: 12, type: "money" },
+  { header: "Pior lucro/venda", key: "piorLucro", width: 15, type: "money" },
+  { header: "Melhor lucro/venda", key: "melhorLucro", width: 17, type: "money" },
+  { header: "Anúncios em prejuízo", key: "emPrejuizo", width: 19, type: "number" },
+  { header: "Vendas período (un. Olist)", key: "vendasPeriodo", width: 22, type: "number" },
+  { header: "Lucro período", key: "lucroPeriodo", width: 13, type: "money" },
+  { header: "Alertas ⚠", key: "alertas", width: 10, type: "number" }
+];
 
 const COLUMNS: XlsxColumn[] = [
   { header: "Loja", key: "loja", width: 18 },
@@ -57,6 +74,49 @@ export async function GET(req: NextRequest) {
 
   let base = aplicaBusca(loja ? todos.filter((r) => r.shop_id === loja) : todos, busca);
   if (vendas) base = base.filter((r) => vendas.has(chaveVenda(r)));
+  const porSku = sp.get("v") === "sku";
+
+  const refreshedAt0 = new Date(todos[0].refreshed_at).toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo"
+  });
+  const geradoEm0 = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+
+  if (porSku) {
+    const grupos = agrupaPorSku(aplicaFiltro(base, filtro), vendas)
+      .sort((a, b) =>
+        vendas
+          ? (a.lucro_periodo ?? Infinity) - (b.lucro_periodo ?? Infinity)
+          : (a.profit_min ?? Infinity) - (b.profit_min ?? Infinity)
+      )
+      .map((g) => ({
+        skuOlist: g.sku_olist,
+        produtoOlist: g.olist_product_name ?? "",
+        anuncios: g.anuncios,
+        lojas: g.lojas.join(" · "),
+        precoMin: g.price_min,
+        precoMax: g.price_max,
+        unitCost: g.unit_cost,
+        piorLucro: g.profit_min,
+        melhorLucro: g.profit_max,
+        emPrejuizo: g.em_prejuizo,
+        vendasPeriodo: g.vendas_unidades_olist,
+        lucroPeriodo: g.lucro_periodo,
+        alertas: g.alertas
+      }));
+    const buffer = await buildXlsx({
+      sheetName: "Por SKU Olist",
+      columns: SKU_COLUMNS,
+      rows: grupos,
+      meta: [
+        `Oráculo · Preço × Custo Shopee AGRUPADO POR SKU · gerado em ${geradoEm0} · dados recalculados em ${refreshedAt0}`,
+        "Um SKU agrega todos os anúncios que o baixam. Vendas período em UNIDADES OLIST (unidades do anúncio × QTD). " +
+          "Lucro período = soma de vendas × lucro AO PREÇO ATUAL.",
+        `${grupos.length} SKUs · filtro: ${filtro}${loja ? ` · loja ${loja}` : ""}${busca ? ` · busca: "${busca}"` : ""}` +
+          (periodo ? ` · vendas de ${periodo.de} a ${periodo.ate}` : "")
+      ]
+    });
+    return xlsxResponse(buffer, `oraculo-preco-custo-shopee-por-sku_${fileStamp()}.xlsx`);
+  }
 
   const rows = aplicaFiltro(base, filtro)
     .slice()

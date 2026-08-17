@@ -7,6 +7,7 @@ import { SortableTable, type SortableCell } from "../../components/sortable-tabl
 import { LojaPills, ShopeeTabs } from "../tabs";
 import { brl } from "../data";
 import {
+  agrupaPorSku,
   aplicaBusca,
   aplicaFiltro,
   chaveVenda,
@@ -32,13 +33,14 @@ const FILTROS: { key: PrecoFiltro; label: string }[] = [
 export default async function ShopeePrecosPage({
   searchParams
 }: {
-  searchParams?: Promise<{ loja?: string; f?: string; q?: string; de?: string; ate?: string }>;
+  searchParams?: Promise<{ loja?: string; f?: string; q?: string; de?: string; ate?: string; v?: string }>;
 }) {
   const params = await searchParams;
   const lojaFiltro = Number(params?.loja) || null;
   const filtro = (FILTROS.some((f) => f.key === params?.f) ? params?.f : "todos") as PrecoFiltro;
   const busca = (params?.q ?? "").trim();
   const periodo = normalizaPeriodo(params?.de, params?.ate);
+  const porSku = params?.v === "sku";
 
   const [{ allowed }, alertCount, todos, vendas] = await Promise.all([
     requireTabAccess("shopee"),
@@ -85,18 +87,23 @@ export default async function ShopeePrecosPage({
     exportQs.set("de", periodo.de);
     exportQs.set("ate", periodo.ate);
   }
-  const filtroQs = (f: PrecoFiltro) => {
+  if (porSku) exportQs.set("v", "sku");
+  const urlCom = (mut: (p: URLSearchParams) => void) => {
     const p = new URLSearchParams();
     if (lojaFiltro) p.set("loja", String(lojaFiltro));
-    if (f !== "todos") p.set("f", f);
+    if (filtro !== "todos") p.set("f", filtro);
     if (busca) p.set("q", busca);
     if (periodo) {
       p.set("de", periodo.de);
       p.set("ate", periodo.ate);
     }
+    if (porSku) p.set("v", "sku");
+    mut(p);
     const qs = p.toString();
     return qs ? `/shopee/precos?${qs}` : "/shopee/precos";
   };
+  const filtroQs = (f: PrecoFiltro) => urlCom((p) => (f === "todos" ? p.delete("f") : p.set("f", f)));
+  const visaoQs = (v: "anuncio" | "sku") => urlCom((p) => (v === "sku" ? p.set("v", "sku") : p.delete("v")));
   const hoje = new Date().toISOString().slice(0, 10);
   const minData = new Date(Date.now() - 60 * 86_400_000).toISOString().slice(0, 10);
 
@@ -152,6 +159,66 @@ export default async function ShopeePrecosPage({
       ];
     });
 
+  const grupos = porSku ? agrupaPorSku(visiveis, vendas) : null;
+  const gruposOrdenados = (grupos ?? [])
+    .slice()
+    .sort((a, b) =>
+      vendas
+        ? (a.lucro_periodo ?? Infinity) - (b.lucro_periodo ?? Infinity)
+        : (a.profit_min ?? Infinity) - (b.profit_min ?? Infinity)
+    )
+    .slice(0, MAX_ROWS);
+
+  const linhasGrupo: SortableCell[][] = gruposOrdenados.map((g) => [
+    { text: g.sku_olist, sort: g.sku_olist, subtitle: g.olist_product_name ?? undefined },
+    { text: String(g.anuncios), sort: g.anuncios, subtitle: g.lojas.join(" · ") },
+    {
+      text:
+        g.price_min === null
+          ? "—"
+          : g.price_min === g.price_max
+            ? brl(g.price_min)
+            : `${brl(g.price_min)} – ${brl(g.price_max!)}`,
+      sort: g.price_min
+    },
+    { text: g.unit_cost !== null ? brl(g.unit_cost) : "—", sort: g.unit_cost },
+    g.profit_min !== null
+      ? {
+          text: brl(g.profit_min),
+          sort: g.profit_min,
+          badge: g.profit_min < 0 ? "status-pill signal-danger" : "status-pill signal-good"
+        }
+      : { text: "—", sort: null },
+    g.profit_max !== null
+      ? {
+          text: brl(g.profit_max),
+          sort: g.profit_max,
+          badge: g.profit_max < 0 ? "status-pill signal-danger" : "status-pill signal-good"
+        }
+      : { text: "—", sort: null },
+    { text: g.em_prejuizo ? String(g.em_prejuizo) : "—", sort: g.em_prejuizo },
+    ...(vendas
+      ? [
+          {
+            text: g.vendas_unidades_olist !== null ? String(g.vendas_unidades_olist) : "0",
+            sort: g.vendas_unidades_olist ?? 0
+          },
+          g.lucro_periodo !== null
+            ? {
+                text: brl(g.lucro_periodo),
+                sort: g.lucro_periodo,
+                badge: g.lucro_periodo < 0 ? "status-pill signal-danger" : "status-pill signal-good"
+              }
+            : ({ text: "—", sort: null } as SortableCell)
+        ]
+      : []),
+    g.alertas > 0
+      ? { text: `⚠ ${g.alertas}`, sort: g.alertas, badge: "status-pill signal-warning" }
+      : { text: "—", sort: 0 }
+  ]);
+
+  const semSku = visiveis.filter((r) => !r.sku_olist).length;
+
   return (
     <AppShell alertCount={alertCount}>
       <header className="topbar">
@@ -165,6 +232,7 @@ export default async function ShopeePrecosPage({
         <form className="filter-row filter-form" method="get" action="/shopee/precos">
           {lojaFiltro ? <input type="hidden" name="loja" value={lojaFiltro} /> : null}
           {filtro !== "todos" ? <input type="hidden" name="f" value={filtro} /> : null}
+          {porSku ? <input type="hidden" name="v" value="sku" /> : null}
           <label>
             <span>Buscar</span>
             <input
@@ -190,7 +258,17 @@ export default async function ShopeePrecosPage({
         </form>
       </header>
       <ShopeeTabs active="precos" />
-      <LojaPills shops={shops} active={lojaFiltro} basePath="/shopee/precos" extraParams={filtro !== "todos" ? { f: filtro } : {}} />
+      <LojaPills
+        shops={shops}
+        active={lojaFiltro}
+        basePath="/shopee/precos"
+        extraParams={{
+          ...(filtro !== "todos" ? { f: filtro } : {}),
+          ...(busca ? { q: busca } : {}),
+          ...(periodo ? { de: periodo.de, ate: periodo.ate } : {}),
+          ...(porSku ? { v: "sku" } : {})
+        }}
+      />
 
       <section className="panel coverage-panel" style={{ marginBottom: 16 }}>
         <div className="coverage-grid">
@@ -219,45 +297,79 @@ export default async function ShopeePrecosPage({
         </div>
       </section>
 
-      <div className="pill-row" style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+      <div className="pill-row" style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         {FILTROS.map((f) => (
           <Link key={f.key} href={filtroQs(f.key)} className={filtro === f.key ? "pill pill-gold" : "pill"}>
             {f.label}
           </Link>
         ))}
+        <span style={{ width: 16 }} />
+        <Link href={visaoQs("anuncio")} className={!porSku ? "pill pill-gold" : "pill"}>
+          Por anúncio
+        </Link>
+        <Link href={visaoQs("sku")} className={porSku ? "pill pill-gold" : "pill"}>
+          Por SKU
+        </Link>
       </div>
 
       <section className="panel">
         <div className="section-head">
           <p className="eyebrow">
-            {visiveis.length} anúncios
+            {porSku
+              ? `${grupos!.length} SKUs · ${visiveis.length - semSku} anúncios mapeados${semSku ? ` · ${semSku} anúncios sem SKU (ver visão por anúncio)` : ""}`
+              : `${visiveis.length} anúncios`}
             {periodo ? ` · com venda entre ${periodo.de.split("-").reverse().join("/")} e ${periodo.ate.split("-").reverse().join("/")}` : ""}
-            {visiveis.length > MAX_ROWS ? ` · exibindo os ${MAX_ROWS} piores` : ""}
+            {(porSku ? grupos!.length : visiveis.length) > MAX_ROWS ? ` · exibindo os ${MAX_ROWS} piores` : ""}
           </p>
         </div>
-        <SortableTable
-          columns={[
-            { label: "Anúncio" },
-            { label: "Preço", numeric: true, hint: "Preço atual na Shopee (promoção inclusa), sync de hora em hora" },
-            { label: "SKU Olist", hint: "Produto do ERP que a venda baixa (de-para por pedidos casados)" },
-            { label: "QTD", numeric: true, hint: "Unidades Olist por unidade do anúncio" },
-            { label: "Custo unit.", numeric: true, hint: "Kit → valor da aba de kits da Olist · unitário → preço de custo do cadastro" },
-            { label: "Custo total", numeric: true },
-            { label: "Lucro/venda", numeric: true, hint: "Fórmula: preço − custo − comissão − taxa fixa − 1,3% − 6% − 9,25%×(preço−custo) − 3% − 3% − R$1" },
-            ...(vendas
-              ? [
-                  { label: "Vendas período", numeric: true, hint: "Unidades vendidas no intervalo escolhido (cancelados e não pagos fora)" },
-                  { label: "Lucro período", numeric: true, hint: "Vendas do período × lucro por venda AO PREÇO ATUAL (não é o lucro histórico)" }
-                ]
-              : []),
-            { label: "Pedidos", numeric: true, hint: "Pedidos casados que sustentam o vínculo" },
-            { label: "Checagem", hint: "⚠ = dimensão/volume/peso do anúncio conflita com o produto Olist, ou evidência de 1 pedido" }
-          ]}
-          rows={rows}
-          initialSort={vendas ? 8 : 6}
-          initialDir="asc"
-          showRank
-        />
+        {porSku ? (
+          <SortableTable
+            columns={[
+              { label: "SKU Olist", hint: "Produto do ERP; agrega todos os anúncios que baixam este SKU" },
+              { label: "Anúncios", numeric: true, hint: "Quantos anúncios/variações apontam para este SKU" },
+              { label: "Preço", numeric: true, hint: "Faixa de preço atual entre os anúncios do SKU" },
+              { label: "Custo unit.", numeric: true, hint: "Kit → valor da aba de kits da Olist · unitário → preço de custo do cadastro" },
+              { label: "Pior lucro/venda", numeric: true, hint: "Menor lucro por venda entre os anúncios do SKU" },
+              { label: "Melhor lucro/venda", numeric: true },
+              { label: "Anúncios em prejuízo", numeric: true },
+              ...(vendas
+                ? [
+                    { label: "Vendas período (un. Olist)", numeric: true, hint: "Unidades OLIST vendidas no intervalo (unidades do anúncio × QTD)" },
+                    { label: "Lucro período", numeric: true, hint: "Soma dos anúncios: vendas × lucro AO PREÇO ATUAL (não é o lucro histórico)" }
+                  ]
+                : []),
+              { label: "⚠", numeric: true, hint: "Anúncios do SKU com alerta de checagem de modelo/evidência" }
+            ]}
+            rows={linhasGrupo}
+            initialSort={vendas ? 8 : 4}
+            initialDir="asc"
+            showRank
+          />
+        ) : (
+          <SortableTable
+            columns={[
+              { label: "Anúncio" },
+              { label: "Preço", numeric: true, hint: "Preço atual na Shopee (promoção inclusa), sync de hora em hora" },
+              { label: "SKU Olist", hint: "Produto do ERP que a venda baixa (de-para por pedidos casados)" },
+              { label: "QTD", numeric: true, hint: "Unidades Olist por unidade do anúncio" },
+              { label: "Custo unit.", numeric: true, hint: "Kit → valor da aba de kits da Olist · unitário → preço de custo do cadastro" },
+              { label: "Custo total", numeric: true },
+              { label: "Lucro/venda", numeric: true, hint: "Fórmula: preço − custo − comissão − taxa fixa − 1,3% − 6% − 9,25%×(preço−custo) − 3% − 3% − R$1" },
+              ...(vendas
+                ? [
+                    { label: "Vendas período", numeric: true, hint: "Unidades vendidas no intervalo escolhido (cancelados e não pagos fora)" },
+                    { label: "Lucro período", numeric: true, hint: "Vendas do período × lucro por venda AO PREÇO ATUAL (não é o lucro histórico)" }
+                  ]
+                : []),
+              { label: "Pedidos", numeric: true, hint: "Pedidos casados que sustentam o vínculo" },
+              { label: "Checagem", hint: "⚠ = dimensão/volume/peso do anúncio conflita com o produto Olist, ou evidência de 1 pedido" }
+            ]}
+            rows={rows}
+            initialSort={vendas ? 8 : 6}
+            initialDir="asc"
+            showRank
+          />
+        )}
       </section>
     </AppShell>
   );
