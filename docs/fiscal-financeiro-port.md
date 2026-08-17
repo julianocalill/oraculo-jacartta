@@ -23,22 +23,27 @@ Precedência (`calcNetCost`):
 3. **bruto − créditos recuperáveis explícitos** (`max(0, bruto − créditos)`);
 4. **bruto puro** (fallback).
 
-> **Decisão do negócio (04/08/2026):** mercadoria que entra por transferência e vai
-> para o estoque geral **tem o mesmo custo do produto normal** — se custa R$ 1 e
-> volta ao estoque, continua custando R$ 1. A regra `×0,8425` do app Financeiro
-> **não é aplicada** e isso deixa de ser uma pendência. O crédito de PIS/COFINS
-> sobre o custo, aliás, já está no motor (é o crédito de 9,25% do cálculo).
+> **Decisão do negócio (14/08/2026), que substitui a de 04/08:** o custo entra
+> **líquido dos créditos recuperáveis**, pela origem da mercadoria —
+> `nacional × 0,9075` (9,25%) e `importado × 0,8825` (11,75%). Os 15,75% do porte
+> original (que somavam 4% de ICMS) **não** são usados: a base não tem a flag de
+> entrada por transferência. Ver `docs/adr/ADR-005-custo-liquido-creditos.md`.
 
 No Oráculo, o custo unitário vem de `oraculo_product_effective_cost`:
-- produto simples: `preco_custo_medio > 0 ? preco_custo_medio : preco_custo`;
+- produto simples: `preco_custo_medio > 0 ? preco_custo_medio : preco_custo`,
+  passado por `oraculo_net_cost(bruto, origem)`;
 - **kit (tipo K): soma dos componentes** de `payload->'kit'`
-  (`quantidade × custo_componente`); `cost_complete` indica se todos os componentes
-  tinham custo.
+  (`quantidade × custo líquido do componente`, cada um com a origem dele);
+  `cost_complete` indica se todos os componentes tinham custo;
+- `unit_cost_gross` fica exposto ao lado, para auditoria.
+
+A mesma função alimenta `oraculo_sku_unit_cost` (Shopee, Mercado Livre, devoluções)
+e `oraculo_sku_margin_30d` (margem operacional de `/skus`) — a regra vive num lugar
+só. O override manual de `/parametros` é tratado como custo **bruto**.
 
 Sanidade: custo indisponível quando `custo ≤ 0`, kit sem custo completo, ou custo
 implausível (`> 3× o preço de venda real do item`, pois `olist_products.preco` é
-placeholder para muitos SKUs). A regra `×0,8425` de importado por transferência
-**não** é aplicada automaticamente por falta da flag de transferência na base atual.
+placeholder para muitos SKUs). A trava compara o custo **líquido** com o preço.
 
 ## ICMS de saída (matriz Jacarta)
 
@@ -81,9 +86,12 @@ pis_cofins = base_NF × 9,25%
 
 **Decisão de 04/08/2026:** o custo do produto é gestão interna e **não entra em
 cálculo de imposto**. O débito é bruto, como a NF destaca (CST 01; na NF real
-533740: 44,51 × 1,65% + 44,51 × 7,60% = 4,11). O crédito das entradas continua
-existindo na apuração da empresa — só não é simulado por linha. Consequência:
-o PIS/COFINS exibido é conservador (maior que o efetivamente recolhido).
+533740: 44,51 × 1,65% + 44,51 × 7,60% = 4,11).
+
+**Emenda de 14/08/2026:** o crédito das entradas voltou ao motor, mas **pelo lado
+do custo** (`× 0,9075` / `× 0,8825`, seção "Custo do produto"), não pelo lado do
+imposto. Em lucro o efeito é idêntico; a vantagem é que o imposto exibido continua
+conferindo com a NF. Não há dupla contagem — o crédito aparece uma vez só.
 
 Regra original do Financeiro (não usada mais no motor): débito − crédito sobre
 o custo, piso zero — permanece em `calcPisCofins` com `creditEnabled: true`.
@@ -118,25 +126,26 @@ As 27 UFs × 2 origens foram semeadas com **exatamente os valores que o motor j�
 aplicava**, como `Pendente`. Verificado: validar uma linha semeada produz números
 idênticos aos da regra fixa. Validar é revisar e marcar, não digitar do zero.
 
-## DIFAL — por dentro, só interestadual (04/08/2026)
+## DIFAL — diferença de alíquotas, só interestadual (14/08/2026)
+
+```
+difal = base_NF × max(0, interna_destino − interestadual) / 100
+difal = 0 quando a venda é dentro de MG (intraestadual)
+```
+
+Regra vigente, por orientação do contador (ADR-004). É a fórmula do Financeiro
+original **com a correção do intraestadual**: o porte antigo (`calcDifal`) cobrava
+DIFAL em MG→MG, o que nunca foi devido. Espelho JS: `calcDifalDiferencaAliquotas`.
+
+Entre 04/08 e 14/08/2026 valeu a base única "por dentro" da LC 190/2022, que
+reproduz o que a NF traz impresso — na NF real 533740 (MG→RJ, vNF 44,51),
+`vBCUFDest 57,06 = 44,51/0,78` e `vICMSUFDest 7,21 = 57,06×22% − 44,51×12%`,
+contra os 4,45 da regra atual. Continua no `fiscal.js` como `calcDifalPorDentro`,
+com testes, na condição de especificação histórica:
 
 ```
 base_destino = base_NF / (1 − interna_destino)
 difal        = max(0, base_destino × interna_destino − base_NF × interestadual)
-difal        = 0 quando a venda é dentro de MG (intraestadual)
-```
-
-Validado contra a NF real 533740 (MG→RJ, vNF 44,51): `vBCUFDest 57,06 =
-44,51/0,78`; `vICMSUFDest 7,21 = 57,06×22% − 44,51×12%`. A fórmula antiga do
-Financeiro (`base × (interna − interestadual)`, sem gross-up, cobrando
-intraestadual) dava 4,45 — subestimava ~40% — e cobrava DIFAL indevido em
-MG→MG. Espelho JS: `calcDifalPorDentro` (a `calcDifal` antiga permanece como
-especificação do Financeiro).
-
-Regra original do Financeiro (referência):
-
-```
-difal = base × max(0, icms_interno_destino − interestadual) / 100
 ```
 
 - **Alíquota interna do destino** (`INTERNAL_ICMS_RATES`, 27 UFs): AC19 AL20 AP18

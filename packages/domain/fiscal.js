@@ -124,8 +124,42 @@ export function marginSignal({
 // camada fiscal SQL do Oráculo. Ver docs/fiscal-financeiro-port.md.
 // ---------------------------------------------------------------------------
 
-/** Fator de crédito na transferência de importados: 4% ICMS + 11,75% PIS/COFINS. */
+/**
+ * Créditos recuperáveis descontados do custo de aquisição (regra de 14/08/2026):
+ *   nacional  → 9,25%  (PIS/COFINS não cumulativo sobre a entrada)
+ *   importado → 11,75% (PIS/COFINS-Importação: 2,1% + 9,65%)
+ * Espelha a função SQL `oraculo_net_cost_rate`, usada pelas três views que
+ * resolvem custo. Ver docs/adr/ADR-005-custo-liquido-creditos.md.
+ */
+export const NET_COST_CREDIT_RATES = { nacional: 0.0925, importado: 0.1175 };
+
+/**
+ * Fator de crédito na transferência de importados no app Financeiro:
+ * 4% ICMS + 11,75% PIS/COFINS. **Especificação histórica** — o motor usa só os
+ * 11,75% (`NET_COST_CREDIT_RATES.importado`), porque a base não tem a flag que
+ * identifica entrada por transferência.
+ */
 export const IMPORTED_TRANSFER_CREDIT_RATE = 0.1575;
+
+/** Alíquota de crédito recuperável por origem. Espelha `oraculo_net_cost_rate`. */
+export function netCostCreditRate(origin) {
+  return String(origin ?? "").trim().toLowerCase().startsWith("import")
+    ? NET_COST_CREDIT_RATES.importado
+    : NET_COST_CREDIT_RATES.nacional;
+}
+
+/**
+ * Custo líquido de créditos recuperáveis — o custo que o motor usa em toda a
+ * plataforma. Espelha a função SQL `oraculo_net_cost`: null entra, null sai, e
+ * o resultado nunca é negativo.
+ *
+ * Em kit, a regra vale por componente: cada um desconta o crédito da SUA origem,
+ * porque um kit pode misturar nacional e importado.
+ */
+export function calcNetCostByOrigin(grossCost, origin) {
+  if (grossCost == null || !Number.isFinite(Number(grossCost))) return null;
+  return Math.max(0, toNumber(grossCost) * (1 - netCostCreditRate(origin)));
+}
 
 /** Faixas de taxa da Shopee (marketplace fee por faixa de preço de venda). */
 export const SHOPEE_MARKETPLACE_TIERS = [
@@ -273,13 +307,34 @@ export function interstateIcmsRate(sourceState, destState, origin) {
 }
 
 /**
- * DIFAL do Oráculo (decisões de 04/08/2026, validadas contra a NF real 533740):
- *   * só existe em operação INTERESTADUAL — venda MG→MG retorna 0;
- *   * base única "por dentro" (LC 190/2022), como a NF calcula:
+ * DIFAL do Oráculo (regra em produção desde 14/08/2026, por orientação do
+ * contador): diferença simples entre a alíquota interna do destino e a
+ * interestadual nominal, aplicada sobre a base — sem gross-up.
+ *
+ *   difal = base × max(0, interna − interestadual)
+ *
+ * Continua existindo só em operação INTERESTADUAL: venda MG→MG retorna 0.
+ *
+ * Divergência conhecida e deliberada: a NF 533740 (vNF 44,51 · RJ interna 22% ·
+ * interestadual 12%) imprime vICMSUFDest 7,21, calculado por dentro; esta regra
+ * devolve 4,45 para a mesma nota. É o mesmo tratamento que o ICMS já recebe —
+ * o motor mede a premissa do contador, não o campo da NF.
+ * Ver docs/adr/ADR-004-difal-diferenca-aliquotas.md.
+ */
+export function calcDifalDiferencaAliquotas({ base, internalRate, interstateRate, intrastate = false } = {}) {
+  const b = toNumber(base);
+  if (intrastate || b <= 0) return 0;
+  return b * (Math.max(0, toRate(internalRate) - toRate(interstateRate)) / 100);
+}
+
+/**
+ * DIFAL com base única "por dentro" da LC 190/2022 — regra do motor entre
+ * 04/08 e 14/08/2026, mantida como especificação do que a NF traz impressa:
  *       base_destino = base / (1 − interna)
  *       difal        = base_destino × interna − base × interestadual_destacada
  * NF de referência: vNF 44,51 · RJ interna 22% · interestadual 12% →
- * vBCUFDest 57,06 e vICMSUFDest 7,21 (o motor antigo, sem gross-up, dava 4,45).
+ * vBCUFDest 57,06 e vICMSUFDest 7,21. O motor NÃO usa mais esta regra —
+ * ver calcDifalDiferencaAliquotas.
  */
 export function calcDifalPorDentro({ base, internalRate, interstateRate, intrastate = false } = {}) {
   const b = toNumber(base);

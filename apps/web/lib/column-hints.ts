@@ -18,13 +18,13 @@ export const HINTS = {
   capitalParado:
     "Estoque × preço do anúncio: dinheiro imobilizado em produto que não está girando (e pagando armazenagem).",
   margemUnit:
-    "Preço do anúncio − custo unitário do livro de custos (cadastro manual > Olist > kits). É margem bruta: não desconta comissão do marketplace, frete nem impostos.",
+    "Preço do anúncio − custo unitário do livro de custos (cadastro manual > Olist > kits), já líquido dos créditos recuperáveis (−9,25% nacional, −11,75% importado). É margem bruta: não desconta comissão do marketplace, frete nem impostos.",
   enviar:
     "Quantidade sugerida: média/dia × (dias de estoque alvo + dias até a coleta/prazo) − estoque − trânsito.",
   vendaProtegida:
     "Unidades sugeridas × preço do anúncio: o faturamento que esse envio sustenta durante o horizonte escolhido.",
   custoEnvio:
-    "Unidades sugeridas × custo unitário: quanto de capital o envio consome. Aparece quando o SKU tem custo cadastrado.",
+    "Unidades sugeridas × custo unitário líquido de créditos: quanto de capital o envio consome. Aparece quando o SKU tem custo cadastrado.",
   situacao:
     "Urgência do item: Em ruptura (perdendo venda agora) > Crítico (rompe antes da próxima reposição chegar) > Abaixo do alvo > Fora do Full/oportunidade.",
   armazem: "Centro de distribuição da Shopee onde este SKU está estocado (BRFSP1 = São Paulo, BRFMG1 = Minas, etc.).",

@@ -12,7 +12,10 @@ import {
   interstateIcmsRate,
   calcDifal,
   calcDifalPorDentro,
+  calcDifalDiferencaAliquotas,
   calcNetCost,
+  calcNetCostByOrigin,
+  netCostCreditRate,
   calcShopeeMarketplaceFee,
   calcPisCofins,
   calcFiscalOrder,
@@ -276,7 +279,26 @@ test("calcMarketplaceFeeForChannel: canal sem faixa não inventa comissão", () 
   closeTo(shopee.total, 100 * 0.14 + 20); // 100 > 99,99 → cai na faixa 100–199,99 (14% + R$ 20)
 });
 
-test("DIFAL por dentro: reproduz a NF real 533740 (MG→RJ nacional)", () => {
+test("DIFAL do motor: diferença simples de alíquotas (regra de 14/08/2026)", () => {
+  // NF 533740 (MG→RJ nacional): 44,51 × (22% − 12%) = 4,45. A NF imprime 7,21,
+  // calculado por dentro — a divergência é deliberada (ADR-004).
+  closeTo(calcDifalDiferencaAliquotas({ base: 44.51, internalRate: 22, interstateRate: 12 }), 4.451, 1e-9);
+  // CE nacional: 100 × (20% − 7%) = 13 (a regra por dentro dava 18)
+  closeTo(calcDifalDiferencaAliquotas({ base: 100, internalRate: 20, interstateRate: 7 }), 13);
+  // RJ importado: 100 × (22% − 4%) = 18
+  closeTo(calcDifalDiferencaAliquotas({ base: 100, internalRate: 22, interstateRate: 4 }), 18);
+});
+
+test("DIFAL do motor: MG→MG não paga, e nunca é negativo", () => {
+  assert.equal(calcDifalDiferencaAliquotas({ base: 100, internalRate: 18, interstateRate: 12, intrastate: true }), 0);
+  // interna menor que a interestadual (importado 4% para UF de interna 4%) não gera crédito
+  assert.equal(calcDifalDiferencaAliquotas({ base: 100, internalRate: 4, interstateRate: 12 }), 0);
+  // guardas: base/alíquota ausentes nunca explodem
+  assert.equal(calcDifalDiferencaAliquotas({ base: 0, internalRate: 22, interstateRate: 12 }), 0);
+  assert.equal(calcDifalDiferencaAliquotas({ base: 100, internalRate: 0, interstateRate: 12 }), 0);
+});
+
+test("DIFAL por dentro (especificação histórica): reproduz a NF real 533740 (MG→RJ nacional)", () => {
   // vNF 44,51 · RJ interna 22% · interestadual 12% → vBCUFDest 57,06 · vICMSUFDest 7,21
   closeTo(calcDifalPorDentro({ base: 44.51, internalRate: 22, interstateRate: 12 }), 7.21, 0.005);
   // CE nacional: 100/(1-0,20)×20% − 100×7% = 25 − 7 = 18 (motor antigo dava 13)
@@ -285,11 +307,32 @@ test("DIFAL por dentro: reproduz a NF real 533740 (MG→RJ nacional)", () => {
   closeTo(calcDifalPorDentro({ base: 100, internalRate: 22, interstateRate: 4 }), 100 / 0.78 * 0.22 - 4, 1e-9);
 });
 
-test("DIFAL por dentro: não existe em venda intraestadual (MG→MG)", () => {
+test("DIFAL por dentro (especificação histórica): não existe em venda intraestadual (MG→MG)", () => {
   assert.equal(calcDifalPorDentro({ base: 100, internalRate: 18, interstateRate: 12, intrastate: true }), 0);
   // guardas: base/alíquota inválidas nunca explodem
   assert.equal(calcDifalPorDentro({ base: 0, internalRate: 22, interstateRate: 12 }), 0);
   assert.equal(calcDifalPorDentro({ base: 100, internalRate: 0, interstateRate: 12 }), 0);
+});
+
+test("Custo líquido: desconta 9,25% do nacional e 11,75% do importado", () => {
+  closeTo(netCostCreditRate("nacional"), 0.0925);
+  closeTo(netCostCreditRate("importado"), 0.1175);
+  // origem ausente ou desconhecida cai em nacional, como o SQL
+  closeTo(netCostCreditRate(null), 0.0925);
+  closeTo(netCostCreditRate("Importado por transferência"), 0.1175);
+
+  closeTo(calcNetCostByOrigin(100, "nacional"), 90.75);
+  closeTo(calcNetCostByOrigin(100, "importado"), 88.25);
+  // POTE DE VIDRO MARMITA - BRANCO - 370ML (SKU 213875, importado, cadastro 3,93)
+  closeTo(calcNetCostByOrigin(3.93, "importado"), 3.468225, 1e-9);
+});
+
+test("Custo líquido: null entra, null sai; nunca negativo", () => {
+  assert.equal(calcNetCostByOrigin(null, "nacional"), null);
+  assert.equal(calcNetCostByOrigin(undefined, "importado"), null);
+  assert.equal(calcNetCostByOrigin("abc", "nacional"), null);
+  assert.equal(calcNetCostByOrigin(0, "nacional"), 0);
+  assert.equal(calcNetCostByOrigin(-10, "nacional"), 0);
 });
 
 test("PIS/COFINS do motor: débito bruto sobre a NF, sem crédito de custo", () => {

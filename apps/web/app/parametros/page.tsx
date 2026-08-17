@@ -489,8 +489,8 @@ export default async function ParametrosPage() {
               <input name="sku" required placeholder="CABIDE VELUDO-50UN-PRETO" />
             </label>
             <label>
-              <span>Custo unitário</span>
-              <input name="unit_cost_override" inputMode="decimal" placeholder="22,50" />
+              <span>Custo unitário bruto</span>
+              <input name="unit_cost_override" inputMode="decimal" placeholder="22,50" title="Informe o custo de aquisição BRUTO (o que foi pago). O sistema desconta sozinho o crédito recuperável: −9,25% nacional, −11,75% importado." />
             </label>
             <label>
               <span>Margem meta</span>

@@ -1182,7 +1182,7 @@ export default async function HomePage({
               accent="accent-cyan"
               label="Custo do produto"
               value={formatCurrency(fm.totalCost)}
-              caption="Kits expandidos por componente"
+              caption="Kits por componente, líquido de créditos"
               delta={costDelta}
               spark={history.map((point) => point.cost)}
               sparkColor="var(--cyan)"
@@ -1353,9 +1353,10 @@ export default async function HomePage({
             </div>
           </div>
           <p className="fiscal-note">
-            Base = <strong>valor faturado na NF</strong>, rateado por item (não o valor do pedido). ICMS efetivo
+            Base = <strong>valor faturado na NF</strong>, rateado por item (não o valor do pedido). Custo do produto
+            <strong> líquido dos créditos recuperáveis</strong> (−9,25% nacional, −11,75% importado). ICMS efetivo
             por UF/origem (perfil Jacarta), PIS/COFINS 9,25% sobre a NF <strong>sem crédito de custo</strong> (custo
-            é gestão interna) e DIFAL <strong>por dentro, só interestadual</strong> — venda dentro de MG não paga.
+            é gestão interna) e DIFAL pela <strong>diferença de alíquotas, só interestadual</strong> — venda dentro de MG não paga.
             A <strong>comissão de marketplace</strong> entra pelas faixas de cada canal e
             <strong> absorve frete, ads, embalagem e despesa operacional</strong>.
             Cobre {formatDecimal(data.fiscalMargin.coverageCostRevenuePct, 1)}% da receita fiscal do período
