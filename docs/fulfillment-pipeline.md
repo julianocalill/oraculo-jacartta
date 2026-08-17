@@ -14,8 +14,9 @@ pacote. Cancelamentos e pedidos não pagos ficam fora da carga operacional.
 
 ## Fronteiras e fontes de verdade
 
-- Shopee e tokens: `shopee-sync`, no Oráculo. Continua sendo o único renovador
-  dos tokens rotativos.
+- Shopee: `shopee-sync`, no Oráculo, coleta os dados logísticos usando o token
+  replicado. O único renovador dos tokens rotativos é o workflow n8n
+  `Zeptn7GL4bOOsGKj`.
 - Bip Comercial: `printed_label_audits` no banco do Bip.
 - Bip Logística: `logistics_label_receipts` no banco do Bip.
 - Conciliação e histórico gerencial: banco do Oráculo.

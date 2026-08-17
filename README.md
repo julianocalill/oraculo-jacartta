@@ -33,20 +33,21 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-08-10.md](docs/project-status-2026-08-10.md) **← start here** (current state)
+1. [docs/project-status-2026-08-13.md](docs/project-status-2026-08-13.md) **← start here** (current state)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
    — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every card/column/config field across the whole system — analytics, alerts, calculator, imports, params, sync status — exact formula, PT-BR, for team walkthroughs)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
 4. [docs/project-context.md](docs/project-context.md)
 5. [docs/engineering-playbook.md](docs/engineering-playbook.md)
 6. [docs/deployment-map.md](docs/deployment-map.md)
-7. [docs/fiscal-financeiro-port.md](docs/fiscal-financeiro-port.md)
-8. [docs/metric-contract.md](docs/metric-contract.md)
-9. [docs/oraculo-master-plan.md](docs/oraculo-master-plan.md)
-10. [CHANGELOG.md](CHANGELOG.md) (full history)
-11. [vault/00-home/index.md](vault/00-home/index.md)
+7. [docs/shopee-sales-whatsapp-report.md](docs/shopee-sales-whatsapp-report.md) (relatório Shopee direto → WhatsApp)
+8. [docs/fiscal-financeiro-port.md](docs/fiscal-financeiro-port.md)
+9. [docs/metric-contract.md](docs/metric-contract.md)
+10. [docs/oraculo-master-plan.md](docs/oraculo-master-plan.md)
+11. [CHANGELOG.md](CHANGELOG.md) (full history)
+12. [vault/00-home/index.md](vault/00-home/index.md)
 
-Earlier snapshots (historical, superseded): [docs/project-status-2026-07-17.md](docs/project-status-2026-07-17.md), [docs/project-status-2026-07-16.md](docs/project-status-2026-07-16.md), [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md), [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
+Earlier snapshots (historical, superseded): [docs/project-status-2026-08-12.md](docs/project-status-2026-08-12.md), [docs/project-status-2026-08-10.md](docs/project-status-2026-08-10.md), [docs/project-status-2026-07-17.md](docs/project-status-2026-07-17.md), [docs/project-status-2026-07-16.md](docs/project-status-2026-07-16.md), [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md), [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
 
 ## Tooling choices
 
@@ -57,7 +58,7 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-07-17.md](
 
 ## Current production state
 
-**Last update**: `2026-08-10` (see `docs/project-status-2026-08-10.md`) —
+**Last update**: `2026-08-13` (see `docs/project-status-2026-08-13.md`) —
 Três marketplaces com analítica de estoque (ML Full, Shopee FBS multi-armazém,
 Olist), sugestão de reposição com export .xlsx, livro de custos por SKU,
 rastreamento de importações com mapa AIS, **aba Devoluções com funil de três
@@ -66,7 +67,11 @@ relatório periódico de Shopee Ads por IA local (implementado; aguardando o
 preview final do Ollama antes da ativação) e **aba Agenda de tarefas
 compartilhadas entre usuários** (calendário mensal, pop-up de tarefa com
 sub-tarefas colaborativas e badge por usuário; primeira feature com RLS por
-linha).
+linha), além do relatório operacional de vendas Shopee direto da Open Platform
+para WhatsApp, sem dependência dos dados do Oráculo, e da **aba RPA Afiliados**
+(upload do Relatório Mensal da Shopee → retenções → ZIP com um Recibo de
+Pagamento a Autônomo em PDF por CPF; primeira feature com dado pessoal de
+terceiros em escala e primeira geração de PDF por biblioteca).
 
 ### Deployment & auth
 - Production URL: `https://oraculo.oliverhome.com.br`
@@ -143,6 +148,7 @@ linha).
 - Manual parameters: `/parametros`
 - Mobile responsive: enabled for dashboard, forms, tables
 - DIFAL parameter rule: `difal_rate = max(destination internal ICMS - interstate ICMS, 0)` and `effective_tax_rate = interstate ICMS + DIFAL + FCP`.
+- Since 2026-08-14 the fiscal margin engine applies that same rate to the invoice value — no LC 190/2022 gross-up, interstate only (MG→MG pays none). See `docs/adr/ADR-004-difal-diferenca-aliquotas.md`.
 
 Current product areas:
 

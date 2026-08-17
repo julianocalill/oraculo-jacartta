@@ -21,3 +21,13 @@ A regra está implementada tanto na função testável local quanto no código d
 A coleta direta também repete automaticamente chamadas GET que sofram falha de
 rede transitória, necessária porque a janela de fim de semana consulta um volume
 maior de pedidos nas quatro lojas.
+
+## CSV enxuto com SKU Olist
+
+O CSV anexo passou a conter somente `SKU`, `produto`,
+`unidades_vendidas_unitariamente`, `caixas_completas` e `unidades_avulsas`.
+`SKU` é sempre o SKU Olist, carregado da análise de preço-produto para a tabela
+operacional `shopee_olist_sku_mappings`; não há fallback para SKU Shopee.
+
+A carga de 17/08 materializou 1.068 vínculos inequívocos. Uma prévia real sem
+WhatsApp gerou 117 linhas: 111 com SKU Olist e seis vazias por falta de vínculo.

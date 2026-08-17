@@ -399,7 +399,7 @@ Regra:
 - custos e exceções que não vierem por API entram em `oraculo_margin_sku_params`;
 - taxas/impostos/metas por canal entram em `oraculo_margin_channel_params`;
 - impostos por UF entram em `oraculo_state_tax_params`;
-- DIFAL deve ser calculado como `max(ICMS interno destino - ICMS interestadual, 0)`;
+- DIFAL deve ser calculado como `max(ICMS interno destino - ICMS interestadual, 0)`, aplicado sobre o valor da NF e só em operação interestadual (regra do motor fiscal desde 14/08/2026 — ver ADR-004);
 - taxa efetiva por UF deve ser calculada como `ICMS interestadual + DIFAL + FCP`;
 - Shopee é somente leitura: estes parâmetros são internos do Oraculo e não alteram nada na Shopee.
 - as 27 UFs foram criadas como pendentes, sem alíquota preenchida automaticamente;

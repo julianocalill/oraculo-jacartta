@@ -1,6 +1,6 @@
 # Oráculo — Manual da Plataforma
 
-**Guia para diretoria e treinamento · Grupo Jacartta · Julho 2026**
+**Guia para diretoria e treinamento · Grupo Jacartta · Atualizado em agosto de 2026**
 
 ---
 
@@ -36,6 +36,22 @@ O Oráculo é a plataforma de inteligência de vendas do Grupo Jacartta. Ele re�
 | **Alertas** | Produtos que exigem ação: ruptura, risco de ruptura, parados |
 | **Parâmetros** | Cadastro manual de custos e taxas por canal/SKU/UF |
 | **Usuários / Status** | Administração de acessos e saúde da sincronização |
+
+### Relatório operacional Shopee no WhatsApp
+
+Além das telas do Oráculo, a operação recebe todos os dias um relatório de
+vendas Shopee às **06:30** e **12:30**:
+
+- 06:30: vendas do dia anterior completo;
+- 12:30: vendas do dia atual até o horário;
+- todas as lojas e variações são consolidadas por produto;
+- todos os produtos vendidos aparecem do maior para o menor;
+- listas grandes chegam em partes numeradas.
+
+Esse relatório consulta a Shopee diretamente e segue para o WhatsApp pelo n8n
+e pela Evolution API. Ele **não usa os dados do Oráculo**. Por isso, seus
+números são uma visão operacional por pedidos e não devem ser confundidos com
+a receita fiscal oficial do painel, baseada em notas fiscais.
 
 ## 4. Analytics — a página principal
 

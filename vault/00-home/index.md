@@ -65,6 +65,7 @@ daquela data. Para o estado atual, leia o status doc de 2026-07-17.
   - SKU cost/margin overrides;
   - state/UF tax rules for destination internal ICMS, interstate ICMS, FCP, computed DIFAL and computed effective tax rate.
 - DIFAL rule: `max(destination internal ICMS - interstate ICMS, 0)`. Effective tax: `interstate ICMS + DIFAL + FCP`.
+- Since 2026-08-14 the fiscal engine charges that rate on the invoice value, interstate only — no LC 190/2022 gross-up (ADR-004, accountant's call).
 - Olist sync is Supabase-first:
   - orders hourly;
   - derived metrics hourly;

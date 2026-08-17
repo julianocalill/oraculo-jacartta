@@ -10,6 +10,97 @@ Histórico de entregas e mudanças significativas.
 - A coleta direta da Shopee passa a repetir chamadas GET após falhas transitórias
   de rede, reduzindo o risco de a janela maior terminar com `ECONNRESET`.
 
+## [2026-08-16] — De-para de SKUs: anúncio do marketplace → SKU Olist
+
+- Botão **"De-para de SKUs (.xlsx)"** na aba `/skus`: planilha com 4 abas
+  (Shopee, Mercado Livre, TikTok, Não mapeados e ambíguos) mapeando o SKU do
+  anúncio de cada canal para o SKU do cadastro Olist — onde a baixa de estoque
+  de fato acontece.
+- A API pública Tiny v3 **não expõe** o vínculo de anúncios da Olist (só
+  `PUT /anuncios/{id}/preco`, sem GET). O de-para é **derivado por evidência de
+  venda**: pedidos casados pelo `numeroPedidoEcommerce`, usando só pedidos com
+  1 SKU distinto de cada lado (precedente de `oraculo_returns_reconciled`).
+  `mapeado` = ≥2 pedidos e ≥80% de dominância.
+- A **razão de quantidade** denuncia anúncio de fardo/kit: `CABIDE
+  VELUDO-50UN` → razão 50 (1 fardo vendido = 50 unidades baixadas na Olist).
+- Cache `oraculo_sku_channel_map_cache` com refresh on-demand na própria rota
+  (throttle 6h), **sem novo job de cron** — worker slots no limite.
+- Novo: `mercadolivre_order_items` — o `mercadolivre-sync` passou a persistir
+  itens de pedido por anúncio/variação (antes só agregava por dia); backfill de
+  120 dias executado. TikTok usa as devoluções importadas como fonte (a
+  integração direta nunca foi aplicada em produção).
+- Detalhes e decisões em `docs/de-para-skus.md`.
+
+## [2026-08-14] — Custo do produto líquido de créditos recuperáveis
+
+- O custo passa a descontar o crédito que volta na apuração, pela origem da
+  mercadoria: **−9,25% nacional** (PIS/COFINS não cumulativo) e **−11,75%
+  importado** (PIS/COFINS-Importação). O custo bruto do ERP superestimava o
+  desembolso real.
+- A regra vive em **uma função só** (`oraculo_net_cost`), ligada às três views que
+  resolvem custo: `oraculo_product_effective_cost` (motor fiscal),
+  `oraculo_sku_unit_cost` (Shopee, Mercado Livre, devoluções) e
+  `oraculo_sku_margin_30d` (margem operacional de `/skus`). Kit desconta **por
+  componente**, com a origem de cada um.
+- Impacto medido (01–14/08): custo de **R$ 1.996.913,36 → R$ 1.777.481,69**, lucro
+  fiscal de −R$ 49.567,99 → **+R$ 169.862,34**, margem de −1,30% → **+4,44%** e ROI
+  de −2,48% → **+9,56%**. É a primeira vez que a base coberta fecha positiva.
+- **Somada à mudança do DIFAL do mesmo dia, a margem do período saiu de −5,16%
+  para +4,44% sem que uma única venda mudasse.** O resultado melhorou porque a
+  régua mudou — é assim que deve ser comunicado.
+- Não há dupla contagem: o PIS/COFINS continua sendo o débito bruto que a NF
+  destaca; o crédito aparece uma vez só, do lado do custo.
+- O override manual de `/parametros` passa a ser explicitamente **bruto** (o campo
+  virou "Custo unitário bruto"); o sistema desconta o crédito.
+- A trava de sanidade agora compara o custo líquido com o preço, então algumas
+  linhas antes descartadas entraram: receita coberta +R$ 6,37 e impostos +R$ 1,73.
+- Pendência: confirmar com o contador que o crédito é integral — fornecedor do
+  Simples, produto monofásico ou com ST não geram 9,25% cheios, e a regra hoje é
+  uniforme para o portfólio inteiro. Registrado em
+  `docs/adr/ADR-005-custo-liquido-creditos.md`.
+
+## [2026-08-14] — DIFAL passa a ser a diferença simples de alíquotas
+
+- Por orientação do contador (Eduardo Faleiros, na planilha de ICMS interestadual
+  devolvida em 14/08), o DIFAL deixou de usar a base "por dentro" da LC 190/2022 e
+  passou a ser `valor da NF × max(0, interna do destino − interestadual)`. Continua
+  existindo só em operação interestadual — venda MG→MG não paga.
+- Impacto medido em produção (01–14/08, receita com custo R$ 3.824.978,14,
+  cobertura 96,5%): DIFAL de **R$ 570.891,62 → R$ 423.249,36** (−25,9%), imposto
+  total de R$ 1.030.082,62 → R$ 882.440,36 (−14,3%), lucro de −R$ 197.210,25 →
+  **−R$ 49.567,99**, margem de −5,16% → **−1,30%** e ROI de −9,88% → −2,48%. O
+  prejuízo encolhe 75%, mas a operação coberta segue negativa.
+- **O motor passa a divergir da NF em mais um campo, de propósito**: na NF 533740
+  a nota imprime `vICMSUFDest` R$ 7,21 e o motor calcula R$ 4,45. É o mesmo
+  tratamento que o ICMS já tinha (nominal × efetivo do RET). Registrado em
+  `docs/adr/ADR-004-difal-diferenca-aliquotas.md`, na ressalva 3 de
+  `docs/explicacao-fiscal-oraculo.md` (v5) e nas notas do dashboard e de `/skus`.
+- `calcDifalDiferencaAliquotas` entra em `packages/domain/fiscal.js` como espelho
+  da função SQL; `calcDifalPorDentro` fica como especificação histórica, com os
+  testes da NF 533740 preservados.
+- Pendências que continuam abertas: o parecer escrito do contador, a íntegra do RET
+  (as 54 linhas de `/parametros` seguem `Pendente`) e o degrau nos sparklines, já
+  que as capturas anteriores a 14/08 ficaram com a regra antiga.
+
+## [2026-08-13] — Relatório Shopee convertido em caixas
+
+- O workflow `GJHOwusnuXgaxVaT` passa a enviar às `07:00` e `13:30`, com
+  janelas fixas `14:00→06:30` e `08:00→13:00`, respectivamente.
+- A planilha de cubagem foi materializada no banco operacional: 77 perfis,
+  componentes dos dois perfis `DESTAMPADO` e vínculos explícitos por
+  `shop_id + item_id + model_id`.
+- Quantidades agora viram caixas completas + unidades avulsas, considerando
+  `units_per_sale` para kits. Itens sem vínculo continuam no relatório em
+  unidades e com alerta.
+- Caixas e sobras dos perfis destampados geram as mesmas caixas e sobras de
+  tampas; perfis tampados não são expandidos. Componentes entram no total de
+  volumes logísticos.
+- Reconciliação conservadora: 440 de 3.954 variações mapeadas, seis ambíguas e
+  3.508 ainda sem vínculo. Dois previews reais passaram sem envio ao WhatsApp.
+- Depois das partes de texto, o workflow anexa um CSV com unidades físicas,
+  caixas, sobras e `shop_id/item_id/model_id/SKU` dos itens vendidos que ainda
+  precisam de mapeamento. O slot só é registrado após o envio do documento.
+
 ## [2026-08-13] — Etiqueta de palete: texto livre, sem vínculo com o cadastro
 
 - Produto e variações passam a ser **digitados à mão**. Saíram o `<datalist>` de
@@ -24,6 +115,48 @@ Histórico de entregas e mudanças significativas.
 - `logistica_palete_itens.sku` e `.olist_product_id` viram **colunas legadas**:
   não são mais escritas nem lidas, e ficam no schema apenas para preservar os
   paletes gerados antes da mudança. Sem migration.
+
+## [2026-08-12] — RPA de afiliados Shopee
+
+- Nova aba **RPA Afiliados** (`/rpa`): sobe o Relatório Mensal de Afiliados da
+  Shopee em `.csv`, calcula INSS/IRRF/ISS por afiliado, mostra o consolidado e,
+  após aprovação, baixa um ZIP com um RPA em PDF por CPF. Documentada em
+  `docs/rpa-afiliados-shopee.md`.
+- **Por que agora**: desde 01/07/2026 a Shopee opera o repasse como mera
+  intermediação — paga o bruto, não retém nada, e a emissão do recibo virou
+  obrigação do vendedor. O arquivo de julho tem 772 afiliados.
+- **É upload porque a API não abre**: os 4 partner apps seguem com HTTP 403
+  `error_api_permission` em `get_conversion_report` (levantamento de 2026-07-27).
+- **Primeiro PDF por biblioteca no repo** (`pdf-lib` + `fflate`), desvio
+  consciente da política da etiqueta de palete: `window.print()` gera um arquivo
+  de N páginas, e a contabilidade precisa de um recibo por pessoa dentro de um
+  ZIP. Fontes padrão usam WinAnsi, então nome com caractere fora dela é
+  degradado (`?`) em vez de derrubar o lote.
+- **`oraculo_rpa_issuers` / `_batches` / `_items` são `service_role`-only**
+  (migration `20260812170000`), sem `grant select` para `authenticated` — ao
+  contrário da regra geral do AGENTS.md, porque guardam CPF, nascimento e
+  endereço de centenas de pessoas físicas.
+- **O app passou a consumir `@oraculo/domain` de verdade** (`allowJs` +
+  `transpilePackages`). O pacote era só especificação executável; duas
+  implementações do mesmo cálculo de dinheiro dariam duas respostas.
+- Dinheiro em centavos inteiros, arredondado **por linha**: no arquivo de julho,
+  arredondar no fim daria 3 centavos de diferença no total do INSS.
+- Verificado com o arquivo real: 772/772 linhas, 772/772 endereços quebrados em
+  campos, bruto R$ 26.045,08, INSS R$ 2.864,99, IRRF R$ 0,00 (tabela de 2026
+  isenta todo o arquivo), ZIP de 2,31 MB em 4,9 s.
+- ⚠️ Pendente com a contabilidade: os coeficientes da tabela do IRRF 2026 e o
+  fato de o relatório da Shopee **não trazer PIS/NIT**.
+
+## [2026-08-12] — Documentação do relatório Shopee direto
+
+- Criada documentação operacional completa do caminho Shopee Open Platform →
+  n8n → Evolution API → WhatsApp, incluindo regras de período, consolidação,
+  paginação das mensagens, dependências, segurança e diagnóstico.
+- Registrada a decisão em `ADR-003` e criado um novo snapshot de estado do
+  projeto em `docs/project-status-2026-08-12.md`.
+- Mapa de deploy, runbook Shopee, Ads, Afiliados, fulfillment, manual da
+  diretoria, contexto do projeto e vault interno foram alinhados ao ownership
+  atual: n8n renova tokens; funções do Oráculo apenas consomem a réplica.
 
 ## [2026-08-11] — Logística: etiqueta de palete com QR Code
 
@@ -45,6 +178,22 @@ Histórico de entregas e mudanças significativas.
   salva como PDF quando preciso. Única dependência nova é `qrcode`, gerando SVG
   inline no servidor (PNG sai serrilhado em térmica de 203/300 dpi).
 - Detalhes e armadilhas em `docs/logistica-etiquetas.md`.
+
+## [2026-08-11] — Relatório Shopee direto no WhatsApp
+
+- O workflow n8n `GJHOwusnuXgaxVaT` consulta pedidos e itens diretamente na
+  Shopee Open Platform, consolida as quatro lojas e todas as variações por
+  produto e envia todos os produtos vendidos pela Evolution API, do maior para
+  o menor, dividindo listas extensas em partes numeradas.
+- O Oráculo deixou de ser fonte do relatório. A antiga RPC
+  `shopee_sales_whatsapp_report` foi removida; uma falha do Oráculo não afeta
+  a coleta nem o envio das informações.
+- O n8n passou a ser o proprietário dos tokens Shopee no workflow
+  `Zeptn7GL4bOOsGKj`, com renovação a cada duas horas. O espelho enviado ao
+  Oráculo é opcional e não bloqueante.
+- Agenda mantida em `06:30` (dia anterior completo) e `12:30` (dia atual).
+  Prévia direta da lista completa validada às 12:08 com 1.362 pedidos, 1.450
+  unidades e 103 produtos, distribuídos em quatro mensagens.
 
 ## [2026-08-10] — Importações: AIS congelado e contêiner entregue no mapa
 

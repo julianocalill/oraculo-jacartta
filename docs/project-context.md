@@ -4,7 +4,12 @@
 
 Oraculo is an operational intelligence system for commerce operations.
 
-The platform started with Olist as the first integration source and now also stores read-only Shopee Donacor data. Supabase/Postgres is the canonical layer; the web product reads derived and cached metrics from that layer.
+The platform started with Olist as the first integration source and now stores
+read-only data from four Shopee shops. Supabase/Postgres is the canonical layer
+for the web product, which reads derived and cached metrics from it. The
+operational Shopee sales report sent to WhatsApp is intentionally outside that
+canonical path: it queries Shopee directly through n8n so Oráculo failures do
+not affect the message.
 
 The current product direction is practical executive intelligence for the operations director:
 
@@ -22,9 +27,9 @@ The current product direction is practical executive intelligence for the operat
 - `Obsidian` can store durable project memory, but repository docs are the source of truth.
 - `AI agents` assist architecture, coding, review and documentation, but repository files remain the source of truth.
 
-## Current state on 2026-08-10
+## Current state on 2026-08-12
 
-See `docs/project-status-2026-08-10.md` (and the chain of status docs it
+See `docs/project-status-2026-08-12.md` (and the chain of status docs it
 supersedes) for the full write-up. Highlights since July:
 
 - Expedição funnel (Shopee × Bip), Devoluções funnel, fiscal margin with
@@ -36,6 +41,11 @@ supersedes) for the full write-up. Highlights since July:
 - Tab-based access control in production (`app_metadata.tabs`, registry in
   `lib/auth/tabs.ts`), Vercel functions in `gru1`, DB compute upgraded to
   Small.
+- Direct Shopee sales report at 06:30 and 12:30 through n8n + Evolution API,
+  listing every sold product across all four shops. It does not read Oráculo
+  data. n8n is the sole Shopee token-renewal owner and replicates tokens to
+  Oráculo on a non-blocking basis. See
+  `docs/shopee-sales-whatsapp-report.md`.
 
 ## Current state on 2026-07-10
 

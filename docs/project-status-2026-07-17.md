@@ -1,5 +1,9 @@
 # Project Status — 2026-07-17
 
+> Snapshot histórico. A afirmação abaixo de que `shopee-sync` renovava tokens
+> foi substituída em 11/08/2026: o renovador atual é o workflow n8n
+> `Zeptn7GL4bOOsGKj`. Ver `docs/project-status-2026-08-12.md`.
+
 Retrato do "agora". Supersede `docs/project-status-2026-07-16.md` (que cobre a
 chegada do Mercado Livre e das Importações) — este consolida as sessões de
 2026-07-14 a 2026-07-17: os **três marketplaces com analítica de estoque**, o
@@ -51,7 +55,7 @@ regras de cálculo dela foram adotadas e, em pontos, superadas — ver
 | `mercadolivre-sync` | `:55` | anúncios, variações, estoque Full, pedidos (janela 2d; backfill por fatia via `toDaysAgo`). Histórico desde 2026-03-24 (~19,2k pedidos) |
 | `mercadolivre-process-notifications` | `*/10` | inbox do webhook: `items`/`items_prices` atualizam anúncio+estoque em ~10 min |
 | limpeza da inbox ML | dom 06:37 UTC | apaga tratadas com +30d |
-| `shopee-sync` | 15 min/loja | pedidos + itens · **renovador único do token** (refresh rotativo) |
+| `shopee-sync` | 15 min/loja | pedidos + itens · em 17/07 era o renovador; ownership substituído em 11/08 pelo n8n |
 | `shopee-escrow-sync` | 30 min/loja | comissão/taxas/líquido por pedido (take rate) |
 | `shopee-sync-sbs` | `:42` | inventário FBS por SKU × armazém (velocidade/cobertura/trânsito da Shopee) |
 | `shopee-sync-products` | 6h **por loja** | anúncios + modelos + estoque local; recalcula série de vendas e agregados (as 4 lojas juntas estouram o teto da edge function) |

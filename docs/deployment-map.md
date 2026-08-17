@@ -70,9 +70,9 @@
   - Pulls Shopee orders + items for each shop into `shopee_orders`/`shopee_order_items`.
   - Também materializa `package_list`, prazo, rastreio e status logístico em
     `shopee_fulfillment_packages`; `LOGISTICS_PICKUP_DONE` confirma a coleta.
-  - **Sole owner of the Shopee token renewal** (rotating refresh token): every
-    other Shopee function only READS the token and defers the shop when it is
-    about to expire. Any new Shopee function MUST respect this.
+  - Reads the token replicated by the primary n8n token workflow and never
+    renews the rotating refresh token. It rejects a token with less than five
+    minutes remaining.
   - Each shop has its **own partner app** — requests are signed with that
     shop's partner key. An `invalid_access_token` is usually a wrong signature
     (wrong app for the shop), not an expired token.
@@ -91,8 +91,8 @@
   - Materializes FBS warehouse inventory (`/api/v2/sbs/get_current_inventory`,
     region BR) into `shopee_sbs_inventory` + daily snapshots. Shopee provides
     sellable/reserved/in-transit, coverage_days, selling_speed and 7–90d sales
-    windows per SKU × warehouse. Read-only on tokens (renewal stays exclusive
-    to `shopee-sync`); signs per-shop with each shop's own partner app key.
+    windows per SKU × warehouse. Read-only on tokens; signs per-shop with each
+    shop's own partner app key.
 - `shopee-sync-products` (deployed 2026-07-16; 6h crons PER SHOP, staggered)
   - Items + models/variations + local stock (`get_item_list` →
     `get_item_base_info` → `get_model_list`) into `shopee_products` + daily
@@ -125,7 +125,7 @@
   - Pulls returns/refunds (`/api/v2/returns/get_return_list`) into the canonical
     `oraculo_returns` (channel `shopee`). No per-channel staging table — the
     Shopee response is already one row per return; the full payload lands in `raw`.
-  - Read-only on tokens (renewal stays exclusive to `shopee-sync`); signs
+  - Read-only on tokens (renewal belongs to the primary n8n workflow); signs
     per-shop with that shop's own partner app key.
   - **Shopee caps the `create_time` window at 15 days.** Asking for 16 returns
     `error_param` and the whole window comes back EMPTY without failing the run —
@@ -139,7 +139,7 @@
 - `shopee-ads-report-data` (deployed 2026-08-07; acionada pelo n8n)
   - Coleta settings e 30 dias de performance diária de Ads, uma loja por
     invocação, e grava `shopee_ads_campaigns` / `shopee_ads_daily`.
-  - Read-only no token; `shopee-sync` continua como único renovador. Adia a loja
+  - Read-only no token; o workflow n8n primário é o único renovador. Adia a loja
     com menos de 10 minutos de validade.
   - O n8n chama RPCs service-role-only, que enfileiram a função por `pg_net` sem
     expor partner key ou token na execução.
@@ -280,6 +280,13 @@ Active jobs in `cron.job`:
 - `shopee-returns-espaco-de-bicho`: `24 */2 * * *`
 - `shopee-returns-donacor`: `36 */2 * * *`
 - `shopee-returns-oliverhome`: `48 */2 * * *`
+- n8n `Shopee - Renovar Tokens (n8n primário)` (`Zeptn7GL4bOOsGKj`):
+  `5 1-23/2 * * *` em `America/Sao_Paulo`. É o único renovador dos tokens
+  Shopee; persiste no banco operacional e replica ao Oráculo sem bloquear.
+- n8n `Shopee API Direta - Todos os Produtos WhatsApp 06h30 e 12h30`
+  (`GJHOwusnuXgaxVaT`): `30 6,12 * * *`. Consulta a Shopee diretamente e
+  envia pela Evolution API; não lê dados do Oráculo. Ver
+  `docs/shopee-sales-whatsapp-report.md`.
 - `mercadolivre-returns-hourly`: `35 * * * *` (away from the `:55` of `mercadolivre-sync`)
 - `oraculo-returns-order-ref-cache`: `7,37 * * * *`
   - Feeds `oraculo_olist_order_ref_cache` (sale NF -> marketplace order number).

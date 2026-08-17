@@ -103,6 +103,8 @@ Applies the Financeiro fiscal rules (perfil Jacarta). See
 - Curve pages must use cached RPCs instead of scanning `olist_order_items` during Next.js render.
 - State tax parameters exist with the corrected DIFAL rule. `/skus` exposes operational margin/ROI through `oraculo_sku_margin_30d`; official fiscal margin/ROI still depends on the audited NF + item layer.
 - DIFAL in `oraculo_state_tax_params` is derived from `max(destination internal ICMS - interstate ICMS, 0)`. Effective tax is `interstate ICMS + DIFAL + FCP`.
+- The fiscal margin engine applies that same rate to the invoice value since 2026-08-14 (interstate only, no gross-up) — the stored `difal_rate` stopped being decorative. See ADR-004.
+- Cost is net of recoverable credits since 2026-08-14: `oraculo_net_cost(gross, origin)` — 9,25% nacional, 11,75% importado — applied by `oraculo_product_effective_cost`, `oraculo_sku_unit_cost` and `oraculo_sku_margin_30d`. Kits discount per component. See ADR-005.
 - **Most Olist SKUs carry cost R$ 0** — it used to be counted as "has cost", making cost coverage look real when it was not. `oraculo_sku_unit_cost` ignores zero; the manual book per marketplace SKU is the fix at the source.
 - SKU discipline differs sharply by channel: Shopee has SKU on ~98% of products; Mercado Livre on 20 of 1.930 listings — which is what blocks margin on the ML side.
 - Reads of channel tables must paginate (`fetchAllPages`): PostgREST caps at 1.000 rows.

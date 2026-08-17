@@ -215,7 +215,7 @@ View `oraculo_olist_devolucoes` sobre `olist_invoices` com
 
 ### Fase 5 — Shopee via API
 `shopee-returns-sync` com `get_return_list` + `get_return_detail`. **Lê o token,
-nunca renova** (renovador exclusivo: `shopee-sync`); pula loja com TTL < 5 min;
+nunca renova** (renovador exclusivo: workflow n8n `Zeptn7GL4bOOsGKj`); pula loja com TTL < 5 min;
 assina com a partner key de cada uma das 4 lojas. Cron por loja a cada 30 min,
 **agendado na mesma migração** (rotina sem cron é falha invisível — já custou 45 dias).
 

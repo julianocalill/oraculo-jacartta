@@ -1,5 +1,8 @@
 # Estado do projeto — 2026-08-10
 
+> Snapshot histórico. O estado atual está em
+> `docs/project-status-2026-08-12.md`.
+
 Supersede `docs/project-status-2026-08-09.md`. O estado anterior continua
 válido; esta atualização registra a aba Agenda de tarefas compartilhadas.
 
@@ -102,6 +105,15 @@ diagnóstico exato.
 
 ## Pendências herdadas
 
+- Relatório Shopee → WhatsApp ativo para `06:30` e `12:30`, com consulta
+  direta à Shopee Open Platform, todos os produtos ordenados por quantidade e
+  todas as lojas/variações consolidadas. Listas extensas são divididas em
+  partes numeradas. Não lê dados do Oráculo. O envio de 06:30 cobre o dia anterior
+  completo; o de 12:30 cobre o dia atual até o horário. Workflow n8n
+  `GJHOwusnuXgaxVaT`; prévia direta da lista completa validada em 2026-08-11
+  às 12:08 com 1.362 pedidos, 1.450 unidades e 103 produtos em quatro
+  mensagens. Ver
+  `docs/shopee-sales-whatsapp-report.md`.
 - Workflow n8n de Shopee Ads segue inativo aguardando preview final.
 - Linhas de RET em `/parametros` pendentes da íntegra do regime vigente.
 - Margem fiscal negativa confirmada e explicada no dashboard (ver

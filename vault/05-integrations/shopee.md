@@ -19,9 +19,11 @@ assinatura com a chave errada, não token vencido).
 
 ## Sincronizações
 
-- `shopee-sync` (15 min/loja): pedidos + itens; **renovador único** do token
-  (refresh rotativo — nenhuma outra função renova). Desde 2026-08-09 também
-  materializa pacotes, prazo, rastreio e status da expedição.
+- n8n `Zeptn7GL4bOOsGKj` (2h): **renovador único** do token rotativo; grava no
+  banco operacional e replica ao Oráculo sem bloquear.
+- `shopee-sync` (15 min/loja): pedidos + itens; apenas consome o token
+  replicado. Desde 2026-08-09 também materializa pacotes, prazo, rastreio e
+  status da expedição.
 - `shopee-escrow-sync` (30 min/loja): comissão/taxas/líquido por pedido.
 - `shopee-sync-sbs` (horário, :42): inventário FBS por SKU × armazém via
   `/api/v2/sbs/get_current_inventory` — a Shopee entrega vendável/reservado,
@@ -31,6 +33,16 @@ assinatura com a chave errada, não token vencido).
   (`get_item_list` → `get_item_base_info` → `get_model_list`); snapshot
   diário; ao final recalcula `shopee_sales_daily` (derivada dos pedidos) e
   agregados 30/60d dos produtos (RPCs).
+
+## Relatório de vendas no WhatsApp
+
+- n8n `GJHOwusnuXgaxVaT`, às 06:30 e 12:30.
+- Caminho: Shopee Open Platform → n8n → Evolution API → WhatsApp.
+- Consulta as quatro lojas diretamente e não lê pedidos/caches do Oráculo.
+- Consolida lojas e variações por produto, ordena por unidades e envia todos
+  os produtos vendidos em partes numeradas.
+- Falha de uma loja interrompe o relatório inteiro para impedir parcial.
+- Operação completa: `docs/shopee-sales-whatsapp-report.md`.
 
 ## Produto — três abas em `/shopee`
 

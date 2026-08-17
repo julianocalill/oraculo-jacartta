@@ -39,9 +39,10 @@ evita os intervalos irregulares de um cron `*/3` na virada do mês.
 
 ## Segurança e ownership de token
 
-`shopee-sync` continua sendo o único renovador de token Shopee. A função de Ads
-só lê o token e adia a loja quando restam menos de dez minutos. Cada loja assina
-com o próprio partner app.
+O workflow n8n `Shopee - Renovar Tokens (n8n primário)`
+(`Zeptn7GL4bOOsGKj`) é o único renovador de token Shopee. A função de Ads só lê
+o token replicado no Oráculo e adia a loja quando restam menos de dez minutos.
+Cada loja assina com o próprio partner app.
 
 O n8n usa a credencial criptografada `Oráculo Supabase Service Role` para chamar
 RPCs do PostgREST. A service role, partner keys e tokens não ficam no JSON do
