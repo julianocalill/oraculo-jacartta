@@ -5,7 +5,15 @@ import { NextRequest } from "next/server";
 import { getCurrentUser } from "../../../../lib/auth/session";
 import { canAccess } from "../../../../lib/auth/access";
 import { buildXlsx, fileStamp, xlsxResponse, type XlsxColumn } from "../../../../lib/xlsx";
-import { aplicaBusca, aplicaFiltro, loadPrecoProduto, type PrecoFiltro } from "../data";
+import {
+  aplicaBusca,
+  aplicaFiltro,
+  chaveVenda,
+  loadPrecoProduto,
+  loadVendasPeriodo,
+  normalizaPeriodo,
+  type PrecoFiltro
+} from "../data";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +31,8 @@ const COLUMNS: XlsxColumn[] = [
   { header: "Custo unit.", key: "unitCost", width: 12, type: "money" },
   { header: "Custo total", key: "custoTotal", width: 12, type: "money" },
   { header: "Lucro/venda", key: "lucro", width: 12, type: "money" },
+  { header: "Vendas período", key: "vendasPeriodo", width: 14, type: "number" },
+  { header: "Lucro período", key: "lucroPeriodo", width: 13, type: "money" },
   { header: "Pedidos", key: "pedidos", width: 9, type: "number" },
   { header: "Origem do custo", key: "origem", width: 56 },
   { header: "Checagem", key: "checagem", width: 44 }
@@ -37,14 +47,26 @@ export async function GET(req: NextRequest) {
   const loja = Number(sp.get("loja")) || null;
   const filtro = (sp.get("f") ?? "todos") as PrecoFiltro;
   const busca = (sp.get("q") ?? "").trim();
+  const periodo = normalizaPeriodo(sp.get("de") ?? undefined, sp.get("ate") ?? undefined);
 
-  const todos = await loadPrecoProduto();
+  const [todos, vendas] = await Promise.all([
+    loadPrecoProduto(),
+    periodo ? loadVendasPeriodo(periodo.de, periodo.ate) : Promise.resolve(null)
+  ]);
   if (todos.length === 0) return new Response("Cache vazio", { status: 404 });
 
-  const rows = aplicaFiltro(aplicaBusca(loja ? todos.filter((r) => r.shop_id === loja) : todos, busca), filtro)
+  let base = aplicaBusca(loja ? todos.filter((r) => r.shop_id === loja) : todos, busca);
+  if (vendas) base = base.filter((r) => vendas.has(chaveVenda(r)));
+
+  const rows = aplicaFiltro(base, filtro)
     .slice()
     .sort((a, b) => (a.profit_unit ?? Infinity) - (b.profit_unit ?? Infinity))
     .map((r) => ({
+      vendasPeriodo: vendas ? vendas.get(chaveVenda(r))?.units ?? 0 : null,
+      lucroPeriodo:
+        vendas && r.profit_unit !== null
+          ? Number(((vendas.get(chaveVenda(r))?.units ?? 0) * r.profit_unit).toFixed(2))
+          : null,
       loja: r.shop_name ?? String(r.shop_id),
       anuncio: r.item_name ?? r.item_id,
       variacao: r.model_name ?? "",
@@ -75,7 +97,8 @@ export async function GET(req: NextRequest) {
       `Oráculo · Preço × Custo Shopee · gerado em ${geradoEm} · dados recalculados em ${refreshedAt} (cron de hora em hora)`,
       "Custo: anúncio de KIT usa o valor da aba de kits da Olist; produto unitário usa o preço de custo do cadastro. " +
         "Lucro = preço − custo − comissão Shopee − taxa fixa − 1,3% − 6% − 9,25%×(preço−custo) − 3% − 3% − R$1.",
-      `${rows.length} anúncios · filtro: ${filtro}${loja ? ` · loja ${loja}` : ""}${busca ? ` · busca: "${busca}"` : ""}`
+      `${rows.length} anúncios · filtro: ${filtro}${loja ? ` · loja ${loja}` : ""}${busca ? ` · busca: "${busca}"` : ""}` +
+        (periodo ? ` · vendas de ${periodo.de} a ${periodo.ate} (lucro período = vendas × lucro ao preço ATUAL)` : "")
     ]
   });
 

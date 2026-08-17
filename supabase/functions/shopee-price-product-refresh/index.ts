@@ -308,6 +308,10 @@ Deno.serve(async (req) => {
       .lt("refreshed_at", now);
     if (pruneError) throw pruneError;
 
+    // Vendas por dia (60d) para o filtro de período da aba — mesma cadência.
+    const { error: salesError } = await supabase.rpc("refresh_oraculo_shopee_precos_sales_daily");
+    if (salesError) throw salesError;
+
     await supabase.from("oraculo_shopee_price_product_runs").update({
       finished_at: new Date().toISOString(), status: "success", rows_written: rows.length
     }).eq("id", runId);

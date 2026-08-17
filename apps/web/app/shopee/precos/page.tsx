@@ -6,7 +6,16 @@ import { loadActionableAlertCount } from "../../../lib/alert-count";
 import { SortableTable, type SortableCell } from "../../components/sortable-table";
 import { LojaPills, ShopeeTabs } from "../tabs";
 import { brl } from "../data";
-import { aplicaBusca, aplicaFiltro, loadPrecoProduto, type PrecoFiltro } from "./data";
+import {
+  aplicaBusca,
+  aplicaFiltro,
+  chaveVenda,
+  loadPrecoProduto,
+  loadVendasPeriodo,
+  normalizaPeriodo,
+  type PrecoFiltro,
+  type VendasPeriodo
+} from "./data";
 
 export const dynamic = "force-dynamic";
 
@@ -23,17 +32,19 @@ const FILTROS: { key: PrecoFiltro; label: string }[] = [
 export default async function ShopeePrecosPage({
   searchParams
 }: {
-  searchParams?: Promise<{ loja?: string; f?: string; q?: string }>;
+  searchParams?: Promise<{ loja?: string; f?: string; q?: string; de?: string; ate?: string }>;
 }) {
   const params = await searchParams;
   const lojaFiltro = Number(params?.loja) || null;
   const filtro = (FILTROS.some((f) => f.key === params?.f) ? params?.f : "todos") as PrecoFiltro;
   const busca = (params?.q ?? "").trim();
+  const periodo = normalizaPeriodo(params?.de, params?.ate);
 
-  const [{ allowed }, alertCount, todos] = await Promise.all([
+  const [{ allowed }, alertCount, todos, vendas] = await Promise.all([
     requireTabAccess("shopee"),
     loadActionableAlertCount(),
-    loadPrecoProduto()
+    loadPrecoProduto(),
+    periodo ? loadVendasPeriodo(periodo.de, periodo.ate) : Promise.resolve(null as VendasPeriodo | null)
   ]);
   if (!allowed) return <NoAccess tab="shopee" />;
 
@@ -55,7 +66,9 @@ export default async function ShopeePrecosPage({
     .map(([shop_id, shop_name]) => ({ shop_id, shop_name }))
     .sort((a, b) => (a.shop_name ?? "").localeCompare(b.shop_name ?? ""));
 
-  const daLoja = aplicaBusca(lojaFiltro ? todos.filter((r) => r.shop_id === lojaFiltro) : todos, busca);
+  let daLoja = aplicaBusca(lojaFiltro ? todos.filter((r) => r.shop_id === lojaFiltro) : todos, busca);
+  // Com período ativo, só quem vendeu no intervalo entra na análise.
+  if (vendas) daLoja = daLoja.filter((r) => vendas.has(chaveVenda(r)));
   const comCusto = daLoja.filter((r) => r.profit_unit !== null);
   const prejuizo = comCusto.filter((r) => r.profit_unit! < 0);
   const atencao = daLoja.filter((r) => (r.checagem ?? "").startsWith("⚠"));
@@ -68,20 +81,46 @@ export default async function ShopeePrecosPage({
   if (lojaFiltro) exportQs.set("loja", String(lojaFiltro));
   if (filtro !== "todos") exportQs.set("f", filtro);
   if (busca) exportQs.set("q", busca);
+  if (periodo) {
+    exportQs.set("de", periodo.de);
+    exportQs.set("ate", periodo.ate);
+  }
   const filtroQs = (f: PrecoFiltro) => {
     const p = new URLSearchParams();
     if (lojaFiltro) p.set("loja", String(lojaFiltro));
     if (f !== "todos") p.set("f", f);
     if (busca) p.set("q", busca);
+    if (periodo) {
+      p.set("de", periodo.de);
+      p.set("ate", periodo.ate);
+    }
     const qs = p.toString();
     return qs ? `/shopee/precos?${qs}` : "/shopee/precos";
   };
+  const hoje = new Date().toISOString().slice(0, 10);
+  const minData = new Date(Date.now() - 60 * 86_400_000).toISOString().slice(0, 10);
 
   const rows: SortableCell[][] = visiveis
     .slice()
     .sort((a, b) => (a.profit_unit ?? Infinity) - (b.profit_unit ?? Infinity))
     .slice(0, MAX_ROWS)
-    .map((r) => [
+    .map((r) => {
+      const venda = vendas?.get(chaveVenda(r));
+      const lucroPeriodo =
+        venda && r.profit_unit !== null ? Number((venda.units * r.profit_unit).toFixed(2)) : null;
+      const extras: SortableCell[] = vendas
+        ? [
+            { text: venda ? String(venda.units) : "0", sort: venda?.units ?? 0 },
+            lucroPeriodo !== null
+              ? {
+                  text: brl(lucroPeriodo),
+                  sort: lucroPeriodo,
+                  badge: lucroPeriodo < 0 ? "status-pill signal-danger" : "status-pill signal-good"
+                }
+              : { text: "—", sort: null }
+          ]
+        : [];
+      return [
       {
         text: [r.item_name ?? r.item_id, r.model_name].filter(Boolean).join(" — "),
         sort: r.item_name ?? r.item_id,
@@ -105,11 +144,13 @@ export default async function ShopeePrecosPage({
             badge: r.profit_unit < 0 ? "status-pill signal-danger" : "status-pill signal-good"
           }
         : { text: "—", sort: null },
+      ...extras,
       { text: r.pedidos ? String(r.pedidos) : "—", sort: r.pedidos },
       (r.checagem ?? "").startsWith("⚠")
         ? { text: r.checagem!, sort: 0, badge: "status-pill signal-warning" }
         : { text: r.checagem || "—", sort: r.checagem === "ok" ? 1 : null }
-    ]);
+      ];
+    });
 
   return (
     <AppShell alertCount={alertCount}>
@@ -133,6 +174,14 @@ export default async function ShopeePrecosPage({
               placeholder="SKU ou nome do produto"
               style={{ minWidth: 220 }}
             />
+          </label>
+          <label>
+            <span>Vendas de</span>
+            <input type="date" name="de" defaultValue={periodo?.de ?? ""} min={minData} max={hoje} />
+          </label>
+          <label>
+            <span>até</span>
+            <input type="date" name="ate" defaultValue={periodo?.ate ?? ""} min={minData} max={hoje} />
           </label>
           <button type="submit">Aplicar</button>
           <Link className="button-link" href={`/shopee/precos/export${exportQs.toString() ? `?${exportQs}` : ""}`}>
@@ -181,7 +230,9 @@ export default async function ShopeePrecosPage({
       <section className="panel">
         <div className="section-head">
           <p className="eyebrow">
-            {visiveis.length} anúncios{visiveis.length > MAX_ROWS ? ` · exibindo os ${MAX_ROWS} piores` : ""}
+            {visiveis.length} anúncios
+            {periodo ? ` · com venda entre ${periodo.de.split("-").reverse().join("/")} e ${periodo.ate.split("-").reverse().join("/")}` : ""}
+            {visiveis.length > MAX_ROWS ? ` · exibindo os ${MAX_ROWS} piores` : ""}
           </p>
         </div>
         <SortableTable
@@ -193,11 +244,17 @@ export default async function ShopeePrecosPage({
             { label: "Custo unit.", numeric: true, hint: "Kit → valor da aba de kits da Olist · unitário → preço de custo do cadastro" },
             { label: "Custo total", numeric: true },
             { label: "Lucro/venda", numeric: true, hint: "Fórmula: preço − custo − comissão − taxa fixa − 1,3% − 6% − 9,25%×(preço−custo) − 3% − 3% − R$1" },
+            ...(vendas
+              ? [
+                  { label: "Vendas período", numeric: true, hint: "Unidades vendidas no intervalo escolhido (cancelados e não pagos fora)" },
+                  { label: "Lucro período", numeric: true, hint: "Vendas do período × lucro por venda AO PREÇO ATUAL (não é o lucro histórico)" }
+                ]
+              : []),
             { label: "Pedidos", numeric: true, hint: "Pedidos casados que sustentam o vínculo" },
             { label: "Checagem", hint: "⚠ = dimensão/volume/peso do anúncio conflita com o produto Olist, ou evidência de 1 pedido" }
           ]}
           rows={rows}
-          initialSort={6}
+          initialSort={vendas ? 8 : 6}
           initialDir="asc"
           showRank
         />

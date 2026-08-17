@@ -44,6 +44,45 @@ export async function loadPrecoProduto(): Promise<PrecoRow[]> {
 
 export type PrecoFiltro = "todos" | "prejuizo" | "lucro" | "sem-custo" | "atencao";
 
+export type VendasPeriodo = Map<string, { units: number; orders: number }>;
+
+const isoDia = (d: Date) => d.toISOString().slice(0, 10);
+
+// Normaliza o intervalo pedido: limita à janela de 60 dias do agregado diário
+// e corrige inversões. Retorna null se nenhuma data foi informada.
+export function normalizaPeriodo(deRaw?: string, ateRaw?: string): { de: string; ate: string } | null {
+  const valido = (s?: string) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
+  if (!valido(deRaw) && !valido(ateRaw)) return null;
+  const hoje = new Date();
+  const minimo = new Date(hoje.getTime() - 60 * 86_400_000);
+  let de = valido(deRaw) ? deRaw! : isoDia(minimo);
+  let ate = valido(ateRaw) ? ateRaw! : isoDia(hoje);
+  if (de > ate) [de, ate] = [ate, de];
+  if (de < isoDia(minimo)) de = isoDia(minimo);
+  if (ate > isoDia(hoje)) ate = isoDia(hoje);
+  return { de, ate };
+}
+
+// Vendas por anúncio no intervalo (agregado diário recalculado de hora em hora)
+export async function loadVendasPeriodo(de: string, ate: string): Promise<VendasPeriodo> {
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin.rpc("oraculo_shopee_precos_vendas_periodo", {
+    p_from: de,
+    p_to: ate
+  });
+  if (error) throw new Error(error.message);
+  const out: VendasPeriodo = new Map();
+  for (const r of (data ?? []) as { shop_id: number; item_id: string; model_id: string; units: number; orders_count: number }[]) {
+    out.set(`${r.shop_id}|${r.item_id}|${r.model_id}`, {
+      units: Number(r.units),
+      orders: Number(r.orders_count)
+    });
+  }
+  return out;
+}
+
+export const chaveVenda = (r: PrecoRow) => `${r.shop_id}|${r.item_id}|${r.model_id}`;
+
 const semAcento = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
