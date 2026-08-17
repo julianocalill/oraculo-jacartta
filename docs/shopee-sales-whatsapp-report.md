@@ -98,19 +98,23 @@ medida.
 Nome: `separacao-shopee-YYYY-MM-DD-SLOT.csv`. O arquivo usa UTF-8 com BOM e
 separador `;`, para abrir corretamente no Excel brasileiro.
 
-Cada linha traz:
+O arquivo contém somente estas cinco colunas, nesta ordem:
 
-- período e status `MAPEADO` ou `PENDENTE`;
-- produto e quantidade vendida unitariamente; para mapeados, já convertida em
-  peças físicas;
-- caixas completas e unidades avulsas;
-- perfil de cubagem e itens por caixa, quando mapeado;
-- `shop_id`, `item_id`, `model_id` e SKU para corrigir os pendentes;
-- orientação explícita de mapeamento nas linhas pendentes.
+1. `SKU` — exclusivamente SKU Olist;
+2. `produto`;
+3. `unidades_vendidas_unitariamente`;
+4. `caixas_completas`;
+5. `unidades_avulsas`.
 
-Enquanto um item estiver pendente, não é possível conhecer seu multiplicador
-físico com segurança. Nessas linhas, a quantidade é a informada pela Shopee e
-a observação pede também o cadastro das unidades físicas por venda.
+O SKU do anúncio Shopee não é usado nessa coluna. O de-para é materializado na
+tabela operacional `shopee_olist_sku_mappings` e ligado pela chave
+`shop_id + item_id + model_id`. Quando o mesmo produto físico consolida mais de
+um SKU Olist, os SKUs aparecem na mesma célula separados por ` | `. Se não
+houver correspondência segura, o campo fica vazio.
+
+Enquanto um item estiver pendente de cubagem, não é possível conhecer seu
+multiplicador físico com segurança. Nessas linhas, a quantidade é a informada
+pela Shopee, as caixas ficam zeradas e a quantidade aparece como avulsa.
 
 Nos perfis destampados, cada pote e tampa ocupa sua própria linha, repetindo a
 quantidade física e as caixas do componente conforme a regra logística.
@@ -181,6 +185,7 @@ unidirecional, opcional e não bloqueante. O workflow legado
 /Users/julianocalil/espacodebicho-integracoes/
   scripts/setup-shopee-box-catalog.js
   scripts/reconcile-shopee-box-mappings.js
+  scripts/setup-shopee-olist-sku-mappings.js
   scripts/setup-n8n-shopee-sales-direct-whatsapp.js
   scripts/run-n8n-shopee-sales-whatsapp-test.js
   src/workflows/shopee-sales-whatsapp.js
@@ -193,6 +198,7 @@ npm run test:shopee-sales-whatsapp
 npm run n8n:setup-shopee-sales-whatsapp
 npm run shopee:setup-box-catalog
 npm run shopee:reconcile-box-mappings
+npm run shopee:setup-olist-sku-mappings
 ```
 
 `n8n:setup-shopee-sales-whatsapp -- --activate` atualiza e ativa o workflow. O
@@ -215,6 +221,11 @@ ficaram abaixo de 3.400 caracteres.
 Após a inclusão do CSV, uma nova prévia do slot `13:30` gerou
 `separacao-shopee-2026-08-13-1330.csv`: 136 linhas de dados, 41.173 bytes e 116
 linhas pendentes. O documento não foi enviado nessa prévia.
+
+Em 17/08/2026, após a troca para o formato enxuto, a prévia do slot de
+16/08/2026 às `13:30` terminou com 117 linhas, todas com exatamente cinco
+colunas. Dessas, 111 tinham SKU Olist e seis ficaram sem SKU por falta de
+correspondência segura. Nenhuma mensagem foi enviada ao WhatsApp.
 
 ## Runbook de diagnóstico
 

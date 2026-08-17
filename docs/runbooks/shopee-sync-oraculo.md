@@ -1,5 +1,10 @@
 # Runbook — Sync Shopee dentro do Oráculo
 
+> Estado atual desde 11/08/2026: este runbook descreve o sync que alimenta o
+> Oráculo, mas o n8n é o proprietário dos tokens Shopee. O relatório de vendas
+> no WhatsApp é independente deste sync. Ver
+> `docs/shopee-sales-whatsapp-report.md`.
+
 Traz os pedidos das 4 lojas Shopee para dentro do projeto Oráculo
 (`bbtiipnmdxfxnxbemgjr`), assumindo o que hoje roda no projeto "Espaço de
 Bicho" (`aisbanubvjwxrfjoywpd`) + n8n.
@@ -17,43 +22,40 @@ Bicho" (`aisbanubvjwxrfjoywpd`) + n8n.
 
 - **Tabelas de credencial** (Oráculo): `shopee_app_config`, `shopee_shops`,
   `shopee_tokens` — RLS, só `service_role`. Migration `20260713140000`.
-- **Edge function** `shopee-sync`: renova access_token (via refresh_token),
-  lista + detalha pedidos, upsert em `shopee_orders`/`shopee_order_items`,
-  log em `shopee_sync_runs`. Único renovador de token.
+- **Edge function** `shopee-sync`: consome o access token replicado pelo n8n,
+  lista + detalha pedidos, faz upsert em
+  `shopee_orders`/`shopee_order_items` e registra em `shopee_sync_runs`. Não
+  renova tokens.
 - **Agendamento**: pg_cron + pg_net.
+- **Renovador primário**: workflow n8n `Shopee - Renovar Tokens (n8n
+  primário)`, ID `Zeptn7GL4bOOsGKj`.
 
-## ⚠️ Regra de ouro — rotação de refresh_token
+## ⚠️ Regra de ouro atual — rotação de refresh_token
 
-A Shopee **rotaciona o refresh_token a cada renovação**. Só **um** sistema
-pode renovar cada loja. Portanto, o Oráculo só pode assumir DEPOIS que o
-fluxo Shopee do n8n (`Dc6cFKsiWmI2kDJk`) for **desativado**. Rodar os dois em
+A Shopee **rotaciona o refresh_token a cada renovação**. Só **um** sistema pode
+renovar cada loja. Desde 11/08/2026, esse sistema é o n8n, no workflow
+`Zeptn7GL4bOOsGKj`. O workflow legado `Dc6cFKsiWmI2kDJk` permanece desativado e
+o `shopee-sync` do Oráculo é apenas consumidor. Rodar dois renovadores em
 paralelo quebra a autenticação.
 
-## Sequência de go-live (ordem importa)
+## Operação atual
 
-1. **[Supabase/repo]** Migration de credencial aplicada + edge function
-   revisada. ✅
-2. **[n8n]** Desativar o workflow `Dc6cFKsiWmI2kDJk` (renovação Shopee).
-   *Ação do time n8n — não é feita pelo Supabase.*
-3. **[Supabase]** Só então: copiar `shopee_app_config` + `shopee_shops` +
-   `shopee_tokens` de Espaço de Bicho → Oráculo (máquina-a-máquina, sem expor
-   valores). Copiar depois do passo 2 garante pegar o refresh_token final.
-4. **[Supabase]** Fornecer a `partner_key` da Jacartta (2038778) no
-   `shopee_app_config` (não existe no DB de origem).
-5. **[Supabase]** Deploy da edge function; testar com a **Donacor** primeiro
-   (`?shop_id=1227023039`, token válido) — validar end-to-end.
-6. **[Supabase]** Renovar as 3 expiradas (a função faz isso sozinha no
-   primeiro run, usando o refresh_token que vale até agosto).
-7. **[Supabase]** Agendar pg_cron (ex.: a cada 15–30 min) para todas as lojas
-   ativas.
-8. **[BI]** Ligar a leitura Shopee no dashboard (unificação de canais já
-   existe no Oráculo).
+1. O n8n renova os quatro tokens a cada duas horas e grava em seu banco.
+2. O mesmo workflow tenta replicar o token vigente para o Oráculo, sem bloquear
+   o fluxo em caso de falha do destino.
+3. Os crons do Oráculo chamam `shopee-sync` por loja.
+4. A função valida que o access token tem pelo menos cinco minutos e executa o
+   sync; se não tiver, falha sem tentar renovar.
+5. Funções de escrow, produtos, SBS, devoluções e Ads seguem o mesmo contrato
+   de somente leitura dos tokens.
 
-## Reversão
+## Recuperação
 
-Se algo falhar no go-live, reativar o workflow n8n restaura o estado
-anterior (n8n volta a renovar em Espaço de Bicho). Por isso o passo 2 é
-reversível até o passo 3.
+Não reativar o renovador legado nem devolver a renovação ao Oráculo como ação
+de diagnóstico. Primeiro recuperar o workflow primário do n8n e validar os
+quatro tokens. Qualquer troca de proprietário exige handoff explícito do último
+refresh token, desativação do proprietário anterior e atualização coordenada
+de todas as integrações.
 
 ## Notas
 
@@ -62,9 +64,10 @@ reversível até o passo 3.
   `shop_id-order_sn[-item-model]`).
 - Janela padrão: pedidos alterados nos últimos 3 dias (`update_time`).
 
-## Status (2026-07-13) — LIVE para 4 lojas
+## Histórico de ativação (2026-07-13) — substituído quanto ao token
 
-- n8n `Dc6cFKsiWmI2kDJk` desativado; Oráculo é o renovador de token. ✅
+- Na ativação de 13/07, o Oráculo era o renovador. Essa decisão foi substituída
+  em 11/08/2026: agora o n8n `Zeptn7GL4bOOsGKj` é o único renovador. ✅
 - Credenciais copiadas (app_config/shops/tokens). ✅
 - Partner_key da Jacartta cadastrada no `shopee_app_config` sem exposição em
   chat/log durável. ✅
@@ -121,8 +124,8 @@ Implementa a camada de ROI/descontos da fonte direta:
   `shopee_escrow_pending`, retry até 5×) → `payment.get_escrow_detail` um a
   um → upsert. Teto 80/run. `?since=` limita o backlog (default 2026-07-01 —
   coerente com a decisão sem backfill).
-- **⚠️ Não renova token, por design:** o único renovador continua sendo o
-  `shopee-sync` (regra de ouro). Se o access_token estiver a <5 min de
+- **⚠️ Não renova token, por design:** o único renovador atual é o workflow
+  n8n `Zeptn7GL4bOOsGKj`. Se o access_token estiver a <5 min de
   expirar, o run é pulado (`status=skipped`) e o próximo pega o token fresco.
 - **Cron a cada 30 min**, minutos sem colisão com o sync de pedidos:
   Donacor (11/41), Espaço de Bicho (13/43), Oliverhome (17/47),
