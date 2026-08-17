@@ -10,10 +10,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@oraculo/domain": "workspace:^",
     "@supabase/supabase-js": "^2.108.2",
     "exceljs": "^4.4.0",
+    "fflate": "^0.8.3",
     "leaflet": "^1.9.4",
     "next": "15.5.9",
+    "pdf-lib": "^1.17.1",
     "qrcode": "^1.5.4",
     "react": "18.3.1",
     "react-dom": "18.3.1"

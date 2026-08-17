@@ -6,7 +6,10 @@
       "dom.iterable",
       "es2022"
     ],
-    "allowJs": false,
+    // Ligado para o app consumir @oraculo/domain, que é JS puro sem build. A
+    // alternativa era reescrever as fórmulas fiscais em TS dentro do app, e
+    // dinheiro com duas implementações é dinheiro com duas respostas.
+    "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,

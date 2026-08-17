@@ -34,6 +34,9 @@ export const TABS = [
   // destaque do menu casa por prefixo (sidebar-nav) e `paths` cobre toda a área.
   { key: "logistica", label: "Logística", href: "/logistica/etiqueta", group: "main", paths: ["/logistica"] },
   { key: "calculadora", label: "Calculadora", href: "/calculadora", group: "main", paths: ["/calculadora"] },
+  // Guarda CPF/endereço de centenas de afiliados: por ser opt-in por usuário,
+  // a aba nasce invisível para todo mundo até ser liberada em /usuarios.
+  { key: "rpa", label: "RPA Afiliados", href: "/rpa", group: "main", paths: ["/rpa"] },
   { key: "agenda", label: "Agenda", href: "/agenda", group: "main", paths: ["/agenda"] },
   { key: "alertas", label: "Alertas", href: "/alertas", group: "main", paths: ["/alertas"] },
   { key: "parametros", label: "Parâmetros", href: "/parametros", group: "main", paths: ["/parametros"] },

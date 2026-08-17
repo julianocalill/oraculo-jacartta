@@ -111,17 +111,18 @@ partner_id + path + timestamp + access_token + shop_id
 
 ### Regra crítica de token
 
-`shopee-sync` é o único renovador do token. As funções de escrow, produtos e
-SBS apenas leem o token e adiam a execução quando ele está perto de expirar.
-Qualquer extrator de afiliados deve seguir a mesma regra e nunca renovar o
-token.
+O workflow n8n `Shopee - Renovar Tokens (n8n primário)`
+(`Zeptn7GL4bOOsGKj`) é o único renovador do token. As funções do Oráculo,
+incluindo `shopee-sync`, escrow, produtos e SBS, apenas leem o token replicado e
+adiam a execução quando ele está perto de expirar. Qualquer extrator de
+afiliados deve seguir a mesma regra e nunca renovar o token.
 
 ## Arquivos encontrados
 
 ### Integração principal
 
 - `supabase/functions/shopee-sync/index.ts`
-  - renovação exclusiva de token;
+  - consome o token replicado pelo n8n; não renova;
   - pedidos e detalhes;
   - paginação por cursor;
   - upsert idempotente de pedidos e itens.
@@ -500,3 +501,30 @@ Até essa validação, não é tecnicamente correto gerar:
 - ranking ou performance por afiliado;
 - recorrência de afiliados;
 - metas ou tamanho de campanha baseados em afiliados.
+
+## Atualização — 2026-08-12: o Relatório Mensal entra por upload
+
+O bloqueio acima continua valendo para performance de afiliado, mas apareceu uma
+demanda que não depende dele e que já está em produção.
+
+Desde **01/07/2026** a Shopee opera o repasse de comissões do Programa de
+Afiliados do Vendedor como **intermediação**
+([artigo 27737](https://seller.shopee.com.br/edu/article/27737)): repassa o valor
+bruto, não retém tributo na fonte, e a emissão do RPA para o afiliado pessoa
+física passou a ser responsabilidade do vendedor.
+
+O insumo é o **Relatório Mensal**, baixado à mão em
+`Afiliados do Vendedor > Relatórios > Relatório Mensal` e gerado todo dia 1º com
+os pedidos concluídos no mês anterior. Ele é **outro artefato** que o
+`get_conversion_report` deste levantamento: traz identificação fiscal do
+afiliado (nome, CPF, nascimento, endereço, contato) e o valor da comissão, mas
+**não traz clique, conversão, conteúdo nem atribuição**. Serve para emitir
+recibo, não para medir performance.
+
+Por isso a aba `/rpa` foi construída como **upload de `.csv`**, e não como
+integração — ver `docs/rpa-afiliados-shopee.md`. O relatório de Jul/2026 tem 772
+afiliados e R$ 26.045,08 de comissão bruta.
+
+Quando a permissão AMS for concedida, nada disso muda: o leitor AMS descrito na
+conclusão acima continua sendo o caminho para ranking e recorrência, e o
+Relatório Mensal continua sendo a fonte fiscal.

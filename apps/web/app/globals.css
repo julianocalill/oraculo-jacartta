@@ -796,6 +796,12 @@ p {
   grid-template-columns: repeat(7, minmax(132px, 1fr));
 }
 
+/* RPA: afiliados, bruto, INSS, IRRF+ISS e líquido — a conta do recibo lida da
+   esquerda para a direita, então os cinco precisam ficar na mesma linha. */
+.metric-grid-five {
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
+}
+
 .fulfillment-metric-grid {
   grid-template-columns: repeat(5, minmax(150px, 1fr));
 }
@@ -1845,7 +1851,8 @@ h2 {
   }
 
   .metric-grid-eight,
-  .metric-grid-seven {
+  .metric-grid-seven,
+  .metric-grid-five {
     grid-template-columns: 1fr;
   }
 
@@ -3635,4 +3642,138 @@ h2 {
   .etiqueta-variacao-row {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* RPA — Afiliados Shopee ---------------------------------------------------
+   Primeiro switch do projeto. Até aqui só existiam checkbox cru (/usuarios) e
+   <select> (Ativo/Bloqueado); as retenções pedem leitura de relance de três
+   estados ligados/desligados lado a lado, então o checkbox continua sendo o
+   controle real (nativo, acessível, chega no FormData) e o track é decoração.
+   ------------------------------------------------------------------------- */
+
+.toggle-set {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  align-items: center;
+  background: var(--panel-soft);
+}
+
+.toggle-set legend {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+  padding: 0 6px;
+}
+
+/* Prefixado com `.upload-form` porque `.upload-form label { display: grid }`
+   tem especificidade maior e empilharia o switch em cima do texto. */
+.upload-form .toggle,
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--field);
+  cursor: pointer;
+}
+
+/* O input é o controle de verdade; some da tela sem sair do fluxo de foco nem
+   da árvore de acessibilidade. Mesma técnica do `.sr-only` daqui — `width: 0`
+   com `height: 0` esconderia do leitor de tela e do teclado junto. */
+/* Prefixado com `.upload-form` para ganhar da regra genérica de altura que o
+   formulário aplica em todo input. */
+.upload-form .toggle input[type="checkbox"],
+.toggle input[type="checkbox"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.toggle-track {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 21px;
+  border-radius: 999px;
+  background: var(--line-strong);
+  position: relative;
+  transition: background 120ms ease;
+}
+
+.toggle-track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--text);
+  transition: transform 120ms ease;
+}
+
+.toggle input:checked + .toggle-track {
+  background: var(--violet);
+}
+
+.toggle input:checked + .toggle-track::after {
+  transform: translateX(17px);
+}
+
+/* Sem isto o foco fica invisível, já que o input real é transparente. */
+.toggle input:focus-visible + .toggle-track {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+/* `.upload-form label > span` deixaria os dois spans em caixa-alta de 10px. */
+.upload-form .toggle .toggle-text {
+  display: grid;
+  gap: 2px;
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: inherit;
+  color: inherit;
+}
+
+.toggle-text strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.toggle-text em {
+  font-size: 11px;
+  font-style: normal;
+  color: var(--faint);
+}
+
+.toggle-input {
+  display: grid;
+  gap: 6px;
+}
+
+/* `.upload-form textarea` tem min-height 150px, pensado para colar listas
+   grandes. A descrição do serviço é uma linha só e não pode dominar o painel. */
+.upload-form textarea.compact-textarea {
+  min-height: 56px;
+}
+
+.upload-form button.button-danger {
+  background: transparent;
+  border: 1px solid var(--crit-line);
+  color: var(--rose);
 }
