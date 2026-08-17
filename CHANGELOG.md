@@ -2,6 +2,14 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-17] — Consolidado de fim de semana da Shopee
+
+- O relatório de separação em caixas (`GJHOwusnuXgaxVaT`) passa a usar, às
+  segundas-feiras no slot de `13:30`, a janela especial de sábado `13:30` até
+  segunda `13:00`. O slot de segunda às `07:00` permanece inalterado.
+- A coleta direta da Shopee passa a repetir chamadas GET após falhas transitórias
+  de rede, reduzindo o risco de a janela maior terminar com `ECONNRESET`.
+
 ## [2026-08-13] — Etiqueta de palete: texto livre, sem vínculo com o cadastro
 
 - Produto e variações passam a ser **digitados à mão**. Saíram o `<datalist>` de
