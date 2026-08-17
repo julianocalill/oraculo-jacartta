@@ -44,6 +44,25 @@ export async function loadPrecoProduto(): Promise<PrecoRow[]> {
 
 export type PrecoFiltro = "todos" | "prejuizo" | "lucro" | "sem-custo" | "atencao";
 
+const semAcento = (s: string) =>
+  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+// Busca solta: cada palavra digitada precisa aparecer em algum campo da linha
+// (nome do anúncio, variação, SKU do anúncio, SKU/produto Olist, item id) —
+// sem exigir nome exato e ignorando acentos/caixa.
+export function aplicaBusca(rows: PrecoRow[], q: string | undefined): PrecoRow[] {
+  const termos = semAcento(q ?? "").split(/\s+/).filter(Boolean);
+  if (!termos.length) return rows;
+  return rows.filter((r) => {
+    const alvo = semAcento(
+      [r.item_name, r.model_name, r.channel_sku, r.sku_olist, r.olist_product_name, r.item_id]
+        .filter(Boolean)
+        .join(" ")
+    );
+    return termos.every((t) => alvo.includes(t));
+  });
+}
+
 export function aplicaFiltro(rows: PrecoRow[], filtro: PrecoFiltro): PrecoRow[] {
   switch (filtro) {
     case "prejuizo":

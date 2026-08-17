@@ -6,7 +6,7 @@ import { loadActionableAlertCount } from "../../../lib/alert-count";
 import { SortableTable, type SortableCell } from "../../components/sortable-table";
 import { LojaPills, ShopeeTabs } from "../tabs";
 import { brl } from "../data";
-import { aplicaFiltro, loadPrecoProduto, type PrecoFiltro } from "./data";
+import { aplicaBusca, aplicaFiltro, loadPrecoProduto, type PrecoFiltro } from "./data";
 
 export const dynamic = "force-dynamic";
 
@@ -23,11 +23,12 @@ const FILTROS: { key: PrecoFiltro; label: string }[] = [
 export default async function ShopeePrecosPage({
   searchParams
 }: {
-  searchParams?: Promise<{ loja?: string; f?: string }>;
+  searchParams?: Promise<{ loja?: string; f?: string; q?: string }>;
 }) {
   const params = await searchParams;
   const lojaFiltro = Number(params?.loja) || null;
   const filtro = (FILTROS.some((f) => f.key === params?.f) ? params?.f : "todos") as PrecoFiltro;
+  const busca = (params?.q ?? "").trim();
 
   const [{ allowed }, alertCount, todos] = await Promise.all([
     requireTabAccess("shopee"),
@@ -54,7 +55,7 @@ export default async function ShopeePrecosPage({
     .map(([shop_id, shop_name]) => ({ shop_id, shop_name }))
     .sort((a, b) => (a.shop_name ?? "").localeCompare(b.shop_name ?? ""));
 
-  const daLoja = lojaFiltro ? todos.filter((r) => r.shop_id === lojaFiltro) : todos;
+  const daLoja = aplicaBusca(lojaFiltro ? todos.filter((r) => r.shop_id === lojaFiltro) : todos, busca);
   const comCusto = daLoja.filter((r) => r.profit_unit !== null);
   const prejuizo = comCusto.filter((r) => r.profit_unit! < 0);
   const atencao = daLoja.filter((r) => (r.checagem ?? "").startsWith("⚠"));
@@ -66,10 +67,12 @@ export default async function ShopeePrecosPage({
   const exportQs = new URLSearchParams();
   if (lojaFiltro) exportQs.set("loja", String(lojaFiltro));
   if (filtro !== "todos") exportQs.set("f", filtro);
+  if (busca) exportQs.set("q", busca);
   const filtroQs = (f: PrecoFiltro) => {
     const p = new URLSearchParams();
     if (lojaFiltro) p.set("loja", String(lojaFiltro));
     if (f !== "todos") p.set("f", f);
+    if (busca) p.set("q", busca);
     const qs = p.toString();
     return qs ? `/shopee/precos?${qs}` : "/shopee/precos";
   };
@@ -118,9 +121,24 @@ export default async function ShopeePrecosPage({
             recalculado às {refreshedAt}
           </p>
         </div>
-        <Link className="button-link" href={`/shopee/precos/export${exportQs.toString() ? `?${exportQs}` : ""}`}>
-          Exportar (.xlsx)
-        </Link>
+        <form className="filter-row filter-form" method="get" action="/shopee/precos">
+          {lojaFiltro ? <input type="hidden" name="loja" value={lojaFiltro} /> : null}
+          {filtro !== "todos" ? <input type="hidden" name="f" value={filtro} /> : null}
+          <label>
+            <span>Buscar</span>
+            <input
+              type="search"
+              name="q"
+              defaultValue={busca}
+              placeholder="SKU ou nome do produto"
+              style={{ minWidth: 220 }}
+            />
+          </label>
+          <button type="submit">Aplicar</button>
+          <Link className="button-link" href={`/shopee/precos/export${exportQs.toString() ? `?${exportQs}` : ""}`}>
+            Exportar (.xlsx)
+          </Link>
+        </form>
       </header>
       <ShopeeTabs active="precos" />
       <LojaPills shops={shops} active={lojaFiltro} basePath="/shopee/precos" extraParams={filtro !== "todos" ? { f: filtro } : {}} />

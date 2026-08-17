@@ -5,7 +5,7 @@ import { NextRequest } from "next/server";
 import { getCurrentUser } from "../../../../lib/auth/session";
 import { canAccess } from "../../../../lib/auth/access";
 import { buildXlsx, fileStamp, xlsxResponse, type XlsxColumn } from "../../../../lib/xlsx";
-import { aplicaFiltro, loadPrecoProduto, type PrecoFiltro } from "../data";
+import { aplicaBusca, aplicaFiltro, loadPrecoProduto, type PrecoFiltro } from "../data";
 
 export const dynamic = "force-dynamic";
 
@@ -36,11 +36,12 @@ export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const loja = Number(sp.get("loja")) || null;
   const filtro = (sp.get("f") ?? "todos") as PrecoFiltro;
+  const busca = (sp.get("q") ?? "").trim();
 
   const todos = await loadPrecoProduto();
   if (todos.length === 0) return new Response("Cache vazio", { status: 404 });
 
-  const rows = aplicaFiltro(loja ? todos.filter((r) => r.shop_id === loja) : todos, filtro)
+  const rows = aplicaFiltro(aplicaBusca(loja ? todos.filter((r) => r.shop_id === loja) : todos, busca), filtro)
     .slice()
     .sort((a, b) => (a.profit_unit ?? Infinity) - (b.profit_unit ?? Infinity))
     .map((r) => ({
@@ -74,7 +75,7 @@ export async function GET(req: NextRequest) {
       `Oráculo · Preço × Custo Shopee · gerado em ${geradoEm} · dados recalculados em ${refreshedAt} (cron de hora em hora)`,
       "Custo: anúncio de KIT usa o valor da aba de kits da Olist; produto unitário usa o preço de custo do cadastro. " +
         "Lucro = preço − custo − comissão Shopee − taxa fixa − 1,3% − 6% − 9,25%×(preço−custo) − 3% − 3% − R$1.",
-      `${rows.length} anúncios · filtro: ${filtro}${loja ? ` · loja ${loja}` : ""}`
+      `${rows.length} anúncios · filtro: ${filtro}${loja ? ` · loja ${loja}` : ""}${busca ? ` · busca: "${busca}"` : ""}`
     ]
   });
 
