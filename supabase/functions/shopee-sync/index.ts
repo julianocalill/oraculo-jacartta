@@ -1,12 +1,10 @@
 // Shopee sync — traz pedidos das lojas Shopee para dentro do Oráculo.
 //
-// Fonte única de verdade dos tokens: as tabelas shopee_app_config / shopee_shops
-// / shopee_tokens deste projeto. Esta função é o ÚNICO renovador de token — o
-// fluxo de renovação do n8n precisa estar DESLIGADO para estas lojas (a Shopee
-// rotaciona o refresh_token a cada uso; dois renovadores quebram a autenticação).
+// O n8n é a fonte primária dos tokens e replica o token vigente para
+// shopee_tokens. Esta função é somente consumidora e nunca gira refresh_token.
 //
 // A cada invocação, para cada loja ativa (ou uma só via ?shop_id=):
-//   1. renova o access_token se estiver perto de expirar (usa o refresh_token);
+//   1. valida o access_token replicado pelo n8n;
 //   2. lista pedidos alterados na janela (get_order_list, paginado por cursor);
 //   3. busca o detalhe em lotes de 50 (get_order_detail);
 //   4. faz upsert em shopee_orders / shopee_order_items;
@@ -17,7 +15,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SHOPEE_HOST = "https://partner.shopeemobile.com";
-const REFRESH_SKEW_SECONDS = 30 * 60; // renova se faltar menos de 30 min
 const DEFAULT_WINDOW_MINUTES = 45; // janela incremental padrão (sobreposição de segurança)
 const MAX_ORDERS_PER_RUN = 800; // teto por execução, respeita o limite de tempo da edge function
 const PAGE_SIZE = 50;
@@ -29,7 +26,6 @@ type TokenRow = {
   shop_id: number;
   partner_id: number;
   access_token: string | null;
-  refresh_token: string | null;
   access_token_expires_at: string | null;
 };
 
@@ -47,11 +43,6 @@ async function hmacSha256Hex(key: string, message: string): Promise<string> {
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// Assinatura de API pública (token get/refresh): partner_id + path + timestamp.
-async function signPublic(partnerId: number, path: string, ts: number, partnerKey: string) {
-  return hmacSha256Hex(partnerKey, `${partnerId}${path}${ts}`);
-}
-
 // Assinatura de API de loja: partner_id + path + timestamp + access_token + shop_id.
 async function signShop(
   partnerId: number,
@@ -66,26 +57,6 @@ async function signShop(
 
 function nowSec() {
   return Math.floor(Date.now() / 1000);
-}
-
-async function refreshAccessToken(
-  partnerId: number,
-  partnerKey: string,
-  shopId: number,
-  refreshToken: string
-): Promise<{ access_token: string; refresh_token: string; expire_in: number }> {
-  const path = "/api/v2/auth/access_token/get";
-  const ts = nowSec();
-  const sign = await signPublic(partnerId, path, ts, partnerKey);
-  const url = `${SHOPEE_HOST}${path}?partner_id=${partnerId}&timestamp=${ts}&sign=${sign}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ partner_id: partnerId, shop_id: shopId, refresh_token: refreshToken })
-  });
-  const json = await res.json();
-  if (json.error) throw new Error(`refresh ${shopId}: ${json.error} ${json.message}`);
-  return { access_token: json.access_token, refresh_token: json.refresh_token, expire_in: json.expire_in };
 }
 
 async function shopGet(
@@ -287,28 +258,14 @@ async function syncShop(
 
   const { data: tokenRow } = await supabase
     .from("shopee_tokens")
-    .select("shop_id, partner_id, access_token, refresh_token, access_token_expires_at")
+    .select("shop_id, partner_id, access_token, access_token_expires_at")
     .eq("shop_id", shop.shop_id)
     .maybeSingle();
   const token = tokenRow as TokenRow | null;
-  if (!token?.refresh_token) throw new Error(`sem refresh_token para loja ${shop.shop_id}`);
-
-  // 1) Renova access_token se necessário.
-  let accessToken = token.access_token ?? "";
-  const expiresAt = token.access_token_expires_at ? Date.parse(token.access_token_expires_at) : 0;
-  const needsRefresh = !accessToken || expiresAt - Date.now() < REFRESH_SKEW_SECONDS * 1000;
-  if (needsRefresh) {
-    const r = await refreshAccessToken(shop.partner_id, partnerKey, shop.shop_id, token.refresh_token);
-    accessToken = r.access_token;
-    await supabase
-      .from("shopee_tokens")
-      .update({
-        access_token: r.access_token,
-        refresh_token: r.refresh_token,
-        access_token_expires_at: new Date(Date.now() + r.expire_in * 1000).toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq("shop_id", shop.shop_id);
+  const accessToken = token?.access_token ?? "";
+  const expiresAt = token?.access_token_expires_at ? Date.parse(token.access_token_expires_at) : 0;
+  if (!accessToken || !Number.isFinite(expiresAt) || expiresAt - Date.now() < 5 * 60 * 1000) {
+    throw new Error(`token gerenciado pelo n8n ausente ou perto de expirar para loja ${shop.shop_id}`);
   }
 
   // 2) Página por página: lista → detalhe → upsert (progresso persiste a cada

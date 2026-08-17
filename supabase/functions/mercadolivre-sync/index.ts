@@ -197,11 +197,18 @@ async function fetchFullStock(accessToken: string, inventoryId: string): Promise
 }
 
 type MlOrder = {
+  id?: number | string;
+  pack_id?: number | string | null;
   status?: string;
   date_created?: string;
   date_closed?: string;
   order_items?: Array<{
-    item?: { id?: string; variation_id?: number | string | null };
+    item?: {
+      id?: string;
+      variation_id?: number | string | null;
+      seller_sku?: string | null;
+      seller_custom_field?: string | null;
+    };
     quantity?: number;
     unit_price?: number;
   }>;
@@ -331,6 +338,19 @@ Deno.serve(async (req) => {
       const orders = await fetchPaidOrders(accessToken, sellerId, lookbackDays, maxOrderPages, toDaysAgo);
       const daily = new Map<string, { qty: number; revenue: number }>();
       const variationDaily = new Map<string, { qty: number; revenue: number }>();
+      // Itens por pedido (base do de-para de SKUs canal → Olist); agregados por
+      // (pedido, anúncio, variação) porque o ML pode repetir a linha.
+      const orderItemRows = new Map<string, {
+        seller_id: number;
+        ml_order_id: string;
+        pack_id: string | null;
+        mlb_id: string;
+        variation_id: string;
+        seller_sku: string | null;
+        quantity: number;
+        unit_price: number;
+        date_created: string | null;
+      }>();
       for (const order of orders) {
         const when = order.date_closed ?? order.date_created ?? "";
         const saleDate = when.slice(0, 10);
@@ -340,6 +360,26 @@ Deno.serve(async (req) => {
           const qty = Number(line.quantity ?? 0);
           const unit = Number(line.unit_price ?? 0);
           if (!mlbId || qty <= 0) continue;
+
+          const orderId = order.id != null ? String(order.id) : "";
+          if (orderId) {
+            const lineVariationId =
+              line.item?.variation_id != null ? String(line.item.variation_id) : "";
+            const rowKey = `${orderId}|${mlbId}|${lineVariationId}`;
+            const row = orderItemRows.get(rowKey) ?? {
+              seller_id: sellerId,
+              ml_order_id: orderId,
+              pack_id: order.pack_id != null ? String(order.pack_id) : null,
+              mlb_id: mlbId,
+              variation_id: lineVariationId,
+              seller_sku: line.item?.seller_sku ?? line.item?.seller_custom_field ?? null,
+              quantity: 0,
+              unit_price: unit,
+              date_created: order.date_created ?? null
+            };
+            row.quantity += qty;
+            orderItemRows.set(rowKey, row);
+          }
           const dayKey = `${mlbId}|${saleDate}`;
           const day = daily.get(dayKey) ?? { qty: 0, revenue: 0 };
           day.qty += qty;
@@ -450,6 +490,17 @@ Deno.serve(async (req) => {
             onConflict: "seller_id,mlb_id,variation_id,sale_date"
           });
         if (variationSalesError) throw variationSalesError;
+      }
+
+      // 5a2) Itens de pedido (de-para de SKUs canal → Olist)
+      const orderItemList = [...orderItemRows.values()];
+      for (let index = 0; index < orderItemList.length; index += 200) {
+        const { error: orderItemsError } = await supabase
+          .from("mercadolivre_order_items")
+          .upsert(orderItemList.slice(index, index + 200), {
+            onConflict: "seller_id,ml_order_id,mlb_id,variation_id"
+          });
+        if (orderItemsError) throw orderItemsError;
       }
 
       // 5b) Recalcula agregados 30d a partir da série acumulada (fonte da verdade)
