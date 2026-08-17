@@ -87,10 +87,11 @@ export ANALISE_DIR="$(pwd)/dados"
 5. `05-repuxar-precos.py` — atualiza preços (I/K) do sync Shopee do banco.
 6. `06-checagem-modelo.py` — gera a coluna Y (conflitos de modelo).
 
-> Melhor caminho futuro: transformar isso numa **aba do Oráculo** (preço e
-> custo sempre ao vivo, checagem embutida, sem planilha envelhecendo).
-> O de-para já existe como cache `oraculo_sku_channel_map_cache` + export em
-> `/skus/de-para/export`.
+> **ATUALIZAÇÃO 17/08/2026: esta análise virou a aba `/shopee/precos` do
+> Oráculo**, recalculada de hora em hora (edge function
+> `shopee-price-product-refresh`, cron :57) com export .xlsx. Esta pasta fica
+> como registro histórico e referência das regras. O de-para também existe como
+> cache `oraculo_sku_channel_map_cache` + export em `/skus/de-para/export`.
 
 ## Fontes
 

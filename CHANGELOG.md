@@ -2,6 +2,26 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-17] — Aba Preço × Custo Shopee (análise horária)
+
+- Nova aba **/shopee/precos**: lucro/prejuízo por anúncio/variação das 4 lojas
+  ao preço atual, com custo Olist resolvido pela regra validada na planilha de
+  16/08 (**anúncio de KIT → valor da aba de kits da Olist; produto unitário →
+  preço de custo do cadastro**), QTD por razão de quantidade dos pedidos
+  casados, checagem de conflito de modelo (⚠ 80x60 vs 60x60 etc.) e export
+  .xlsx com filtros. Substitui a planilha manual
+  (`analises/preco-produto-shopee-2026-08/`).
+- Cache `oraculo_shopee_price_product_cache` recalculado **de hora em hora**
+  pela edge function `shopee-price-product-refresh` (cron `:57`, minuto que só
+  tinha o backfill overnight — teto de 2 jobs/minuto respeitado), com auditoria
+  em `oraculo_shopee_price_product_runs`.
+- Os 4 syncs de produtos Shopee passaram de 4×/dia para **horários** (mesmos
+  minutos 22/32/44/52) — sem isso o preço envelheceria 6h e a análise horária
+  seria teatro. Custo: ~6× mais chamadas à API de produtos da Shopee.
+- Fórmula de lucro: a do Juliano (comissão 20%/14% + taxa fixa por faixa +
+  1,3% + 6% + 9,25%×(preço−custo) + 3% + 3% + R$1), documentada no hint da
+  coluna.
+
 ## [2026-08-17] — Consolidado de fim de semana da Shopee
 
 - O relatório de separação em caixas (`GJHOwusnuXgaxVaT`) passa a usar, às
