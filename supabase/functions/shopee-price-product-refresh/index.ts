@@ -318,7 +318,12 @@ Deno.serve(async (req) => {
 
     return jsonResponse({ ok: true, rows: rows.length });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    // Erros do supabase-js são objetos simples ({message, code, ...}), não
+    // instâncias de Error — String() vira "[object Object]" e cega o debug.
+    const message =
+      error instanceof Error
+        ? error.message
+        : (error as { message?: string })?.message ?? JSON.stringify(error);
     console.error("shopee-price-product-refresh", message);
     if (runId) {
       await supabase.from("oraculo_shopee_price_product_runs").update({
