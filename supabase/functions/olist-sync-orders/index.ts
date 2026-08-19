@@ -1,21 +1,26 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
+type JsonObject = Record<string, unknown>;
+
 type OlistApiPayload = {
   itens?: unknown[];
   items?: unknown[];
   data?: unknown[];
   pedidos?: unknown[];
+  paginacao?: JsonObject;
 };
 
 type SyncRun = {
-  started_at: string;
+  id: string;
+  started_at?: string;
   finished_at: string | null;
   status: 'running' | 'success' | 'failed';
   window_start: string;
   window_end: string;
-  records_fetched: number;
-  records_upserted: number;
+  records_fetched: number | null;
+  records_upserted: number | null;
   error_message: string | null;
+  metadata: JsonObject | null;
 };
 
 const env = {
@@ -49,6 +54,16 @@ function toIsoDate(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
+function todayIso() {
+  return toIsoDate(new Date());
+}
+
+function daysAgoIso(days: number) {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() - days);
+  return toIsoDate(date);
+}
+
 function chunk<T>(items: T[], size: number) {
   const chunks: T[][] = [];
   for (let index = 0; index < items.length; index += size) {
@@ -59,6 +74,12 @@ function chunk<T>(items: T[], size: number) {
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function clampPositiveInt(value: unknown, fallback: number, max: number) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.min(Math.floor(parsed), max);
 }
 
 function parseJsonOrThrow(text: string, context: string) {
@@ -197,76 +218,59 @@ async function storeRefreshedToken(
   if (error) throw error;
 }
 
-async function fetchOlistOrders(accessToken: string, lookbackDays = 2, maxPages = 50) {
-  const baseUrl = env.olistApiBaseUrl.endsWith('/') ? env.olistApiBaseUrl : `${env.olistApiBaseUrl}/`;
-  const headers: Record<string, string> = {
-    Accept: 'application/json'
-  };
-
+function olistHeaders(accessToken: string): Record<string, string> {
+  const headers: Record<string, string> = { Accept: 'application/json' };
   headers[env.olistApiAuthHeader] = env.olistApiAuthPrefix
     ? `${env.olistApiAuthPrefix} ${accessToken}`
     : accessToken;
+  return headers;
+}
 
-  const windowEnd = new Date();
-  const windowStart = new Date(windowEnd);
-  windowStart.setDate(windowStart.getDate() - lookbackDays);
+async function fetchOrderPage(
+  accessToken: string,
+  startDate: string,
+  endDate: string,
+  offset: number,
+  limit: number,
+  maxAttempts = 6
+) {
+  const baseUrl = env.olistApiBaseUrl.endsWith('/') ? env.olistApiBaseUrl : `${env.olistApiBaseUrl}/`;
+  const url = new URL('pedidos', baseUrl);
+  url.searchParams.set('limit', String(limit));
+  url.searchParams.set('offset', String(offset));
+  url.searchParams.set('orderBy', 'desc');
+  url.searchParams.set('dataInicial', startDate);
+  url.searchParams.set('dataFinal', endDate);
 
-  const startDate = toIsoDate(windowStart);
-  const endDate = toIsoDate(windowEnd);
-  const limit = 100;
-  let offset = 0;
-  const rows: Record<string, unknown>[] = [];
-
-  for (let page = 0; page < maxPages; page += 1) {
-    const url = new URL('pedidos', baseUrl);
-    url.searchParams.set('limit', String(limit));
-    url.searchParams.set('offset', String(offset));
-    url.searchParams.set('orderBy', 'desc');
-    url.searchParams.set('dataInicial', startDate);
-    url.searchParams.set('dataFinal', endDate);
-
-    const response = await fetch(url, { headers });
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const response = await fetch(url, { headers: olistHeaders(accessToken) });
     const text = await response.text();
 
-    if (!response.ok) {
-      throw new Error(`Falha ao buscar pedidos da Olist (${response.status}): ${text.slice(0, 300)}`);
+    if (response.ok) {
+      return parseJsonOrThrow(text, 'Falha ao buscar pedidos da Olist') as OlistApiPayload;
     }
 
-    const payload = parseJsonOrThrow(text, 'Falha ao buscar pedidos da Olist');
-    const normalized = normalizeRows(payload);
-    if (normalized.length === 0) {
-      break;
+    // Rate limit / transient server error: back off and retry so a single 429
+    // in the middle of a peak sweep doesn't fail (and roll back) the whole run.
+    if (response.status === 429 || response.status >= 500) {
+      const retryAfter = Number(response.headers.get('retry-after') ?? '0');
+      const waitMs = retryAfter > 0 ? retryAfter * 1000 : Math.min(15000, 1500 * (attempt + 1));
+      await sleep(waitMs);
+      continue;
     }
 
-    rows.push(...normalized);
-    offset += normalized.length;
-
-    if (normalized.length < limit) {
-      break;
-    }
+    throw new Error(`Falha ao buscar pedidos da Olist (${response.status}): ${text.slice(0, 300)}`);
   }
 
-  return {
-    rows,
-    windowStart: startDate,
-    windowEnd: endDate
-  };
+  throw new Error('Falha ao buscar pedidos da Olist (429): limite de taxa da Olist excedido');
 }
 
 async function fetchOlistOrderDetail(accessToken: string, orderId: string) {
   const baseUrl = env.olistApiBaseUrl.endsWith('/') ? env.olistApiBaseUrl : `${env.olistApiBaseUrl}/`;
-  const headers: Record<string, string> = {
-    Accept: 'application/json'
-  };
-
-  headers[env.olistApiAuthHeader] = env.olistApiAuthPrefix
-    ? `${env.olistApiAuthPrefix} ${accessToken}`
-    : accessToken;
-
   const url = new URL(`pedidos/${orderId}`, baseUrl);
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
-    const response = await fetch(url, { headers });
+    const response = await fetch(url, { headers: olistHeaders(accessToken) });
     const text = await response.text();
 
     if (response.ok) {
@@ -365,7 +369,63 @@ async function hydrateOrderDetails(
   return detailedRows;
 }
 
+async function findResumeRun(
+  supabase: ReturnType<typeof createClient>,
+  startDate: string,
+  endDate: string
+) {
+  const { data, error } = await supabase
+    .from('olist_order_sync_runs')
+    .select('*')
+    .eq('window_start', startDate)
+    .eq('window_end', endDate)
+    .in('status', ['running', 'failed'])
+    .order('started_at', { ascending: false })
+    .limit(50);
+
+  if (error) throw error;
+  return (data ?? []).sort((left: SyncRun, right: SyncRun) => {
+    const leftOffset = Number(left.metadata?.next_offset ?? 0);
+    const rightOffset = Number(right.metadata?.next_offset ?? 0);
+    if (rightOffset !== leftOffset) return rightOffset - leftOffset;
+    return String(right.started_at ?? '').localeCompare(String(left.started_at ?? ''));
+  })[0] as SyncRun | undefined;
+}
+
+async function createRun(
+  supabase: ReturnType<typeof createClient>,
+  startDate: string,
+  endDate: string,
+  metadata: JsonObject
+) {
+  const { data, error } = await supabase
+    .from('olist_order_sync_runs')
+    .insert({
+      status: 'running',
+      window_start: startDate,
+      window_end: endDate,
+      metadata
+    })
+    .select('*')
+    .single();
+
+  if (error) throw error;
+  return data as SyncRun;
+}
+
+async function patchRun(supabase: ReturnType<typeof createClient>, runId: string, patch: JsonObject) {
+  const { error } = await supabase
+    .from('olist_order_sync_runs')
+    .update(patch)
+    .eq('id', runId);
+
+  if (error) throw error;
+}
+
 Deno.serve(async (req) => {
+  let supabase: ReturnType<typeof createClient> | null = null;
+  let run: SyncRun | null = null;
+
   try {
     requireValue('SUPABASE_URL', env.supabaseUrl);
     requireValue('SUPABASE_SERVICE_ROLE_KEY', env.supabaseServiceRoleKey);
@@ -381,78 +441,158 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'Unauthorized' }, 401);
     }
 
-    const supabase = createClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
+    supabase = createClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false
       }
     });
 
-    const startedAt = new Date().toISOString();
-    const run: SyncRun = {
-      started_at: startedAt,
-      finished_at: null,
-      status: 'running',
-      window_start: '',
-      window_end: '',
-      records_fetched: 0,
-      records_upserted: 0,
-      error_message: null
-    };
-
-    const requestBody = req.headers.get('content-type')?.includes('application/json')
-      ? await req.json().catch(() => ({}))
+    const body = req.headers.get('content-type')?.includes('application/json')
+      ? await req.json().catch(() => ({})) as JsonObject
       : {};
-    const typedBody = requestBody as {
-      hydrateDetails?: boolean;
-      lookbackDays?: number;
-      maxPages?: number;
-      detailDelayMs?: number;
+
+    // Window: explicit startDate/endDate wins; otherwise fall back to lookbackDays (legacy).
+    const lookbackDays = clampPositiveInt(body.lookbackDays, 2, 31);
+    const startDate = typeof body.startDate === 'string' ? body.startDate : daysAgoIso(lookbackDays);
+    const endDate = typeof body.endDate === 'string' ? body.endDate : todayIso();
+    const pageSize = clampPositiveInt(body.pageSize ?? body.limit, 100, 100);
+    const maxPages = clampPositiveInt(body.maxPages, 50, 1000);
+    const delayMs = clampPositiveInt(body.delayMs, 0, 10000);
+    const detailDelayMs = clampPositiveInt(body.detailDelayMs, 250, 10000);
+    // Headers-only pass by default; item/detail hydration is opt-in (slow path).
+    const shouldHydrateDetails = body.hydrateDetails === true;
+    const resume = body.resume !== false;
+
+    const runMetadata = {
+      source: 'supabase/functions/olist-sync-orders',
+      page_size: pageSize,
+      hydrate_details: shouldHydrateDetails,
+      max_pages: maxPages,
+      next_offset: 0,
+      started_at: new Date().toISOString()
     };
-    const shouldHydrateDetails = Boolean(typedBody.hydrateDetails);
-    const lookbackDays = Number.isFinite(Number(typedBody.lookbackDays)) ? Number(typedBody.lookbackDays) : 2;
-    const maxPages = Number.isFinite(Number(typedBody.maxPages)) ? Number(typedBody.maxPages) : 50;
-    const detailDelayMs = Number.isFinite(Number(typedBody.detailDelayMs))
-      ? Math.max(0, Number(typedBody.detailDelayMs))
-      : 250;
 
-    const accessToken = await getAccessToken(supabase);
-    const syncResult = await fetchOlistOrders(accessToken, lookbackDays, maxPages);
-    const rows = shouldHydrateDetails
-      ? await hydrateOrderDetails(supabase, accessToken, syncResult.rows, detailDelayMs)
-      : syncResult.rows;
+    run = resume ? (await findResumeRun(supabase, startDate, endDate)) ?? null : null;
+    run = run ?? await createRun(supabase, startDate, endDate, runMetadata);
 
-    run.window_start = syncResult.windowStart;
-    run.window_end = syncResult.windowEnd;
-    run.records_fetched = rows.length;
+    if (!run?.id) throw new Error('Nao foi possivel criar ou retomar o run de sync.');
 
-    for (const batch of chunk(rows, 50)) {
-      const { error } = await supabase
-        .from('olist_orders')
-        .upsert(batch, { onConflict: 'id' });
-
-      if (error) throw error;
-      run.records_upserted += batch.length;
+    if (run.status !== 'running') {
+      await patchRun(supabase, run.id, {
+        status: 'running',
+        finished_at: null,
+        error_message: null,
+        metadata: {
+          ...(run.metadata ?? {}),
+          resumed_at: new Date().toISOString(),
+          hydrate_details: shouldHydrateDetails
+        }
+      });
     }
 
-    run.status = 'success';
-    run.finished_at = new Date().toISOString();
+    const accessToken = await getAccessToken(supabase);
+    const existingMetadata = run.metadata && typeof run.metadata === 'object' ? run.metadata : {};
+    let offset = resume ? Number(existingMetadata.next_offset ?? 0) : 0;
+    let totalFetched = Number(run.records_fetched ?? 0);
+    let totalUpserted = Number(run.records_upserted ?? 0);
+    let totalReported = Number(existingMetadata.total_reported ?? 0);
+    let pagesProcessed = 0;
+    let completed = false;
 
-    const { error: insertError } = await supabase
-      .from('olist_sync_runs')
-      .insert(run);
+    for (let page = 0; page < maxPages; page += 1) {
+      const payload = await fetchOrderPage(accessToken, startDate, endDate, offset, pageSize);
+      const normalized = normalizeRows(payload);
+      const pagination = payload && typeof payload === 'object' ? payload.paginacao as JsonObject | undefined : undefined;
+      totalReported = Number(pagination?.total ?? totalReported ?? 0);
 
-    if (insertError) throw insertError;
+      if (normalized.length === 0) {
+        completed = true;
+        break;
+      }
+
+      const rows = shouldHydrateDetails
+        ? await hydrateOrderDetails(supabase, accessToken, normalized, detailDelayMs)
+        : normalized;
+
+      for (const batch of chunk(rows, 50)) {
+        const { error } = await supabase
+          .from('olist_orders')
+          .upsert(batch, { onConflict: 'id' });
+
+        if (error) throw error;
+      }
+
+      totalFetched += normalized.length;
+      totalUpserted += rows.length;
+      offset += normalized.length;
+      pagesProcessed += 1;
+      completed = totalReported > 0 ? offset >= totalReported : normalized.length < pageSize;
+
+      await patchRun(supabase, run.id, {
+        records_fetched: totalFetched,
+        records_upserted: totalUpserted,
+        metadata: {
+          ...(run.metadata ?? {}),
+          source: 'supabase/functions/olist-sync-orders',
+          page_size: pageSize,
+          hydrate_details: shouldHydrateDetails,
+          total_reported: totalReported,
+          next_offset: offset,
+          last_page_size: normalized.length,
+          updated_at: new Date().toISOString()
+        }
+      });
+
+      if (completed) break;
+      if (delayMs > 0) await sleep(delayMs);
+    }
+
+    await patchRun(supabase, run.id, {
+      status: completed ? 'success' : 'running',
+      finished_at: completed ? new Date().toISOString() : null,
+      records_fetched: totalFetched,
+      records_upserted: totalUpserted,
+      error_message: null,
+      metadata: {
+        ...(run.metadata ?? {}),
+        source: 'supabase/functions/olist-sync-orders',
+        page_size: pageSize,
+        hydrate_details: shouldHydrateDetails,
+        total_reported: totalReported,
+        next_offset: offset,
+        completed,
+        updated_at: new Date().toISOString()
+      }
+    });
 
     return jsonResponse({
       ok: true,
-      window_start: run.window_start,
-      window_end: run.window_end,
-      fetched: run.records_fetched,
-      upserted: run.records_upserted
+      run_id: run.id,
+      window_start: startDate,
+      window_end: endDate,
+      pages_processed: pagesProcessed,
+      next_offset: offset,
+      total_reported: totalReported,
+      fetched: totalFetched,
+      upserted: totalUpserted,
+      hydrate_details: shouldHydrateDetails,
+      completed
     });
   } catch (error) {
     console.error(error);
+    if (supabase && run?.id) {
+      await patchRun(supabase, run.id, {
+        status: 'failed',
+        finished_at: new Date().toISOString(),
+        error_message: error instanceof Error ? error.message : String(error),
+        metadata: {
+          ...(run.metadata ?? {}),
+          failed_at: new Date().toISOString()
+        }
+      }).catch(() => null);
+    }
+
     return jsonResponse({
       ok: false,
       error: error instanceof Error ? error.message : String(error)

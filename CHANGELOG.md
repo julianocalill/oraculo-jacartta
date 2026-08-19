@@ -2,6 +2,33 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-19] — Curvas com refresh agendado e detalhe do pedido preservado
+
+- **Refresh automático das curvas**: as materialized views
+  `oraculo_sales_curve_cache` (Curva de Venda por recência) e
+  `oraculo_stock_coverage_curve_cache` (Curva de Estoque) tinham funções
+  `refresh_*` desde 06/07 que **nunca foram agendadas** — as duas abas mostravam
+  o retrato de 06/07, 44 dias atrás. Novo job `oraculo-curves-refresh-daily`
+  (08:26 UTC, depois do derived-refresh full das 07:43 que reconstrói
+  `olist_products`), rodando como `postgres` com o grant correspondente.
+- **Detalhe do pedido deixa de ser destruído**: novo trigger
+  `olist_orders_preserve_payload_itens`. O sync com `hydrateDetails=true` salva o
+  payload completo (com `itens`), mas a varredura dia-a-dia e as invocações sem
+  hydrate gravavam o payload da listagem por cima — nenhum dos 15.766 pedidos dos
+  últimos 3 dias tinha `itens`. Sem esse campo o cache do `hydrateOrderDetails`
+  nunca valia e cada passada re-buscava todos os pedidos da janela, um a um:
+  a varredura de 3 dias levava ~13h e o dia corrente só entrava quando a janela
+  já tinha rolado — a base vivia ~1 dia atrás dos canais. O mesmo apagão deixava
+  `olist-derived-refresh` sem itens para derivar, jogando tudo no backfill
+  overnight.
+- `supabase/functions/olist-sync-orders/index.ts` sincronizado com a **v14 que
+  está em produção** (deploy de 17/07): paginação retomável por cursor
+  (`next_offset` em `olist_order_sync_runs.metadata`), `resume` e `patchRun`. O
+  arquivo do repo era a versão anterior, sem cursor — um deploy a partir dele
+  teria regredido o sync. Os `504 IDLE_TIMEOUT` a cada `:05` e `:35` são parte
+  desse desenho: a função morre no limite de 150s do Edge Runtime e a invocação
+  seguinte continua de onde parou.
+
 ## [2026-08-19] — Curva de Venda com filtro de período e canal (ABC por volume)
 
 - A aba **/curva-de-venda** ganhou filtro de datas (**De** / **Até**). Com o
@@ -27,6 +54,16 @@ Histórico de entregas e mudanças significativas.
 - No modo período a tabela mostra unidades vendidas, % do volume e % acumulado,
   e o gráfico de barras passa a comparar unidades por curva em vez de contagem
   de produtos. O export CSV acompanha os filtros (colunas e nome do arquivo).
+
+## [2026-08-18] — Termos de Serviço públicos
+
+- Nova página pública `/termos-de-servico`, com condições de acesso e uso da
+  plataforma interna, responsabilidades dos usuários, integrações de terceiros,
+  propriedade intelectual, disponibilidade, suspensão e legislação aplicável.
+- A rota foi liberada no middleware para consulta sem autenticação e vinculada à
+  Política de Privacidade. A fonte editorial fica em `docs/termos-de-servico.md`.
+- Publicado na raiz do domínio o arquivo de verificação solicitado pelo TikTok
+  Developers, com liberação pública restrita à rota exata no middleware.
 
 ## [2026-08-17] — Aba Preço × Custo Shopee (análise horária)
 
