@@ -1021,6 +1021,16 @@ p {
   min-width: 0;
 }
 
+/* Cards cujo valor é texto (nome de canal, rótulo de filtro) em vez de número:
+   sem o nowrap+ellipsis o nome inteiro cabe em duas linhas. */
+.metric.metric-text strong {
+  font-size: clamp(1rem, 1.1vw, 1.2rem);
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+
 .metric small {
   color: var(--muted);
   font-size: 12px;

@@ -2,6 +2,32 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-19] — Curva de Venda com filtro de período e canal (ABC por volume)
+
+- A aba **/curva-de-venda** ganhou filtro de datas (**De** / **Até**). Com o
+  período preenchido a classificação muda de significado: deixa de ser recência
+  (A = vendeu nos últimos 90 dias) e vira **ABC clássica por unidades vendidas
+  na janela** — A = até 80% do volume acumulado, B = até 95%, C = os últimos 5%
+  mais os produtos em estoque sem venda no período. Sem datas, a tela continua
+  exatamente como era.
+- Novo RPC `oraculo_sales_curve_volume(p_start, p_end, p_channel, p_exclude_no_channel)`: agrega
+  `olist_order_items` no período (excluindo pedidos cancelados, mesmo critério
+  de `refresh_oraculo_olist_qty_cache`), calcula participação e acumulado por
+  produto e junta o estoque de `olist_products`. Sem cache — a janela é livre e
+  a base só tem pedidos desde 01/05/2026, então roda direto pelo índice de
+  `order_data_criacao` (~3s para um mês; ~9s quando o filtro de canal obriga a
+  ler o payload dos pedidos).
+- **Filtro de canal** junto do período: *Todos os canais*, *Só marketplaces
+  (sem atacado)*, *Só atacado (sem canal)* ou um canal específico. Existe porque
+  o atacado B2B distorce a ABC — 2 pedidos sem canal em 08/2026 somaram 63.557
+  unidades, mais que qualquer marketplace inteiro, e sozinhos derrubavam a curva
+  A para meia dúzia de SKUs. Nada é excluído por padrão; quem decide é a tela.
+  A lista de canais vem de `oraculo_sales_curve_channels()`, que lê o cache
+  diário por canal em vez de destoastar `olist_orders.payload`.
+- No modo período a tabela mostra unidades vendidas, % do volume e % acumulado,
+  e o gráfico de barras passa a comparar unidades por curva em vez de contagem
+  de produtos. O export CSV acompanha os filtros (colunas e nome do arquivo).
+
 ## [2026-08-17] — Aba Preço × Custo Shopee (análise horária)
 
 - Nova aba **/shopee/precos**: lucro/prejuízo por anúncio/variação das 4 lojas
