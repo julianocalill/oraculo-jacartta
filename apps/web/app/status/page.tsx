@@ -142,6 +142,27 @@ async function latestCacheDay(supabase: ReturnType<typeof createSupabaseAdminCli
   } as SyncRun;
 }
 
+// O cache diário de quantidade (canal/SKU) também não tem tabela de runs; o
+// refresh horário reescreve os últimos 10 dias, então o refreshed_at do dia
+// mais recente diz quando o job rodou pela última vez. A Previsão de Vendas
+// depende inteiramente dele.
+async function latestQtyCacheRun(supabase: ReturnType<typeof createSupabaseAdminClient>) {
+  const { data, error } = await supabase
+    .from("oraculo_olist_qty_channel_daily_cache")
+    .select("order_date, refreshed_at")
+    .order("order_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  const row = data as { order_date: string; refreshed_at: string };
+  return {
+    started_at: row.refreshed_at,
+    finished_at: row.refreshed_at,
+    status: "success",
+    error_message: null
+  } as SyncRun;
+}
+
 // Cache curto (60s): é página de monitoramento, mas as rotinas rodam em
 // escala de minutos/horas — 60s de defasagem não muda nenhum selo, e evita
 // refazer as queries a cada F5 do operador.
@@ -155,7 +176,7 @@ async function loadStatusUncached() {
   const [
     tokenResult, ordersRun, stockRun, invoicesRun, backfillRun, mercadolivreRun,
     importacoesAisRun, shopeeReturnsRun, mercadolivreReturnsRun, returnsCacheRun,
-    bipFulfillmentRun
+    bipFulfillmentRun, qtyCacheRun
   ] = await Promise.all([
     supabase
       .from("olist_oauth_tokens")
@@ -171,7 +192,8 @@ async function loadStatusUncached() {
     latestRunBySource(supabase, "shopee_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message", "shopee-returns-sync"),
     latestReturnsRunML(supabase),
     latestCacheDay(supabase),
-    latestRun(supabase, "bip_fulfillment_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message")
+    latestRun(supabase, "bip_fulfillment_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message"),
+    latestQtyCacheRun(supabase)
   ]);
 
   const token = (tokenResult.data as TokenRow | null) ?? null;
@@ -212,6 +234,9 @@ async function loadStatusUncached() {
     // erro nenhum. Já custou 45 dias de número errado neste projeto.
     brtDate(returnsCacheRun?.started_at) !== today
       ? "Cache de NF de venda (devoluções) não foi atualizado hoje."
+      : "",
+    brtDate(qtyCacheRun?.started_at) !== today
+      ? "Cache de quantidade por canal/SKU (Previsão de Vendas) não foi atualizado hoje."
       : ""
   ].filter(Boolean);
 
@@ -232,7 +257,8 @@ async function loadStatusUncached() {
       { key: "shopee-returns", label: "Devoluções Shopee", run: shopeeReturnsRun },
       { key: "mercadolivre-returns", label: "Devoluções / claims ML", run: mercadolivreReturnsRun },
       { key: "returns-cache", label: "Cache NF de venda (devoluções)", run: returnsCacheRun },
-      { key: "bip-fulfillment", label: "Expedição · espelho do Bip", run: bipFulfillmentRun }
+      { key: "bip-fulfillment", label: "Expedição · espelho do Bip", run: bipFulfillmentRun },
+      { key: "qty-cache", label: "Cache de quantidade (Previsão de Vendas)", run: qtyCacheRun }
     ]
   };
 }

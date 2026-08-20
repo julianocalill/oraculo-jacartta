@@ -25,6 +25,7 @@ export const TABS = [
   { key: "skus", label: "SKUs", href: "/skus", group: "main", paths: ["/skus"] },
   { key: "curva-de-venda", label: "Curva de Venda", href: "/curva-de-venda", group: "main", paths: ["/curva-de-venda"] },
   { key: "curva-de-estoque", label: "Curva de Estoque", href: "/curva-de-estoque", group: "main", paths: ["/curva-de-estoque"] },
+  { key: "previsao-de-vendas", label: "Previsão de Vendas", href: "/previsao-de-vendas", group: "main", paths: ["/previsao-de-vendas"] },
   { key: "shopee", label: "Shopee", href: "/shopee", group: "main", paths: ["/shopee"] },
   { key: "mercado-livre", label: "Mercado Livre", href: "/mercado-livre", group: "main", paths: ["/mercado-livre"] },
   { key: "expedicao", label: "Expedição", href: "/expedicao", group: "main", paths: ["/expedicao"] },

@@ -39,5 +39,23 @@ export const HINTS = {
     "Heurística: mais de 120 dias sem venda → avaliar retirada; item Curva A parado → investigar antes de dar desconto; demais → ativar promoção.",
   estoqueFull: "Unidades disponíveis para venda no centro de distribuição do Mercado Livre.",
   origem: "Full = estoque no centro de distribuição do Mercado Livre. Local = estoque próprio, enviado por você.",
-  variacao: "Cor/tamanho/modelo do anúncio. A ruptura acontece por variação: o anúncio segue ativo enquanto uma variação já zerou."
+  variacao: "Cor/tamanho/modelo do anúncio. A ruptura acontece por variação: o anúncio segue ativo enquanto uma variação já zerou.",
+  prevMediaSemana:
+    "Unidades por semana: total vendido nas últimas semanas completas da base (até 4) ÷ semanas consideradas (SKU novo divide só pelas semanas em que existiu).",
+  prevPrevisao:
+    "Média semanal × tendência geral. A tendência compara a média das últimas 4 semanas com as 4 anteriores, limitada a ±30%; sem 4 anteriores no histórico, tendência = 1.",
+  prevFaixa:
+    "Cenários baixo e alto: previsão × (1 ± variação típica das últimas 8 semanas). É a incerteza esperada, não um limite garantido.",
+  prevTendencia:
+    "Razão entre a média das 4 últimas semanas do próprio canal e as 4 anteriores, limitada a ±30%. Informativa: a previsão por canal usa o share, não esta razão.",
+  prevPeso:
+    "Participação deste dia da semana nas unidades das semanas completas do histórico (até 8). A soma dos 7 dias é 100%.",
+  prevCobertura:
+    "Estoque disponível ÷ previsão da semana: quantas semanas o estoque atual dura no ritmo previsto.",
+  prevStatus:
+    "Ruptura = sem estoque; Risco alto = falta até no cenário baixo; Risco = falta no cenário central; Atenção = falta no cenário alto; OK = cobre a semana.",
+  prevSugestao:
+    "Cenário alto da semana − estoque disponível, arredondado para cima. Não considera lead time de reposição: para compras com prazo, multiplique pelas semanas até chegar.",
+  prevSemanaBase:
+    "Semanas usadas no cálculo. O histórico começa em 03/08/2026 — antes disso a cobertura de itens é incompleta e as unidades saem subcontadas. Cobertura abaixo de 90% gera aviso na tela."
 } as const;

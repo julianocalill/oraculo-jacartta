@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-08-13.md](docs/project-status-2026-08-13.md) **← start here** (current state)
+1. [docs/project-status-2026-08-19.md](docs/project-status-2026-08-19.md) **← start here** (current state)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
    — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every card/column/config field across the whole system — analytics, alerts, calculator, imports, params, sync status — exact formula, PT-BR, for team walkthroughs)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
@@ -47,7 +47,7 @@ oraculo/
 11. [CHANGELOG.md](CHANGELOG.md) (full history)
 12. [vault/00-home/index.md](vault/00-home/index.md)
 
-Earlier snapshots (historical, superseded): [docs/project-status-2026-08-12.md](docs/project-status-2026-08-12.md), [docs/project-status-2026-08-10.md](docs/project-status-2026-08-10.md), [docs/project-status-2026-07-17.md](docs/project-status-2026-07-17.md), [docs/project-status-2026-07-16.md](docs/project-status-2026-07-16.md), [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md), [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
+Earlier snapshots (historical, superseded): [docs/project-status-2026-08-17.md](docs/project-status-2026-08-17.md), [docs/project-status-2026-08-13.md](docs/project-status-2026-08-13.md), [docs/project-status-2026-08-12.md](docs/project-status-2026-08-12.md), [docs/project-status-2026-08-10.md](docs/project-status-2026-08-10.md), [docs/project-status-2026-07-17.md](docs/project-status-2026-07-17.md), [docs/project-status-2026-07-16.md](docs/project-status-2026-07-16.md), [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md), [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
 
 ## Tooling choices
 
@@ -58,8 +58,10 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-08-12.md](
 
 ## Current production state
 
-**Last update**: `2026-08-13` (see `docs/project-status-2026-08-13.md`) —
-Três marketplaces com analítica de estoque (ML Full, Shopee FBS multi-armazém,
+**Last update**: `2026-08-19` (see `docs/project-status-2026-08-19.md`) —
+**aba Previsão de Vendas** (previsão semanal de unidades por canal, SKU e dia,
+com backtest e ligação com estoque para sugestão de compra),
+três marketplaces com analítica de estoque (ML Full, Shopee FBS multi-armazém,
 Olist), sugestão de reposição com export .xlsx, livro de custos por SKU,
 rastreamento de importações com mapa AIS, **aba Devoluções com funil de três
 canais cruzado com a NF fiscal**, margem fiscal com comissão de marketplace,

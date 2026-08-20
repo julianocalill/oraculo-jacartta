@@ -2,6 +2,37 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-19] — Previsão de Vendas (nova aba)
+
+- Nova aba **/previsao-de-vendas**: previsão de unidades da próxima semana
+  (seg–dom) para planejamento de estoque/compra — total, por canal, por SKU e
+  dia a dia. Regras transparentes, auditáveis na própria tela: média simples
+  das 4 últimas semanas completas × tendência (razão 4v4, limitada a ±30%),
+  faixa low–high pelo coeficiente de variação de 8 semanas (clamp 5–50%), pesos
+  por dia da semana, share por canal e, por SKU, média das semanas em que o SKU
+  existiu. Ligação com estoque na linha do SKU: cobertura em semanas, situação
+  (ruptura/risco alto/risco/atenção/OK) e sugestão de compra (cenário alto −
+  disponível).
+- 5 RPCs novas (`oraculo_sales_forecast_week/daily/channels/skus/backtest`,
+  migration `20260819210000`), todas `stable` lendo só os caches
+  `oraculo_olist_qty_*_daily_cache` — sem cache novo, sem cron novo. B2B/"Sem
+  canal" fica **fora** da previsão e aparece como KPI à parte. A âncora é
+  `oraculo_olist_last_order_date()` e a previsão nunca enxerga dados da própria
+  semana-alvo — o que torna o **backtest** (painel "previsão vs realizado" na
+  tela) honesto por construção.
+- Backfill one-shot `oraculo-qty-cache-backfill-once` (pg_cron `:02`, se
+  auto-desagenda): rerun de 120 dias dos qty caches. Ele revelou que a
+  cobertura de itens pré-agosto é irrecuperável sem re-hidratar os pedidos
+  (semanas de julho com ~30% ⇒ unidades subcontadas ~3x), então o histórico da
+  previsão tem **piso em 03/08/2026** (decisão de 20/08): só semanas a partir
+  daí entram na base/tendência/backtest, e semana usada com cobertura < 90%
+  gera aviso em `calc_note` na tela. A base cresce sozinha a cada semana
+  completa nova (hoje: 2 semanas ⇒ tendência neutra e backtest vazio por ora).
+- `/status` ganhou a linha "Cache de quantidade (Previsão de Vendas)" — a
+  previsão depende inteiramente do job `oraculo-olist-qty-cache` (`:20`) e um
+  cache parado é falha silenciosa.
+- Export CSV por SKU em `/previsao-de-vendas/export` (mesmas RPCs da página).
+
 ## [2026-08-19] — Curvas com refresh agendado e detalhe do pedido preservado
 
 - **Refresh automático das curvas**: as materialized views

@@ -231,6 +231,18 @@ Active jobs in `cron.job`:
     106s — the payload detoast in `olist_orders` (957 MB) dominates.
   - Dates older than the window stay frozen; re-run with a larger
     `lookback_days` by hand after a historical reload.
+  - **Also feeds `/previsao-de-vendas`** (RPCs `oraculo_sales_forecast_*`,
+    migration `20260819210000`): the forecast reads only these two caches, so
+    their freshness is surfaced on `/status` as "Cache de quantidade (Previsão
+    de Vendas)".
+  - One-shot backfill `oraculo-qty-cache-backfill-once` (`2 * * * *`, created
+    2026-08-19 by the same migration): ran `refresh_oraculo_olist_qty_cache(120)`
+    once and unscheduled itself (confirmed gone from `cron.job` on 2026-08-20).
+    It exposed that pre-August item coverage is unrecoverable without
+    re-hydrating orders (July weeks at ~30% ⇒ units undercounted ~3x), so the
+    forecast history has a hard floor at **2026-08-03**; weeks used with
+    coverage < 90% raise a warning in `calc_note`. If the job ever reappears in
+    `cron.job`, a run failed and it will retry hourly.
 - `oraculo-olist-stock-6h`: `15 */6 * * *`
   - Calls `olist-sync-stock`.
 - `oraculo-olist-invoices-15m`: `*/15 * * * *`
