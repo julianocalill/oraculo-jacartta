@@ -7,7 +7,7 @@ import { SortableTable } from "../components/sortable-table";
 import { ForecastChart } from "../components/forecast-chart";
 import { formatBrDate } from "../../lib/date";
 import { HINTS } from "../../lib/column-hints";
-import { asTargetWeek, loadForecastView, type ForecastSku } from "./data";
+import { asTargetWeek, loadForecastView } from "./data";
 
 export const dynamic = "force-dynamic";
 
@@ -47,15 +47,6 @@ function addDays(isoDate: string, days: number) {
 
 const WEEKDAYS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
 
-const STOCK_STATUS: Record<ForecastSku["stock_status"], { label: string; badge: string; rank: number }> = {
-  ruptura: { label: "Ruptura", badge: "status-pill signal-danger", rank: 0 },
-  risco_alto: { label: "Risco alto", badge: "status-pill signal-danger", rank: 1 },
-  risco: { label: "Risco", badge: "status-pill signal-warning", rank: 2 },
-  atencao: { label: "Atenção", badge: "status-pill signal-warning", rank: 3 },
-  ok: { label: "OK", badge: "status-pill signal-good", rank: 4 },
-  sem_estoque_mapeado: { label: "Sem estoque mapeado", badge: "status-pill signal-muted", rank: 5 }
-};
-
 export default async function PrevisaoDeVendasPage({
   searchParams
 }: {
@@ -74,11 +65,6 @@ export default async function PrevisaoDeVendasPage({
   const targetStart = week?.target_week_start ?? null;
   const targetEnd = targetStart ? addDays(targetStart, 6) : null;
   const hasForecast = week?.forecast_units != null;
-
-  const riskCount = view.skus.filter((sku) =>
-    sku.stock_status === "ruptura" || sku.stock_status === "risco_alto" || sku.stock_status === "risco"
-  ).length;
-  const purchaseTotal = view.skus.reduce((sum, sku) => sum + n(sku.purchase_suggestion), 0);
 
   // Acurácia recente: erro absoluto médio do backtest (previsão feita "como se
   // fosse na época" contra o realizado).
@@ -104,7 +90,7 @@ export default async function PrevisaoDeVendasPage({
           <p>
             {targetStart
               ? `Semana de ${formatBrDate(targetStart)} a ${formatBrDate(targetEnd)} · unidades de marketplaces (Olist), sem atacado B2B`
-              : "Previsão semanal de unidades para planejamento de estoque"}
+              : "Previsão semanal de unidades para produção e logística"}
           </p>
         </div>
         <form className="filter-row filter-form" method="get">
@@ -123,7 +109,7 @@ export default async function PrevisaoDeVendasPage({
         </section>
       )}
 
-      <section className="metric-grid metric-grid-seven">
+      <section className="metric-grid metric-grid-five">
         <article className="metric accent-yellow">
           <span className="label">Previsão da semana</span>
           <strong>{hasForecast ? `${count(week?.forecast_units)} un` : "—"}</strong>
@@ -149,24 +135,14 @@ export default async function PrevisaoDeVendasPage({
               : `${week?.n_base ?? 0} semana(s) completa(s) na base`}
           </small>
         </article>
-        <article className={`metric ${riskCount > 0 ? "accent-red" : "accent-green"}`}>
-          <span className="label">SKUs em risco</span>
-          <strong>{count(riskCount)}</strong>
-          <small>Estoque abaixo do cenário central · {count(view.skus.length)} SKUs previstos</small>
-        </article>
         <article className="metric accent-green">
           <span className="label">Acurácia recente</span>
           <strong>{meanAbsError != null ? `±${dec(meanAbsError, 1)}%` : "—"}</strong>
           <small>
             {view.backtest.length > 0
               ? `Erro médio · ${withinCount} de ${view.backtest.length} semanas na faixa`
-              : "Backtest indisponível"}
+              : `Backtest indisponível · ${count(view.skus.length)} SKUs previstos`}
           </small>
-        </article>
-        <article className="metric accent-blue">
-          <span className="label">Sugestão de compra</span>
-          <strong>{count(purchaseTotal)} un</strong>
-          <small>Soma dos SKUs abaixo do cenário alto</small>
         </article>
         <article className="metric metric-text">
           <span className="label">Atacado B2B (fora da previsão)</span>
@@ -270,7 +246,7 @@ export default async function PrevisaoDeVendasPage({
         <section className="panel product-panel">
           <div className="sku-toolbar">
             <div>
-              <p className="eyebrow">Planejamento de estoque</p>
+              <p className="eyebrow">Produção e previsibilidade</p>
               <h2>Previsão por SKU</h2>
             </div>
             <div className="sku-actions">
@@ -281,43 +257,28 @@ export default async function PrevisaoDeVendasPage({
             columns={[
               { label: "Produto" },
               { label: "SKU" },
+              { label: "Unidades na base", numeric: true },
               { label: "Média/semana", numeric: true, hint: HINTS.prevMediaSemana },
               { label: "Previsão", numeric: true, hint: HINTS.prevPrevisao },
-              { label: "Faixa", numeric: true, hint: HINTS.prevFaixa },
-              { label: "Estoque disponível", numeric: true },
-              { label: "Cobertura", numeric: true, hint: HINTS.prevCobertura },
-              { label: "Situação", numeric: true, hint: HINTS.prevStatus },
-              { label: "Sugestão de compra", numeric: true, hint: HINTS.prevSugestao }
+              { label: "Faixa", numeric: true, hint: HINTS.prevFaixa }
             ]}
-            initialSort={3}
+            initialSort={4}
             initialDir="desc"
-            rows={view.skus.map((sku) => {
-              const status = STOCK_STATUS[sku.stock_status];
-              return [
-                {
-                  text: sku.product_name ?? "Sem nome",
-                  sort: sku.product_name ?? null,
-                  href: `/skus?source=olist&sku=${encodeURIComponent(sku.sku)}`,
-                  subtitle: sku.is_new
-                    ? `Novo — ${sku.weeks_considered} semana(s) de histórico`
-                    : undefined
-                },
-                { text: sku.sku, sort: sku.sku },
-                { text: dec(sku.avg_units_week, 1), sort: n(sku.avg_units_week) },
-                { text: dec(sku.forecast_units, 1), sort: n(sku.forecast_units) },
-                { text: range(sku.forecast_low, sku.forecast_high), sort: n(sku.forecast_units) },
-                {
-                  text: sku.available_stock != null ? count(sku.available_stock) : "—",
-                  sort: sku.available_stock ?? null
-                },
-                {
-                  text: sku.coverage_weeks != null ? `${dec(sku.coverage_weeks, 1)} sem` : "—",
-                  sort: sku.coverage_weeks ?? null
-                },
-                { text: status.label, sort: status.rank, badge: status.badge },
-                { text: count(sku.purchase_suggestion), sort: n(sku.purchase_suggestion) }
-              ];
-            })}
+            rows={view.skus.map((sku) => [
+              {
+                text: sku.product_name ?? "Sem nome",
+                sort: sku.product_name ?? null,
+                href: `/skus?source=olist&sku=${encodeURIComponent(sku.sku)}`,
+                subtitle: sku.is_new
+                  ? `Novo — ${sku.weeks_considered} semana(s) de histórico`
+                  : undefined
+              },
+              { text: sku.sku, sort: sku.sku },
+              { text: count(sku.units_base), sort: n(sku.units_base) },
+              { text: dec(sku.avg_units_week, 1), sort: n(sku.avg_units_week) },
+              { text: dec(sku.forecast_units, 1), sort: n(sku.forecast_units) },
+              { text: range(sku.forecast_low, sku.forecast_high), sort: n(sku.forecast_units) }
+            ])}
           />
         </section>
       )}

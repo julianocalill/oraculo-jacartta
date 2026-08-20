@@ -5,14 +5,15 @@ Histórico de entregas e mudanças significativas.
 ## [2026-08-19] — Previsão de Vendas (nova aba)
 
 - Nova aba **/previsao-de-vendas**: previsão de unidades da próxima semana
-  (seg–dom) para planejamento de estoque/compra — total, por canal, por SKU e
-  dia a dia. Regras transparentes, auditáveis na própria tela: média simples
-  das 4 últimas semanas completas × tendência (razão 4v4, limitada a ±30%),
-  faixa low–high pelo coeficiente de variação de 8 semanas (clamp 5–50%), pesos
-  por dia da semana, share por canal e, por SKU, média das semanas em que o SKU
-  existiu. Ligação com estoque na linha do SKU: cobertura em semanas, situação
-  (ruptura/risco alto/risco/atenção/OK) e sugestão de compra (cenário alto −
-  disponível).
+  (seg–dom) para a logística trabalhar produção e previsibilidade — total, por
+  canal, por SKU e dia a dia. Regras transparentes, auditáveis na própria tela:
+  média simples das últimas semanas completas (até 4) × tendência (razão 4v4,
+  limitada a ±30%), faixa low–high pelo coeficiente de variação (clamp 5–50%),
+  pesos por dia da semana, share por canal e, por SKU, média das semanas em que
+  o SKU existiu. **Previsão pura, sem ligação com estoque** (decisão de 20/08:
+  as colunas de estoque/cobertura/sugestão de compra do primeiro corte foram
+  removidas — estoque é assunto da Curva de Estoque; o `disponivel` do ERP
+  também não enxergava o saldo posicionado no Full/FBS).
 - 5 RPCs novas (`oraculo_sales_forecast_week/daily/channels/skus/backtest`,
   migration `20260819210000`), todas `stable` lendo só os caches
   `oraculo_olist_qty_*_daily_cache` — sem cache novo, sem cron novo. B2B/"Sem

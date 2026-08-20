@@ -2,10 +2,10 @@
 
 ## Nova aba: Previsão de Vendas (`/previsao-de-vendas`)
 
-Previsão de unidades da **próxima semana** (segunda a domingo) para
-planejamento de estoque/compra. Registrada em `lib/auth/tabs.ts` como
-`previsao-de-vendas` (masters veem automaticamente; demais usuários via
-`/usuarios`).
+Previsão de unidades da **próxima semana** (segunda a domingo) para a
+logística trabalhar produção e previsibilidade. Registrada em
+`lib/auth/tabs.ts` como `previsao-de-vendas` (masters veem automaticamente;
+demais usuários via `/usuarios`).
 
 ### Regras de cálculo (todas visíveis na tela)
 
@@ -23,10 +23,13 @@ planejamento de estoque/compra. Registrada em `lib/auth/tabs.ts` como
 - **Por canal**: share do canal nas 4 semanas-base × total (Σ canais = total);
   a tendência 4v4 do próprio canal é coluna informativa.
 - **Por SKU**: média das k semanas-base em que o SKU existiu (k ≤ 4; SKU novo
-  ganha flag) × tendência geral. Sem venda nas 4 semanas = fora da tabela.
-- **Estoque**: cobertura em semanas, situação (ruptura / risco alto / risco /
-  atenção / OK contra os cenários baixo/central/alto) e **sugestão de compra**
-  = cenário alto − disponível (ceil). Sem lead time no v1.
+  ganha flag) × tendência geral. Sem venda nas semanas-base = fora da tabela.
+- **Sem ligação com estoque** (decisão de 20/08): o primeiro corte trazia
+  cobertura/situação/sugestão de compra cruzando com `olist_products.disponivel`,
+  mas o público da aba é a logística (produção/previsibilidade) e o `disponivel`
+  do ERP não enxerga o saldo posicionado no ML Full nem no FBS Shopee — as
+  colunas foram removidas da RPC, da tela e do CSV. Estoque é assunto da Curva
+  de Estoque.
 - **Semana completa** = 7 dias no cache E terminada até `anchor − 1`
   (`oraculo_olist_last_order_date()`) E anterior à semana-alvo — a previsão
   nunca enxerga dados da própria semana prevista, o que torna o backtest

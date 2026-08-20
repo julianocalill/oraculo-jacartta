@@ -1,7 +1,8 @@
 -- Previsão de vendas da próxima semana (aba "Previsão de Vendas").
 --
--- Objetivo: planejamento de estoque/compra — prever unidades da próxima semana
--- (seg-dom) no total, por canal, por SKU e por dia, com regras transparentes:
+-- Objetivo: dar previsibilidade à logística/produção — prever unidades da
+-- próxima semana (seg-dom) no total, por canal, por SKU e por dia, com regras
+-- transparentes (previsão pura, sem ligação com estoque — decisão de 20/08):
 --
 --   base      = média simples das últimas 4 semanas completas
 --   tendência = clamp( média(4 recentes) / média(4 anteriores), 0.7, 1.3 )
@@ -330,16 +331,15 @@ as $$
 $$;
 
 -- ---------------------------------------------------------------------------
--- Previsão por SKU, ligada ao estoque. k = min(4, semanas-base desde a 1ª
--- venda) trata SKU novo sem penalizar a média; is_new sinaliza baixa confiança.
--- SKU sem venda nas 4 semanas-base fica fora (previsão 0) — estoque parado é
--- assunto da Curva de Estoque. Previsão em decimal; ceil só na sugestão de
--- compra (cobre o cenário alto da semana).
+-- Previsão por SKU (previsão pura, para a logística planejar produção — sem
+-- ligação com estoque; decisão de 20/08: estoque/cobertura é assunto da Curva
+-- de Estoque). k = min(4, semanas-base desde a 1ª venda) trata SKU novo sem
+-- penalizar a média; is_new sinaliza baixa confiança. SKU sem venda nas
+-- semanas-base fica fora (previsão 0).
 --
 -- Limitação: o cache de SKU só tem o boolean has_channel, não o nome do canal
 -- — esta tabela é total-marketplaces, sem filtro por canal (v2: dimensão de
--- canal no cache). Estoque: olist_products agrupado por
--- coalesce(sku, id), somando disponivel de produtos que compartilham SKU.
+-- canal no cache).
 -- ---------------------------------------------------------------------------
 drop function if exists public.oraculo_sales_forecast_skus(date);
 
@@ -356,11 +356,7 @@ returns table (
   avg_units_week numeric,
   forecast_units numeric,
   forecast_low numeric,
-  forecast_high numeric,
-  available_stock numeric,
-  coverage_weeks numeric,
-  stock_status text,
-  purchase_suggestion numeric
+  forecast_high numeric
 )
 language sql
 stable
@@ -394,13 +390,6 @@ as $$
     group by 1
     having sum(c.units) > 0
   ),
-  stock as (
-    select
-      coalesce(nullif(p.sku, ''), p.id) as sku_key,
-      sum(p.disponivel::numeric) as disponivel
-    from public.olist_products p
-    group by 1
-  ),
   calc as (
     select
       s.sku,
@@ -411,11 +400,9 @@ as $$
         (select count(*) from base_weeks)
       ), 1)::integer as weeks_considered,
       f.first_sale_date > (select min(week_start) from base_weeks) as is_new,
-      s.units_base,
-      st.disponivel as available_stock
+      s.units_base
     from by_sku s
     join first_sale f on f.sku = s.sku
-    left join stock st on st.sku_key = s.sku
   )
   select
     c.sku,
@@ -427,22 +414,7 @@ as $$
     round(c.units_base / c.weeks_considered, 2) as avg_units_week,
     round(c.units_base / c.weeks_considered * fw.trend, 2) as forecast_units,
     round(c.units_base / c.weeks_considered * fw.trend * (1 - fw.cv), 2) as forecast_low,
-    round(c.units_base / c.weeks_considered * fw.trend * (1 + fw.cv), 2) as forecast_high,
-    c.available_stock,
-    round(c.available_stock / nullif(c.units_base / c.weeks_considered * fw.trend, 0), 2),
-    case
-      when c.available_stock is null then 'sem_estoque_mapeado'
-      when c.available_stock <= 0 then 'ruptura'
-      when c.available_stock < c.units_base / c.weeks_considered * fw.trend * (1 - fw.cv) then 'risco_alto'
-      when c.available_stock < c.units_base / c.weeks_considered * fw.trend then 'risco'
-      when c.available_stock < c.units_base / c.weeks_considered * fw.trend * (1 + fw.cv) then 'atencao'
-      else 'ok'
-    end,
-    ceil(greatest(
-      c.units_base / c.weeks_considered * fw.trend * (1 + fw.cv)
-        - coalesce(c.available_stock, 0),
-      0
-    ))
+    round(c.units_base / c.weeks_considered * fw.trend * (1 + fw.cv), 2) as forecast_high
   from calc c
   cross join fw
   where fw.forecast_units is not null

@@ -69,16 +69,6 @@ export type ForecastSku = {
   forecast_units: number;
   forecast_low: number;
   forecast_high: number;
-  available_stock: number | null;
-  coverage_weeks: number | null;
-  stock_status:
-    | "sem_estoque_mapeado"
-    | "ruptura"
-    | "risco_alto"
-    | "risco"
-    | "atencao"
-    | "ok";
-  purchase_suggestion: number;
 };
 
 export type BacktestRow = {

@@ -50,12 +50,6 @@ export const HINTS = {
     "Razão entre a média das 4 últimas semanas do próprio canal e as 4 anteriores, limitada a ±30%. Informativa: a previsão por canal usa o share, não esta razão.",
   prevPeso:
     "Participação deste dia da semana nas unidades das semanas completas do histórico (até 8). A soma dos 7 dias é 100%.",
-  prevCobertura:
-    "Estoque disponível ÷ previsão da semana: quantas semanas o estoque atual dura no ritmo previsto.",
-  prevStatus:
-    "Ruptura = sem estoque; Risco alto = falta até no cenário baixo; Risco = falta no cenário central; Atenção = falta no cenário alto; OK = cobre a semana.",
-  prevSugestao:
-    "Cenário alto da semana − estoque disponível, arredondado para cima. Não considera lead time de reposição: para compras com prazo, multiplique pelas semanas até chegar.",
   prevSemanaBase:
     "Semanas usadas no cálculo. O histórico começa em 03/08/2026 — antes disso a cobertura de itens é incompleta e as unidades saem subcontadas. Cobertura abaixo de 90% gera aviso na tela."
 } as const;

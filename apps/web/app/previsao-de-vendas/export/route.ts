@@ -20,15 +20,6 @@ function csvNumber(value: number | null | undefined, digits = 2) {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: digits }).format(n(value));
 }
 
-const STATUS_LABEL: Record<ForecastSku["stock_status"], string> = {
-  ruptura: "Ruptura",
-  risco_alto: "Risco alto",
-  risco: "Risco",
-  atencao: "Atenção",
-  ok: "OK",
-  sem_estoque_mapeado: "Sem estoque mapeado"
-};
-
 export async function GET(request: Request) {
   const user = await getCurrentUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
@@ -59,10 +50,6 @@ export async function GET(request: Request) {
     "Previsão (un)",
     "Cenário baixo",
     "Cenário alto",
-    "Estoque disponível",
-    "Cobertura (semanas)",
-    "Situação",
-    "Sugestão de compra",
     "SKU novo"
   ];
   const rows = skus.map((sku) => [
@@ -73,10 +60,6 @@ export async function GET(request: Request) {
     csvNumber(sku.forecast_units),
     csvNumber(sku.forecast_low),
     csvNumber(sku.forecast_high),
-    sku.available_stock != null ? csvNumber(sku.available_stock, 0) : "",
-    sku.coverage_weeks != null ? csvNumber(sku.coverage_weeks) : "",
-    STATUS_LABEL[sku.stock_status],
-    csvNumber(sku.purchase_suggestion, 0),
     sku.is_new ? "Sim" : "Não"
   ]);
 
