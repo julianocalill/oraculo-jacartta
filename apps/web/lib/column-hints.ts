@@ -51,5 +51,5 @@ export const HINTS = {
   prevPeso:
     "Participação deste dia da semana nas unidades das semanas completas do histórico (até 8). A soma dos 7 dias é 100%.",
   prevSemanaBase:
-    "Semanas usadas no cálculo. O histórico começa em 03/08/2026 — antes disso a cobertura de itens é incompleta e as unidades saem subcontadas. Cobertura abaixo de 90% gera aviso na tela."
+    "Semanas usadas no cálculo. O histórico começa em 20/07/2026; semana anterior a 03/08 só entra quando a cobertura de itens dela atinge 90% (o backfill reescreve julho automaticamente). Cobertura abaixo de 90% gera aviso na tela."
 } as const;

@@ -23,12 +23,19 @@ Histórico de entregas e mudanças significativas.
   tela) honesto por construção.
 - Backfill one-shot `oraculo-qty-cache-backfill-once` (pg_cron `:02`, se
   auto-desagenda): rerun de 120 dias dos qty caches. Ele revelou que a
-  cobertura de itens pré-agosto é irrecuperável sem re-hidratar os pedidos
-  (semanas de julho com ~30% ⇒ unidades subcontadas ~3x), então o histórico da
-  previsão tem **piso em 03/08/2026** (decisão de 20/08): só semanas a partir
-  daí entram na base/tendência/backtest, e semana usada com cobertura < 90%
-  gera aviso em `calc_note` na tela. A base cresce sozinha a cada semana
-  completa nova (hoje: 2 semanas ⇒ tendência neutra e backtest vazio por ora).
+  cobertura de itens pré-agosto exigia re-hidratar os pedidos (semanas de
+  julho com ~30% ⇒ unidades subcontadas ~3x). Regra de piso: histórico começa
+  em **20/07/2026**, e semana anterior a 03/08 só entra na base/tendência/
+  backtest quando a cobertura de itens dela atinge 90%; semana usada com
+  cobertura < 90% gera aviso em `calc_note` na tela.
+- **Re-hidratação de itens de julho** (migration `20260820150000`, iniciada
+  20/08): fila de 45,5 mil pedidos de 20/07–02/08 sem itens, semeada direto
+  dos pedidos (a semeadura fiscal só cobre os 66% com NF vinculada; a fila
+  passou a aceitar pedido sem NF). Cron a cada 2 min dirige a edge function
+  `olist-backfill-order-items` (~100 pedidos/execução ⇒ ~15h) e um
+  finalizador horário reescreve o qty cache (35 dias) quando a fila zera e
+  desagenda tudo — as semanas de julho entram na previsão automaticamente,
+  completando a base de 4 semanas.
 - `/status` ganhou a linha "Cache de quantidade (Previsão de Vendas)" — a
   previsão depende inteiramente do job `oraculo-olist-qty-cache` (`:20`) e um
   cache parado é falha silenciosa.

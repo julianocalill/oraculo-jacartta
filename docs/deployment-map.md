@@ -238,11 +238,22 @@ Active jobs in `cron.job`:
   - One-shot backfill `oraculo-qty-cache-backfill-once` (`2 * * * *`, created
     2026-08-19 by the same migration): ran `refresh_oraculo_olist_qty_cache(120)`
     once and unscheduled itself (confirmed gone from `cron.job` on 2026-08-20).
-    It exposed that pre-August item coverage is unrecoverable without
-    re-hydrating orders (July weeks at ~30% ⇒ units undercounted ~3x), so the
-    forecast history has a hard floor at **2026-08-03**; weeks used with
-    coverage < 90% raise a warning in `calc_note`. If the job ever reappears in
-    `cron.job`, a run failed and it will retry hourly.
+    It exposed that pre-August item coverage required re-hydrating orders
+    (July weeks at ~30% ⇒ units undercounted ~3x).
+  - **July item re-hydration** (migration `20260820150000`, started 2026-08-20):
+    `oraculo-olist-items-backfill-julho` (`*/2 * * * *`) drives
+    `olist-backfill-order-items` over the 2026-07-20..2026-08-02 window
+    (~45.5k orders queued via `prepare_olist_order_item_backfill_queue_by_orders`,
+    which seeds the queue from orders directly — the fiscal seeding only covers
+    invoice-linked orders, 66% of the gap; the queue's `invoice_id`/`issued_at`
+    became nullable for this). Throughput ~100 orders per tick ⇒ ~15h.
+    `oraculo-olist-items-backfill-julho-finish` (`14 * * * *`) waits for the
+    queue to drain, runs `refresh_oraculo_olist_qty_cache(35)` and unschedules
+    both jobs. If both jobs are gone from `cron.job`, the backfill completed.
+  - Forecast history floor: hard floor **2026-07-20**; weeks before 2026-08-03
+    only qualify once their item coverage reaches 90% (so July enters
+    automatically after the re-hydration), and any used week under 90% raises
+    a warning in `calc_note`.
 - `oraculo-olist-stock-6h`: `15 */6 * * *`
   - Calls `olist-sync-stock`.
 - `oraculo-olist-invoices-15m`: `*/15 * * * *`

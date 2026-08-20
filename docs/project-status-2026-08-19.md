@@ -57,15 +57,25 @@ Os caches começavam em ~06/07 e as semanas de 20/07 e 27/07 congelaram com
 ~30% de cobertura de itens (unidades 3–4x subcontadas). O job one-shot
 `oraculo-qty-cache-backfill-once` (pg_cron `:02`, auto-desagenda) rodou
 `refresh_oraculo_olist_qty_cache(120)` e se desagendou (confirmado 20/08),
-mas o rerun **não recupera** a cobertura: os pedidos de junho/julho seguem sem
-`payload.itens` hidratado — só a re-hidratação dos pedidos (sync lento, ~13h
-por 3 dias) resolveria. Decisão do Juliano (20/08): **piso do histórico em
-03/08/2026** (primeira segunda ≥ 01/08, cobertura 100%) e aviso na tela quando
-uma semana usada tiver cobertura < 90%. Efeito imediato: base = 2 semanas
-(03/08: 43.887 un · 100%; 10/08: 36.127 un · 100%) ⇒ previsão de 24–30/08 =
-**40.007 un** (faixa 34.520–45.494), tendência neutra e backtest vazio até
-acumular semanas; tudo se normaliza sozinho com o passar das semanas. Detalhe
-no `docs/deployment-map.md` (seção Supabase Cron).
+mas o rerun **não recupera** a cobertura: os 45,5 mil pedidos da janela
+20/07–02/08 sem itens não têm `payload.itens` (todos exigem `GET pedidos/{id}`
+na API). Decisões do Juliano (20/08): usar 01/08 em diante com aviso quando a
+cobertura de uma semana usada ficar < 90% **e**, em seguida, re-hidratar as
+semanas de julho para completar a base de 4 semanas.
+
+**Re-hidratação em andamento** (migration `20260820150000`): fila semeada com
+os 45.506 pedidos (nova `prepare_olist_order_item_backfill_queue_by_orders`,
+sem exigir NF — a semeadura fiscal só cobria 66%), driver pg_cron a cada 2 min
+chamando `olist-backfill-order-items` (medido: 100 pedidos/64s, 0 erros, 0
+429 ⇒ ~15h total) e finalizador horário (`:14`) que, quando a fila zera, roda
+`refresh_oraculo_olist_qty_cache(35)` e desagenda os dois crons. O piso da
+previsão virou **20/07/2026 com trava de cobertura**: semana anterior a 03/08
+só entra quando a cobertura dela atinge 90% — julho entra sozinho ao fim do
+backfill, sem degradar a previsão enquanto roda. Estado no momento da
+escrita: base = 2 semanas (03/08: 43.887 un · 100%; 10/08: 36.127 un · 100%)
+⇒ previsão de 24–30/08 = **40.007 un** (faixa 34.520–45.494), tendência
+neutra e backtest vazio. Detalhe no `docs/deployment-map.md` (seção Supabase
+Cron).
 
 ### Limitações aceitas (v1)
 
