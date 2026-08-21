@@ -3,7 +3,7 @@ import Link from "next/link";
 // Sub-abas da Documentação, no padrão de ImportacoesTabs/DevolucoesTabs.
 const TABS = [
   { key: "visao", label: "Visão geral", href: "/documentacao" },
-  { key: "conectar", label: "Conectar BI", href: "/documentacao/conectar" },
+  { key: "perguntar", label: "Perguntar", href: "/documentacao/perguntar" },
   { key: "dicionario", label: "Dicionário de dados", href: "/documentacao/dicionario" },
   { key: "funcoes", label: "Funções (RPC)", href: "/documentacao/funcoes" },
   { key: "receitas", label: "Receitas de SQL", href: "/documentacao/receitas" },

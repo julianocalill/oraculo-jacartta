@@ -58,9 +58,10 @@ export default async function DocumentacaoPage() {
             que envelheceu.
           </p>
           <p>
-            Se é sua primeira vez: comece por <Link className="doc-link" href="/documentacao/conectar">Conectar BI</Link> para ligar a
-            ferramenta ao banco, depois vá em <Link className="doc-link" href="/documentacao/receitas">Receitas de SQL</Link> — são
-            consultas prontas para os pedidos mais comuns. Antes de publicar qualquer número, leia{" "}
+            Se é sua primeira vez: use <Link className="doc-link" href="/documentacao/perguntar">Perguntar</Link> para descrever
+            o que você quer saber em português e descobrir onde o dado mora, ou vá direto às{" "}
+            <Link className="doc-link" href="/documentacao/receitas">Receitas de SQL</Link> — consultas prontas para os pedidos
+            mais comuns. Antes de publicar qualquer número, leia{" "}
             <Link className="doc-link" href="/documentacao/armadilhas">Armadilhas</Link>.
           </p>
         </div>

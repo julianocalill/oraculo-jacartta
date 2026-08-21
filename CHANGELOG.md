@@ -2,6 +2,40 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-21] — Perguntar em linguagem natural (e adeus Conectar BI)
+
+- Nova aba **/documentacao/perguntar**: a pessoa descreve em português o que
+  quer saber ("quanto eu faturei por canal em julho") e recebe **o caminho** —
+  qual view usar, qual receita já resolve e quais armadilhas se aplicam. Não
+  devolve número e **não escreve SQL**: neste banco, somar duas fontes dobra o
+  faturamento e contar pedidos na tabela errada erra 3x, e as dez armadilhas
+  existem porque são os casos em que o SQL *parece* certo. SQL que roda e
+  devolve número errado é pior que nenhuma resposta — ninguém desconfia.
+- **Dois estágios.** A recuperação determinística (`ask.ts`) roda sempre, sem
+  IA, com um vocabulário de negócio (ninguém digita `billed_revenue`, digita
+  "quanto faturei"). A IA local (Ollama na VPS, `qwen2.5-coder:7b`) recebe
+  **só os candidatos**, nunca o schema inteiro, e escolhe entre eles. Mesmo
+  princípio do relatório de Shopee Ads: a IA redige, o código decide o que é
+  verdade. Toda tabela citada é validada contra o catálogo — nome inventado é
+  descartado e a tela diz que foi.
+- **Sem `OLLAMA_URL` a busca funciona igual**, só sem o parágrafo da IA. A
+  seção fica num `<Suspense>`: a página aparece na hora com o resultado
+  completo do catálogo e a leitura por IA chega depois. Zero client JS.
+- Dois ajustes de ranking que só apareceram testando: alvo curto (`sku`) casava
+  como substring em quase todo nome e afogava o específico — "quais produtos
+  vão acabar no estoque" trazia margem por SKU em primeiro e ruptura em quarto.
+  E as armadilhas passaram a vir da curadoria já declarada em `recipes.ts`, não
+  do score: o limiar é alto de propósito, porque três avisos irrelevantes
+  ensinam a ignorar o bloco inteiro e aí o que importa passa batido.
+- **Aba Conectar BI removida** a pedido: some a rota `/documentacao/conectar`,
+  o `connection.ts`, o passo a passo de Metabase/PowerBI e os avisos sobre
+  porta 6543, DirectQuery e "esta conexão consegue escrever".
+- Riscos que ficam com a infra, não com o código (documentados em
+  `docs/documentacao-perguntar-ia.md`): a chamada sai da Vercel direto para a
+  VPS, então o endpoint precisa exigir token, e a VPS é compartilhada — uma
+  busca interativa tem perfil de carga muito diferente de um relatório a cada
+  três dias.
+
 ## [2026-08-21] — Documentação do banco (nova aba)
 
 - Nova aba **/documentacao**: dicionário de dados, receitas de SQL e as

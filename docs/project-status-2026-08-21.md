@@ -74,7 +74,7 @@ dados de junho por 45 dias sem nenhum erro.
 | Rota | Conteúdo |
 |---|---|
 | `/documentacao` | mapa dos domínios, cobertura, as 3 armadilhas mais caras |
-| `/documentacao/conectar` | pooler, SSL, passo a passo de Metabase e PowerBI |
+| `/documentacao/perguntar` | busca em linguagem natural — ver `docs/documentacao-perguntar-ia.md` |
 | `/documentacao/dicionario` | os 121 objetos, filtros por domínio/tipo/cobertura e **busca por coluna** |
 | `/documentacao/dicionario/[objeto]` | colunas, tipos, PK/FK, armadilhas do objeto, SQL da view |
 | `/documentacao/funcoes` | as 50 funções de BI (triggers e refresh atrás de `?todas=1`) |
@@ -145,3 +145,26 @@ em `/documentacao` é o detector de quando alguém esquecer.
 2. Liberar a aba em `/usuarios` para quem monta relatório.
 3. Confirmar no Metabase que as descrições aparecem na Table Metadata — é o
    ganho que justificou escolher `COMMENT ON` em vez de markdown.
+
+
+## Adendo do mesmo dia — Perguntar, e a saída do Conectar BI
+
+A aba **Conectar BI** foi removida a pedido, com tudo que havia nela (rota,
+`connection.ts`, passo a passo das ferramentas e os avisos sobre porta 6543 e
+sobre a conexão conseguir escrever no banco).
+
+No lugar entrou **`/documentacao/perguntar`**: a pessoa descreve em português o
+que quer saber e recebe o caminho — view, receita e armadilhas. Não devolve
+número e não escreve SQL, de propósito: as dez armadilhas deste banco existem
+porque são os casos em que o SQL *parece* certo, e uma consulta que roda e
+devolve o número errado é pior que nenhuma resposta.
+
+A busca tem dois estágios. O determinístico roda sempre e não depende de nada
+externo; a IA local (Ollama na VPS) só escolhe entre os candidatos que ele já
+encontrou, e todo nome que ela citar é conferido contra o catálogo antes de
+chegar à tela. Sem `OLLAMA_URL` configurado, a aba funciona igual — só sem o
+parágrafo escrito por IA.
+
+Detalhes, decisões de ranking e os riscos da chamada direta Vercel → VPS
+(autenticação do endpoint e carga sobre uma VPS compartilhada) estão em
+`docs/documentacao-perguntar-ia.md`.

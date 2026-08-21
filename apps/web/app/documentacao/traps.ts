@@ -105,7 +105,8 @@ export const TRAPS: Trap[] = [
       "oraculo_sku_current_unified_cache",
       "oraculo_channel_sales_unified_cache",
       "oraculo_daily_sales_cache",
-      "oraculo_nf_daily_cache"
+      "oraculo_nf_daily_cache",
+      "oraculo_stock_watchlist_unified_cache"
     ]
   },
   {
