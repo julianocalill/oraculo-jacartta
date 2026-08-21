@@ -124,13 +124,22 @@ Ollama (`/api/pull`, `/api/delete`, `/api/create`): qualquer pessoa na internet
 pode consumir a CPU da VPS, baixar modelos até encher o disco ou apagar os que
 existem.
 
-**Por que não foi corrigido junto:** a credencial do n8n
-(`Ollama Local - ia.oliverhome.com.br`, tipo `ollamaApi`) está criptografada no
-banco, então não dá para saber se ela usa a URL pública ou o host interno.
-Confirmei que o host interno funciona — de dentro do worker do n8n,
-`http://ollama:11434/api/tags` responde. Se a credencial já usa esse caminho,
-adicionar auth na rota pública não quebra nada; se usa a URL pública, derruba o
-relatório de Ads. **Confirme a credencial antes de aplicar o middleware.**
+**O n8n NÃO usa a rota pública — verificado em 21/08.** A credencial
+(`Ollama Local - ia.oliverhome.com.br`, tipo `ollamaApi`) está criptografada,
+mas a dedução é conclusiva:
+
+- O workflow de Ads rodou **com sucesso todos os dias às 08:00** entre 11/08 e
+  21/08 (execuções `16388` a `23471`).
+- O access log do Traefik cobre 13/08–21/08 com **419.334 requisições**, e nesse
+  período houve **12 chamadas ao `/ollama` — todas de testes manuais em 21/08**.
+
+Se a credencial usasse a URL pública, cada execução diária teria deixado rastro
+no access log. Não deixou: o n8n fala com o Ollama pelo host interno
+(`http://ollama:11434`, confirmado respondendo de dentro do worker), pela rede
+`JacarttaNet` que os dois compartilham.
+
+**Conclusão: adicionar basic auth na rota pública não quebra o relatório de
+Ads.**
 
 Correção sugerida (basic auth só na rota pública, n8n seguindo pelo interno):
 

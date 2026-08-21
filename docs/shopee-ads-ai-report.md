@@ -120,6 +120,13 @@ com sucesso.
 
 ## Estado de ativação
 
+> **Desatualizado — corrigido em 2026-08-21.** O workflow está **ATIVO**
+> (`workflow_entity.active = true`) e vem rodando com sucesso **todos os dias
+> às 08:00** desde pelo menos 11/08 (execuções `16388`…`23471`). O Schedule
+> Trigger dispara diariamente; quem segura o envio para cada três dias é a
+> trava em `shopee_ads_report_runs`, como descrito acima. O parágrafo abaixo
+> descreve o estado de 07/08 e ficou para trás.
+
 O workflow está **inativo** até o preview final. Em 07/08, o nó legado
 `lmOllama` devolveu texto vazio ao parser. A integração foi migrada para
 `lmChatOllama`. `gemma4:latest` (9,6 GB) e `qwen3.5:latest` (6,6 GB) excederam a
