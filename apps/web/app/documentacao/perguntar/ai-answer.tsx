@@ -37,15 +37,6 @@ export async function AiAnswer({
         </div>
       ) : null}
 
-      {answer.receita ? (
-        <p style={{ marginTop: 12 }}>
-          Receita pronta:{" "}
-          <Link className="doc-link" href={`/documentacao/receitas/${answer.receita}`}>
-            {answer.receita}
-          </Link>
-        </p>
-      ) : null}
-
       {answer.inventados.length > 0 ? (
         <p className="fiscal-note" style={{ marginTop: 12 }}>
           A IA citou {answer.inventados.length === 1 ? "um nome que não existe" : "nomes que não existem"} no banco (

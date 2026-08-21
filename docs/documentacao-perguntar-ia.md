@@ -63,20 +63,92 @@ chegar. Zero client JS.
 `.env` / variáveis da Vercel. **Sem `OLLAMA_URL` a busca funciona normalmente**,
 só sem o parágrafo da IA.
 
+**A URL tem path.** O Traefik roteia o Ollama em
+`https://ia.oliverhome.com.br/ollama` (`PathPrefix` + `stripprefix`); a raiz do
+domínio é o Open WebUI, não a API. Apontar para a raiz devolve HTML.
+
+## Medições no servidor real (2026-08-21)
+
+VPS `129.121.53.71`: 6 vCPUs, 15 GB de RAM, **46 containers**, **sem GPU** —
+inferência 100% em CPU. Modelos instalados: `qwen2.5-coder:7b` (4,7 GB),
+`qwen3.5` (6,6 GB), `gemma4` (9,6 GB), `nomic-embed-text`.
+
+| Cenário | Tempo |
+|---|---|
+| Cold start (modelo fora da memória) | 10,7 s |
+| Com o modelo carregado | 6,3 – 7,6 s |
+| Prompt real da aplicação | 10,5 – 14,7 s |
+
+O modelo fica residente por 5 minutos após a última chamada. Durante a
+inferência a RAM disponível cai de **6,5 GB para 1,8 GB** — funciona, mas é a
+folga inteira da máquina, que roda Metabase, n8n, Chatwoot, Evolution API e
+mais 40 containers.
+
+Três casos testados contra o servidor real, com o prompt exato da aplicação:
+
+1. "quanto eu faturei por canal em julho" → `oraculo_fiscal_invoices_valid`, e
+   citou `channel_label`. Correto.
+2. "quais produtos vão acabar no estoque" → `oraculo_stock_watchlist_unified`.
+   Correto.
+3. "qual a cor favorita do meu cachorro" → *"Não há informações disponíveis no
+   catálogo"*, com `objetos: []`. **Não alucinou** — que é o caso que mais
+   importa.
+
+### Por que o prompt não lista as receitas
+
+A primeira versão pedia ao modelo que escolhesse também a receita de SQL. Ele
+devolveu `receita: null` em todas as tentativas, inclusive com instrução
+explícita. Como o estágio determinístico já acerta a receita (7 de 7 nas
+perguntas testadas) e a tela a mostra em destaque, o campo saiu do contrato:
+prompt menor, e na CPU cada linha a menos são segundos.
+
 ## Riscos da chamada direta Vercel → VPS
 
 A decisão foi chamar a VPS direto, sem o n8n no meio. O código protege o lado
 dele — timeout de 25s, `num_predict` de 320, degradação silenciosa em qualquer
 falha — mas **dois riscos são de infra e não dá para resolver aqui**:
 
-1. **Autenticação.** Hoje o acesso ao Ollama é por credencial n8n. Chamando
-   direto, o endpoint precisa exigir token (`OLLAMA_TOKEN`), senão fica um
-   Ollama aberto na internet aceitando qualquer prompt.
-2. **Carga.** A VPS é compartilhada — a calculadora está no mesmo IP. O doc do
-   relatório de Ads registra `gemma4` (9,6 GB) e `qwen3.5` (6,6 GB)
-   "excedendo a capacidade segura e reiniciando Ollama/workers". Um relatório
-   roda 1x a cada 3 dias; uma busca na tela roda quando qualquer pessoa quiser.
-   Vale limitar taxa no Cloudflare antes de liberar para todo mundo.
+### 1. O Ollama está aberto na internet (verificado em 21/08)
+
+`https://ia.oliverhome.com.br/ollama/api/tags` responde **200 sem nenhuma
+autenticação**. As labels do Traefik em `ollama_ollama` têm apenas
+`stripprefix` — não há middleware de auth:
+
+```
+traefik.http.routers.ollama.rule: Host(`ia.oliverhome.com.br`) && PathPrefix(`/ollama`)
+traefik.http.routers.ollama.middlewares: ollama-strip
+```
+
+Como o proxy repassa a API inteira, isso expõe também as rotas de escrita do
+Ollama (`/api/pull`, `/api/delete`, `/api/create`): qualquer pessoa na internet
+pode consumir a CPU da VPS, baixar modelos até encher o disco ou apagar os que
+existem.
+
+**Por que não foi corrigido junto:** a credencial do n8n
+(`Ollama Local - ia.oliverhome.com.br`, tipo `ollamaApi`) está criptografada no
+banco, então não dá para saber se ela usa a URL pública ou o host interno.
+Confirmei que o host interno funciona — de dentro do worker do n8n,
+`http://ollama:11434/api/tags` responde. Se a credencial já usa esse caminho,
+adicionar auth na rota pública não quebra nada; se usa a URL pública, derruba o
+relatório de Ads. **Confirme a credencial antes de aplicar o middleware.**
+
+Correção sugerida (basic auth só na rota pública, n8n seguindo pelo interno):
+
+```
+traefik.http.middlewares.ollama-auth.basicauth.users: <usuario>:<hash-htpasswd>
+traefik.http.routers.ollama.middlewares: ollama-strip,ollama-auth
+```
+
+e então preencher `OLLAMA_TOKEN` — hoje vazio, porque não há o que autenticar.
+
+### 2. Carga sobre uma VPS compartilhada
+
+46 containers de produção dividem 6 vCPUs sem GPU, e a inferência consome a
+folga inteira de RAM (6,5 GB → 1,8 GB). O doc do relatório de Ads já registra
+`gemma4` e `qwen3.5` "excedendo a capacidade segura e reiniciando
+Ollama/workers". Um relatório roda 1x a cada 3 dias; uma busca na tela roda
+quando qualquer pessoa quiser. Vale limitar taxa no Cloudflare antes de liberar
+a aba para todo mundo.
 
 Latência esperada: as functions rodam em `iad1` (EUA) e a VPS está no Brasil.
 Um 7B leva dezenas de segundos. Por isso o resultado determinístico aparece
