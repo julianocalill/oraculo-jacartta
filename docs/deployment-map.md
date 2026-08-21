@@ -146,6 +146,20 @@
   - Workflow: `Oráculo - Relatório IA Shopee Ads 3d` (`YpzBJxJkHeMLsunB`),
     08:00 BRT com trava de três dias. Está inativo até um preview completo
     validar a redação pelo Ollama Chat (`qwen2.5-coder:7b`).
+- **Ollama (VPS `129.121.53.71`, stack `ollama`)** — `qwen2.5-coder:7b`, sem GPU.
+  - Interno: `http://ollama:11434` pela rede `JacarttaNet`. É por aqui que o n8n
+    fala (relatório de Shopee Ads) — não passa pelo Traefik.
+  - Público: `https://ia.oliverhome.com.br/ollama`, **protegido por basic auth**
+    desde 21/08 (middleware `ollama-auth`). É o caminho usado pela aba
+    `/documentacao/perguntar` do web app, com `OLLAMA_TOKEN` na Vercel.
+  - **As labels foram aplicadas por `docker service update`, e a stack é
+    gerenciada pelo editor web do Portainer: um redeploy da stack reabre o
+    Ollama para a internet.** Confira com `curl -o /dev/null -w '%{http_code}'
+    https://ia.oliverhome.com.br/ollama/api/tags` — 401 é o esperado.
+  - Latência medida: 6,3–7,6s com o modelo carregado, 10,7s em cold start. A RAM
+    disponível cai de 6,5 GB para 1,8 GB enquanto o modelo está residente (5 min
+    após a última chamada), numa máquina com 46 containers.
+
 - `mercadolivre-returns-sync` (deployed 2026-08-04; hourly cron `:35`)
   - Pulls claims/returns (`/post-purchase/v1/claims/search`) into
     `oraculo_returns` (channel `mercadolivre`). Read-only on tokens (renewal

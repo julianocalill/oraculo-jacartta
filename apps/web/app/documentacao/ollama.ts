@@ -78,8 +78,16 @@ export async function askOllama(
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
+    // O Traefik protege a rota pública com basic auth (middleware `ollama-auth`,
+    // aplicado em 21/08). Por isso OLLAMA_TOKEN no formato `usuario:senha` vira
+    // um header Basic; um valor sem `:` continua sendo tratado como Bearer,
+    // para o caso de a proteção mudar para token no futuro.
     const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (cfg.token) headers.Authorization = `Bearer ${cfg.token}`;
+    if (cfg.token) {
+      headers.Authorization = cfg.token.includes(":")
+        ? `Basic ${Buffer.from(cfg.token).toString("base64")}`
+        : `Bearer ${cfg.token}`;
+    }
 
     const res = await fetch(`${cfg.url.replace(/\/$/, "")}/api/generate`, {
       method: "POST",

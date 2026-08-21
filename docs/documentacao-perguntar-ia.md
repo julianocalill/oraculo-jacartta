@@ -108,47 +108,45 @@ A decisão foi chamar a VPS direto, sem o n8n no meio. O código protege o lado
 dele — timeout de 25s, `num_predict` de 320, degradação silenciosa em qualquer
 falha — mas **dois riscos são de infra e não dá para resolver aqui**:
 
-### 1. O Ollama está aberto na internet (verificado em 21/08)
+### 1. Autenticação do Ollama — CORRIGIDO em 21/08
 
-`https://ia.oliverhome.com.br/ollama/api/tags` responde **200 sem nenhuma
-autenticação**. As labels do Traefik em `ollama_ollama` têm apenas
-`stripprefix` — não há middleware de auth:
-
-```
-traefik.http.routers.ollama.rule: Host(`ia.oliverhome.com.br`) && PathPrefix(`/ollama`)
-traefik.http.routers.ollama.middlewares: ollama-strip
-```
-
-Como o proxy repassa a API inteira, isso expõe também as rotas de escrita do
-Ollama (`/api/pull`, `/api/delete`, `/api/create`): qualquer pessoa na internet
-pode consumir a CPU da VPS, baixar modelos até encher o disco ou apagar os que
+Antes: `https://ia.oliverhome.com.br/ollama/api/tags` respondia **200 sem
+autenticação nenhuma**, e como o proxy repassa a API inteira, isso incluía
+`/api/pull`, `/api/delete` e `/api/create` — qualquer pessoa na internet podia
+consumir a CPU da VPS, baixar modelos até encher o disco ou apagar os que
 existem.
 
-**O n8n NÃO usa a rota pública — verificado em 21/08.** A credencial
-(`Ollama Local - ia.oliverhome.com.br`, tipo `ollamaApi`) está criptografada,
-mas a dedução é conclusiva:
+Foi confirmado que o n8n **não** usa a rota pública: o workflow de Ads rodou com
+sucesso todos os dias às 08:00 entre 11/08 e 21/08, e o access log do Traefik
+(13/08–21/08, 419.334 requisições) registrou só 12 chamadas ao `/ollama`, todas
+de testes manuais. O n8n fala pelo host interno `http://ollama:11434`, pela rede
+`JacarttaNet`. Com isso, fechar a rota pública era seguro.
 
-- O workflow de Ads rodou **com sucesso todos os dias às 08:00** entre 11/08 e
-  21/08 (execuções `16388` a `23471`).
-- O access log do Traefik cobre 13/08–21/08 com **419.334 requisições**, e nesse
-  período houve **12 chamadas ao `/ollama` — todas de testes manuais em 21/08**.
-
-Se a credencial usasse a URL pública, cada execução diária teria deixado rastro
-no access log. Não deixou: o n8n fala com o Ollama pelo host interno
-(`http://ollama:11434`, confirmado respondendo de dentro do worker), pela rede
-`JacarttaNet` que os dois compartilham.
-
-**Conclusão: adicionar basic auth na rota pública não quebra o relatório de
-Ads.**
-
-Correção sugerida (basic auth só na rota pública, n8n seguindo pelo interno):
+Aplicado via `docker service update` no serviço `ollama_ollama`:
 
 ```
-traefik.http.middlewares.ollama-auth.basicauth.users: <usuario>:<hash-htpasswd>
-traefik.http.routers.ollama.middlewares: ollama-strip,ollama-auth
+traefik.http.middlewares.ollama-auth.basicauth.users=oraculo:<hash bcrypt>
+traefik.http.routers.ollama.middlewares=ollama-strip,ollama-auth
 ```
 
-e então preencher `OLLAMA_TOKEN` — hoje vazio, porque não há o que autenticar.
+Verificado depois da mudança: sem credencial **401**, com credencial **200**, e
+o n8n continua respondendo pelo host interno.
+
+**Onde está a senha:** `/root/.ollama-app-pass` na VPS (modo 600) e na variável
+`OLLAMA_TOKEN` de produção na Vercel, no formato `usuario:senha`. O hash bcrypt
+fica em `/root/.ollama-app-hash`. O app monta o header `Authorization: Basic`
+quando o token tem `:`.
+
+> **Atenção ao redeploy.** A stack `ollama` não tem arquivo em `/root` (é
+> gerenciada pelo editor web do Portainer), e as labels foram aplicadas por
+> `docker service update`. **Um redeploy da stack pelo Portainer sobrescreve as
+> labels e reabre o Ollama para a internet, sem aviso.** Ao editar essa stack,
+> inclua as duas labels acima na definição — ou confira depois com:
+>
+> ```bash
+> curl -s -o /dev/null -w '%{http_code}\n' https://ia.oliverhome.com.br/ollama/api/tags
+> # 401 = protegido | 200 = reaberto, reaplique o middleware
+> ```
 
 ### 2. Carga sobre uma VPS compartilhada
 
