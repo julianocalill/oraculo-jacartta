@@ -27,17 +27,14 @@ Fuso: `America/Sao_Paulo`.
 | Envio | Início do corte | Fim do corte |
 |---|---|---|
 | `07:00` | dia anterior às `14:00` | dia atual às `06:30` |
-| `13:30` | dia atual às `08:00` | dia atual às `13:00` |
-| segunda-feira `13:30` | sábado às `13:30` | segunda-feira às `13:00` |
+| `13:30` | dia atual às `07:00` | dia atual às `13:30` |
 
-Os intervalos `06:30–08:00` e `13:00–14:00` não pertencem a nenhum relatório,
+Os intervalos `06:30–07:00` e `13:30–14:00` não pertencem a nenhum relatório,
 por decisão operacional. Os limites são fixos: atraso na execução não amplia a
 janela.
 
-A execução de segunda-feira às `13:30` é uma exceção deliberada: consolida
-sábado, domingo e segunda-feira desde sábado às `13:30`. A execução de segunda
-às `07:00` continua usando a janela diária normal e, portanto, seus pedidos
-também aparecem no consolidado das `13:30`.
+A execução das `13:30` usa a mesma janela diária inclusive às segundas-feiras:
+somente vendas criadas entre `07:00` e `13:30` do próprio dia.
 
 ## Conversão em caixas
 
@@ -85,8 +82,9 @@ infere esse vínculo apenas pelo título do anúncio.
 - Componentes derivados, inclusive tampas, entram no total de caixas.
 - Paginação: até 3.400 caracteres por mensagem, em `Parte N/Total`, sem cortar
   linha de produto.
-- Depois de todas as partes de texto, o fluxo envia um CSV único. O slot só é
-  marcado como concluído se o documento também for aceito pela Evolution.
+- Depois de todas as partes de texto, o fluxo envia um CSV único somente com
+  produtos que tenham ao menos uma caixa completa. O slot só é marcado como
+  concluído se o documento também for aceito pela Evolution.
 
 O total “unidades vendidas” mede quantidades de anúncios da Shopee. O total de
 “unidades avulsas” é físico e já considera `unidades por venda`; portanto os
@@ -98,23 +96,30 @@ medida.
 Nome: `separacao-shopee-YYYY-MM-DD-SLOT.csv`. O arquivo usa UTF-8 com BOM e
 separador `;`, para abrir corretamente no Excel brasileiro.
 
-O arquivo contém somente estas cinco colunas, nesta ordem:
+O arquivo contém somente estas seis colunas, nesta ordem:
 
 1. `SKU` — exclusivamente SKU Olist;
 2. `produto`;
-3. `unidades_vendidas_unitariamente`;
-4. `caixas_completas`;
-5. `unidades_avulsas`.
+3. `variacao` — cor normalizada quando identificável; caso contrário, a
+   variação completa informada pela Shopee;
+4. `unid vendidas` — unidades físicas vendidas após aplicar o multiplicador do
+   anúncio;
+5. `caixas` — quantidade de caixas completas;
+6. `unid avulsas` — sobra física após formar as caixas completas.
 
 O SKU do anúncio Shopee não é usado nessa coluna. O de-para é materializado na
 tabela operacional `shopee_olist_sku_mappings` e ligado pela chave
-`shop_id + item_id + model_id`. Quando o mesmo produto físico consolida mais de
-um SKU Olist, os SKUs aparecem na mesma célula separados por ` | `. Se não
-houver correspondência segura, o campo fica vazio.
+`shop_id + item_id + model_id`. A consolidação logística é feita por perfil e
+SKU Olist, mantendo cores/modelos diferentes em linhas distintas. Variações da
+Shopee como `Preto,20 UNIDADES` e `Preto,50 UNIDADES` são normalizadas para
+`Preto` quando pertencem ao mesmo SKU Olist. Se não houver correspondência
+segura, o campo SKU fica vazio.
 
-Enquanto um item estiver pendente de cubagem, não é possível conhecer seu
-multiplicador físico com segurança. Nessas linhas, a quantidade é a informada
-pela Shopee, as caixas ficam zeradas e a quantidade aparece como avulsa.
+O CSV é uma lista de separação de caixas e, por isso, exclui qualquer linha com
+`caixas = 0`. Itens pendentes de cubagem ou vendas que formem apenas unidades
+avulsas continuam nas mensagens do WhatsApp e nos alertas de mapeamento, mas
+não aparecem nesse arquivo. Esse filtro não altera os cálculos nem os totais
+das mensagens.
 
 Nos perfis destampados, cada pote e tampa ocupa sua própria linha, repetindo a
 quantidade física e as caixas do componente conforme a regra logística.
@@ -152,6 +157,13 @@ Na reconciliação de 13/08/2026, 440 das 3.954 variações foram vinculadas com
 regra determinística; seis ficaram ambíguas e 3.508 permaneceram sem vínculo.
 Essa cobertura é deliberadamente conservadora. As vendas não vinculadas
 continuam visíveis com alerta até revisão manual.
+
+Em 21/08/2026, a planilha manual
+`/Users/julianocalil/Desktop/Mapeamento Shopee - Caixas e Avulsos.xlsx` foi
+processada pelo script `scripts/apply-user-shopee-box-mappings.js`. Foram
+aplicados 71 vínculos considerados seguros ao catálogo operacional. O
+`source_row` identifica a linha de origem usada para retomar e completar os
+mapeamentos pendentes; aproximações ambíguas não devem ser publicadas.
 
 ## Workflows em produção
 
@@ -226,6 +238,13 @@ Em 17/08/2026, após a troca para o formato enxuto, a prévia do slot de
 16/08/2026 às `13:30` terminou com 117 linhas, todas com exatamente cinco
 colunas. Dessas, 111 tinham SKU Olist e seis ficaram sem SKU por falta de
 correspondência segura. Nenhuma mensagem foi enviada ao WhatsApp.
+
+Em 21/08/2026, depois da carga dos 71 vínculos manuais, o workflow ativo foi
+atualizado para excluir do CSV as linhas com zero caixas e adotar os cabeçalhos
+`unid vendidas`, `caixas` e `unid avulsas`. A prévia
+`separacao-shopee-2026-08-21-0700.csv` retornou 21 linhas, todas com no mínimo
+uma caixa (`zeroBoxRows = 0`), além de seis partes de mensagem. Um teste real de
+entrega também concluiu com sucesso antes da renomeação dos cabeçalhos.
 
 ## Runbook de diagnóstico
 
