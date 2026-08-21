@@ -287,6 +287,13 @@ export default function PoliticaDeDadosPage() {
           </a>
           .
         </p>
+        <p style={{ margin: "12px 0 0" }}>
+          Consulte também os{" "}
+          <a href="/termos-de-servico" style={{ color: "var(--gold)" }}>
+            Termos de Serviço
+          </a>
+          .
+        </p>
       </section>
     </main>
   );

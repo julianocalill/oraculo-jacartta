@@ -24,10 +24,13 @@ maior de pedidos nas quatro lojas.
 
 ## CSV enxuto com SKU Olist
 
-O CSV anexo passou a conter somente `SKU`, `produto`,
+O CSV anexo passou a conter somente `SKU`, `produto`, `variacao`,
 `unidades_vendidas_unitariamente`, `caixas_completas` e `unidades_avulsas`.
 `SKU` é sempre o SKU Olist, carregado da análise de preço-produto para a tabela
 operacional `shopee_olist_sku_mappings`; não há fallback para SKU Shopee.
+As linhas agora são separadas por SKU Olist e a variação mostra a cor
+normalizada quando identificável, preservando a variação Shopee completa nos
+demais casos.
 
 A carga de 17/08 materializou 1.068 vínculos inequívocos. Uma prévia real sem
 WhatsApp gerou 117 linhas: 111 com SKU Olist e seis vazias por falta de vínculo.

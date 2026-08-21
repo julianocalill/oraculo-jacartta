@@ -1,6 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/politica-de-dados"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/politica-de-dados",
+  "/termos-de-servico",
+  "/tiktokUdTXf8xKegiqtg4LrWcbwYa9Yd1UVu8t.txt"
+];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

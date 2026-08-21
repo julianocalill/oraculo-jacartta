@@ -153,3 +153,5 @@ mesma página. O histórico de versões é mantido no controle de versão do pro
 
 Dúvidas sobre esta política, solicitações relativas a dados ou comunicação de
 incidentes: **juliano@oliverhome.com.br**.
+
+Consulte também os [Termos de Serviço](https://oraculo.oliverhome.com.br/termos-de-servico).
