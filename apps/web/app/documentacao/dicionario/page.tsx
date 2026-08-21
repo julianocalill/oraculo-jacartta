@@ -109,7 +109,9 @@ export default async function DicionarioPage({ searchParams }: { searchParams: P
           <div className="doc-columns-list">
             {Object.entries(groupedMatches).map(([objectName, columns]) => (
               <p key={objectName} className="doc-match">
-                <Link href={`/documentacao/dicionario/${objectName}`}>{objectName}</Link>
+                <Link className="doc-link" href={`/documentacao/dicionario/${objectName}`}>
+                  {objectName}
+                </Link>
                 <span className="muted"> · {columns.map((c) => c.column_name).join(", ")}</span>
               </p>
             ))}
@@ -151,7 +153,9 @@ export default async function DicionarioPage({ searchParams }: { searchParams: P
                   return (
                     <tr key={object.object_name}>
                       <td>
-                        <Link href={`/documentacao/dicionario/${object.object_name}`}>{object.object_name}</Link>
+                        <Link className="row-link doc-object" href={`/documentacao/dicionario/${object.object_name}`}>
+                          {object.object_name}
+                        </Link>
                         {sensitivity !== "normal" ? (
                           <div className="doc-badge doc-badge-warn">{SENSITIVITY_LABEL[sensitivity]}</div>
                         ) : null}
@@ -162,7 +166,7 @@ export default async function DicionarioPage({ searchParams }: { searchParams: P
                         </span>
                       </td>
                       <td className="muted">{LAYER_LABEL[layerOf(object.object_name, object.object_kind)]}</td>
-                      <td>
+                      <td className="doc-desc">
                         {object.object_comment ? (
                           object.object_comment
                         ) : (

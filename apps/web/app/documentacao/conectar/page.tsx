@@ -50,7 +50,7 @@ export default async function ConectarPage() {
               ))}
               <tr>
                 <td>Senha</td>
-                <td className="doc-missing">não é exibida aqui</td>
+                <td className="doc-withheld">não é exibida aqui</td>
                 <td className="muted">peça ao administrador do Oráculo</td>
               </tr>
             </tbody>

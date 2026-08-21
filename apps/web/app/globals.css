@@ -3795,20 +3795,25 @@ h2 {
    .workspace > * { min-width: 0 }).
 --------------------------------------------------------------------------- */
 
+/* `nowrap` aqui fazia SQL inline, host de conexão e assinatura de função
+   saírem pela borda direita do painel — nenhum ancestral tem overflow. Quebrar
+   é sempre melhor que estourar. */
 code {
   background: var(--field);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 6px;
   color: var(--gold);
   font-family: var(--mono);
   font-size: 0.88em;
+  overflow-wrap: anywhere;
   padding: 1px 6px;
-  white-space: nowrap;
 }
 
+/* Borda em --line dava 1,30:1 contra o próprio fundo: o bloco de SQL não se
+   distinguia do painel. Componente precisa de 3:1 (WCAG 1.4.11). */
 .sql-block {
   background: var(--field);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
@@ -3853,10 +3858,10 @@ code {
 }
 
 .copy-sql {
-  background: var(--field);
-  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  border: 1px solid var(--gold);
   border-radius: 8px;
-  color: var(--muted);
+  color: var(--gold);
   cursor: pointer;
   font-family: inherit;
   font-size: 11px;
@@ -3868,8 +3873,8 @@ code {
 }
 
 .copy-sql:hover {
-  border-color: var(--gold);
-  color: var(--gold);
+  background: var(--gold);
+  color: #2a1c00;
 }
 
 .copy-sql.is-copied {
@@ -3913,11 +3918,15 @@ code {
   margin: 0 0 8px;
 }
 
+/* Badges do app têm borda (.warning-pill, .danger-pill); sem ela estes ficavam
+   flutuando. Fonte subiu para 11px e as cores foram clareadas: indigo e violet
+   a 10,5px bold reprovavam AA sobre o tint. */
 .kind-badge {
+  border: 1px solid;
   border-radius: 6px;
   display: inline-block;
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.03em;
   padding: 2px 7px;
@@ -3926,18 +3935,21 @@ code {
 }
 
 .kind-table {
-  background: color-mix(in srgb, var(--indigo) 16%, transparent);
-  color: var(--indigo);
+  background: color-mix(in srgb, var(--indigo) 18%, transparent);
+  border-color: color-mix(in srgb, var(--indigo) 42%, transparent);
+  color: #a8bcff;
 }
 
 .kind-view {
-  background: color-mix(in srgb, var(--cyan) 16%, transparent);
+  background: color-mix(in srgb, var(--cyan) 18%, transparent);
+  border-color: color-mix(in srgb, var(--cyan) 42%, transparent);
   color: var(--cyan);
 }
 
 .kind-materialized_view {
-  background: color-mix(in srgb, var(--violet) 16%, transparent);
-  color: var(--violet);
+  background: color-mix(in srgb, var(--violet) 18%, transparent);
+  border-color: color-mix(in srgb, var(--violet) 42%, transparent);
+  color: #c9a9ff;
 }
 
 .doc-badge {
@@ -3977,10 +3989,14 @@ code {
   color: var(--emerald);
 }
 
+/* O trilho precisa ser visível: com --line sobre --panel-soft o contraste era
+   1.15:1 e a barra de 11% virava um traço verde flutuando no nada, sem
+   referência de quanto falta. */
 .doc-coverage-bar {
-  background: var(--line);
+  background: var(--field);
+  border: 1px solid var(--faint);
   border-radius: 999px;
-  height: 6px;
+  height: 8px;
   margin: 10px 0 8px;
   overflow: hidden;
   width: 100%;
@@ -3990,6 +4006,7 @@ code {
   background: var(--emerald);
   display: block;
   height: 100%;
+  min-width: 2px;
 }
 
 .doc-missing {
@@ -4033,12 +4050,57 @@ a.doc-card:hover {
   border-left: 3px solid var(--rose);
 }
 
+/* Links da área de documentação.
+   Sem isto o navegador aplica o azul padrão, ilegível sobre o fundo escuro —
+   o app não tem estilo global de `a`, cada área estiliza o seu. */
+.doc-link {
+  color: var(--gold);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.doc-link:hover {
+  text-decoration: underline;
+}
+
+/* Link de objeto na tabela do dicionário: segue o padrão do app (.row-link usa
+   --text, não cor de link — a diferenciação vem do peso e do underline no
+   hover), só troca para mono porque o conteúdo é nome de tabela. */
+.data-table .row-link.doc-object {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  max-width: 420px;
+}
+
+.data-table .row-link.doc-object:hover {
+  color: var(--gold);
+}
+
+/* Descrição é texto livre vindo de COMMENT ON: sem teto a coluna incha e
+   empurra as numéricas para fora da viewport. */
+.data-table .doc-desc {
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.55;
+  max-width: 460px;
+  min-width: 260px;
+  white-space: normal;
+}
+
 .doc-columns-list {
   margin-top: 12px;
 }
 
+/* Nomes de coluna são longos e vêm em lista: precisam quebrar dentro da
+   coluna, senão o texto sai pela borda direita da tela. */
 .doc-match {
-  margin: 0 0 8px;
+  margin: 0 0 10px;
+  overflow-wrap: anywhere;
+}
+
+.doc-match .muted {
+  font-size: 12.5px;
 }
 
 @media (min-width: 900px) {
@@ -4061,4 +4123,31 @@ a.doc-card:hover {
   .doc-columns-list {
     columns: 1;
   }
+}
+
+/* Título de card. Antes usava .eyebrow (11px uppercase --muted), o que deixava
+   o dado principal do card menor e mais apagado que a descrição logo abaixo. */
+.doc-card-title {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1.35;
+  margin: 0 0 6px;
+  overflow-wrap: anywhere;
+}
+
+/* Nome de objeto é tudo colado por underscore: sem isto não quebra em lugar
+   nenhum e estoura o cabeçalho em telas estreitas. */
+.doc-object-title {
+  font-family: var(--mono);
+  font-size: 26px;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+/* Valor deliberadamente omitido (a senha do banco) — é informação, não campo
+   vazio, então não usa o cinza-itálico de "sem descrição". */
+.doc-withheld {
+  color: var(--muted);
+  font-weight: 650;
 }

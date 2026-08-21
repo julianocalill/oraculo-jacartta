@@ -39,7 +39,7 @@ export default async function ReceitasPage() {
         <div className="doc-grid">
           {RECIPES.map((recipe) => (
             <Link key={recipe.slug} href={`/documentacao/receitas/${recipe.slug}`} className="doc-card">
-              <p className="eyebrow">{recipe.title}</p>
+              <p className="doc-card-title">{recipe.title}</p>
               <p className="doc-question">{recipe.question}</p>
               <p className="muted">
                 {recipe.objects.join(", ")}

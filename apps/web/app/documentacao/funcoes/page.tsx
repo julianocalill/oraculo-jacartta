@@ -98,7 +98,7 @@ export default async function FuncoesPage({ searchParams }: { searchParams: Prom
                       {fn.arguments ? <code>{fn.arguments}</code> : <span className="muted">sem parâmetros</span>}
                     </td>
                     <td className="muted">{fn.return_type}</td>
-                    <td>
+                    <td className="doc-desc">
                       {fn.function_comment ? (
                         fn.function_comment
                       ) : (

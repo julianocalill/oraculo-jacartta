@@ -50,9 +50,9 @@ export default async function ObjetoPage({ params }: { params: Promise<{ objeto:
       <header className="topbar">
         <div>
           <p className="eyebrow">
-            <Link href="/documentacao/dicionario">Dicionário</Link> · {domainLabel(object.domain_key)}
+            <Link className="doc-link" href="/documentacao/dicionario">Dicionário</Link> · {domainLabel(object.domain_key)}
           </p>
-          <h1>{objeto}</h1>
+          <h1 className="doc-object-title">{objeto}</h1>
           <p>
             <span className={`kind-badge kind-${object.object_kind}`}>{kindLabel(object.object_kind)}</span>{" "}
             {LAYER_LABEL[layerOf(objeto, object.object_kind)]} · {object.column_count} colunas ·{" "}
@@ -117,7 +117,7 @@ export default async function ObjetoPage({ params }: { params: Promise<{ objeto:
                 </p>
                 <p className="muted">{trap.evidence}</p>
                 <p>
-                  <Link href={`/documentacao/armadilhas#${trap.id}`}>Como fazer certo →</Link>
+                  <Link className="doc-link" href={`/documentacao/armadilhas#${trap.id}`}>Como fazer certo →</Link>
                 </p>
               </div>
             ))}
@@ -159,13 +159,13 @@ export default async function ObjetoPage({ params }: { params: Promise<{ objeto:
                   <td className="muted">
                     {column.is_primary_key ? <span className="kind-badge kind-table">PK</span> : null}
                     {column.references_to ? (
-                      <Link href={`/documentacao/dicionario/${column.references_to.split(".")[0]}`}>
+                      <Link className="doc-link" href={`/documentacao/dicionario/${column.references_to.split(".")[0]}`}>
                         → {column.references_to}
                       </Link>
                     ) : null}
                     {!column.is_primary_key && !column.references_to ? "—" : null}
                   </td>
-                  <td>
+                  <td className="doc-desc">
                     {column.column_comment ? (
                       column.column_comment
                     ) : (

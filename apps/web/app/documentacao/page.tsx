@@ -58,10 +58,10 @@ export default async function DocumentacaoPage() {
             que envelheceu.
           </p>
           <p>
-            Se é sua primeira vez: comece por <Link href="/documentacao/conectar">Conectar BI</Link> para ligar a
-            ferramenta ao banco, depois vá em <Link href="/documentacao/receitas">Receitas de SQL</Link> — são
+            Se é sua primeira vez: comece por <Link className="doc-link" href="/documentacao/conectar">Conectar BI</Link> para ligar a
+            ferramenta ao banco, depois vá em <Link className="doc-link" href="/documentacao/receitas">Receitas de SQL</Link> — são
             consultas prontas para os pedidos mais comuns. Antes de publicar qualquer número, leia{" "}
-            <Link href="/documentacao/armadilhas">Armadilhas</Link>.
+            <Link className="doc-link" href="/documentacao/armadilhas">Armadilhas</Link>.
           </p>
         </div>
       </section>
@@ -90,7 +90,7 @@ export default async function DocumentacaoPage() {
             </li>
           </ul>
           <p>
-            <Link href="/documentacao/armadilhas">Ver as {TRAPS.length} armadilhas →</Link>
+            <Link className="doc-link" href="/documentacao/armadilhas">Ver as {TRAPS.length} armadilhas →</Link>
           </p>
         </div>
       </section>
@@ -111,7 +111,7 @@ export default async function DocumentacaoPage() {
         </div>
         <div className="doc-grid">
           <div className="doc-card">
-            <p className="eyebrow">Objetos descritos</p>
+            <p className="doc-card-title">Objetos descritos</p>
             <strong className="doc-big">
               {documentedObjects} / {objects.length}
             </strong>
@@ -121,7 +121,7 @@ export default async function DocumentacaoPage() {
             <p className="muted">{objectPct}% das tabelas, views e materialized views</p>
           </div>
           <div className="doc-card">
-            <p className="eyebrow">Colunas descritas</p>
+            <p className="doc-card-title">Colunas descritas</p>
             <strong className="doc-big">
               {documentedColumns.toLocaleString("pt-BR")} / {totalColumns.toLocaleString("pt-BR")}
             </strong>
@@ -130,15 +130,15 @@ export default async function DocumentacaoPage() {
             </div>
             <p className="muted">
               {columnPct}% —{" "}
-              <Link href="/documentacao/dicionario?pendentes=1">ver o que falta</Link>
+              <Link className="doc-link" href="/documentacao/dicionario?pendentes=1">ver o que falta</Link>
             </p>
           </div>
           <div className="doc-card">
-            <p className="eyebrow">Receitas prontas</p>
+            <p className="doc-card-title">Receitas prontas</p>
             <strong className="doc-big">{RECIPES.length}</strong>
             <p className="muted">
               Consultas testadas contra o banco de produção.{" "}
-              <Link href="/documentacao/receitas">Abrir</Link>
+              <Link className="doc-link" href="/documentacao/receitas">Abrir</Link>
             </p>
           </div>
         </div>
@@ -163,7 +163,7 @@ export default async function DocumentacaoPage() {
         <div className="doc-grid">
           {byDomain.map((domain) => (
             <Link key={domain.key} href={`/documentacao/dicionario?dominio=${domain.key}`} className="doc-card">
-              <p className="eyebrow">{domain.label}</p>
+              <p className="doc-card-title">{domain.label}</p>
               <strong className="doc-big">{domain.count}</strong>
               <p className="muted">{domain.description}</p>
             </Link>

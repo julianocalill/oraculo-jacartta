@@ -27,7 +27,7 @@ export default async function ReceitaPage({ params }: { params: Promise<{ slug: 
       <header className="topbar">
         <div>
           <p className="eyebrow">
-            <Link href="/documentacao/receitas">Receitas</Link>
+            <Link className="doc-link" href="/documentacao/receitas">Receitas</Link>
           </p>
           <h1>{recipe.title}</h1>
           <p>{recipe.question}</p>
@@ -58,7 +58,7 @@ export default async function ReceitaPage({ params }: { params: Promise<{ slug: 
                 </p>
                 <p className="muted">{trap.evidence}</p>
                 <p>
-                  <Link href={`/documentacao/armadilhas#${trap.id}`}>Detalhes →</Link>
+                  <Link className="doc-link" href={`/documentacao/armadilhas#${trap.id}`}>Detalhes →</Link>
                 </p>
               </div>
             ))}
