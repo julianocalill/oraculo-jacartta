@@ -2,6 +2,53 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-21] — Documentação do banco (nova aba)
+
+- Nova aba **/documentacao**: dicionário de dados, receitas de SQL e as
+  armadilhas do dado, para que Metabase e PowerBI parem de adivinhar o schema.
+  Seis telas: visão geral, **Conectar BI** (parâmetros do pooler, passo a passo
+  de Metabase e PowerBI, e o aviso de que a conexão consegue escrever), o
+  **dicionário** dos 121 objetos com busca por coluna, o detalhe de cada objeto
+  (colunas, tipos, PK/FK, SQL da view), as **50 funções** de BI com assinatura,
+  as **11 receitas** de SQL e a página de **armadilhas**.
+- **A fonte da verdade é o catálogo do Postgres, não um markdown paralelo.** As
+  descrições entram como `COMMENT ON` e as telas leem `pg_catalog` em tempo
+  real por 4 RPCs `security definer` novas (`oraculo_catalog_objects`,
+  `..._columns`, `..._functions`, `..._view_sql` — migration `20260821120000`,
+  com `revoke from anon` explícito). O ganho é duplo: a mesma descrição aparece
+  dentro do **Metabase** (Table Metadata) e do DBeaver. E mostra o banco real:
+  as migrations descrevem objetos que não existem em produção
+  (`product_fiscal_rules`, toda a família `tiktok_*`), então um dicionário
+  escrito a partir delas nasceria mentindo.
+- **Cobertura de descrição: 18 → 121 objetos (100%), 1 → 158 colunas (11%),
+  0 → 50 funções de BI (100%)** — migrations `20260821130000`, `20260821140000`,
+  `20260821150000` e `20260821160000`. As colunas cobertas são as dos 16 objetos
+  que o BI realmente consome. **A tela mostra o que falta**: cada objeto tem
+  medidor de cobertura e o filtro `?pendentes=1` é a lista de trabalho — sem
+  isso a documentação apodrece invisivelmente, o mesmo modo de falha do cache
+  sem cron que serviu junho por 45 dias.
+- **As armadilhas saíram do AGENTS.md para a tela.** As 10 que já custaram bug
+  real (contar pedido em `olist_order_items`, somar Olist e Shopee, ler o
+  `payload` de 1 GB, `fiscal_invoice_type='E'` em vez de `fiscal_origin_type`,
+  valor pelo item em vez de `total_amount`, B2B distorcendo ranking, custo 0 que
+  não é nulo) aparecem no objeto que elas machucam e na receita que as evita.
+  Ficavam num arquivo que quem escreve SQL no Metabase nunca abre.
+- A aba nasce **opt-in** (invisível até ser liberada em `/usuarios`), como
+  `/rpa`: ela lista os nomes de `oraculo_rpa_*` e `shopee_order_escrow` e as
+  instruções de conexão direta ao banco. Nomes e descrições, nunca dados — e a
+  senha do banco não aparece na tela nem existe como variável de ambiente do web
+  app.
+- Primeiro bloco de código multi-linha do app: `.sql-block` (`white-space: pre`
+  + `overflow-x: auto`) rola sozinho, como `.table-wrap` — o invariante
+  `.workspace > * { min-width: 0 }` foi verificado a 1280px e 720px com o SQL
+  mais largo do banco (493 caracteres). O botão "copiar SQL" é o único
+  `"use client"` da aba, pelo mesmo motivo das outras exceções deliberadas: o
+  propósito da área é tirar SQL daqui e colar no Metabase.
+- **Trap nova documentada**: `drop view ... ; create view ...` **apaga os
+  comentários** da view e das colunas dela (`create or replace view` preserva).
+  O repo faz isso em 4 migrations. Toda migration que derruba uma view precisa
+  reaplicar os `COMMENT ON` no mesmo arquivo; a barra de cobertura é o detector.
+
 ## [2026-08-19] — Previsão de Vendas (nova aba)
 
 - Nova aba **/previsao-de-vendas**: previsão de unidades da próxima semana

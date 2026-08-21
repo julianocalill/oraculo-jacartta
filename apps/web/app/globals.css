@@ -3787,3 +3787,278 @@ h2 {
   border: 1px solid var(--crit-line);
   color: var(--rose);
 }
+
+/* ---------------------------------------------------------------------------
+   Documentação (/documentacao) — dicionário de dados e receitas de SQL.
+   Primeiro lugar do app com bloco de código multi-linha. `.sql-block` rola
+   sozinho no eixo X, como .table-wrap: o documento nunca rola (invariante
+   .workspace > * { min-width: 0 }).
+--------------------------------------------------------------------------- */
+
+code {
+  background: var(--field);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--gold);
+  font-family: var(--mono);
+  font-size: 0.88em;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+.sql-block {
+  background: var(--field);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.sql-block-head {
+  align-items: center;
+  background: var(--panel-soft);
+  border-bottom: 1px solid var(--line);
+  color: var(--faint);
+  display: flex;
+  font-size: 12px;
+  font-weight: 700;
+  justify-content: space-between;
+  letter-spacing: 0.02em;
+  padding: 8px 14px;
+  text-transform: uppercase;
+}
+
+.sql-block pre {
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.65;
+  margin: 0;
+  overflow-x: auto;
+  padding: 16px 18px;
+  tab-size: 2;
+  white-space: pre;
+}
+
+.sql-block pre::-webkit-scrollbar {
+  height: 10px;
+}
+
+.sql-block pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sql-block pre::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 6px;
+}
+
+.copy-sql {
+  background: var(--field);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 5px 10px;
+  text-transform: uppercase;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.copy-sql:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.copy-sql.is-copied {
+  border-color: var(--emerald);
+  color: var(--emerald);
+}
+
+/* Coluna de leitura: prosa não deve esticar pela largura da tela. */
+.doc-prose {
+  color: var(--text);
+  font-size: 14.5px;
+  line-height: 1.7;
+  max-width: 78ch;
+}
+
+.doc-prose p {
+  margin: 0 0 12px;
+}
+
+.doc-prose p:last-child {
+  margin-bottom: 0;
+}
+
+.doc-prose ul,
+.doc-prose ol {
+  margin: 0 0 12px;
+  padding-left: 22px;
+}
+
+.doc-prose li {
+  margin-bottom: 8px;
+}
+
+.doc-prose a {
+  color: var(--gold);
+}
+
+.doc-question {
+  color: var(--text);
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+
+.kind-badge {
+  border-radius: 6px;
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  padding: 2px 7px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.kind-table {
+  background: color-mix(in srgb, var(--indigo) 16%, transparent);
+  color: var(--indigo);
+}
+
+.kind-view {
+  background: color-mix(in srgb, var(--cyan) 16%, transparent);
+  color: var(--cyan);
+}
+
+.kind-materialized_view {
+  background: color-mix(in srgb, var(--violet) 16%, transparent);
+  color: var(--violet);
+}
+
+.doc-badge {
+  border-radius: 6px;
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 6px;
+  padding: 2px 8px;
+}
+
+.doc-badge-warn {
+  background: color-mix(in srgb, var(--rose) 14%, transparent);
+  color: var(--rose);
+}
+
+.doc-status {
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+.doc-status.is-missing {
+  background: color-mix(in srgb, var(--rose) 14%, transparent);
+  color: var(--rose);
+}
+
+.doc-status.is-partial {
+  background: color-mix(in srgb, var(--amber) 14%, transparent);
+  color: var(--amber);
+}
+
+.doc-status.is-done {
+  background: color-mix(in srgb, var(--emerald) 14%, transparent);
+  color: var(--emerald);
+}
+
+.doc-coverage-bar {
+  background: var(--line);
+  border-radius: 999px;
+  height: 6px;
+  margin: 10px 0 8px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.doc-coverage-bar > i {
+  background: var(--emerald);
+  display: block;
+  height: 100%;
+}
+
+.doc-missing {
+  color: var(--faint);
+  font-style: italic;
+}
+
+.doc-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  margin-top: 12px;
+}
+
+.doc-card {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: inherit;
+  display: block;
+  padding: 16px 18px;
+  text-decoration: none;
+  transition: border-color 0.15s ease;
+}
+
+a.doc-card:hover {
+  border-color: var(--gold);
+}
+
+.doc-big {
+  color: var(--text);
+  display: block;
+  font-size: 24px;
+  font-weight: 800;
+  margin: 4px 0;
+}
+
+/* Callout de armadilha: a faixa lateral é o que distingue "isto vai te morder"
+   de uma nota qualquer. */
+.doc-trap {
+  border-left: 3px solid var(--rose);
+}
+
+.doc-columns-list {
+  margin-top: 12px;
+}
+
+.doc-match {
+  margin: 0 0 8px;
+}
+
+@media (min-width: 900px) {
+  .doc-columns-list {
+    column-gap: 28px;
+    columns: 2;
+  }
+
+  .doc-match {
+    break-inside: avoid;
+  }
+}
+
+@media (max-width: 720px) {
+  .sql-block pre {
+    font-size: 11.5px;
+    padding: 12px 14px;
+  }
+
+  .doc-columns-list {
+    columns: 1;
+  }
+}

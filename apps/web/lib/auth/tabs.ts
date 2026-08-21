@@ -38,6 +38,10 @@ export const TABS = [
   // Guarda CPF/endereço de centenas de afiliados: por ser opt-in por usuário,
   // a aba nasce invisível para todo mundo até ser liberada em /usuarios.
   { key: "rpa", label: "RPA Afiliados", href: "/rpa", group: "main", paths: ["/rpa"] },
+  // Mapa do banco (nomes de tabela, colunas e descrições — nunca dados) mais as
+  // instruções de conexão direta ao Postgres para Metabase/PowerBI. Nasce
+  // invisível como /rpa: liberada em /usuarios para quem escreve query.
+  { key: "documentacao", label: "Documentação", href: "/documentacao", group: "main", paths: ["/documentacao"] },
   { key: "agenda", label: "Agenda", href: "/agenda", group: "main", paths: ["/agenda"] },
   { key: "alertas", label: "Alertas", href: "/alertas", group: "main", paths: ["/alertas"] },
   { key: "parametros", label: "Parâmetros", href: "/parametros", group: "main", paths: ["/parametros"] },
