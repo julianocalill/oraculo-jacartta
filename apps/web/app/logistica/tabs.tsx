@@ -1,11 +1,12 @@
 import Link from "next/link";
 
 // Navegação entre as abas de Logística
-export type LogisticaTab = "visao-geral" | "estoque" | "etiqueta";
+export type LogisticaTab = "visao-geral" | "estoque" | "recebimento" | "etiqueta";
 
 const TABS: Array<{ key: LogisticaTab; href: string; label: string }> = [
   { key: "visao-geral", href: "/logistica", label: "Visão geral" },
   { key: "estoque", href: "/logistica/estoque", label: "Estoque" },
+  { key: "recebimento", href: "/logistica/recebimento", label: "Recebimento" },
   { key: "etiqueta", href: "/logistica/etiqueta", label: "Etiqueta" }
 ];
 

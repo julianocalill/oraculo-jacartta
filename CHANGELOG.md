@@ -2,6 +2,28 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-22] — Logística Fase 2: recebimento e conferência
+
+- Nova pill **/logistica/recebimento**: lista as faturas de importação sem
+  conferência, as conferências abertas (com progresso) e o histórico. "Iniciar
+  conferência" copia os itens esperados de `importacao_itens` (quantity, ou
+  cartons × quantity_per_carton) para `logistica_recebimento_itens`.
+- **/logistica/recebimento/[id]** é a tela do galpão (mobile-first, campos
+  grandes, um item por cartão): quantidade e cartons conferidos, divergência
+  sugerida pela quantidade (ok/falta/sobra/avaria) que a pessoa confirma, SKU
+  Olist opcional com `datalist` do ERP e observação. Cada item grava quem e
+  quando conferiu. Concluir fecha como `concluido` ou
+  `concluido_com_divergencia`; item não conferido entra como falta total (a
+  tela avisa antes). Dá para reabrir.
+- Aqui o vínculo com o catálogo do ERP é desejado — ao contrário da etiqueta
+  de palete — porque o objetivo é cruzar a entrada conferida com o saldo Olist
+  (a tela mostra o disponível de hoje do SKU informado). Referências a
+  faturas/itens são soltas: a planilha pode ser recarregada sem apagar uma
+  conferência já feita.
+- Tabelas `logistica_recebimentos` e `logistica_recebimento_itens`, view
+  `oraculo_recebimento_progress` (migration `20260822120000`). O lançamento de
+  entrada continua sendo feito no Olist.
+
 ## [2026-08-22] — Menu lateral por setores
 
 - O menu deixou de ser uma lista plana de 19 abas: agora são três setores —

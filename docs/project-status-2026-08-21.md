@@ -202,3 +202,13 @@ A sidebar foi reorganizada em Analítico · Comercial · Operações (acordeão
 nativo via `<details name>`, setor da página atual aberto, Agenda e Parâmetros
 soltos, Admin no rodapé). `sector` é metadado em `lib/auth/tabs.ts`; `group` e
 o gate de acesso não mudaram. Ver CHANGELOG [2026-08-22].
+
+## Adendo de 2026-08-22 — Logística Fase 2: recebimento
+
+`/logistica/recebimento` fecha o elo entre importações e o galpão: a fatura
+vira uma conferência com os itens esperados copiados de `importacao_itens`, e
+o time registra item a item (celular) o que chegou, com divergência
+classificada e autoria. Concluída, a conferência fica no histórico; o
+lançamento de entrada segue no Olist. Ver CHANGELOG [2026-08-22] e
+`docs/plano-logistica-deposito.md` (Fase 3 é a próxima: endereçamento por
+posição + inventário).

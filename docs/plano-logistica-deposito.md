@@ -52,15 +52,19 @@ posição** (rua/coluna/nível) e **lista de picking**. Devoluções ficam fora
   `/logistica/estoque` (tabela com colunas dinâmicas por depósito, sinal da
   watchlist, custo canônico, capital, export xlsx).
 
-## Fase 2 — Recebimento e conferência
+## Fase 2 — Recebimento e conferência (ENTREGUE 2026-08-22)
 
 - `logistica_recebimentos` (ref solta a `importacao_faturas`) +
   `logistica_recebimento_itens` (esperado pré-populado de `importacao_itens`:
   cartons × quantity_per_carton; de-para descrição→SKU sugerido).
 - `/logistica/recebimento` mobile-first: lista de faturas por chegar →
   conferência item a item. Divergência: ok | falta | sobra | avaria.
-- Cruzamento informativo: `qty_conferida` × variação do saldo Olist nos dias
-  seguintes (detecta entrada não lançada no ERP).
+- Cruzamento informativo: a tela mostra o saldo Olist de hoje do SKU informado;
+  a comparação com a variação nos dias seguintes fica para a Fase 3/4 (precisa
+  de histórico por dia em `olist_stock_snapshots` cruzado por SKU).
+- Entregue: migration `20260822120000`, `/logistica/recebimento` (lista +
+  iniciar) e `/logistica/recebimento/[id]` (conferência item a item, concluir,
+  reabrir). Item não conferido ao concluir = falta total, com aviso.
 
 ## Fase 3 — Endereçamento por posição + inventário
 
