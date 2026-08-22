@@ -48,6 +48,21 @@ Build an operational intelligence system where Supabase is the canonical backend
 - Sem cron e sem notificação externa por decisão — o aviso é o badge.
 - Retrato completo: `docs/project-status-2026-08-10.md`.
 
+## Update 2026-08-22 — Logística Fase 1 e menu por setores
+
+- O Oráculo passa a ter visão de depósito: `/logistica` (hub) e
+  `/logistica/estoque` mostram o saldo do ERP quebrado pelos **8 depósitos do
+  Olist** (Geral, Full ML, Full Shopee, Amazon Onsite, Avarias, Devolução,
+  Importação, Transferência), capital a custo e sinal de ruptura.
+- Descoberta: o payload de `produtos/{id}` não traz depósitos nem `reservado`;
+  vêm de `GET /estoque/{id}`. Tabela `olist_stock_deposits` + dimensão
+  `logistica_depositos`; dados de envio de `olist_orders.transportador`
+  materializados por trigger; peso/medidas/cubagem em `olist_products`.
+- Menu lateral reorganizado em Analítico · Comercial · Operações (acordeão
+  nativo `<details name>`).
+- Roteiro das fases 2–5 (recebimento, endereçamento por posição, inventário,
+  expedição multi-canal, picking): `docs/plano-logistica-deposito.md`.
+
 ## Olist/fiscal foundation — validado em 2026-07-07
 
 Bloco histórico da era Olist/fiscal. As regras seguem valendo; os números são

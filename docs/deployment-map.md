@@ -41,8 +41,8 @@
   - Has an `incremental` mode for hourly execution.
   - JWT verification is disabled at deploy level for internal cron calls; protected by `x-sync-secret`.
 - `olist-sync-stock`
-  - Pulls Olist stock/products.
-  - Runs less frequently because the current implementation scans products broadly.
+  - Pulls Olist stock/products with a resumable cursor (`olist_stock_sync_state`): one page of 100 products per run, full sweep ≈ 16h (migration `20260816130000`).
+  - Since 2026-08-21 it also calls `GET /estoque/{id}` for products with stock/reservation (or that already had deposit rows) and upserts `olist_stock_deposits` — the per-deposit breakdown is NOT in the `produtos/{id}` payload. ~+30% calls; a page stays well under the 150s wall clock. `includeDeposits: false` in the body disables it.
   - JWT verification is disabled at deploy level for internal cron calls; protected by `x-sync-secret`.
 - `olist-sync-invoices`
   - Pulls Olist fiscal invoices from endpoint `notas`.
@@ -268,8 +268,10 @@ Active jobs in `cron.job`:
     only qualify once their item coverage reaches 90% (so July enters
     automatically after the re-hydration), and any used week under 90% raises
     a warning in `calc_note`.
-- `oraculo-olist-stock-6h`: `15 */6 * * *`
-  - Calls `olist-sync-stock`.
+- `oraculo-olist-stock-30m`: `11,41 * * * *` (replaced `oraculo-olist-stock-6h` on 2026-08-16)
+  - Calls `olist-sync-stock` with `{"pagesPerRun": 1, "detailConcurrency": 1, "detailDelayMs": 300}`; resumes from the cursor.
+- `oraculo-olist-products-daily`: `43 7 * * *`
+  - Calls `olist-derived-refresh` (products + daily stock snapshot from `olist_stock_items`).
 - `oraculo-olist-invoices-15m`: `*/15 * * * *`
   - Calls `olist-sync-invoices`.
   - Payload: `lookbackDays=3`, `pageSize=50`, `maxPages=2`, `hydrateDetails=true`.

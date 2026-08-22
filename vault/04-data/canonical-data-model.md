@@ -108,3 +108,19 @@ Applies the Financeiro fiscal rules (perfil Jacarta). See
 - **Most Olist SKUs carry cost R$ 0** — it used to be counted as "has cost", making cost coverage look real when it was not. `oraculo_sku_unit_cost` ignores zero; the manual book per marketplace SKU is the fix at the source.
 - SKU discipline differs sharply by channel: Shopee has SKU on ~98% of products; Mercado Livre on 20 of 1.930 listings — which is what blocks margin on the ML side.
 - Reads of channel tables must paginate (`fetchAllPages`): PostgREST caps at 1.000 rows.
+
+## Update 2026-08-22 — estoque por depósito e dados de envio
+
+- `olist_stock_deposits (produto_id, deposito_id)` — saldo/reservado/disponível
+  por depósito do Olist, com `desconsiderar` (depósitos fora do consolidado).
+  Fonte: `GET /estoque/{id}`. Leitura: view `oraculo_estoque_por_deposito`.
+- `logistica_depositos` — dimensão curada (tipo proprio/full_ml/full_shopee/
+  terceiro, apelido, endereço físico).
+- `olist_products.peso_*_kg`, `altura_cm`, `largura_cm`, `comprimento_cm`,
+  `volume_m3` — generated columns de `payload.dimensoes` (0 → NULL).
+- `olist_orders.transportador_nome`, `forma_envio`, `frete_por_conta`,
+  `codigo_rastreamento`, `valor_frete` — trigger
+  `oraculo_olist_order_logistics_fields()` a partir de `transportador` e
+  `payload.valorFrete` (este só em pedidos hidratados).
+- Armadilha: `olist_stock_items.reservado` é sempre NULL; o reservado real é a
+  soma dos depósitos com `desconsiderar = false`.

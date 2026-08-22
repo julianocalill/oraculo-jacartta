@@ -27,7 +27,7 @@ The active sync is defined in migrations and Edge Functions in this repo.
 - Orders: `oraculo-olist-orders-hourly`, minute `:05`.
 - Derived metrics/cache: `oraculo-olist-derived-hourly`, minute `:25`.
 - NF cache: `oraculo-nf-cache-hourly`, minute `:35`.
-- Stock/products: `oraculo-olist-stock-6h`, every 6 hours.
+- Stock/products: `oraculo-olist-stock-30m`, minutes `:11`/`:41`, resumable cursor (full sweep ≈ 16h); also fills `olist_stock_deposits` (per-deposit balance). Products table + daily snapshot: `oraculo-olist-products-daily` at `07:43` UTC.
 - Fiscal invoices: `oraculo-olist-invoices-15m`, every 15 minutes.
 - Fiscal invoice current-month catch-up: `oraculo-olist-invoices-monthly-deep`, daily at `06:20` UTC.
 

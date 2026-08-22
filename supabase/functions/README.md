@@ -25,7 +25,7 @@ The Olist sync functions are called by Supabase `pg_cron` through `pg_net`.
 
 Because `pg_net` does not send user JWTs, these functions are deployed with `--no-verify-jwt` and protected by the internal `x-sync-secret` header.
 
-Deploy commands:
+Deploy: this environment has no Supabase CLI/Docker — use `node scripts/deploy-edge-function.js <name>` (Management API, see `docs/deployment-map.md`). CLI equivalents, for reference:
 
 ```bash
 npx supabase functions deploy olist-sync-orders --no-verify-jwt
@@ -40,7 +40,7 @@ npx supabase functions deploy mercadolivre-webhook --no-verify-jwt
 
 - `olist-sync-orders`: pulls recent Olist orders in small hourly batches and hydrates details only when needed.
 - `olist-derived-refresh`: builds order items, light dimensions, sales caches and unified channel cache in incremental mode.
-- `olist-sync-stock`: refreshes stock/products every 6 hours.
+- `olist-sync-stock`: resumable product sweep every 30 min (one page per run) → `olist_stock_items`; also `GET /estoque/{id}` → `olist_stock_deposits` for products with movement.
 - `olist-sync-invoices`: pulls fiscal invoices in checkpointed batches for recent days and current-month catch-up.
 - `olist-oauth-callback`: stores Olist refresh token after OAuth.
 - `olist-sync-health`: health/status endpoint.

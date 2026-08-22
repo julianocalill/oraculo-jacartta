@@ -58,7 +58,12 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-08-19.md](
 
 ## Current production state
 
-**Last update**: `2026-08-21` (see `docs/project-status-2026-08-21.md`) —
+**Last update**: `2026-08-22` (see `docs/project-status-2026-08-21.md`, adendos de 22/08) —
+**menu lateral por setores** (Analítico · Comercial · Operações em acordeão nativo),
+**Logística Fase 1** (`/logistica` como hub + `/logistica/estoque`: saldo do ERP
+quebrado pelos 8 depósitos do Olist via `GET /estoque/{id}`, capital a custo,
+dimensões físicas de SKU e dados de envio materializados em `olist_orders`;
+roteiro das fases 2–5 em `docs/plano-logistica-deposito.md`),
 **aba Documentação do banco** (dicionário dos 121 objetos lido do catálogo do
 Postgres, receitas de SQL testadas em produção, armadilhas do dado e o passo a
 passo de conexão do Metabase/PowerBI; as descrições vivem como `COMMENT ON`, então
