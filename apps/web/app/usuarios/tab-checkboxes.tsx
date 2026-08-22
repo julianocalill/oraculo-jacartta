@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { TABS, type TabKey } from "../../lib/auth/tabs";
+import { SECTORS, TABS, type TabKey } from "../../lib/auth/tabs";
 
 // Matriz de acesso de um usuário: uma caixinha por aba do menu.
 // Client component só por causa dos atalhos "marcar todas"/"limpar" — com 15
@@ -19,8 +19,15 @@ export function TabCheckboxes({ selected = [] }: { selected?: TabKey[] }) {
     });
   }
 
-  const main = TABS.filter((tab) => tab.group === "main");
-  const admin = TABS.filter((tab) => tab.group === "admin");
+  // Mesma organização do menu lateral: setores, depois as abas soltas, depois Admin.
+  const groups = [
+    ...SECTORS.map((sector) => ({
+      label: sector.label,
+      items: TABS.filter((tab) => tab.group === "main" && "sector" in tab && tab.sector === sector.key)
+    })),
+    { label: "Geral", items: TABS.filter((tab) => tab.group === "main" && !("sector" in tab)) },
+    { label: "Admin", items: TABS.filter((tab) => tab.group === "admin") }
+  ];
 
   return (
     <div className="tab-access">
@@ -36,10 +43,7 @@ export function TabCheckboxes({ selected = [] }: { selected?: TabKey[] }) {
         </div>
       </div>
 
-      {[
-        { label: "Principal", items: main },
-        { label: "Admin", items: admin }
-      ].map((group) => (
+      {groups.map((group) => (
         <div className="tab-access-group" key={group.label}>
           <small>{group.label}</small>
           <div className="tab-grid">
