@@ -168,3 +168,37 @@ parágrafo escrito por IA.
 Detalhes, decisões de ranking e os riscos da chamada direta Vercel → VPS
 (autenticação do endpoint e carga sobre uma VPS compartilhada) estão em
 `docs/documentacao-perguntar-ia.md`.
+
+## Adendo do mesmo dia — Logística Fase 1: estoque por depósito
+
+O Oráculo começou a ganhar a visão logística/depósito planejada em
+`docs/plano-logistica-deposito.md`. A Fase 1 entrega a fundação de dados e o
+estoque por depósito:
+
+- **`/logistica` virou hub** (Visão geral · Estoque · Etiqueta). A visão geral
+  mostra capital em estoque a custo canônico, disponíveis/reservadas, rupturas
+  e capital por depósito; `/logistica/estoque` quebra o saldo do ERP por
+  depósito com sinal da watchlist, custo e export xlsx.
+- **Três dados que a gente coletava e jogava fora** foram materializados:
+  a quebra por depósito (nova `olist_stock_deposits` — o payload de
+  `produtos/{id}` não traz depósitos, eles vêm de `GET /estoque/{id}`; a conta
+  tem 8 depósitos), os dados de envio de `olist_orders.transportador` (trigger
+  `oraculo_olist_order_logistics_fields`, backfill de 371 mil pedidos) e as
+  dimensões físicas de `payload.dimensoes` (generated columns em
+  `olist_products`).
+- **Reconciliação**: soma dos depósitos com `desconsiderar=false` = saldo
+  consolidado em ~96% dos produtos varridos; o resto é desvio de timing entre
+  a varredura de 16h do consolidado e a busca ao vivo dos depósitos.
+- Armadilha nova documentada: `olist_stock_items.reservado` é **sempre NULL**
+  (o payload de listagem não traz o campo); o reservado real vem da soma dos
+  depósitos com `desconsiderar=false`.
+
+Próximas fases (recebimento, endereçamento por posição, inventário, expedição
+multi-canal, picking): `docs/plano-logistica-deposito.md`.
+
+## Adendo de 2026-08-22 — Menu lateral por setores
+
+A sidebar foi reorganizada em Analítico · Comercial · Operações (acordeão
+nativo via `<details name>`, setor da página atual aberto, Agenda e Parâmetros
+soltos, Admin no rodapé). `sector` é metadado em `lib/auth/tabs.ts`; `group` e
+o gate de acesso não mudaram. Ver CHANGELOG [2026-08-22].

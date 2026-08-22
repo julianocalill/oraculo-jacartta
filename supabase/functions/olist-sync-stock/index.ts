@@ -234,7 +234,7 @@ async function getAccessToken(supabase: ReturnType<typeof createClient>) {
   return payload.access_token;
 }
 
-async function fetchProductDetail(accessToken: string, productId: string) {
+async function fetchOlistJson(accessToken: string, path: string, context: string) {
   const baseUrl = env.olistApiBaseUrl.endsWith('/') ? env.olistApiBaseUrl : `${env.olistApiBaseUrl}/`;
   const headers: Record<string, string> = {
     Accept: 'application/json'
@@ -244,13 +244,13 @@ async function fetchProductDetail(accessToken: string, productId: string) {
     ? `${env.olistApiAuthPrefix} ${accessToken}`
     : accessToken;
 
-  const url = new URL(`produtos/${productId}`, baseUrl);
+  const url = new URL(path, baseUrl);
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const response = await fetch(url, { headers });
     const text = await response.text();
 
     if (response.ok) {
-      return parseJsonOrThrow(text, `Falha ao buscar detalhe do produto ${productId}`) as Record<string, unknown>;
+      return parseJsonOrThrow(text, context) as Record<string, unknown>;
     }
 
     if (response.status === 429 || response.status >= 500) {
@@ -260,10 +260,42 @@ async function fetchProductDetail(accessToken: string, productId: string) {
       continue;
     }
 
-    throw new Error(`Falha ao buscar detalhe do produto ${productId} (${response.status}): ${text.slice(0, 300)}`);
+    throw new Error(`${context} (${response.status}): ${text.slice(0, 300)}`);
   }
 
-  throw new Error(`Falha ao buscar detalhe do produto ${productId} (429): limite de taxa da Olist excedido`);
+  throw new Error(`${context} (429): limite de taxa da Olist excedido`);
+}
+
+function fetchProductDetail(accessToken: string, productId: string) {
+  return fetchOlistJson(accessToken, `produtos/${productId}`, `Falha ao buscar detalhe do produto ${productId}`);
+}
+
+// O payload de produtos/{id} NÃO traz a quebra por depósito — ela vem do
+// endpoint /estoque/{idProduto} (uma chamada extra por produto). Para não
+// estourar o wall-clock de ~150s da Edge Function, só buscamos depósitos de
+// produtos com movimento (saldo/reservado ≠ 0) ou que já têm linha com
+// movimento em olist_stock_deposits (para zerar quem esvaziou).
+function fetchStockDeposits(accessToken: string, productId: string) {
+  return fetchOlistJson(accessToken, `estoque/${productId}`, `Falha ao buscar estoque por depósito do produto ${productId}`);
+}
+
+function normalizeDepositRows(stockDetail: Record<string, unknown>, produtoId: string, sku: string | null) {
+  const deposits = Array.isArray(stockDetail.depositos) ? stockDetail.depositos : [];
+  return deposits
+    .filter((row): row is Record<string, unknown> => Boolean(row) && typeof row === 'object')
+    .map((row) => ({
+      produto_id: produtoId,
+      deposito_id: String(row.id ?? '').trim(),
+      sku,
+      deposito_nome: row.nome == null ? null : String(row.nome),
+      desconsiderar: row.desconsiderar === true,
+      saldo: asNumber(row.saldo),
+      reservado: asNumber(row.reservado),
+      disponivel: asNumber(row.disponivel),
+      empresa_cnpj: row.empresa == null ? null : String(row.empresa),
+      synced_at: new Date().toISOString()
+    }))
+    .filter((row) => row.deposito_id !== '');
 }
 
 async function fetchProductPage(accessToken: string, limit: number, offset: number) {
@@ -356,6 +388,7 @@ Deno.serve(async (req) => {
       detailConcurrency?: number;
       detailDelayMs?: number;
       reset?: boolean;
+      includeDeposits?: boolean;
     };
     const limit = 100;
     // A varredura completa (~29 min) não cabe no limite da Edge Function:
@@ -370,6 +403,7 @@ Deno.serve(async (req) => {
     const detailDelayMs = Number.isFinite(Number(typedBody.detailDelayMs))
       ? Math.max(0, Number(typedBody.detailDelayMs))
       : 300;
+    const includeDeposits = typedBody.includeDeposits !== false;
 
     const stored = typedBody.reset === true ? null : await loadSweepState(supabase);
     const state: SweepState = stored?.batch_id
@@ -387,6 +421,7 @@ Deno.serve(async (req) => {
     let sweepCompleted = false;
     let fetched = 0;
     let upserted = 0;
+    let depositsUpserted = 0;
 
     for (let page = 0; page < pagesPerRun; page += 1) {
       const productPage = await fetchProductPage(accessToken, limit, state.next_offset);
@@ -412,6 +447,55 @@ Deno.serve(async (req) => {
 
         if (error) throw error;
         upserted += group.length;
+      }
+
+      if (includeDeposits) {
+        const pageIds = details.map((row) => row.produto_id);
+        const { data: existingRows, error: existingError } = await supabase
+          .from('olist_stock_deposits')
+          .select('produto_id')
+          .in('produto_id', pageIds)
+          .or('saldo.neq.0,reservado.neq.0');
+
+        if (existingError) throw existingError;
+
+        const knownMovement = new Set((existingRows ?? []).map((row) => String(row.produto_id)));
+        const depositTargets = details.filter((row) =>
+          (row.saldo ?? 0) !== 0 || (row.reservado ?? 0) !== 0 || knownMovement.has(row.produto_id)
+        );
+
+        const depositGroups = await mapConcurrent(depositTargets, detailConcurrency, async (row) => {
+          if (detailDelayMs > 0) await sleep(detailDelayMs);
+          const stockDetail = await fetchStockDeposits(accessToken, row.produto_id);
+          return normalizeDepositRows(stockDetail, row.produto_id, row.sku);
+        });
+
+        const depositRows = depositGroups.flat();
+        for (const group of chunk(depositRows, 200)) {
+          const { error } = await supabase
+            .from('olist_stock_deposits')
+            .upsert(group, { onConflict: 'produto_id,deposito_id' });
+
+          if (error) throw error;
+          depositsUpserted += group.length;
+        }
+
+        // Depósito novo criado no ERP entra na dimensão com tipo nulo para
+        // curadoria manual em logistica_depositos.
+        const dimensionRows = Array.from(
+          new Map(depositRows.map((row) => [row.deposito_id, {
+            deposito_id: row.deposito_id,
+            nome: row.deposito_nome ?? row.deposito_id
+          }])).values()
+        );
+
+        if (dimensionRows.length > 0) {
+          const { error } = await supabase
+            .from('logistica_depositos')
+            .upsert(dimensionRows, { onConflict: 'deposito_id', ignoreDuplicates: true });
+
+          if (error) throw error;
+        }
       }
 
       state.next_offset += productPage.products.length;
@@ -465,6 +549,7 @@ Deno.serve(async (req) => {
       total: state.total,
       fetched,
       upserted,
+      deposits_upserted: depositsUpserted,
       sweep_fetched: state.records_fetched,
       sweep_upserted: state.records_upserted
     });

@@ -1,12 +1,22 @@
 import Link from "next/link";
 
 // Navegação entre as abas de Logística
-export function LogisticaTabs({ active }: { active: "etiqueta" }) {
+export type LogisticaTab = "visao-geral" | "estoque" | "etiqueta";
+
+const TABS: Array<{ key: LogisticaTab; href: string; label: string }> = [
+  { key: "visao-geral", href: "/logistica", label: "Visão geral" },
+  { key: "estoque", href: "/logistica/estoque", label: "Estoque" },
+  { key: "etiqueta", href: "/logistica/etiqueta", label: "Etiqueta" }
+];
+
+export function LogisticaTabs({ active }: { active: LogisticaTab }) {
   return (
     <div className="pill-row" style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-      <Link href="/logistica/etiqueta" className={active === "etiqueta" ? "pill pill-gold" : "pill"}>
-        Etiqueta
-      </Link>
+      {TABS.map((tab) => (
+        <Link key={tab.key} href={tab.href} className={active === tab.key ? "pill pill-gold" : "pill"}>
+          {tab.label}
+        </Link>
+      ))}
     </div>
   );
 }

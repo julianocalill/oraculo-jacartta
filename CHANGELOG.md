@@ -2,6 +2,51 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-22] — Menu lateral por setores
+
+- O menu deixou de ser uma lista plana de 19 abas: agora são três setores —
+  **Analítico** (Analytics, SKUs, curvas, previsão, mais vendidos,
+  documentação), **Comercial** (Pedidos, Shopee, Mercado Livre, Calculadora,
+  RPA) e **Operações** (Logística, Expedição, Importações, Devoluções,
+  Alertas) — em acordeão: o setor da página atual nasce aberto e abrir outro
+  fecha o anterior. Agenda e Parâmetros ficam soltos; Admin continua no rodapé.
+- Zero estado no cliente: é `<details name="oraculo-setor">` nativo — o
+  browser cuida da exclusividade. O setor é metadado da aba em
+  `lib/auth/tabs.ts` (`sector`); `group` e o controle de acesso não mudam.
+  O badge de rupturas soma no cabeçalho "Operações" para não sumir com o
+  setor fechado. As caixinhas de `/usuarios` seguem o mesmo agrupamento.
+
+## [2026-08-21] — Logística Fase 1: estoque por depósito
+
+- **`/logistica` virou hub** com pills (Visão geral · Estoque · Etiqueta). A
+  visão geral mostra capital em estoque a custo, unidades disponíveis/
+  reservadas, rupturas e a quebra de capital por depósito. **/logistica/estoque**
+  é a tabela por produto com colunas dinâmicas por depósito (só depósitos com
+  movimento viram coluna), sinal da watchlist, custo canônico e capital — com
+  filtros e export xlsx que reusa o builder da tela.
+- **A conta Olist tem 8 depósitos e a gente jogava o dado fora**: a coluna
+  `olist_stock_items.depositos` sempre ficou vazia porque o payload de
+  `produtos/{id}` não traz depósitos — eles vêm de `GET /estoque/{id}`. Nova
+  tabela `olist_stock_deposits` (produto × depósito) alimentada pela edge
+  function `olist-sync-stock` (chamada extra só para produtos com movimento,
+  ~+30% de chamadas, página segue longe do teto de 150s) e semeada por
+  `scripts/backfill-olist-stock-deposits.js`. Dimensão curada em
+  `logistica_depositos` (tipo próprio/full_ml/full_shopee/terceiro).
+- **`olist_orders.transportador` era escrito e nunca lido** — agora um trigger
+  (`oraculo_olist_order_logistics_fields`) materializa `transportador_nome`,
+  `forma_envio`, `frete_por_conta`, `codigo_rastreamento` e `valor_frete` no
+  write (generated column ali é proibido: rewrite de ~1 GB sob lock). Backfill
+  dos 371k pedidos feito por cursor de id — nunca por "where is null", que
+  re-escolheria para sempre pedido com transportador vazio.
+- **Dimensões físicas de SKU** em `olist_products` (peso, medidas, cubagem)
+  como generated columns de `payload.dimensoes` — 1.176 produtos já com peso.
+- Descoberta de dado: `olist_stock_items.reservado` é sempre NULL (mesma
+  causa); o reservado real agora vem da soma dos depósitos com
+  `desconsiderar = false`.
+- Plano completo das próximas fases (recebimento, endereçamento por posição,
+  inventário, expedição multi-canal, picking) em
+  `docs/plano-logistica-deposito.md`.
+
 ## [2026-08-21] — Perguntar em linguagem natural (e adeus Conectar BI)
 
 - Nova aba **/documentacao/perguntar**: a pessoa descreve em português o que

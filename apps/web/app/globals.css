@@ -333,6 +333,69 @@ p {
   color: var(--red);
 }
 
+/* Setores do menu (Analítico · Comercial · Operações): <details name> nativo,
+   acordeão sem JS. O summary tem o visual do cabeçalho de grupo; o chevron
+   gira quando aberto; o setor da página atual ganha o ouro mesmo fechado. */
+.nav-sector {
+  display: grid;
+  gap: 4px;
+}
+
+.nav-sector > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 12px 0 8px;
+  border-radius: 10px;
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.nav-sector > summary::-webkit-details-marker {
+  display: none;
+}
+
+.nav-sector > summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 160ms ease;
+  margin-right: 2px;
+}
+
+.nav-sector[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.nav-sector > summary:hover {
+  background: var(--panel);
+  color: var(--text);
+}
+
+.nav-sector-active > summary {
+  color: var(--gold);
+}
+
+.nav-sector-links {
+  display: grid;
+  gap: 4px;
+}
+
+.nav-sector-links a {
+  padding-left: 22px;
+}
+
 .sidebar-footer {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1207,6 +1270,20 @@ h2 {
   gap: 4px;
 }
 
+/* Atalhos da visão geral de Logística */
+.quick-links {
+  display: grid;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.quick-links a {
+  color: var(--link, var(--indigo));
+  font-weight: 700;
+}
+
 .horizontal-curve-chart {
   display: grid;
   gap: 16px;
@@ -1742,6 +1819,30 @@ h2 {
 
   .nav-group > span {
     display: none;
+  }
+
+  /* No mobile o menu é uma faixa horizontal: cada setor vira uma pill que,
+     aberta, expõe seus links em linha. */
+  .nav-sector {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .nav-sector > summary {
+    min-height: 38px;
+    white-space: nowrap;
+  }
+
+  .nav-sector-links {
+    display: flex;
+    gap: 8px;
+  }
+
+  .nav-sector-links a {
+    padding-left: 12px;
+    white-space: nowrap;
   }
 
   .nav-group a {
