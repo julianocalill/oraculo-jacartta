@@ -358,6 +358,37 @@ lida por `/parametros` via `loadFiscalCostGapSnapshot`
 (`apps/web/lib/fiscal-snapshots.ts`). A tela "Custos pendentes" reaproveita o
 form `saveSkuParam` já existente — sem página nova, sem tabela nova.
 
+### Recálculo ao salvar um custo (23/08/2026)
+
+Salvar um custo Olist em `/parametros` dispara o recálculo sem esperar o cron
+horário, em duas camadas:
+
+1. **Tela atualiza na hora** — `loadParametros` filtra do `fiscal_cost_gap` os
+   SKUs (e componentes de kit) que já têm override ativo, então o SKU some da
+   lista no `revalidatePath` do próprio save, antes do recálculo terminar.
+2. **Números recalculam em até 1 min** — `saveSkuParam` chama
+   `oraculo_trigger_fiscal_recompute()` (migration `20260823150000`), que só
+   agenda um job `pg_cron` de um tiro (`oraculo-fiscal-recompute-once`,
+   `* * * * *`, auto-desagenda ao rodar — mesmo padrão de
+   `oraculo-qty-cache-backfill-once`). `cron.schedule` com nome fixo faz
+   upsert, então salvar vários custos em sequência reagenda em vez de
+   empilhar jobs.
+
+**Por que não chamar a captura direto**: `oraculo_capture_fiscal_margin_snapshots()`
+leva ~16-26s e o caminho REST/PostgREST corta a query antes disso — **e
+`set local statement_timeout` dentro da função NÃO resolve** (testado ao vivo
+via `curl` no endpoint: o limite é imposto antes de chegar na função). Só uma
+conexão direta ao Postgres (CLI, `pg_cron`) roda esse cálculo.
+
+A captura em si foi otimizada na migration `20260823140000`: calculava
+`oraculo_fiscal_margin_lines` três vezes (~10,4s cada, via summary + sku_margin
++ cost_gap) e agora calcula uma vez numa temp table reaproveitada — ~33s → ~16s.
+As três agregações lá dentro são **cópias** de `oraculo_fiscal_margin_summary` /
+`oraculo_fiscal_sku_margin` / `oraculo_fiscal_cost_gap`: mudou a fórmula de
+uma, mudar a cópia também. A mesma migration moveu
+`refresh_oraculo_fiscal_invoice_order_links` para o início da função — antes
+rodava no meio, e só `sku_coverage` via os vínculos frescos.
+
 ## RLS authenticated read — fiscal chain fix
 
 Migration `20260710092000` moved business reads to the authenticated client but its

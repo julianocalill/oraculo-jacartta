@@ -176,10 +176,27 @@ async function saveSkuParam(formData: FormData) {
       .upsert(row, { onConflict: "source,sku" });
 
     if (error) throw error;
+
+    // Um custo Olist pode tirar o SKU da lista de "Custos pendentes" e mudar
+    // a Cobertura fiscal. oraculo_capture_fiscal_margin_snapshots() direto
+    // (~15-25s) estoura o timeout do caminho REST — nem com SET LOCAL dentro
+    // da função (testado ao vivo, confirmado). oraculo_trigger_fiscal_recompute
+    // só agenda um job pg_cron de um tiro (retorna na hora); o recálculo
+    // pesado roda em até 1 minuto por fora do request. O SKU some da tela
+    // na hora mesmo assim — loadParametros filtra pelos overrides ativos
+    // antes do snapshot terminar. Override Shopee não alimenta o motor
+    // fiscal (lê oraculo_sku_unit_cost ao vivo, não snapshot), sem precisar disso.
+    if (row.source === "olist") {
+      const { error: triggerError } = await supabase.rpc("oraculo_trigger_fiscal_recompute");
+      if (triggerError) {
+        console.error("oraculo_trigger_fiscal_recompute falhou após saveSkuParam", triggerError);
+      }
+    }
   }
 
   revalidatePath("/parametros");
   revalidatePath("/skus");
+  revalidatePath("/");
 }
 
 async function saveStateTaxParam(formData: FormData) {
@@ -273,11 +290,31 @@ async function loadParametros() {
     return acc;
   }, {});
 
+  const skuParams = (skuResponse.data ?? []) as SkuParam[];
+
+  // O snapshot de custos pendentes só atualiza de verdade em até 1 minuto
+  // (oraculo_trigger_fiscal_recompute). Enquanto isso, filtra na hora
+  // qualquer SKU/componente que já ganhou override ativo — para o SKU
+  // sumir da tela assim que o formulário é salvo, sem esperar o job rodar.
+  const activeOlistOverrides = new Set(
+    skuParams
+      .filter((row) => row.source === "olist" && row.active && n(row.unit_cost_override) > 0)
+      .map((row) => row.sku)
+  );
+  const pendingCostGap = costGap.filter((row) => {
+    if (activeOlistOverrides.has(row.sku)) return false;
+    if (row.componentesFaltando) {
+      const missing = row.componentesFaltando.split(",").map((s) => s.trim()).filter(Boolean);
+      if (missing.length > 0 && missing.every((sku) => activeOlistOverrides.has(sku))) return false;
+    }
+    return true;
+  });
+
   return {
     channels: (channelsResponse.data ?? []) as ChannelParam[],
-    skuParams: (skuResponse.data ?? []) as SkuParam[],
+    skuParams,
     stateTaxes: (stateTaxResponse.data ?? []) as StateTaxParam[],
-    costGap,
+    costGap: pendingCostGap,
     summary: {
       total: probes.length,
       withCost,
@@ -653,8 +690,8 @@ export default async function ParametrosPage() {
           card &ldquo;Lucro fiscal&rdquo; — sem custo confiável, a margem não entra no
           cálculo. Ordenados pela receita que cada um está deixando fora. Preencha o custo
           unitário bruto (o que foi pago) e salve — o sistema desconta sozinho o crédito
-          recuperável. A cobertura na tela sobe até 1h depois (ela lê o snapshot horário,
-          não este cálculo ao vivo).
+          recuperável. O SKU sai desta lista assim que a página recarrega; a Cobertura e o
+          Lucro fiscal (aqui e na Home) recalculam sozinhos em até 1 minuto.
         </p>
 
         {data.costGap.length === 0 ? (

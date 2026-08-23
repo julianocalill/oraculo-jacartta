@@ -60,6 +60,18 @@ Histórico de entregas e mudanças significativas.
   para 4×/hora (`5,20,35,50 * * * *`, migration `20260823130000`), mesma
   cadência já comprovada segura para as notas fiscais — corta o
   atraso máximo de um pedido novo aparecer de ~30 min para ~15 min.
+- **Salvar um custo recalcula tudo na hora**: o SKU sai de "Custos pendentes"
+  no próprio save (loader filtra pelos overrides ativos, sem esperar o
+  snapshot), e Cobertura/Lucro fiscal recalculam em até 1 minuto via job
+  `pg_cron` de um tiro (`oraculo_trigger_fiscal_recompute`, migration
+  `20260823150000`) — antes só o cron horário atualizava. Chamar a captura
+  direto do request não funciona: leva ~16-26s e o caminho REST corta antes,
+  inclusive com `set local statement_timeout` (testado ao vivo).
+- **Captura de snapshots fiscais 2× mais rápida** (migration `20260823140000`):
+  `oraculo_fiscal_margin_lines` era calculada 3× por passe (~10,4s cada);
+  agora roda uma vez em temp table reaproveitada — ~33s → ~16s. Também moveu
+  `refresh_oraculo_fiscal_invoice_order_links` para o início, para todos os
+  snapshots do passe lerem o mesmo estado de vínculos.
 
 ## [2026-08-23] — Redesign da UI: bento, tema claro, tipografia e gráficos
 
