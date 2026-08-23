@@ -290,6 +290,25 @@ function formatDateShort(value: string | null | undefined) {
   }).format(toDisplayDate(value));
 }
 
+// Hora (HH:mm, BRT) de um timestamp completo — ex.: captured_at do snapshot.
+function formatTimeShort(value: string | null | undefined) {
+  if (!value) return "-";
+  return new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo"
+  }).format(new Date(value));
+}
+
+// "hoje às 14:05" ou "em 22/08 às 19:14" — só omite a data quando o snapshot é
+// do próprio dia, senão a hora sozinha engana (parece recente sem ser).
+function capturedAtLabel(value: string, todaySp: string) {
+  const daySp = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date(value));
+  const time = formatTimeShort(value);
+  if (daySp === todaySp) return `hoje às ${time}`;
+  return `em ${formatDateShort(value)} às ${time}`;
+}
+
 function parseMoney(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value !== "string") return 0;
@@ -448,6 +467,9 @@ async function loadUnifiedChannelRows(
 
 type FiscalMarginSummary = {
   available: boolean;
+  // Hora em que os indicadores foram calculados: capturado do snapshot horário
+  // no mês corrente; null = calculado agora (RPC ao vivo em janela custom).
+  capturedAt: string | null;
   revenueWithCost: number;
   totalCost: number;
   totalTaxes: number;
@@ -465,6 +487,7 @@ type FiscalMarginSummary = {
 
 const UNAVAILABLE_FISCAL_MARGIN: FiscalMarginSummary = {
   available: false,
+  capturedAt: null,
   revenueWithCost: 0,
   totalCost: 0,
   totalTaxes: 0,
@@ -515,6 +538,7 @@ async function loadFiscalMargin(
       const snap = await loadFiscalMarginSummarySnapshot(supabase);
       return {
         available: snap.available,
+        capturedAt: snap.capturedAt,
         revenueWithCost: snap.revenueWithCost,
         totalCost: snap.totalCost,
         totalTaxes: snap.totalTaxes,
@@ -543,6 +567,7 @@ async function loadFiscalMargin(
     };
     return {
       available: true,
+      capturedAt: null,
       revenueWithCost: asMetricNumber(row.revenue_with_cost),
       totalCost: asMetricNumber(row.total_cost),
       totalTaxes: asMetricNumber(row.total_taxes),
@@ -1056,10 +1081,20 @@ export default async function HomePage({
           <div>
             <h1>Visão geral</h1>
             <p>Margem e ROI fiscais · {formatMonthYearFromDate(filters.start)} · regras Jacartta (Lucro Real com RET)</p>
+            {/* Cobertura em linguagem simples: até quando os dados chegam e
+                quando os indicadores foram calculados pela última vez. */}
+            <p className="data-freshness">
+              Números baseados nas notas fiscais já sincronizadas, que vão até{" "}
+              <strong>{formatDateShort(lastDataDate)}</strong>
+              {syncHealthy ? " (hoje — o dia ainda está parcial)" : " — dias mais recentes ainda não entraram"}.
+              {data.fiscalMargin.capturedAt
+                ? ` Indicadores recalculados a cada hora · último cálculo ${capturedAtLabel(data.fiscalMargin.capturedAt, todaySp)}.`
+                : " Indicadores calculados agora, na hora em que a página abriu."}
+            </p>
             <div className="pill-row">
               <span className={`pill sync-pill ${syncHealthy ? "is-ok" : "is-warn"}`}>
                 <i aria-hidden="true" />
-                {syncHealthy ? "Sync fiscal saudável" : `Dados até ${formatDateShort(lastDataDate)}`}
+                {`Dados até ${formatDateShort(lastDataDate)}`}
               </span>
               <span className="pill">{formatMonthYearFromDate(filters.start)}</span>
               <a className="pill pill-gold" href={`/export-fiscal?start=${filters.start}&end=${filters.end}`}>

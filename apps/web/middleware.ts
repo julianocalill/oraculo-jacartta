@@ -33,6 +33,16 @@ export async function middleware(request: NextRequest) {
     return redirectToLogin(request);
   }
 
+  // Janela dura de 1h criada no login (lib/auth/session.ts) e nunca renovada:
+  // quando o cookie expira, a sessão acaba mesmo com refresh token válido.
+  const sessionWindow = request.cookies.get("oraculo_session_window")?.value;
+  if (!sessionWindow) {
+    const redirect = redirectToLogin(request);
+    redirect.cookies.delete("oraculo_access_token");
+    redirect.cookies.delete("oraculo_refresh_token");
+    return redirect;
+  }
+
   const tokenExpiresAt = readJwtExpiration(accessToken);
   if (tokenExpiresAt && tokenExpiresAt > Math.floor(Date.now() / 1000) + 60) {
     return NextResponse.next();
@@ -59,6 +69,7 @@ export async function middleware(request: NextRequest) {
     const redirect = redirectToLogin(request);
     redirect.cookies.delete("oraculo_access_token");
     redirect.cookies.delete("oraculo_refresh_token");
+    redirect.cookies.delete("oraculo_session_window");
     return redirect;
   }
 
@@ -71,8 +82,16 @@ export async function middleware(request: NextRequest) {
     return redirectToLogin(request);
   }
 
-  const next = NextResponse.next();
+  // Os cookies novos precisam valer JÁ neste request: o render que vem depois
+  // (getCurrentUser) lê os cookies do request, e com o token velho o JWT
+  // expirado derrubava o usuário logo após o refresh.
+  request.cookies.set("oraculo_access_token", refreshed.access_token);
+  request.cookies.set("oraculo_refresh_token", refreshed.refresh_token);
+
+  const next = NextResponse.next({ request });
   const secure = process.env.NODE_ENV === "production";
+  // maxAge de 1h nos dois: a janela de sessão (oraculo_session_window, nunca
+  // renovada) desloga antes disso de qualquer forma.
   next.cookies.set("oraculo_access_token", refreshed.access_token, {
     httpOnly: true,
     sameSite: "lax",
@@ -85,7 +104,7 @@ export async function middleware(request: NextRequest) {
     sameSite: "lax",
     secure,
     path: "/",
-    maxAge: 60 * 60 * 24 * 30
+    maxAge: 60 * 60
   });
   return next;
 }

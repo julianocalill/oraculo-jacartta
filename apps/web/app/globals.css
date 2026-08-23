@@ -407,10 +407,6 @@ p {
   gap: 4px;
 }
 
-.nav-admin {
-  align-self: end;
-}
-
 .nav-group > span {
   color: var(--faint);
   font-size: 10px;
@@ -1759,6 +1755,17 @@ h2 {
   white-space: nowrap;
 }
 
+/* Célula de texto corrido dentro de tabela densa (ex.: coluna Cobertura do
+   /status): quebra linha e não deixa a tabela estourar na horizontal. */
+.dense-table td.muted-cell {
+  white-space: normal;
+  min-width: 260px;
+  max-width: 360px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
 .data-table th {
   color: var(--faint);
   font-size: 11px;
@@ -2131,10 +2138,6 @@ h2 {
 
   .nav-group::-webkit-scrollbar {
     display: none;
-  }
-
-  .nav-admin {
-    align-self: auto;
   }
 
   .nav-group > span {
@@ -3293,6 +3296,21 @@ h2 {
   gap: 8px;
   flex-wrap: wrap;
   margin-top: 12px;
+}
+
+/* Linha de cobertura dos dados na Visão geral: até quando os dados chegam e
+   quando os indicadores foram calculados, em linguagem corrida. */
+.data-freshness {
+  margin-top: 6px;
+  max-width: 62ch;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.data-freshness strong {
+  color: var(--text);
+  font-weight: 700;
 }
 
 .sync-pill {

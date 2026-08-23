@@ -2,6 +2,31 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-23] — Menu reorganizado, sessão de 1h e cobertura de dados explícita
+
+- **Menu**: Devoluções migrou de Operações para o setor Comercial;
+  Documentação saiu do Analítico e ficou solta junto da Agenda; o grupo Admin
+  perdeu o `align-self: end` e ficou alinhado com o resto da sidebar.
+- **Parâmetros só para administradores**: nova flag `adminOnly` no registro de
+  abas (`lib/auth/tabs.ts`). O gate ignora a aba para quem não é master mesmo
+  que esteja gravada em `app_metadata.tabs`, e a caixinha saiu da matriz de
+  `/usuarios`.
+- **Sessão com janela dura de 1h** (era deslogado em minutos): a causa raiz
+  era o `getCurrentUser` usando `setSession`, que rotacionava o refresh token
+  por fora do middleware — a rotação dupla disparava o reuse detection do
+  Supabase e revogava a sessão. Agora só o middleware renova token (e propaga
+  os cookies novos para o próprio request); `getCurrentUser` valida com
+  `getUser(jwt)`. O login grava `oraculo_session_window` (1h, nunca renovado)
+  e o middleware desloga quando ele expira. Primeiro deploy desloga todo mundo
+  uma vez (sessões antigas não têm o cookie).
+- **/status com cobertura**: cards "Pedidos na base até" / "NFs na base até"
+  medidos no próprio dado (vermelhos quando não chegam em hoje) e coluna
+  **Cobertura** na tabela explicando o que cada rotina varre e com que atraso.
+- **Visão geral diz de quando são os dados**: linha em linguagem simples sob o
+  título — até quando as NFs sincronizadas chegam e quando os indicadores
+  foram recalculados (hora do snapshot horário, ou "calculados agora" em
+  janela custom).
+
 ## [2026-08-23] — Ranking de SKUs restrito à fonte Olist
 
 - `/skus` agora consulta exclusivamente `source = 'olist'`, inclusive ao abrir

@@ -7,6 +7,11 @@ import { cache } from "react";
 
 const ACCESS_COOKIE = "oraculo_access_token";
 const REFRESH_COOKIE = "oraculo_refresh_token";
+// Janela dura da sessão: nasce no login com 1h de vida e nunca é renovada.
+// O middleware exige este cookie — quando ele expira, o próximo clique cai no
+// /login, independente de refresh token. É o "deslogue de hora em hora".
+const SESSION_WINDOW_COOKIE = "oraculo_session_window";
+const SESSION_WINDOW_SECONDS = 60 * 60;
 
 // O parse do .env da raiz é I/O síncrono no event loop; sem memoização ele
 // rodava a cada readEnvValue de var ausente, várias vezes por request.
@@ -76,15 +81,25 @@ export async function setAuthCookies(accessToken: string, refreshToken: string) 
     sameSite: "lax",
     secure,
     path: "/",
-    maxAge: 60 * 60
+    maxAge: SESSION_WINDOW_SECONDS
   });
 
+  // Mesma vida da janela de sessão: com deslogue em 1h, não há motivo para um
+  // refresh token de 30 dias sobreviver no navegador.
   store.set(REFRESH_COOKIE, refreshToken, {
     httpOnly: true,
     sameSite: "lax",
     secure,
     path: "/",
-    maxAge: 60 * 60 * 24 * 30
+    maxAge: SESSION_WINDOW_SECONDS
+  });
+
+  store.set(SESSION_WINDOW_COOKIE, String(Math.floor(Date.now() / 1000) + SESSION_WINDOW_SECONDS), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure,
+    path: "/",
+    maxAge: SESSION_WINDOW_SECONDS
   });
 }
 
@@ -92,6 +107,7 @@ export async function clearAuthCookies() {
   const store = await cookies();
   store.delete(ACCESS_COOKIE);
   store.delete(REFRESH_COOKIE);
+  store.delete(SESSION_WINDOW_COOKIE);
 }
 
 // React.cache: deduplica por request — a página (via requireTabAccess) e o
@@ -116,15 +132,12 @@ export const getCurrentUser = cache(async () => {
 
   if (!accessToken || !refreshToken) return null;
 
+  // Valida o JWT direto (getUser(jwt)), sem setSession: setSession renovava o
+  // refresh token por fora do middleware e a rotação dupla derrubava a sessão
+  // em minutos (reuse detection do Supabase revoga a família inteira). Quem
+  // renova token agora é só o middleware.
   const supabase = createSupabaseAuthClient();
-  const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-    access_token: accessToken,
-    refresh_token: refreshToken
-  });
-
-  if (sessionError || !sessionData.session) return null;
-
-  const { data, error } = await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getUser(accessToken);
   if (error) return null;
 
   return data.user;

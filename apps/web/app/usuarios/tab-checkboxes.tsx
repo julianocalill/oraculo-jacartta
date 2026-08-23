@@ -19,14 +19,17 @@ export function TabCheckboxes({ selected = [] }: { selected?: TabKey[] }) {
     });
   }
 
-  // Mesma organização do menu lateral: setores, depois as abas soltas, depois Admin.
+  // Mesma organização do menu lateral: setores, depois as abas soltas, depois
+  // Admin. Abas adminOnly ficam fora da matriz — são exclusivas dos masters e
+  // marcar a caixinha não teria efeito (lib/auth/access.ts as ignora).
+  const grantable = TABS.filter((tab) => !("adminOnly" in tab && tab.adminOnly));
   const groups = [
     ...SECTORS.map((sector) => ({
       label: sector.label,
-      items: TABS.filter((tab) => tab.group === "main" && "sector" in tab && tab.sector === sector.key)
+      items: grantable.filter((tab) => tab.group === "main" && "sector" in tab && tab.sector === sector.key)
     })),
-    { label: "Geral", items: TABS.filter((tab) => tab.group === "main" && !("sector" in tab)) },
-    { label: "Admin", items: TABS.filter((tab) => tab.group === "admin") }
+    { label: "Geral", items: grantable.filter((tab) => tab.group === "main" && !("sector" in tab)) },
+    { label: "Admin", items: grantable.filter((tab) => tab.group === "admin") }
   ];
 
   return (
@@ -34,7 +37,7 @@ export function TabCheckboxes({ selected = [] }: { selected?: TabKey[] }) {
       <div className="tab-access-head">
         <span>Abas liberadas</span>
         <div className="tab-access-actions">
-          <button type="button" onClick={() => setChecked(new Set(TABS.map((tab) => tab.key)))}>
+          <button type="button" onClick={() => setChecked(new Set(grantable.map((tab) => tab.key)))}>
             Marcar todas
           </button>
           <button type="button" onClick={() => setChecked(new Set())}>

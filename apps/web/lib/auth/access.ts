@@ -10,7 +10,7 @@
 // middleware continua cuidando apenas de "logado ou não".
 
 import { readEnvValue, requireCurrentUser } from "./session";
-import { ALL_TAB_KEYS, TABS, isTabKey, tabByKey, type TabKey } from "./tabs";
+import { ALL_TAB_KEYS, TABS, isAdminOnlyTab, isTabKey, tabByKey, type TabKey } from "./tabs";
 
 const DEFAULT_MASTER_EMAILS = ["juliano@oliverhome.com.br", "oliveiros_cardoso@hotmail.com"];
 
@@ -69,7 +69,9 @@ export function allowedTabs(user: MaybeUser): TabKey[] {
 
   const granted = new Set(raw.filter(isTabKey));
   // Mantém a ordem canônica do menu, não a ordem gravada no metadata.
-  return ALL_TAB_KEYS.filter((key) => granted.has(key));
+  // Abas adminOnly (ex.: Parâmetros) são exclusivas dos administradores fixos:
+  // mesmo gravadas no metadata por engano, não contam para quem não é master.
+  return ALL_TAB_KEYS.filter((key) => granted.has(key) && !isAdminOnlyTab(key));
 }
 
 export function canAccess(user: MaybeUser, tab: TabKey) {

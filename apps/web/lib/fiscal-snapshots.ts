@@ -43,6 +43,8 @@ export type FiscalMarginSummarySnapshot = {
   available: boolean;
   periodStart: string | null;
   periodEnd: string | null;
+  /** Quando o snapshot foi calculado (refresh horário via pg_cron). */
+  capturedAt: string | null;
   revenueWithCost: number;
   totalCost: number;
   totalTaxes: number;
@@ -193,6 +195,7 @@ export async function loadFiscalMarginSummarySnapshot(
       available: false,
       periodStart: null,
       periodEnd: null,
+      capturedAt: null,
       revenueWithCost: 0,
       totalCost: 0,
       totalTaxes: 0,
@@ -213,6 +216,7 @@ export async function loadFiscalMarginSummarySnapshot(
     available: true,
     periodStart: row.period_start,
     periodEnd: row.period_end,
+    capturedAt: row.captured_at,
     revenueWithCost: asNumber(payload.revenue_with_cost),
     totalCost: asNumber(payload.total_cost),
     totalTaxes: asNumber(payload.total_taxes),

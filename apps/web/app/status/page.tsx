@@ -60,6 +60,15 @@ function dateTime(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
+// Datas "YYYY-MM-DD" (order_date/issued_date) formatadas sem passar por Date:
+// new Date("2026-08-22") é meia-noite UTC e exibiria o dia anterior em BRT.
+function dateOnly(value: string | null | undefined) {
+  if (!value) return "—";
+  const [year, month, day] = value.split("-");
+  if (!year || !month || !day) return value;
+  return `${day}/${month}/${year}`;
+}
+
 function count(value: number | null | undefined) {
   if (value == null || !Number.isFinite(value)) return "—";
   return new Intl.NumberFormat("pt-BR").format(value);
@@ -170,13 +179,37 @@ const loadStatus = unstable_cache(loadStatusUncached, ["status-panel"], {
   revalidate: 60
 });
 
+// Até quando os dados realmente chegam, medido no próprio dado (não na hora em
+// que o sync rodou): último dia com venda agregada e última NF emitida na base.
+async function loadDataWatermarks(supabase: ReturnType<typeof createSupabaseAdminClient>) {
+  const [ordersDay, invoicesDay] = await Promise.all([
+    supabase
+      .from("oraculo_daily_sales")
+      .select("order_date")
+      .order("order_date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("oraculo_fiscal_daily_revenue")
+      .select("issued_date")
+      .order("issued_date", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+  ]);
+
+  return {
+    lastOrderDay: (ordersDay.data as { order_date: string } | null)?.order_date ?? null,
+    lastInvoiceDay: (invoicesDay.data as { issued_date: string } | null)?.issued_date ?? null
+  };
+}
+
 async function loadStatusUncached() {
   const supabase = createSupabaseAdminClient();
 
   const [
     tokenResult, ordersRun, stockRun, invoicesRun, backfillRun, mercadolivreRun,
     importacoesAisRun, shopeeReturnsRun, mercadolivreReturnsRun, returnsCacheRun,
-    bipFulfillmentRun, qtyCacheRun
+    bipFulfillmentRun, qtyCacheRun, watermarks
   ] = await Promise.all([
     supabase
       .from("olist_oauth_tokens")
@@ -193,7 +226,8 @@ async function loadStatusUncached() {
     latestReturnsRunML(supabase),
     latestCacheDay(supabase),
     latestRun(supabase, "bip_fulfillment_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message"),
-    latestQtyCacheRun(supabase)
+    latestQtyCacheRun(supabase),
+    loadDataWatermarks(supabase)
   ]);
 
   const token = (tokenResult.data as TokenRow | null) ?? null;
@@ -247,18 +281,76 @@ async function loadStatusUncached() {
     needsReauth,
     token,
     alerts,
+    watermarks,
+    // `coverage` responde "o que esta rotina cobre e com que atraso" — a coluna
+    // Início/Fim diz quando rodou, mas não até onde o dado chega.
     runs: [
-      { key: "orders", label: "Pedidos", run: ordersRun },
-      { key: "stock", label: "Estoque / produtos", run: stockRun },
-      { key: "invoices", label: "Notas fiscais", run: invoicesRun },
-      { key: "backfill", label: "Backfill de itens", run: backfillRun },
-      { key: "mercadolivre", label: "Mercado Livre (Full)", run: mercadolivreRun },
-      { key: "importacoes-ais", label: "Importações (AIS)", run: importacoesAisRun },
-      { key: "shopee-returns", label: "Devoluções Shopee", run: shopeeReturnsRun },
-      { key: "mercadolivre-returns", label: "Devoluções / claims ML", run: mercadolivreReturnsRun },
-      { key: "returns-cache", label: "Cache NF de venda (devoluções)", run: returnsCacheRun },
-      { key: "bip-fulfillment", label: "Expedição · espelho do Bip", run: bipFulfillmentRun },
-      { key: "qty-cache", label: "Cache de quantidade (Previsão de Vendas)", run: qtyCacheRun }
+      {
+        key: "orders",
+        label: "Pedidos",
+        run: ordersRun,
+        coverage: "Pedidos Olist alterados numa janela móvel de ~3 dias; a varredura completa leva horas, então o dia corrente entra com atraso"
+      },
+      {
+        key: "stock",
+        label: "Estoque / produtos",
+        run: stockRun,
+        coverage: "Estoque por depósito em varredura contínua (cursor, 2× por hora); cadastro completo de produtos 1× ao dia de madrugada"
+      },
+      {
+        key: "invoices",
+        label: "Notas fiscais",
+        run: invoicesRun,
+        coverage: "NFs novas a cada 15 min; varredura de segurança do histórico 1× ao dia"
+      },
+      {
+        key: "backfill",
+        label: "Backfill de itens",
+        run: backfillRun,
+        coverage: "Completa itens de pedidos antigos; roda só de madrugada"
+      },
+      {
+        key: "mercadolivre",
+        label: "Mercado Livre (Full)",
+        run: mercadolivreRun,
+        coverage: "Pedidos e estoque Full a cada hora"
+      },
+      {
+        key: "importacoes-ais",
+        label: "Importações (AIS)",
+        run: importacoesAisRun,
+        coverage: "Posição dos navios a cada 6 h; só há sinal perto da costa — navio em alto-mar sem posição é normal"
+      },
+      {
+        key: "shopee-returns",
+        label: "Devoluções Shopee",
+        run: shopeeReturnsRun,
+        coverage: "Devoluções das 4 lojas, cada loja a cada 2 h"
+      },
+      {
+        key: "mercadolivre-returns",
+        label: "Devoluções / claims ML",
+        run: mercadolivreReturnsRun,
+        coverage: "Devoluções e claims a cada hora"
+      },
+      {
+        key: "returns-cache",
+        label: "Cache NF de venda (devoluções)",
+        run: returnsCacheRun,
+        coverage: "Reprocessa as NFs de venda dos últimos 3 dias, 2× por hora"
+      },
+      {
+        key: "bip-fulfillment",
+        label: "Expedição · espelho do Bip",
+        run: bipFulfillmentRun,
+        coverage: "Espelho das bipagens a cada 2 min — praticamente tempo real"
+      },
+      {
+        key: "qty-cache",
+        label: "Cache de quantidade (Previsão de Vendas)",
+        run: qtyCacheRun,
+        coverage: "Reescreve os últimos 10 dias de quantidade por canal/SKU, de hora em hora"
+      }
     ]
   };
 }
@@ -284,7 +376,10 @@ export default async function StatusPage() {
       <header className="topbar">
         <div>
           <h1>Status do sync</h1>
-          <p>Saúde das integrações Olist e Mercado Livre · referência {data.today} (America/Sao_Paulo)</p>
+          <p>
+            Saúde das integrações e até onde os dados chegam · referência {data.today} (America/Sao_Paulo).
+            A coluna Cobertura diz o que cada rotina varre e com que atraso.
+          </p>
         </div>
         <span className={`status-pill ${data.ok ? "signal-good" : "signal-danger"}`}>
           {data.ok ? "Tudo operacional" : `${data.alerts.length} alerta(s)`}
@@ -299,7 +394,18 @@ export default async function StatusPage() {
         </section>
       )}
 
+      {/* Cobertura medida no dado em si: até quando pedidos e NFs chegam na base. */}
       <section className="metric-grid metric-grid-eight">
+        <article className={`metric ${data.watermarks.lastOrderDay === data.today ? "accent-blue" : "accent-red"}`}>
+          <span className="label">Pedidos na base até</span>
+          <strong>{dateOnly(data.watermarks.lastOrderDay)}</strong>
+          <small>Último dia com venda registrada · o dia corrente entra com atraso</small>
+        </article>
+        <article className={`metric ${data.watermarks.lastInvoiceDay === data.today ? "accent-blue" : "accent-red"}`}>
+          <span className="label">NFs na base até</span>
+          <strong>{dateOnly(data.watermarks.lastInvoiceDay)}</strong>
+          <small>Última nota fiscal emitida já sincronizada</small>
+        </article>
         <article className={`metric ${data.tokenExpired ? "accent-red" : "accent-blue"}`}>
           <span className="label">Token Olist</span>
           <strong>{data.tokenExpired ? "Expirado" : "Válido"}</strong>
@@ -335,6 +441,7 @@ export default async function StatusPage() {
               <tr>
                 <th>Sync</th>
                 <th>Status</th>
+                <th>Cobertura</th>
                 <th>Início</th>
                 <th>Fim</th>
                 <th className="numeric">Registros</th>
@@ -342,13 +449,14 @@ export default async function StatusPage() {
               </tr>
             </thead>
             <tbody>
-              {data.runs.map(({ key, label, run }) => {
+              {data.runs.map(({ key, label, run, coverage }) => {
                 const badge = runBadge(run);
                 const records = run?.records_upserted ?? run?.items_upserted ?? run?.orders_processed ?? run?.items_count ?? run?.positions_updated ?? null;
                 return (
                   <tr key={key}>
                     <td>{label}</td>
                     <td><span className={badge.cls}>{badge.label}</span></td>
+                    <td className="muted-cell">{coverage}</td>
                     <td>{dateTime(run?.started_at)}</td>
                     <td>{dateTime(run?.finished_at)}</td>
                     <td className="numeric">{count(records)}</td>
