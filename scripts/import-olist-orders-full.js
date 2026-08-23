@@ -215,12 +215,17 @@ async function fetchOrdersPage(env, accessToken, startDate, endDate, limit, offs
   // Olist é instável: 429 (rate limit), 400 "consulta levou muito tempo" e
   // falhas de rede são transitórias. Tenta com backoff exponencial em vez de
   // abortar o backfill inteiro no primeiro tropeço.
-  const maxAttempts = Number(process.env.ORDER_FETCH_MAX_ATTEMPTS || "6");
+  const maxAttempts = Number(process.env.ORDER_FETCH_MAX_ATTEMPTS || "8");
+  const requestTimeoutMs = Number(process.env.ORDER_FETCH_TIMEOUT_MS || "90000");
   let lastError = null;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       const response = await fetch(url, {
+        // O cliente HTTP/2 do Node esperava até 5 minutos por uma conexão
+        // quebrada. Um timeout menor permite que o retry/backoff realmente
+        // recupere ECONNRESET/EADDRNOTAVAIL sem travar a carga por meia hora.
+        signal: AbortSignal.timeout(requestTimeoutMs),
         headers: {
           Accept: "application/json",
           [env.OLIST_API_AUTH_HEADER || "Authorization"]: env.OLIST_API_AUTH_PREFIX

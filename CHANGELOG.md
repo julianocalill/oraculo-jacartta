@@ -2,6 +2,24 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-23] — Status do sync sem falsos alertas
+
+- **Pedidos**: `/status` deixou de ler `olist_sync_runs`, tabela legada escrita
+  pela carga histórica local das 10h, e passou a ler
+  `olist_order_sync_runs`, fonte real do sync operacional retomável. Uma falha
+  de backfill de junho não mascara mais os pedidos correntes.
+- **Estoque**: uma varredura aberta agora aparece pela atividade do cursor em
+  `olist_stock_sync_state`; a tela não espera as ~15h da varredura completa
+  para reconhecer que o job rodou hoje e mostra o progresso atual.
+- **Notas**: a pausa deliberada por orçamento de 110s, quando recente e
+  marcada como retomável, aparece como `Retomando` em amarelo. Só vira alerta
+  se deixar de ter atividade por 90 minutos.
+- **Backfill local**: chamadas à Olist agora têm timeout de 90s e 8 tentativas
+  com backoff. Antes o HTTP/2 podia ficar 5 minutos travado em cada tentativa
+  antes de registrar `fetch failed`.
+- Verificação: `node --check scripts/import-olist-orders-full.js`,
+  `pnpm --filter web typecheck` e `pnpm --filter web build` sem erros.
+
 ## [2026-08-23] — Menu reorganizado, sessão de 1h e cobertura de dados explícita
 
 - **Menu**: Devoluções migrou de Operações para o setor Comercial;

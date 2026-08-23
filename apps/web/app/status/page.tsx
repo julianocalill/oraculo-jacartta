@@ -21,6 +21,7 @@ type SyncRun = {
   vessels_targeted?: number | null;
   positions_updated?: number | null;
   error_message: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 type TokenRow = {
@@ -79,8 +80,33 @@ function hasTokenFailure(run?: SyncRun | null) {
   return message.includes("invalid_grant") || message.includes("token is not active");
 }
 
+const ACTIVE_RUN_MAX_AGE_MS = 90 * 60 * 1000;
+
+function runActivityAt(run?: SyncRun | null) {
+  const metadataActivity = run?.metadata?.updated_at;
+  if (typeof metadataActivity === "string") return metadataActivity;
+  return run?.finished_at ?? run?.started_at ?? null;
+}
+
+function hasFreshActivity(run?: SyncRun | null) {
+  const activityAt = runActivityAt(run);
+  if (!activityAt) return false;
+  const timestamp = new Date(activityAt).getTime();
+  return Number.isFinite(timestamp) && Date.now() - timestamp <= ACTIVE_RUN_MAX_AGE_MS;
+}
+
+function isResumablePause(run?: SyncRun | null) {
+  const message = String(run?.error_message ?? "").toLowerCase();
+  const stopReason = String(run?.metadata?.stop_reason ?? "").toLowerCase();
+  return run?.status === "failed"
+    && hasFreshActivity(run)
+    && (stopReason === "timeout" || (message.includes("pausa") && message.includes("resum")));
+}
+
 function runFailed(run?: SyncRun | null) {
-  return Boolean(run && run.status && run.status !== "success" && run.status !== "partial");
+  if (!run?.status || run.status === "success" || run.status === "partial") return false;
+  if (run.status === "running") return !hasFreshActivity(run);
+  return !isResumablePause(run);
 }
 
 async function latestRun(
@@ -96,6 +122,46 @@ async function latestRun(
     .maybeSingle();
   if (error) return null;
   return (data as SyncRun | null) ?? null;
+}
+
+async function latestStockActivity(supabase: ReturnType<typeof createSupabaseAdminClient>) {
+  const [latestCompleted, stateResult] = await Promise.all([
+    latestRun(
+      supabase,
+      "olist_stock_sync_runs",
+      "started_at, finished_at, status, records_fetched, records_upserted, error_message"
+    ),
+    supabase
+      .from("olist_stock_sync_state")
+      .select("batch_id, next_offset, total, sweep_started_at, records_fetched, records_upserted, updated_at")
+      .eq("id", 1)
+      .maybeSingle()
+  ]);
+
+  const state = stateResult.data as {
+    batch_id: string | null;
+    next_offset: number;
+    total: number | null;
+    sweep_started_at: string | null;
+    records_fetched: number;
+    records_upserted: number;
+    updated_at: string;
+  } | null;
+
+  if (!state?.batch_id || !state.sweep_started_at) return latestCompleted;
+
+  return {
+    started_at: state.sweep_started_at,
+    // Em uma varredura aberta, esta coluna representa a última atividade.
+    finished_at: state.updated_at,
+    status: "running",
+    records_fetched: state.records_fetched,
+    records_upserted: state.records_upserted,
+    error_message: state.total == null
+      ? "Varredura em andamento"
+      : `Varredura em andamento: ${state.next_offset} de ${state.total}`,
+    metadata: { updated_at: state.updated_at }
+  } satisfies SyncRun;
 }
 
 // shopee_sync_runs é multi-fonte (source = 'shopee-returns-sync:<shop_id>' etc.),
@@ -216,9 +282,12 @@ async function loadStatusUncached() {
       .select("updated_at, expires_at, token_type, scope")
       .eq("provider", "olist")
       .maybeSingle(),
-    latestRun(supabase, "olist_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message"),
-    latestRun(supabase, "olist_stock_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message"),
-    latestRun(supabase, "olist_invoice_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, items_upserted, error_message"),
+    // O sync operacional retomável grava em olist_order_sync_runs. A tabela
+    // legada olist_sync_runs é usada pela carga histórica local e não pode
+    // determinar a saúde dos pedidos correntes.
+    latestRun(supabase, "olist_order_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message, metadata"),
+    latestStockActivity(supabase),
+    latestRun(supabase, "olist_invoice_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, items_upserted, error_message, metadata"),
     latestRun(supabase, "olist_order_items_backfill_runs", "started_at, finished_at, status, orders_processed, orders_with_error, items_upserted, error_message"),
     latestRun(supabase, "mercadolivre_sync_runs", "started_at, finished_at, status, items_count, orders_count, error_message"),
     latestRun(supabase, "importacao_ais_sync_runs", "started_at, finished_at, status, vessels_targeted, positions_updated, error_message"),
@@ -233,8 +302,11 @@ async function loadStatusUncached() {
   const token = (tokenResult.data as TokenRow | null) ?? null;
   const today = todayBrt();
   const tokenExpired = !token?.expires_at || new Date(token.expires_at).getTime() <= Date.now();
-  const ordersNotRunToday = brtDate(ordersRun?.started_at) !== today;
-  const stockNotRunToday = brtDate(stockRun?.started_at) !== today;
+  // Pedidos e estoque são varreduras longas e podem atravessar a meia-noite.
+  // Saúde diária é a última atividade do cursor, não o instante em que a
+  // varredura começou.
+  const ordersNotRunToday = brtDate(runActivityAt(ordersRun)) !== today;
+  const stockNotRunToday = brtDate(runActivityAt(stockRun)) !== today;
   const needsReauth = tokenExpired || hasTokenFailure(ordersRun) || hasTokenFailure(stockRun);
 
   const alerts = [
@@ -359,8 +431,15 @@ function runBadge(run: SyncRun | null) {
   if (!run) return { label: "Sem execução", cls: "signal-muted" };
   if (run.status === "success") return { label: "OK", cls: "signal-good" };
   if (run.status === "partial") return { label: "Parcial", cls: "signal-warning" };
-  if (run.status === "running") return { label: "Rodando", cls: "signal-warning" };
+  if (isResumablePause(run)) return { label: "Retomando", cls: "signal-warning" };
+  if (run.status === "running" && hasFreshActivity(run)) return { label: "Rodando", cls: "signal-warning" };
+  if (run.status === "running") return { label: "Sem atividade", cls: "signal-danger" };
   return { label: "Falhou", cls: "signal-danger" };
+}
+
+function runMessage(run: SyncRun | null) {
+  if (isResumablePause(run)) return "Pausa controlada; retomada automática no próximo ciclo.";
+  return run?.error_message ?? "—";
 }
 
 export default async function StatusPage() {
@@ -443,7 +522,7 @@ export default async function StatusPage() {
                 <th>Status</th>
                 <th>Cobertura</th>
                 <th>Início</th>
-                <th>Fim</th>
+                <th>Fim / atividade</th>
                 <th className="numeric">Registros</th>
                 <th>Erro</th>
               </tr>
@@ -460,7 +539,7 @@ export default async function StatusPage() {
                     <td>{dateTime(run?.started_at)}</td>
                     <td>{dateTime(run?.finished_at)}</td>
                     <td className="numeric">{count(records)}</td>
-                    <td>{run?.error_message ?? "—"}</td>
+                    <td>{runMessage(run)}</td>
                   </tr>
                 );
               })}
