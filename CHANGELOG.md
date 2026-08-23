@@ -2,6 +2,16 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-23] — Ranking de SKUs restrito à fonte Olist
+
+- `/skus` agora consulta exclusivamente `source = 'olist'`, inclusive ao abrir
+  o detalhe de um produto. URLs antigas com `source=all` ou `source=shopee`
+  não conseguem mais misturar as duas origens.
+- O seletor de fonte foi removido e substituído pela indicação fixa
+  **Olist · todos os marketplaces**. A API direta da Shopee continua como
+  fonte auxiliar em suas análises próprias, mas não participa deste ranking:
+  a mesma venda já chega pela Olist e aparecia duplicada com outro SKU/nome.
+
 ## [2026-08-23] — Cobertura de custo fiscal ligada ao override manual + Olist mais rápido
 
 - **Causa raiz da Cobertura fiscal travada em ~97%**: `oraculo_fiscal_margin_lines`

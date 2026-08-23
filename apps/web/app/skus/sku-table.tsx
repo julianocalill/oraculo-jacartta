@@ -117,7 +117,7 @@ function compare(a: number | string | null, b: number | string | null, dir: "asc
   return dir === "asc" ? r : -r;
 }
 
-export function SkuTable({ rows, source }: { rows: SkuTableRow[]; source: string }) {
+export function SkuTable({ rows }: { rows: SkuTableRow[] }) {
   const [sortKey, setSortKey] = useState<SortKey>("revenue_30d");
   const [dir, setDir] = useState<"asc" | "desc">("desc");
 
@@ -177,7 +177,7 @@ export function SkuTable({ rows, source }: { rows: SkuTableRow[]; source: string
               <td>
                 <Link
                   className="row-link"
-                  href={`/skus?source=${encodeURIComponent(source)}&sku=${encodeURIComponent(row.sku ?? "")}`}
+                  href={`/skus?sku=${encodeURIComponent(row.sku ?? "")}`}
                 >
                   {row.product_name ?? "Sem nome"}
                 </Link>

@@ -14,8 +14,6 @@ import { loadActionableAlertCount } from "../../lib/alert-count";
 
 export const dynamic = "force-dynamic";
 
-type SourceFilter = "all" | "olist" | "shopee";
-
 type SkuRow = {
   source: string | null;
   sku: string | null;
@@ -106,11 +104,6 @@ function sourceLabel(value: string | null | undefined) {
   return "Outros";
 }
 
-function asSource(value: string | undefined): SourceFilter {
-  if (value === "olist" || value === "shopee") return value;
-  return "all";
-}
-
 // A margem fiscal vem de um snapshot pré-computado (refresh noturno via pg_cron),
 // não do cálculo on-the-fly, que era pesado demais e estourava o statement_timeout.
 async function loadFiscalSkuMargins(
@@ -136,33 +129,25 @@ async function loadFiscalSkuMargins(
   }
 }
 
-async function loadSkus(selectedSku?: string, source: SourceFilter = "all") {
+async function loadSkus(selectedSku?: string) {
   const supabase = await createSupabaseUserClient();
 
-  let rowsQuery = supabase
+  const rowsQuery = supabase
     .from("oraculo_sku_margin_30d")
     .select("source, sku, product_name, status_label, units_30d, revenue_30d, revenue_change_pct, available_stock, stock_balance, days_until_stockout, last_sale_at, unit_cost, product_cost_30d, margin_amount_30d, margin_rate_30d, roi_30d, margin_signal, params_configured")
+    .eq("source", "olist")
     .order("revenue_30d", { ascending: false })
     .limit(120);
-
-  if (source !== "all") {
-    rowsQuery = rowsQuery.eq("source", source);
-  }
 
   const selectedQuery = (() => {
     if (!selectedSku) return Promise.resolve({ data: [] as SkuRow[] });
 
-    let query = supabase
+    return supabase
       .from("oraculo_sku_margin_30d")
       .select("source, sku, product_name, status_label, units_30d, revenue_30d, revenue_change_pct, available_stock, stock_balance, days_until_stockout, last_sale_at, unit_cost, product_cost_30d, margin_amount_30d, margin_rate_30d, roi_30d, margin_signal, params_configured")
+      .eq("source", "olist")
       .eq("sku", selectedSku)
       .limit(1);
-
-    if (source !== "all") {
-      query = query.eq("source", source);
-    }
-
-    return query;
   })();
 
   const [rowsResponse, selectedResponse, fiscalCoverage, fiscal] = await Promise.all([
@@ -194,15 +179,14 @@ function fiscalFor(
 export default async function SkusPage({
   searchParams
 }: {
-  searchParams?: Promise<{ sku?: string; source?: string }>;
+  searchParams?: Promise<{ sku?: string }>;
 }) {
   const params = await searchParams;
   const selectedSku = params?.sku;
-  const source = asSource(params?.source);
   const [{ allowed }, alertCount, data] = await Promise.all([
     requireTabAccess("skus"),
     loadActionableAlertCount(),
-    loadSkus(selectedSku, source)
+    loadSkus(selectedSku)
   ]);
   if (!allowed) return <NoAccess tab="skus" />;
   const selected = data.selected ?? data.rows[0] ?? null;
@@ -236,20 +220,12 @@ export default async function SkusPage({
           <h1>SKUs</h1>
           <p>Margem operacional (30d) + margem fiscal por SKU (mês) · leitura parcial até fechar a cobertura fiscal por item</p>
         </div>
-        <form className="filter-row filter-form" method="get">
-          <label>
-            <span>Fonte</span>
-            <select name="source" defaultValue={source}>
-              <option value="all">Todas</option>
-              <option value="olist">Olist</option>
-              <option value="shopee">Shopee</option>
-            </select>
-          </label>
-          <button type="submit">Aplicar</button>
+        <div className="filter-row">
+          <span>Fonte: Olist · todos os marketplaces</span>
           <Link className="button-link" href="/skus/de-para/export" prefetch={false}>
             De-para de SKUs (.xlsx)
           </Link>
-        </form>
+        </div>
       </header>
 
       <section className="panel coverage-panel warning-panel">
@@ -292,13 +268,13 @@ export default async function SkusPage({
               <h2>Ranking operacional com margem</h2>
             </div>
             <div className="sku-actions">
-              <span>Fonte</span>
+              <span>Olist</span>
               <span>Parcial</span>
               <strong>Margem/ROI</strong>
             </div>
           </div>
 
-          <SkuTable rows={tableRows} source={source} />
+          <SkuTable rows={tableRows} />
         </article>
 
         <aside className="panel sku-detail">
