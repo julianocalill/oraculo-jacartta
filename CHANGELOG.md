@@ -92,6 +92,26 @@ Histórico de entregas e mudanças significativas.
 - Documentação: novo `docs/design-system.md` (tokens, temas, bento, gramática
   dos gráficos, regras de interação e mobile).
 
+## [2026-08-23] — Auditoria dos dados de logística e correção de campo morto
+
+- **`olist_orders.transportador_nome` removida**: 0 preenchidos em 138.873
+  pedidos de 30 dias. O campo `nome` do ERP vem sempre vazio porque quem
+  despacha é o marketplace — a coluna foi criada na Fase 1 a partir do shape
+  do jsonb, sem medir taxa de preenchimento. Migration `20260823170000`.
+- **Cobertura real dos campos de envio agora está no `COMMENT ON`** de cada
+  coluna, para não repetir o erro em quem ler o dicionário: `forma_envio` e
+  `frete_por_conta` 99,9%; `codigo_rastreamento` ~1% (só Mercado Envios);
+  `valor_frete` ~2% (só pedidos hidratados).
+- **Fase 4 do plano reescrita**: o Olist não serve como fonte de expedição
+  multicanal. Cada canal precisa da própria ingestão, como já existe para a
+  Shopee. Ordem definida por volume e maturidade de API (ML → TikTok);
+  ranking de transportadoras e frete por pedido saem do escopo por falta de
+  dado. Ver `docs/plano-logistica-deposito.md`.
+- Estado medido do resto: estoque por depósito com 3.073 produtos e **99,3%**
+  de reconciliação com o saldo do ERP (era 88% no backfill inicial, quando
+  saldo e depósito vinham de varreduras diferentes); custo cobre 91,8% dos
+  produtos com estoque; dimensões físicas só 32,5% (peso) e 12,5% (cubagem).
+
 ## [2026-08-22] — Logística Fase 2: recebimento e conferência
 
 - Nova pill **/logistica/recebimento**: lista as faturas de importação sem

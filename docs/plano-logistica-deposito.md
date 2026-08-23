@@ -29,8 +29,10 @@ posição** (rua/coluna/nível) e **lista de picking**. Devoluções ficam fora
   `olist_stock_items.reservado` é sempre NULL.
 - `olist_orders.transportador` está preenchido em ~371 mil pedidos e nunca foi
   lido. Shape: `{nome, formaEnvio: {nome}, fretePorConta, codigoRastreamento,
-  urlRastreamento}`. `payload.valorFrete` só existe nos ~2,2 mil pedidos
-  hidratados com detalhe.
+  urlRastreamento}`. **Medido em 23/08:** `nome` vem sempre vazio (0%) e
+  `codigoRastreamento` em ~1% — o marketplace despacha, o ERP não registra o
+  transporte. Só `formaEnvio.nome` e `fretePorConta` são confiáveis (99,9%).
+  `payload.valorFrete` existe em ~2% (só pedidos hidratados).
 - `payload.dimensoes` (peso/medidas) existe em ~1/3 dos produtos.
 - Generated column em `olist_orders` é proibido (AGENTS.md — rewrite de ~1 GB
   sob ACCESS EXCLUSIVE); em `olist_products` (~3 mil linhas) é seguro.
@@ -78,17 +80,53 @@ posição** (rua/coluna/nível) e **lista de picking**. Devoluções ficam fora
 - `/logistica/enderecos` ("onde está o SKU", mover, imprimir QR reusando o
   fluxo da etiqueta) e `/logistica/inventario`.
 
-## Fase 4 — Expedição multi-canal + analítica
+## Fase 4 — Expedição multi-canal + analítica (REESCRITA em 2026-08-23)
 
-- View `oraculo_shipments_unified`: união de `shopee_fulfillment_packages`
-  (+pipeline) com `olist_orders` materializado para os demais canais. Dedup:
-  pedido Shopee entra só pelo lado Shopee. **Não mexer** em
-  `oraculo_fulfillment_pipeline` (roda em TV no galpão).
-- `oraculo_shipments_daily_cache` + `oraculo_logistica_overview_cache`,
-  refreshados como **steps novos do `olist-derived-refresh`** (zero cron novo —
-  teto de 2 jobs/minuto).
-- `/logistica/expedicao`: a expedir por canal, atrasos, ranking de
-  transportadoras, frete médio (agora que `valor_frete`/`forma_envio` existem).
+**A premissa original caiu.** O plano de 21/08 dizia que bastava materializar
+`olist_orders` para cobrir os canais que não são Shopee. A medição de 23/08
+mostrou que o Olist não tem o dado (últimos 30 dias, 138.873 pedidos):
+
+| Campo | Preenchido | Serve para expedição? |
+|---|---|---|
+| `transportador.nome` | **0,0%** | Não — coluna removida em `20260823170000` |
+| `forma_envio` | 99,9% | Sim, mas identifica o **modal do canal**, não a transportadora |
+| `frete_por_conta` | 99,9% | Sim (CIF/FOB) |
+| `codigo_rastreamento` | ~1% | Não — só Mercado Envios, e em ~40% dos casos dele |
+| `valor_frete` | ~2% | Não — só pedidos hidratados |
+
+A causa é estrutural, não um defeito de sync: **quem despacha é o marketplace**.
+O ERP registra a venda, não o transporte. Nenhum backfill conserta isso.
+
+### Consequência: a fonte é a API de cada canal
+
+Cada canal precisa da sua própria ingestão de envio, como já existe para a
+Shopee. É trabalho maior do que a fase original previa e deve ser fatiado por
+canal, não entregue de uma vez.
+
+| Canal | Volume 30d | Fonte de envio | Situação |
+|---|---|---|---|
+| Shopee | 122.122 | `shopee_fulfillment_packages` + `bip_fulfillment_events` | **Pronto** (`/expedicao`) |
+| TikTok | 12.106 | API TikTok Shop (`/order/get_shipping_info`) | Tabelas `tiktok_*` **nunca aplicadas em prod** — checar antes |
+| Mercado Livre | 3.568 | API `/shipments/{id}` — existe `mercadolivre_notifications` para disparar | A construir; é o único com rastreio parcial no ERP |
+| Kwai | 549 | Sem integração | Fora de escopo por ora |
+| Amazon DBA | 351 | Só export manual (ver `amazon-export-e-mapeamento-sku`) | Fora de escopo por ora |
+
+Ordem recomendada: **Mercado Livre primeiro** (volume relevante, API madura,
+token já rotativo no `mercadolivre-sync`), TikTok depois (volume maior, mas
+exige aplicar as tabelas e revalidar o app).
+
+### O que ainda vale do plano original
+
+- View `oraculo_shipments_unified` continua sendo o destino — mas como união
+  das tabelas de envio **por canal**, não de `olist_orders`. O lado Olist entra
+  só com `forma_envio` e `frete_por_conta`, para o pedido que nenhum canal
+  cobre aparecer como "sem dado de envio" em vez de sumir.
+- **Não mexer** em `oraculo_fulfillment_pipeline` (roda em TV no galpão).
+- `oraculo_shipments_daily_cache` + `oraculo_logistica_overview_cache` como
+  steps novos do `olist-derived-refresh` (zero cron novo — teto de 2/minuto).
+- `/logistica/expedicao`: a expedir por canal, atrasos e SLA de despacho.
+  **Sai do escopo**: ranking de transportadoras e frete médio por pedido — não
+  há dado que sustente nenhum dos dois hoje.
 
 ## Fase 5 — Picking (lista de separação)
 

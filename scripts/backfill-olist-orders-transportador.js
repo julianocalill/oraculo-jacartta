@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 
 // Backfill das colunas materializadas de envio em olist_orders
-// (transportador_nome, forma_envio, frete_por_conta, codigo_rastreamento,
-// valor_frete). O trigger oraculo_olist_order_logistics_fields() faz o
+// (forma_envio, frete_por_conta, codigo_rastreamento, valor_frete).
+//
+// `transportador_nome` existiu até 23/08 e foi removida: vinha 0% preenchida
+// (o marketplace despacha, o ERP não grava transportadora). Ver a migration
+// 20260823170000. O trigger oraculo_olist_order_logistics_fields() faz o
 // trabalho; este script só o dispara em lotes com um no-op
 // `set transportador = transportador`, andando por cursor de id — nunca por
 // "where coluna is null", porque um pedido com transportador vazio produz
