@@ -30,43 +30,53 @@
 
 ## Edge Functions
 
+> Levantado ao vivo em 2026-08-23 via `npx supabase functions list` + `select * from cron.job`. 23 functions implantadas; duas delas (`olist-sync`, `olist-stock-sync`) são versões legadas sem nenhum cron apontando para elas — candidatas a remoção. `tiktok-sync`/`tiktok-oauth-callback` existem em `supabase/functions/` mas **não estão implantadas** (sem tabelas `tiktok_*` em prod).
+
 - `olist-oauth-callback`
-  - Handles Olist OAuth callback and stores refresh token.
-- `olist-sync-orders`
+  - Handles Olist OAuth callback and stores refresh token. Sob demanda (sem cron).
+- `olist-sync-orders` — **ativo `:05` e `:35` de cada hora**
   - Pulls Olist orders incrementally.
   - Uses `x-sync-secret` for internal job authorization.
   - JWT verification is disabled at deploy level because calls come from `pg_net`; the function still rejects calls without the sync secret.
-- `olist-derived-refresh`
+  - Job `oraculo-olist-orders-hourly` (`5,20,35,50 * * * *`, desde 23/08/2026): `lookbackDays=3`, `maxPages=5`, `hydrateDetails=true` — 4×/hora (era 2×/hora), mesma cadência já comprovada segura de `oraculo-olist-invoices-15m`. Corta o atraso máximo de um pedido novo aparecer de ~30 min para ~15 min. Como cada rodada relê a janela de 3 dias do zero (sem cursor persistente), isso quase dobra o volume de chamadas à API do Olist/dia — 0 erros 429 em 14 dias antes da mudança, folga confirmada. Se `429` aparecer, primeiro ajuste é reduzir `maxPages` (5→3), não a frequência.
+- `olist-derived-refresh` — **ativo `:25` de cada hora (incremental) e `43 7 * * *` (produtos/estoque diário)**
   - Builds order items, light dimensions, sales caches and unified channel cache.
   - Has an `incremental` mode for hourly execution.
   - JWT verification is disabled at deploy level for internal cron calls; protected by `x-sync-secret`.
-- `olist-sync-stock`
+  - `oraculo-olist-derived-hourly` (`25 * * * *`): janela D-2..D+1, pula dimensões de produto, snapshot de estoque, cache unificado de SKU e cache de NF.
+  - `oraculo-olist-products-daily` (`43 7 * * *`): dimensões de produto + snapshot diário de estoque a partir de `olist_stock_items`.
+- `olist-sync-stock` — **ativo `:11` e `:41` de cada hora**
   - Pulls Olist stock/products with a resumable cursor (`olist_stock_sync_state`): one page of 100 products per run, full sweep ≈ 16h (migration `20260816130000`).
   - Since 2026-08-21 it also calls `GET /estoque/{id}` for products with stock/reservation (or that already had deposit rows) and upserts `olist_stock_deposits` — the per-deposit breakdown is NOT in the `produtos/{id}` payload. ~+30% calls; a page stays well under the 150s wall clock. `includeDeposits: false` in the body disables it.
   - JWT verification is disabled at deploy level for internal cron calls; protected by `x-sync-secret`.
-- `olist-sync-invoices`
+  - Job `oraculo-olist-stock-30m` (`11,41 * * * *`).
+- `olist-sync-invoices` — **ativo `*/15` e `:56` de cada hora**
   - Pulls Olist fiscal invoices from endpoint `notas`.
   - Uses checkpoint/resume in `olist_invoice_sync_runs`.
   - Hydrates invoice detail/items in bounded batches.
   - JWT verification is disabled at deploy level for internal cron calls; protected by `x-sync-secret`.
-- `olist-backfill-order-items`
+  - `oraculo-olist-invoices-15m` (`*/15 * * * *`): últimos 3 dias, `maxPages=4`, `hydrateDetails=true` — mais páginas do que a versão anterior (2).
+  - `oraculo-olist-invoices-monthly-headers-hourly` (`56 * * * *`): mês corrente inteiro, só cabeçalho (`hydrateDetails=false`).
+- `olist-backfill-order-items` — **ativo `*/2` (temporário, só até a janela de julho fechar) e `:57` das 03h–08h**
   - Backfills missing `olist_order_items` for valid fiscal invoices linked to Olist orders.
   - Reads the revenue-prioritized `olist_order_item_backfill_queue`.
   - Writes progress to `olist_order_items_backfill_runs` and per-order issues to `olist_order_items_backfill_errors`.
   - JWT verification is disabled at deploy level for internal cron calls; protected by `x-sync-secret`.
+  - `oraculo-olist-items-backfill-julho` (`*/2 * * * *`, **temporário**): janela fixa 2026-07-20..2026-08-02. Some sozinho junto com `oraculo-olist-items-backfill-julho-finish` quando a fila esvaziar — se os dois ainda aparecem em `cron.job`, o backfill **não terminou**.
+  - `oraculo-olist-order-items-backfill-overnight` (`57 3-8 * * *`): janela = mês corrente, só na madrugada (evita 429 do Olist em horário comercial).
 - `olist-sync-health`
-  - Health/status endpoint for sync operations.
+  - Health/status endpoint for sync operations. Sob demanda, consumido por `/status`.
 - `mercadolivre-oauth-callback`
   - Public OAuth callback with PKCE and one-time state validation.
   - Exchanges the authorization code, validates `GET /users/me` and stores the
     seller/tokens in service-role-only tables.
-  - Does not import orders, products or financial data.
+  - Does not import orders, products or financial data. Sob demanda (sem cron).
 - `mercadolivre-webhook`
   - Public callback registered in Mercado Livre DevCenter.
   - Validates the application ID, persists notifications idempotently and
     returns without fetching the notified resource.
-  - Topics remain disabled until the data ingestion scope is approved.
-- `shopee-sync` (per-shop cron every 15 min)
+  - Topics remain disabled until the data ingestion scope is approved. Sob demanda (sem cron).
+- `shopee-sync` — **ativo a cada 15 min, defasado por loja (`:01/:16/:31/:46` jacartta, `:03/:18/:33/:48` espaço-de-bicho, `:06/:21/:36/:51` oliverhome, `:09/:24/:39/:54` donacor)**
   - Pulls Shopee orders + items for each shop into `shopee_orders`/`shopee_order_items`.
   - Também materializa `package_list`, prazo, rastreio e status logístico em
     `shopee_fulfillment_packages`; `LOGISTICS_PICKUP_DONE` confirma a coleta.
@@ -76,31 +86,33 @@
   - Each shop has its **own partner app** — requests are signed with that
     shop's partner key. An `invalid_access_token` is usually a wrong signature
     (wrong app for the shop), not an expired token.
-- `shopee-escrow-sync` (per-shop cron every 30 min)
+- `shopee-escrow-sync` — **ativo a cada 30 min, defasado por loja (`:11/:41` donacor, `:13/:43` espaço-de-bicho, `:17/:47` oliverhome, `:19/:49` jacartta)**
   - Pulls escrow detail per order (commission, fees, net) — the source of the
     take rate / net ROI on `/shopee`. Read-only on tokens.
-- `bip-fulfillment-sync` (cron every 2 min)
+- `bip-fulfillment-sync` — **ativo a cada 2 min (todo minuto par)**
   - Pulls the Bip's protected incremental export and upserts
     `bip_fulfillment_events`; it never writes back to the Bip.
   - Protected by `BIP_FULFILLMENT_SYNC_JOB_SECRET`; the Bip endpoint uses a
     separate `BIP_FULFILLMENT_EXPORT_SECRET`.
 - `fulfillment-dashboard`
   - Read-only aggregate for the Bip TVs. Returns no buyer/address/raw payload.
-  - Protected by `FULFILLMENT_DASHBOARD_SECRET` and called only by the Bip backend.
-- `shopee-sync-sbs` (deployed 2026-07-16; hourly cron `:42`)
+  - Protected by `FULFILLMENT_DASHBOARD_SECRET` and called only by the Bip backend. Sem cron — chamada pelo backend do Bip.
+- `shopee-sync-sbs` (deployed 2026-07-16) — **ativo `:53` de cada hora, todas as lojas numa chamada**
   - Materializes FBS warehouse inventory (`/api/v2/sbs/get_current_inventory`,
     region BR) into `shopee_sbs_inventory` + daily snapshots. Shopee provides
     sellable/reserved/in-transit, coverage_days, selling_speed and 7–90d sales
     windows per SKU × warehouse. Read-only on tokens; signs per-shop with each
     shop's own partner app key.
-- `shopee-sync-products` (deployed 2026-07-16; 6h crons PER SHOP, staggered)
+- `shopee-sync-products` (deployed 2026-07-16) — **ativo por hora, defasado por loja (`:22` jacartta, `:32` espaço-de-bicho, `:44` donacor, `:52` oliverhome)** — passou de 4×/dia para horário; doc anterior estava desatualizado.
   - Items + models/variations + local stock (`get_item_list` →
     `get_item_base_info` → `get_model_list`) into `shopee_products` + daily
     snapshots; then rebuilds `shopee_sales_daily` (derived from ingested
     orders) and 30/60d product aggregates via RPCs (migration `20260716220000`).
   - Scheduled per shop because the 4 catalogs together exceed the edge
     function wall clock (observed on first load).
-- `mercadolivre-sync` (deployed 2026-07-14; hourly cron active)
+- `shopee-price-product-refresh` (deployed 2026-08-16) — **ativo `:57` de cada hora**
+  - Recalcula `oraculo_shopee_price_product_cache` (preço × custo × lucro por anúncio/variação); de-para por pedidos casados, custo pela regra kit/unitário. Roda depois dos syncs de produto das 4 lojas (`:22/:32/:44/:52`).
+- `mercadolivre-sync` (deployed 2026-07-14) — **ativo `:55` de cada hora**
   - Read-only ingestion for the `/mercado-livre` analytics page: items (scan),
     Full stock (`/inventories/{id}/stock/fulfillment`) and paid orders
     (default 30-day lookback) into `mercadolivre_items`,
@@ -114,14 +126,15 @@
   - Item 30d aggregates are recomputed from `mercadolivre_sales_daily` by RPC
     `mercadolivre_refresh_item_aggregates` at the end of each run (migration
     `20260714230000`) — never from the sync's own lookback window.
-- `mercadolivre-process-notifications` (deployed 2026-07-14; 10-min cron active)
+  - Job atual: `oraculo-mercadolivre-sync-hourly` (`55 * * * *`), `lookbackDays=2`.
+- `mercadolivre-process-notifications` (deployed 2026-07-14) — **ativo a cada 10 min (`0,10,20,30,40,50`)**
   - Drains the `mercadolivre_notifications` inbox: `items`/`items_prices`
     notifications refresh the item (detail + Full stock) within ~10 minutes;
     `orders_v2` is marked ignored (sales are covered by the hourly sync).
   - Reads the access token but NEVER refreshes it (renewal stays exclusive to
     `mercadolivre-sync`); defers the batch when the token is about to expire.
   - DevCenter topics must be enabled by the operator for events to arrive.
-- `shopee-returns-sync` (deployed 2026-08-04; crons PER SHOP every 2h, staggered)
+- `shopee-returns-sync` (deployed 2026-08-04) — **ativo a cada 2h, defasado por loja (`:04` jacartta, `:08` espaço-de-bicho, `:27` donacor, `:59` oliverhome)**
   - Pulls returns/refunds (`/api/v2/returns/get_return_list`) into the canonical
     `oraculo_returns` (channel `shopee`). No per-channel staging table — the
     Shopee response is already one row per return; the full payload lands in `raw`.
@@ -134,9 +147,9 @@
     wall clock. Measured on the first backfill — it died mid-run with no log,
     leaving one shop out entirely and another stuck at 23/07. Same failure mode
     as `shopee-sync-products`.
-  - Query params: `?shop_id=` (one shop), `?days=N` (default 3), `?from=&to=`
+  - Query params: `?shop_id=` (one shop), `?days=N` (default 3, jobs atuais usam `days=3`), `?from=&to=`
     (backfill). Runs logged in `shopee_sync_runs` as `shopee-returns-sync:<id>`.
-- `shopee-ads-report-data` (deployed 2026-08-07; acionada pelo n8n)
+- `shopee-ads-report-data` (deployed 2026-08-07) — **sem cron ativo; acionada pelo n8n**
   - Coleta settings e 30 dias de performance diária de Ads, uma loja por
     invocação, e grava `shopee_ads_campaigns` / `shopee_ads_daily`.
   - Read-only no token; o workflow n8n primário é o único renovador. Adia a loja
@@ -146,6 +159,10 @@
   - Workflow: `Oráculo - Relatório IA Shopee Ads 3d` (`YpzBJxJkHeMLsunB`),
     08:00 BRT com trava de três dias. Está inativo até um preview completo
     validar a redação pelo Ollama Chat (`qwen2.5-coder:7b`).
+- `tiktok-sync` / `tiktok-oauth-callback` — **presentes no repo, não implantadas**
+  - Mesmo desenho do `shopee-sync` (renovador único de token, janela de pedidos, upsert em `tiktok_orders`/`tiktok_order_items`), mas as tabelas `tiktok_*` nunca foram aplicadas em produção — o canal TikTok hoje não sincroniza nada sozinho.
+- `olist-sync`, `olist-stock-sync` — **legadas, ainda implantadas, órfãs**
+  - Versões anteriores de `olist-sync-orders`/`olist-sync-stock` (deployadas com `verify_jwt: true`). Nenhum job em `cron.job` as chama mais. Candidatas a `supabase functions delete`, a menos que algo externo ainda invoque diretamente.
 - **Ollama (VPS `129.121.53.71`, stack `ollama`)** — `qwen2.5-coder:7b`, sem GPU.
   - Interno: `http://ollama:11434` pela rede `JacarttaNet`. É por aqui que o n8n
     fala (relatório de Shopee Ads) — não passa pelo Traefik.
@@ -199,157 +216,66 @@
 
 ## Supabase Cron
 
-Active jobs in `cron.job`:
+> Levantado ao vivo em 2026-08-23 (`select * from cron.job`). `pg_cron` roda em UTC — coluna "BRT" já convertida (UTC-3). 39 jobs ativos.
 
-- `oraculo-olist-orders-hourly`: `5 * * * *`
-  - Calls `olist-sync-orders`.
-  - Payload: `lookbackDays=1`, `maxPages=1`, `hydrateDetails=true`, `detailDelayMs=150`.
-- `oraculo-olist-derived-hourly`: `25 * * * *`
-  - Calls `olist-derived-refresh` in incremental mode.
-  - Window: `current_date - 2 days` through `current_date + 1 day`.
-  - Skips product dimensions, stock snapshot, unified SKU cache and NF cache.
-- `oraculo-nf-cache-hourly`: `35 * * * *`
-  - Runs `refresh_oraculo_nf_daily_cache` directly in Postgres.
-- `oraculo-unified-sku-cache`: `30 * * * *` (created 2026-08-03)
-  - Runs `refresh_oraculo_unified_sku_cache()` directly in Postgres, wrapped in
-    `set local statement_timeout = '20min'`.
-  - Feeds `oraculo_sku_current_unified_cache` **and**
-    `oraculo_stock_watchlist_unified_cache` — i.e. every SKU 30-day figure,
-    `days_until_stockout` and the whole rupture watchlist.
-  - **Why it exists**: the function had always been there, but nothing
-    scheduled it. `oraculo-olist-derived-hourly` explicitly *skips* the unified
-    SKU cache (see its entry above), so the table was populated once by hand on
-    2026-06-19 and then froze for 45 days. Symptoms while frozen: rupture alerts
-    reported 5 SKUs when the real number was 170, and `/skus` showed R$ 571k of
-    30-day revenue against R$ 8.3 mi of actual billed NF.
-  - **Runtime ~5 min — it does not fit the API gateway's 2-minute statement
-    timeout.** Calling `refresh_oraculo_unified_sku_cache()` through
-    `supabase db query` fails with `57014` and rolls back the whole function
-    (both inserts are in one transaction). Run it through `pg_cron`, never
-    through the REST/API path.
-  - Overlaps `oraculo-nf-cache-hourly` (`:35`) by design of the clock, not by
-    necessity — if a `57014` starts showing up in the `:35` job, move this one.
-  - `pg_cron` does not guard against overlapping runs. Do not schedule this
-    function more frequently than its runtime.
-- `oraculo-olist-qty-cache`: `20 * * * *`
-  - Runs `refresh_oraculo_olist_qty_cache(10)` directly in Postgres (migrations
-    `20260727120000` + `20260728120000`); feeds `/mais-vendidos`.
-  - Reads `olist_orders.payload` **once** per run into a temp table shared by
-    both caches. Reading it twice (channel cache + SKU cache) blew the
-    statement timeout.
-  - Measured: 10-day run ~30s (observed in `cron.job_run_details`), 21-day
-    populate 77s.
-  - Rolling 10-day window on purpose: the page's widest filter is 7 days, and
-    the orders backfill keeps rewriting recent days (21/07 grew from ~1.5k to
-    6.0k orders days after the fact). Measured cost: 10 days = 32s, 21 days =
-    106s — the payload detoast in `olist_orders` (957 MB) dominates.
-  - Dates older than the window stay frozen; re-run with a larger
-    `lookback_days` by hand after a historical reload.
-  - **Also feeds `/previsao-de-vendas`** (RPCs `oraculo_sales_forecast_*`,
-    migration `20260819210000`): the forecast reads only these two caches, so
-    their freshness is surfaced on `/status` as "Cache de quantidade (Previsão
-    de Vendas)".
-  - One-shot backfill `oraculo-qty-cache-backfill-once` (`2 * * * *`, created
-    2026-08-19 by the same migration): ran `refresh_oraculo_olist_qty_cache(120)`
-    once and unscheduled itself (confirmed gone from `cron.job` on 2026-08-20).
-    It exposed that pre-August item coverage required re-hydrating orders
-    (July weeks at ~30% ⇒ units undercounted ~3x).
-  - **July item re-hydration** (migration `20260820150000`, started 2026-08-20):
-    `oraculo-olist-items-backfill-julho` (`*/2 * * * *`) drives
-    `olist-backfill-order-items` over the 2026-07-20..2026-08-02 window
-    (~45.5k orders queued via `prepare_olist_order_item_backfill_queue_by_orders`,
-    which seeds the queue from orders directly — the fiscal seeding only covers
-    invoice-linked orders, 66% of the gap; the queue's `invoice_id`/`issued_at`
-    became nullable for this). Throughput ~100 orders per tick ⇒ ~15h.
-    `oraculo-olist-items-backfill-julho-finish` (`14 * * * *`) waits for the
-    queue to drain, runs `refresh_oraculo_olist_qty_cache(35)` and unschedules
-    both jobs. If both jobs are gone from `cron.job`, the backfill completed.
-  - Forecast history floor: hard floor **2026-07-20**; weeks before 2026-08-03
-    only qualify once their item coverage reaches 90% (so July enters
-    automatically after the re-hydration), and any used week under 90% raises
-    a warning in `calc_note`.
-- `oraculo-olist-stock-30m`: `11,41 * * * *` (replaced `oraculo-olist-stock-6h` on 2026-08-16)
-  - Calls `olist-sync-stock` with `{"pagesPerRun": 1, "detailConcurrency": 1, "detailDelayMs": 300}`; resumes from the cursor.
-- `oraculo-olist-products-daily`: `43 7 * * *`
-  - Calls `olist-derived-refresh` (products + daily stock snapshot from `olist_stock_items`).
-- `oraculo-olist-invoices-15m`: `*/15 * * * *`
-  - Calls `olist-sync-invoices`.
-  - Payload: `lookbackDays=3`, `pageSize=50`, `maxPages=2`, `hydrateDetails=true`.
-- `oraculo-olist-invoices-monthly-headers-hourly`: `45 * * * *`
-  - Calls `olist-sync-invoices`.
-  - Window: first day of current month through `current_date`.
-  - Payload: `pageSize=100`, `maxPages=300`, `hydrateDetails=false`, `delayMs=100`.
-  - Keeps NF headers/counts aligned with Olist before item hydration finishes.
-- `shopee-sync-{donacor,espaco-de-bicho,oliverhome,jacartta}`:
-  `0/3/6/9-59/15 * * * *` — per-shop `shopee-sync` every 15 min, staggered by
-  3 min so the shops never sign at the same minute. Migration `20260713160000`.
-- `oraculo-bip-fulfillment-2m`: `*/2 * * * *`
-  - Calls `bip-fulfillment-sync`; run health is shown on `/status`.
-- `shopee-escrow-{donacor,espaco-de-bicho,oliverhome,jacartta}`:
-  `11/13/17/19-59/30 * * * *` — per-shop `shopee-escrow-sync` every 30 min,
-  offset from the order sync so escrow reads orders that already landed.
-- `shopee-sbs-hourly`: `42 * * * *` — calls `shopee-sync-sbs` (all shops; light).
-- `shopee-products-{jacartta,espaco-de-bicho,donacor,oliverhome}`:
-  `22/32/44/52 1,7,13,19 * * *` — per-shop `shopee-sync-products` runs
-  (staggered; one invocation per shop fits the wall clock).
-- `oraculo-mercadolivre-sync-hourly`: `55 * * * *`
-  - Calls `mercadolivre-sync` via `private.invoke_oraculo_mercadolivre_sync`
-    (Vault secrets `oraculo_project_url` + `oraculo_mercadolivre_sync_job_secret`).
-  - Payload: `lookbackDays=2` (initial 30-day load was run manually at activation).
-  - Scheduled at `:55` to avoid competing with the Olist jobs.
-- `oraculo-mercadolivre-notifications-10m`: `*/10 * * * *`
-  - Calls `mercadolivre-process-notifications` via
-    `private.invoke_oraculo_mercadolivre_function` (generic ML helper, same
-    Vault secrets). Minutes 0/10/20/30/40/50 are free of other jobs.
-- `oraculo-mercadolivre-notifications-cleanup-weekly`: `37 6 * * 0`
-  - Direct Postgres delete (no edge function): removes `ignored`/`processed`
-    notifications older than 30 days; `failed` rows are kept for inspection.
-  - Operational note: backlog created BEFORE the latest successful full sync
-    can be safely bulk-ignored — the hourly sync already captured that state
-    (done manually on 2026-07-16 for the 14k backlog accumulated while
-    DevCenter topics were enabled before the processor existed).
-- `oraculo-olist-order-items-backfill-overnight`: `50 3-8 * * *` (UTC = 00h-05h `America/Sao_Paulo`)
-  - Calls `olist-backfill-order-items`.
-  - Window: `2026-06-01` through `2026-06-19` while the fiscal SKU coverage gate is still open.
-  - Payload: `limit=100`, `delayMs=1500`, `maxRuntimeMs=180000`.
-  - Runs only in the overnight low-traffic window to reduce Olist `429` during business hours.
-  - Replaced the previous hourly job `oraculo-olist-order-items-backfill-hourly` (migration `20260710090000`).
-  - Processes online in Supabase and does not depend on a local terminal or Mac being on.
-- `shopee-returns-jacartta`: `12 */2 * * *`
-- `shopee-returns-espaco-de-bicho`: `24 */2 * * *`
-- `shopee-returns-donacor`: `36 */2 * * *`
-- `shopee-returns-oliverhome`: `48 */2 * * *`
-- n8n `Shopee - Renovar Tokens (n8n primário)` (`Zeptn7GL4bOOsGKj`):
-  `5 1-23/2 * * *` em `America/Sao_Paulo`. É o único renovador dos tokens
-  Shopee; persiste no banco operacional e replica ao Oráculo sem bloquear.
-- n8n `Shopee API Direta - Todos os Produtos WhatsApp 06h30 e 12h30`
-  (`GJHOwusnuXgaxVaT`): `30 6,12 * * *`. Consulta a Shopee diretamente e
-  envia pela Evolution API; não lê dados do Oráculo. Ver
-  `docs/shopee-sales-whatsapp-report.md`.
-- `mercadolivre-returns-hourly`: `35 * * * *` (away from the `:55` of `mercadolivre-sync`)
-- `oraculo-returns-order-ref-cache`: `7,37 * * * *`
-  - Feeds `oraculo_olist_order_ref_cache` (sale NF -> marketplace order number).
-    Extracting that field from `raw_json` live costs **~64 s per month** (129k
-    invoices, 516 MB table, detoast) — it can never run on a page request.
-  - Day coverage is tracked in `oraculo_olist_order_ref_cache_days`, not inferred
-    from the presence of rows: a day with no invoices is a PROCESSED day. Without
-    that, May/2026 (no invoices at all) stayed forever pending and the loop spun
-    in place — 62 days processed, 0 rows, no error.
-  - **Hot window of 1 hour for the 3 most recent days** (migration `20260804230000`);
-    closed days are processed once and never revisited. The first rule used 20h for
-    everything — right for a closed day, wrong for the CURRENT one, which keeps
-    receiving invoices: a sale issued after the cron pass stayed out of the cache
-    until the next day, and a return against it landed on a false `sem_nf_venda`,
-    sending the team looking for an invoice that exists. Applying the fix pulled in
-    8.164 stranded invoices from 02–03/08.
-  - Surfaced on `/status` as "Cache NF de venda (devoluções)", with an alert when it
-    has not refreshed today.
-- `oraculo-importacoes-ais-sync`: `0 0,6,12,18 * * *`
-  - Calls `importacoes-ais-sync` via `private.invoke_oraculo_importacoes_ais_sync`
-    (Vault secrets `oraculo_project_url` + `oraculo_importacoes_ais_job_secret`).
-  - 03:00/09:00/15:00/21:00 `America/Sao_Paulo`; only vessels referenced by
-    invoices are queried, so VesselAPI free-tier usage stays minimal.
-- Sync health is surfaced through the `/status` page (pull-based). There is no push notification channel; Telegram alerting was intentionally not adopted for this project.
+### Tabela direta: horário BRT, vezes/dia, o que chama
+
+| job | horário (BRT) | vezes/dia | chama | status |
+|---|---|---|---|---|
+| `oraculo-bip-fulfillment-2m` | a cada 2 min | 720 | `bip-fulfillment-sync` | permanente |
+| `oraculo-olist-items-backfill-julho` | a cada 2 min | 720 | `olist-backfill-order-items` (janela 20/07–02/08) | **temporário — ainda ativo em 23/08** |
+| `oraculo-mercadolivre-notifications-10m` | :00 :10 :20 :30 :40 :50 de cada hora | 144 | `mercadolivre-process-notifications` | permanente |
+| `oraculo-olist-invoices-15m` | :00 :15 :30 :45 de cada hora | 96 | `olist-sync-invoices` (3 dias, 4 páginas) | permanente |
+| `shopee-sync-donacor` | :01 :16 :31 :46 de cada hora | 96 | `shopee-sync` | permanente |
+| `shopee-sync-espaco-de-bicho` | :03 :18 :33 :48 de cada hora | 96 | `shopee-sync` | permanente |
+| `shopee-sync-oliverhome` | :06 :21 :36 :51 de cada hora | 96 | `shopee-sync` | permanente |
+| `shopee-sync-jacartta` | :09 :24 :39 :54 de cada hora | 96 | `shopee-sync` | permanente |
+| `oraculo-returns-order-ref-cache` | :07 :37 de cada hora | 48 | SQL `refresh_oraculo_olist_order_ref_cache(3)` | permanente |
+| `oraculo-olist-orders-hourly` | :05 :20 :35 :50 de cada hora | 96 | `olist-sync-orders` (3 dias, 5 páginas) | permanente (era 48/dia até 23/08) |
+| `oraculo-olist-stock-30m` | :11 :41 de cada hora | 48 | `olist-sync-stock` | permanente |
+| `oraculo-shopee-take-rate-cache` | :12 :42 de cada hora | 48 | SQL `refresh_oraculo_shopee_take_rate_cache()` | permanente |
+| `shopee-escrow-donacor` | :11 :41 de cada hora | 48 | `shopee-escrow-sync` | permanente |
+| `shopee-escrow-espaco-de-bicho` | :13 :43 de cada hora | 48 | `shopee-escrow-sync` | permanente |
+| `shopee-escrow-oliverhome` | :17 :47 de cada hora | 48 | `shopee-escrow-sync` | permanente |
+| `shopee-escrow-jacartta` | :19 :49 de cada hora | 48 | `shopee-escrow-sync` | permanente |
+| `oraculo-fiscal-margin-snapshots-hourly` | :14 de cada hora | 24 | SQL captura snapshot fiscal + purga >14 dias | permanente |
+| `oraculo-olist-items-backfill-julho-finish` | :14 de cada hora | 24 | SQL checa fila / finaliza backfill julho | **temporário — ainda ativo em 23/08** |
+| `oraculo-olist-derived-hourly` | :25 de cada hora | 24 | `olist-derived-refresh` (incremental) | permanente |
+| `oraculo-unified-sku-cache` | :28 de cada hora | 24 | SQL `refresh_oraculo_unified_sku_cache()` (~5min) | permanente |
+| `oraculo-olist-qty-cache` | :23 de cada hora | 24 | SQL `refresh_oraculo_olist_qty_cache(10)` | permanente |
+| `oraculo-nf-cache-hourly` | :34 de cada hora | 24 | SQL `refresh_oraculo_nf_daily_cache` | permanente |
+| `mercadolivre-returns-hourly` | :38 de cada hora | 24 | `mercadolivre-returns-sync?days=45` | permanente |
+| `shopee-products-jacartta` | :22 de cada hora | 24 | `shopee-sync-products` | permanente |
+| `shopee-products-espaco-de-bicho` | :32 de cada hora | 24 | `shopee-sync-products` | permanente |
+| `shopee-products-donacor` | :44 de cada hora | 24 | `shopee-sync-products` | permanente |
+| `shopee-products-oliverhome` | :52 de cada hora | 24 | `shopee-sync-products` | permanente |
+| `shopee-sbs-hourly` | :53 de cada hora | 24 | `shopee-sync-sbs` (todas as lojas) | permanente |
+| `oraculo-mercadolivre-sync-hourly` | :55 de cada hora | 24 | `mercadolivre-sync` (lookback 2 dias) | permanente |
+| `oraculo-olist-invoices-monthly-headers-hourly` | :56 de cada hora | 24 | `olist-sync-invoices` (mês corrente, só cabeçalho) | permanente |
+| `oraculo-shopee-price-product-hourly` | :57 de cada hora | 24 | `shopee-price-product-refresh` | permanente |
+| `shopee-returns-jacartta` | 01:04 03:04 05:04 07:04 09:04 11:04 13:04 15:04 17:04 19:04 21:04 23:04 | 12 | `shopee-returns-sync?days=3` | permanente |
+| `shopee-returns-espaco-de-bicho` | 01:08 03:08 05:08 07:08 09:08 11:08 13:08 15:08 17:08 19:08 21:08 23:08 | 12 | `shopee-returns-sync?days=3` | permanente |
+| `shopee-returns-donacor` | 01:27 03:27 05:27 07:27 09:27 11:27 13:27 15:27 17:27 19:27 21:27 23:27 | 12 | `shopee-returns-sync?days=3` | permanente |
+| `shopee-returns-oliverhome` | 01:59 03:59 05:59 07:59 09:59 11:59 13:59 15:59 17:59 19:59 21:59 23:59 | 12 | `shopee-returns-sync?days=3` | permanente |
+| `oraculo-importacoes-ais-sync` | 03:29 09:29 15:29 21:29 | 4 | `importacoes-ais-sync` | permanente |
+| `oraculo-olist-order-items-backfill-overnight` | 00:57 01:57 02:57 03:57 04:57 05:57 | 6 | `olist-backfill-order-items` (mês corrente) | permanente |
+| `oraculo-olist-products-daily` | 04:43 | 1 | `olist-derived-refresh` (produtos + snapshot) | permanente |
+| `oraculo-curves-refresh-daily` | 05:26 | 1 | SQL refresh curvas de venda/estoque | permanente |
+| `oraculo-mercadolivre-notifications-cleanup-weekly` | 03:58, só domingo | 1/semana | SQL apaga notificações >30 dias | permanente |
+
+Fora do `pg_cron` (n8n, não aparece em `cron.job`): `Shopee - Renovar Tokens` (03:05, 05:05... a cada 2h, ímpares BRT — único renovador de token Shopee) e `Shopee API Direta - Produtos WhatsApp` (06:30 e 12:30 BRT, não lê dados do Oráculo).
+
+**Backfill de julho ainda rodando**: `oraculo-olist-items-backfill-julho` (2/2min) e `-finish` (:14/h) seguem ativos em 23/08 — quando os dois sumirem do `cron.job`, a reidratação da janela 20/07–02/08 terminou.
+
+### Conflitos de agendamento
+
+Teto conhecido do Postgres do projeto: ~2 jobs por minuto (`max_worker_processes=6`). Pontos que estouram isso hoje, todos por causa do backfill de julho (temporário):
+
+- **:00 e :30** — 4 jobs simultâneos (`bip-2m` + `julho-backfill` + `ml-notifications-10m` + `olist-invoices-15m`).
+- **:14** — pior ponto: 4 jobs, sendo dois SQL diretos pesados no mesmo minuto (`fiscal-margin-snapshots` + `julho-backfill-finish`).
+- Somem sozinhos quando o backfill de julho terminar — não precisa mexer em nada, só confirmar que os dois jobs de julho saíram do `cron.job`.
+- Único conflito permanente (não ligado ao backfill): `:57` — `shopee-price-product-hourly` e `olist-order-items-backfill-overnight` coincidem todo dia das 00h às 05h BRT.
+- Fora isso, o desenho evita colisão de propósito: as 4 lojas Shopee (sync/escrow/produtos/devoluções) nunca disparam no mesmo minuto entre si.
 
 ## Cached Analytics Sources
 
@@ -398,6 +324,39 @@ over valid NF + linked order items:
 
 Dashboard shows a "Margem e ROI fiscais" section reading the summary, with the
 coverage % explicit. Margin is fiscal-partial (no marketplace fee/freight/ads).
+
+### Cobertura de custo — override manual ligado (23/08/2026)
+
+Até 23/08/2026, o custo confiável era resolvido **só** por `produto_id ->
+olist_products`, via `oraculo_product_effective_cost` — o override manual em
+`oraculo_margin_sku_params` (formulário em `/parametros`, bulk em
+`/shopee/reposicao`) nunca era consultado pelo motor fiscal. Preencher um
+custo nessas telas não movia a Cobertura de jeito nenhum.
+
+Corrigido em três migrations (`20260823120000`, `20260823121000`,
+`20260823122000`):
+
+- `oraculo_product_effective_cost` agora prioriza o override (por produto, e
+  por componente dentro de kits) sobre o custo do Olist.
+- `oraculo_fiscal_margin_lines` casa o override **direto pelo SKU da linha**
+  (`oi.sku`/`ii.sku`), não só por `produto_id` — necessário porque uma fatia
+  relevante das linhas tem `produto_id = '0'` (placeholder do Olist para "sem
+  produto do catálogo vinculado") e nunca alcançaria o override por
+  `produto_id`. Confirmado ao vivo: era a causa mais comum do gap, não custo
+  zerado num produto existente.
+- `oraculo_fiscal_cost_gap(start, end, limit)` lista os SKUs exatos que ficam
+  de fora, com motivo (`SKU sem produto vinculado no Olist` / `kit com
+  componente sem custo` / `sem custo cadastrado` / `custo implausível`),
+  receita afetada e, para kit, o componente específico faltando.
+
+**Roda só via snapshot, nunca ao vivo**: `oraculo_fiscal_cost_gap` varre o mês
+inteiro e estoura o timeout de 8s do papel `authenticated` no caminho da
+página (mesma classe de problema de `refresh_oraculo_unified_sku_cache`).
+Capturado dentro de `oraculo_capture_fiscal_margin_snapshots()` (cron
+`oraculo-fiscal-margin-snapshots-hourly`, `:14`) na snapshot `fiscal_cost_gap`,
+lida por `/parametros` via `loadFiscalCostGapSnapshot`
+(`apps/web/lib/fiscal-snapshots.ts`). A tela "Custos pendentes" reaproveita o
+form `saveSkuParam` já existente — sem página nova, sem tabela nova.
 
 ## RLS authenticated read — fiscal chain fix
 

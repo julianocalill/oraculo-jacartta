@@ -1777,6 +1777,16 @@ h2 {
   font-size: 13px;
 }
 
+.inline-cost-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inline-cost-form input {
+  width: 90px;
+}
+
 /* Zebra + hover: com 10-16 colunas nowrap, sem guia de linha o olho perde a
    posição no scroll horizontal. */
 .data-table tbody tr:nth-child(even) td {

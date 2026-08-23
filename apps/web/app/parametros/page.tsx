@@ -6,6 +6,7 @@ import { assertTabAccess, requireTabAccess } from "../../lib/auth/access";
 import { NoAccess } from "../components/no-access";
 import { AppShell } from "../components/app-shell";
 import { loadActionableAlertCount } from "../../lib/alert-count";
+import { loadFiscalCostGapSnapshot } from "../../lib/fiscal-snapshots";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,7 @@ type MarginProbe = {
   unit_cost: number | null;
   margin_signal: string | null;
 };
+
 
 function n(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -228,8 +230,9 @@ async function saveStateTaxParam(formData: FormData) {
 
 async function loadParametros() {
   const supabase = await createSupabaseUserClient();
+  const admin = createSupabaseAdminClient();
 
-  const [channelsResponse, skuResponse, stateTaxResponse, marginResponse] = await Promise.all([
+  const [channelsResponse, skuResponse, stateTaxResponse, marginResponse, costGap] = await Promise.all([
     supabase
       .from("oraculo_margin_channel_params")
       .select("*")
@@ -250,7 +253,11 @@ async function loadParametros() {
     supabase
       .from("oraculo_sku_margin_30d")
       .select("source, unit_cost, margin_signal")
-      .limit(5000)
+      .limit(5000),
+    // Snapshot horária (cron oraculo-fiscal-margin-snapshots-hourly), nunca ao
+    // vivo: oraculo_fiscal_cost_gap varre o mês inteiro e estoura o timeout
+    // de 8s do papel authenticated no caminho da página.
+    loadFiscalCostGapSnapshot(admin)
   ]);
 
   if (channelsResponse.error) throw channelsResponse.error;
@@ -270,6 +277,7 @@ async function loadParametros() {
     channels: (channelsResponse.data ?? []) as ChannelParam[],
     skuParams: (skuResponse.data ?? []) as SkuParam[],
     stateTaxes: (stateTaxResponse.data ?? []) as StateTaxParam[],
+    costGap,
     summary: {
       total: probes.length,
       withCost,
@@ -626,6 +634,83 @@ export default async function ParametrosPage() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="panel product-panel">
+        <div className="sku-toolbar">
+          <div>
+            <p className="eyebrow">Cobertura fiscal</p>
+            <h2>Custos pendentes</h2>
+          </div>
+          <div className="sku-actions">
+            <strong>{count(data.costGap.length)} SKUs</strong>
+            <span>mês corrente</span>
+          </div>
+        </div>
+
+        <p className="table-note">
+          Estes SKUs são exatamente os que ficam de fora da <strong>Cobertura</strong> do
+          card &ldquo;Lucro fiscal&rdquo; — sem custo confiável, a margem não entra no
+          cálculo. Ordenados pela receita que cada um está deixando fora. Preencha o custo
+          unitário bruto (o que foi pago) e salve — o sistema desconta sozinho o crédito
+          recuperável. A cobertura na tela sobe até 1h depois (ela lê o snapshot horário,
+          não este cálculo ao vivo).
+        </p>
+
+        {data.costGap.length === 0 ? (
+          <p className="table-note">Nenhum SKU sem custo confiável no período — cobertura no teto possível.</p>
+        ) : (
+          <div className="table-wrap dense-table-wrap">
+            <table className="data-table dense-table">
+              <thead>
+                <tr>
+                  <th>SKU</th>
+                  <th>Nome</th>
+                  <th>Motivo</th>
+                  <th className="numeric">Receita afetada</th>
+                  <th className="numeric">Linhas</th>
+                  <th>Corrigir custo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.costGap.map((row) => (
+                  <tr key={row.sku}>
+                    <td>{row.sku}</td>
+                    <td>{row.nome ?? "-"}</td>
+                    <td>
+                      <span className="status-pill signal-warning">{row.motivo}</span>
+                      {row.componentesFaltando && (
+                        <div className="table-note" style={{ marginTop: "0.35rem" }}>
+                          componente sem custo: {row.componentesFaltando}
+                        </div>
+                      )}
+                    </td>
+                    <td className="numeric">{money(row.receitaAfetada)}</td>
+                    <td className="numeric">{count(row.linhas)}</td>
+                    <td>
+                      <form action={saveSkuParam} className="inline-cost-form">
+                        <input type="hidden" name="source" value="olist" />
+                        <input
+                          type="hidden"
+                          name="sku"
+                          value={row.componentesFaltando ? row.componentesFaltando.split(",")[0].trim() : row.sku}
+                        />
+                        <input type="hidden" name="active" value="true" />
+                        <input
+                          name="unit_cost_override"
+                          inputMode="decimal"
+                          placeholder="custo bruto"
+                          required
+                        />
+                        <button type="submit">Salvar</button>
+                      </form>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <section className="panel product-panel">

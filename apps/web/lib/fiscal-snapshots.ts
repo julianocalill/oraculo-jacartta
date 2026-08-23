@@ -5,6 +5,7 @@ export const FISCAL_SKU_COVERAGE_SNAPSHOT_KEY = "sku_coverage";
 export const FISCAL_MARGIN_SUMMARY_SNAPSHOT_KEY = "fiscal_margin_summary";
 export const FISCAL_SKU_MARGIN_SNAPSHOT_KEY = "fiscal_sku_margin";
 export const FISCAL_CHANNEL_METRICS_SNAPSHOT_KEY = "fiscal_channel_metrics";
+export const FISCAL_COST_GAP_SNAPSHOT_KEY = "fiscal_cost_gap";
 
 type FiscalSnapshotRow = {
   snapshot_key: string;
@@ -260,6 +261,37 @@ export async function loadFiscalSkuMarginSnapshot(
     periodEnd: row.period_end,
     rows
   };
+}
+
+export type FiscalCostGapRow = {
+  sku: string;
+  nome: string | null;
+  tipo: string | null;
+  motivo: string;
+  componentesFaltando: string | null;
+  receitaAfetada: number;
+  linhas: number;
+};
+
+export async function loadFiscalCostGapSnapshot(
+  supabase: ReturnType<typeof createSupabaseAdminClient>
+): Promise<FiscalCostGapRow[]> {
+  const snapshots = await loadLatestFiscalSnapshots(supabase, [FISCAL_COST_GAP_SNAPSHOT_KEY]);
+  const row = snapshots.get(FISCAL_COST_GAP_SNAPSHOT_KEY);
+  if (!row) return [];
+  const payload = readSnapshotPayload(row);
+  const raw = Array.isArray(payload.gap) ? (payload.gap as Array<Record<string, unknown>>) : [];
+  return raw
+    .map((r) => ({
+      sku: r.sku == null ? "" : String(r.sku),
+      nome: r.nome == null ? null : String(r.nome),
+      tipo: r.tipo == null ? null : String(r.tipo),
+      motivo: r.motivo == null ? "" : String(r.motivo),
+      componentesFaltando: r.componentes_faltando == null ? null : String(r.componentes_faltando),
+      receitaAfetada: asNumber(r.receita_afetada),
+      linhas: asNumber(r.linhas)
+    }))
+    .filter((r) => r.sku);
 }
 
 export async function loadFiscalChannelMetricsSnapshot(

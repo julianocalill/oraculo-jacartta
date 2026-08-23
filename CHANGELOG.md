@@ -2,6 +2,30 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-23] — Cobertura de custo fiscal ligada ao override manual + Olist mais rápido
+
+- **Causa raiz da Cobertura fiscal travada em ~97%**: `oraculo_fiscal_margin_lines`
+  resolvia custo só por `produto_id -> olist_products`, nunca olhando o
+  override manual de `oraculo_margin_sku_params` (formulário já existente em
+  `/parametros` e `/shopee/reposicao`). Preencher custo nessas telas não
+  movia a Cobertura. Corrigido casando o override direto pelo SKU da linha
+  (necessário porque parte relevante das linhas tem `produto_id = '0'` — sem
+  produto do catálogo Olist vinculado, nem sequer um id pra cadastrar custo)
+  e, para kits, também por componente. Migrations `20260823120000`,
+  `20260823121000`, `20260823122000`. Ver `docs/deployment-map.md`.
+- **Nova seção "Custos pendentes" em `/parametros`**: lista os SKUs exatos
+  que ficam fora da Cobertura fiscal, ordenados por receita afetada, com o
+  motivo (sem produto vinculado / kit incompleto / sem custo / custo
+  implausível) e correção inline reaproveitando o form `saveSkuParam` já
+  existente — sem página nem tabela nova. RPC `oraculo_fiscal_cost_gap`
+  roda só via snapshot horária (`fiscal_cost_gap`, dentro de
+  `oraculo_capture_fiscal_margin_snapshots()`), nunca ao vivo — o cálculo
+  varre o mês inteiro e estoura o timeout de 8s do papel `authenticated`.
+- **Olist com menos atraso**: `oraculo-olist-orders-hourly` passou de 2×/hora
+  para 4×/hora (`5,20,35,50 * * * *`, migration `20260823130000`), mesma
+  cadência já comprovada segura para as notas fiscais — corta o
+  atraso máximo de um pedido novo aparecer de ~30 min para ~15 min.
+
 ## [2026-08-23] — Redesign da UI: bento, tema claro, tipografia e gráficos
 
 - **Visão geral recomposta em bento grid** (12 colunas, tiles de tamanhos
