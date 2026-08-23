@@ -38,8 +38,9 @@ Fonte única da geometria: todos derivam do mesmo desenho. Para regerar rasters:
 
 ## Tipografia
 
-- **Interface e wordmark:** Aptos / Segoe UI / system-ui (sans-serif), peso 800 no wordmark.
-- **Números (readouts):** monoespaçada tabular (SF Mono / JetBrains Mono) — dá o ar de "console de dados".
+- **Interface e wordmark:** IBM Plex Sans (self-hosted via `next/font`), peso 700 no wordmark.
+- **Números (readouts):** IBM Plex Mono, tabular — dá o ar de "console de dados".
+- Pareamento "Financial Trust"; detalhes em `docs/design-system.md`.
 
 ## Uso
 

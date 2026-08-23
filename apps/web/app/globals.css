@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   /* Tema dark — console de dados do Oráculo.
      Tinta fria quase-preta + ouro como assinatura de marca (mantém o nome
      --amber por compatibilidade) + paleta joia para data-viz. */
@@ -17,10 +18,22 @@
      4.5:1 — e forçava o usuário a decorar a ordem das colunas. */
   --faint: #8593ab;
 
-  /* Assinatura (ouro) — usada com parcimônia. --amber = alias histórico. */
+  /* Assinatura (ouro) — usada com parcimônia. --amber = alias histórico.
+     --gold-text é o ouro como cor de texto: no dark é o mesmo valor; no claro
+     escurece para manter 4.5:1 sobre branco. */
   --gold: #f6c453;
   --amber: #f6c453;
   --amber-strong: #e3a93a;
+  --gold-text: #f6c453;
+  --on-gold: #121000;
+
+  /* Superfícies auxiliares que variam por tema. */
+  --tooltip-bg: #172033;
+  --tooltip-text: #ffffff;
+  --zebra: rgba(255, 255, 255, 0.015);
+  --chip-soft: rgba(255, 255, 255, 0.07);
+  --link-indigo: #a8bcff;
+  --link-violet: #c9a9ff;
 
   /* Paleta joia — data-viz e acentos por métrica. */
   --indigo: #6d8bff;
@@ -43,12 +56,90 @@
   --info-soft: rgba(109, 139, 255, 0.12);
   --neutral-soft: #1a2130;
 
-  --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", "Roboto Mono", monospace;
+  /* Tipografia — pareamento "Financial Trust" (IBM Plex). As variáveis
+     --font-sans/--font-mono vêm do next/font no layout.tsx; o fallback cobre
+     o intervalo entre o primeiro paint e a fonte carregar. */
+  --sans: var(--font-sans, "IBM Plex Sans"), "Segoe UI", system-ui, sans-serif;
+  --mono: var(--font-mono, "IBM Plex Mono"), ui-monospace, "SF Mono", "Cascadia Code", monospace;
+
+  /* Escala de espaçamento densa (perfil dashboard): 4 · 8 · 12 · 16 · 24 · 32.
+     Cards e grids usam --space-3; seções usam --space-5. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Anel de foco único para teclado — 2px + offset, contraste ≥ 3:1 sobre
+     qualquer superfície do tema. */
+  --ring: var(--indigo);
+
+  /* Reflexo de 1px no topo das superfícies (profundidade "glass" discreta). */
+  --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
   --radius: 14px;
   --radius-sm: 10px;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.30), 0 2px 8px rgba(0, 0, 0, 0.25);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.30), 0 12px 30px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.35), 0 22px 48px rgba(0, 0, 0, 0.50);
+}
+
+
+/* ============================ Tema claro ============================
+   Mesma estrutura de tokens; o usuário escolhe no toggle da sidebar
+   (data-theme="light" no <html>). Paleta joia de data-viz é compartilhada. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f3f5f9;
+  --bg-grad: radial-gradient(900px 480px at 100% -8%, rgba(109, 139, 255, 0.10), transparent 60%), radial-gradient(760px 420px at -6% -4%, rgba(246, 196, 83, 0.12), transparent 55%);
+  --sidebar: #ffffff;
+  --panel: #ffffff;
+  --panel-soft: #f2f4f9;
+  --field: #ffffff;
+  --line: #e2e6ef;
+  --line-strong: #c6cdda;
+  --text: #101626;
+  --muted: #56617a;
+  --faint: #66718a;
+
+  --gold: #f2bb3f;
+  --amber: #f2bb3f;
+  --amber-strong: #dca12a;
+  --gold-text: #8a6100;
+  --on-gold: #1a1200;
+
+  --indigo: #4d6cf0;
+  --violet: #8b5cf6;
+  --cyan: #0fa9b3;
+  --emerald: #15a36f;
+  --rose: #e0506a;
+  --blue: #4d6cf0;
+  --green: #15a36f;
+  --red: #e0506a;
+
+  --warn-text: #b46a00;
+  --good-soft: rgba(21, 163, 111, 0.12);
+  --good-line: rgba(21, 163, 111, 0.35);
+  --warn-soft: rgba(240, 169, 59, 0.16);
+  --warn-line: rgba(200, 130, 20, 0.40);
+  --crit-soft: rgba(224, 80, 106, 0.10);
+  --crit-line: rgba(224, 80, 106, 0.35);
+  --info-soft: rgba(77, 108, 240, 0.10);
+  --neutral-soft: #eef1f7;
+
+  --tooltip-bg: #101626;
+  --tooltip-text: #ffffff;
+  --zebra: rgba(16, 22, 38, 0.025);
+  --chip-soft: rgba(16, 22, 38, 0.07);
+  --link-indigo: #3b57d6;
+  --link-violet: #7344e0;
+
+  --ring: #4d6cf0;
+  --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --shadow-sm: 0 1px 2px rgba(16, 22, 38, 0.05), 0 2px 8px rgba(16, 22, 38, 0.05);
+  --shadow: 0 1px 2px rgba(16, 22, 38, 0.05), 0 10px 28px rgba(16, 22, 38, 0.08);
+  --shadow-lg: 0 2px 4px rgba(16, 22, 38, 0.06), 0 20px 44px rgba(16, 22, 38, 0.14);
 }
 
 * {
@@ -62,13 +153,45 @@ body {
   background: var(--bg-grad), var(--bg);
   background-attachment: fixed;
   color: var(--text);
-  font-family: "Aptos", "Segoe UI", system-ui, sans-serif;
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
 body {
   min-height: 100vh;
+}
+
+/* Links: o app não usa sublinhado — afford de link vem de cor/peso e o
+   feedback de hover é mudança de cor (padrão aplicado ao sistema todo). */
+a {
+  text-decoration: none;
+}
+
+/* Foco por teclado: um único anel para links, botões, campos e summaries.
+   :focus-visible não dispara no clique do mouse, então não suja a UI. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Todo clicável tem cursor de ponteiro. */
+:where(button, summary, [role="button"], label[for]) {
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 .login-shell {
@@ -189,7 +312,7 @@ body {
   border: 0;
   border-radius: 8px;
   background: var(--amber);
-  color: #121000;
+  color: var(--on-gold);
   cursor: pointer;
   font: inherit;
   font-weight: 850;
@@ -222,8 +345,14 @@ p {
   position: sticky;
   top: 0;
   height: 100vh;
+  /* min-width: 0 — no mobile o shell vira uma coluna e o item de grid
+     herdaria min-width:auto da nav horizontal (chegava a 1100px num
+     viewport de 375). */
+  min-width: 0;
   border-right: 1px solid var(--line);
-  background: var(--sidebar);
+  background: color-mix(in srgb, var(--sidebar) 88%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   padding: 18px 12px;
   display: flex;
   flex-direction: column;
@@ -384,7 +513,7 @@ p {
 }
 
 .nav-sector-active > summary {
-  color: var(--gold);
+  color: var(--gold-text);
 }
 
 .nav-sector-links {
@@ -406,7 +535,7 @@ p {
 }
 
 .sync-dot {
-  color: var(--amber);
+  color: var(--gold-text);
   letter-spacing: 0;
 }
 
@@ -499,7 +628,7 @@ p {
   border: 0;
   border-radius: 9px;
   background: linear-gradient(180deg, var(--amber), var(--amber-strong));
-  color: #2a1c00;
+  color: var(--on-gold);
   cursor: pointer;
   font: inherit;
   font-size: 13px;
@@ -518,7 +647,7 @@ p {
   min-height: 34px;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
-  color: var(--amber);
+  color: var(--gold-text);
   display: inline-flex;
   align-items: center;
   font-size: 13px;
@@ -599,7 +728,7 @@ p {
   border: 0;
   border-radius: 8px;
   background: var(--amber);
-  color: #121000;
+  color: var(--on-gold);
   cursor: pointer;
   font: inherit;
   font-size: 13px;
@@ -654,7 +783,7 @@ p {
   border: 0;
   border-radius: 8px;
   background: var(--amber);
-  color: #121000;
+  color: var(--on-gold);
   cursor: pointer;
   font: inherit;
   font-size: 13px;
@@ -814,7 +943,7 @@ p {
 .filter-row strong,
 .pill {
   background: var(--amber);
-  color: #121000;
+  color: var(--on-gold);
   border-color: transparent;
 }
 
@@ -831,7 +960,7 @@ p {
 }
 
 .back-link {
-  color: var(--amber);
+  color: var(--gold-text);
   display: inline-flex;
   font-size: 13px;
   font-weight: 750;
@@ -839,14 +968,22 @@ p {
   text-decoration: none;
 }
 
+.back-link,
+.row-link {
+  transition: color 140ms ease;
+}
+
 .back-link:hover,
 .row-link:hover {
-  text-decoration: underline;
+  color: var(--gold-text);
 }
 
 .metric-grid {
   display: grid;
   gap: 12px;
+  /* Sem modificador (ex.: /devolucoes) os cards empilhavam numa coluna só
+     no desktop. auto-fit mantém uma linha enquanto couberem 200px por card. */
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
 .metric-grid-eight {
@@ -897,7 +1034,7 @@ p {
   position: absolute;
   z-index: 2;
   right: -9px;
-  color: var(--amber);
+  color: var(--gold-text);
   font-size: 24px;
   font-weight: 900;
 }
@@ -959,6 +1096,10 @@ p {
 
 .dashboard-section {
   display: grid;
+  /* minmax(0,1fr): coluna `auto` dimensiona por max-content, e um SVG com
+     viewBox de 720px alargava o painel além do viewport no mobile
+     (ex.: "Devoluções abertas por dia"). */
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -1008,6 +1149,7 @@ p {
   border: 1px solid var(--line);
   background: var(--panel);
   border-radius: var(--radius);
+  box-shadow: var(--surface-highlight);
 }
 
 .metric {
@@ -1022,6 +1164,9 @@ p {
   gap: 6px;
   position: relative;
   overflow: hidden;
+  /* Container query: o valor escala pela largura do card (cqi), não do
+     viewport — 7 cards na linha cabem sem "R$ 5.902.8…". */
+  container-type: inline-size;
 }
 
 .metric:has(.hero-spark) {
@@ -1073,9 +1218,11 @@ p {
 .metric.curve-c        { --accent: var(--rose); }
 
 .metric strong {
-  font-size: clamp(1.25rem, 1.5vw, 1.65rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  /* 12.5cqi ≈ 13 caracteres mono ("R$ 11.394.392") na largura do card.
+     O ellipsis fica só como última defesa para valores anômalos. */
+  font-size: clamp(0.9rem, 12.5cqi, 1.65rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
   line-height: 1.05;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -1125,8 +1272,8 @@ p {
 }
 
 .panel {
-  padding: 22px;
-  box-shadow: var(--shadow);
+  padding: var(--space-5);
+  box-shadow: var(--shadow), var(--surface-highlight);
 }
 
 .section-head {
@@ -1179,8 +1326,8 @@ h2 {
   max-width: 220px;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
-  background: #172033;
-  color: #ffffff;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
   box-shadow: 0 12px 28px rgba(23, 32, 51, 0.18);
   font-size: 11px;
   font-weight: 700;
@@ -1201,7 +1348,7 @@ h2 {
 .bar-track {
   height: 178px;
   border: 1px solid var(--line);
-  background: linear-gradient(180deg, #10151f, #0d1119);
+  background: linear-gradient(180deg, var(--field), color-mix(in srgb, var(--field) 80%, var(--bg)));
   border-radius: 8px;
   display: flex;
   align-items: flex-end;
@@ -1321,7 +1468,7 @@ h2 {
   border: 0;
   border-radius: 10px;
   background: var(--gold);
-  color: #161616;
+  color: var(--on-gold);
   font-weight: 800;
   font-size: 14px;
   cursor: pointer;
@@ -1561,7 +1708,7 @@ h2 {
 }
 
 .sku-actions strong {
-  color: #211800;
+  color: var(--on-gold);
   background: var(--amber);
   border-color: transparent;
 }
@@ -1633,7 +1780,7 @@ h2 {
 /* Zebra + hover: com 10-16 colunas nowrap, sem guia de linha o olho perde a
    posição no scroll horizontal. */
 .data-table tbody tr:nth-child(even) td {
-  background: rgba(255, 255, 255, 0.015);
+  background: var(--zebra);
 }
 
 .data-table tbody tr:hover td {
@@ -1701,7 +1848,7 @@ h2 {
 
 .grade.yellow {
   background: var(--warn-soft);
-  color: var(--amber);
+  color: var(--gold-text);
 }
 
 .trend-value {
@@ -1729,7 +1876,7 @@ h2 {
 .signal-warning {
   background: var(--warn-soft);
   border-color: var(--warn-line);
-  color: var(--amber);
+  color: var(--gold-text);
 }
 
 .signal-danger {
@@ -1782,7 +1929,7 @@ h2 {
 }
 
 .rank-list strong {
-  color: var(--amber);
+  color: var(--gold-text);
   white-space: nowrap;
 }
 
@@ -1863,7 +2010,7 @@ h2 {
 .detail-code {
   border: 1px solid var(--line);
   border-radius: 8px;
-  color: var(--amber);
+  color: var(--gold-text);
   display: inline-flex;
   font-size: 12px;
   font-weight: 800;
@@ -1939,7 +2086,7 @@ h2 {
 
 @media (max-width: 1180px) {
   .app-shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .sidebar {
@@ -1947,6 +2094,8 @@ h2 {
     height: auto;
     gap: 10px;
     padding: 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
   }
 
   .sidebar > .nav-admin,
@@ -2006,9 +2155,11 @@ h2 {
     white-space: nowrap;
   }
 
-  .nav-group a {
+  /* Alvo de toque ≥ 44px (WCAG 2.5.8 / HIG) nos chips da nav. */
+  .nav-group a,
+  .nav-sector > summary {
     flex: 0 0 auto;
-    min-height: 36px;
+    min-height: 44px;
     border: 1px solid var(--line);
     border-radius: 8px;
     padding: 0 12px;
@@ -2103,6 +2254,20 @@ h2 {
   .filter-row strong,
   .pill {
     width: 100%;
+  }
+
+  .filter-form input,
+  .filter-form select,
+  .filter-form button,
+  .button-link,
+  a.pill {
+    min-height: 44px;
+  }
+
+  a.pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .filter-form button,
@@ -2409,7 +2574,7 @@ h2 {
 }
 
 .fiscal-loss-drivers-head a {
-  color: var(--gold);
+  color: var(--gold-text);
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
@@ -2759,7 +2924,7 @@ h2 {
   color: var(--text);
 }
 .data-table th .th-sort.is-active {
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .data-table th .th-sort:focus-visible {
   outline: 2px solid var(--indigo);
@@ -2808,7 +2973,7 @@ h2 {
   transition: color 140ms ease, border-color 140ms ease;
 }
 .data-table th.th-has-hint:hover .th-hint-mark {
-  color: var(--gold);
+  color: var(--gold-text);
   border-color: var(--gold);
 }
 .data-table th.th-has-hint::after {
@@ -2821,10 +2986,10 @@ h2 {
   max-width: 320px;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
-  background: #172033;
-  color: #ffffff;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
-  font-family: "Aptos", "Segoe UI", system-ui, sans-serif;
+  font-family: var(--sans);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0;
@@ -2885,6 +3050,7 @@ h2 {
 
 /* Skeleton de carregamento entre navegações */
 .skeleton {
+  max-width: 100%;
   border-radius: 6px;
   background: linear-gradient(90deg, var(--panel-soft) 25%, var(--line) 50%, var(--panel-soft) 75%);
   background-size: 200% 100%;
@@ -3141,7 +3307,7 @@ h2 {
 .pill-gold {
   background: linear-gradient(180deg, var(--amber), var(--amber-strong));
   border-color: transparent;
-  color: #2a1c00;
+  color: var(--on-gold);
   font-weight: 800;
   text-decoration: none;
 }
@@ -3184,7 +3350,7 @@ h2 {
 .pill-row .pill-gold {
   background: linear-gradient(180deg, var(--amber), var(--amber-strong));
   border-color: transparent;
-  color: #2a1c00;
+  color: var(--on-gold);
 }
 
 /* ── Importações: mapa de navios (Leaflet) ─────────────────────────────── */
@@ -3336,7 +3502,7 @@ h2 {
 
 .vessel-tip strong {
   font-size: 13px;
-  color: var(--gold);
+  color: var(--gold-text);
 }
 
 .vessel-tip span {
@@ -3374,8 +3540,12 @@ h2 {
   cursor: pointer;
 }
 
+.link-button {
+  transition: color 140ms ease;
+}
+
 .link-button:hover {
-  text-decoration: underline;
+  color: color-mix(in srgb, var(--red) 75%, var(--text));
 }
 
 /* Chips de filtro (período/canal em /devolucoes). Link puro — sem JS de
@@ -3401,7 +3571,7 @@ h2 {
 
 .chip-active {
   border-color: var(--gold);
-  color: var(--gold);
+  color: var(--gold-text);
   background: rgba(246, 196, 83, 0.10);
 }
 
@@ -3450,7 +3620,7 @@ h2 {
   margin-left: 8px;
   padding: 1px 7px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--chip-soft);
   font-family: var(--mono);
   font-size: 11px;
 }
@@ -3508,7 +3678,7 @@ h2 {
 }
 
 .agenda-day-today .agenda-day-number {
-  color: var(--gold);
+  color: var(--gold-text);
   font-weight: 700;
 }
 
@@ -3752,7 +3922,7 @@ h2 {
   border: 1px solid var(--warn-line);
   border-radius: 8px;
   background: var(--warn-soft);
-  color: var(--gold);
+  color: var(--gold-text);
   font: inherit;
   font-size: 12px;
   font-weight: 800;
@@ -4064,7 +4234,7 @@ code {
   background: var(--field);
   border: 1px solid var(--line-strong);
   border-radius: 6px;
-  color: var(--gold);
+  color: var(--gold-text);
   font-family: var(--mono);
   font-size: 0.88em;
   overflow-wrap: anywhere;
@@ -4123,7 +4293,7 @@ code {
   background: var(--panel);
   border: 1px solid var(--gold);
   border-radius: 8px;
-  color: var(--gold);
+  color: var(--gold-text);
   cursor: pointer;
   font-family: inherit;
   font-size: 11px;
@@ -4136,7 +4306,7 @@ code {
 
 .copy-sql:hover {
   background: var(--gold);
-  color: #2a1c00;
+  color: var(--on-gold);
 }
 
 .copy-sql.is-copied {
@@ -4171,7 +4341,7 @@ code {
 }
 
 .doc-prose a {
-  color: var(--gold);
+  color: var(--gold-text);
 }
 
 .doc-question {
@@ -4199,7 +4369,7 @@ code {
 .kind-table {
   background: color-mix(in srgb, var(--indigo) 18%, transparent);
   border-color: color-mix(in srgb, var(--indigo) 42%, transparent);
-  color: #a8bcff;
+  color: var(--link-indigo);
 }
 
 .kind-view {
@@ -4211,7 +4381,7 @@ code {
 .kind-materialized_view {
   background: color-mix(in srgb, var(--violet) 18%, transparent);
   border-color: color-mix(in srgb, var(--violet) 42%, transparent);
-  color: #c9a9ff;
+  color: var(--link-violet);
 }
 
 .doc-badge {
@@ -4243,7 +4413,7 @@ code {
 
 .doc-status.is-partial {
   background: color-mix(in srgb, var(--amber) 14%, transparent);
-  color: var(--amber);
+  color: var(--gold-text);
 }
 
 .doc-status.is-done {
@@ -4316,14 +4486,18 @@ a.doc-card:hover {
    Sem isto o navegador aplica o azul padrão, ilegível sobre o fundo escuro —
    o app não tem estilo global de `a`, cada área estiliza o seu. */
 .doc-link {
-  color: var(--gold);
+  color: var(--gold-text);
   font-weight: 650;
   overflow-wrap: anywhere;
   text-decoration: none;
 }
 
+.doc-link {
+  transition: color 140ms ease;
+}
+
 .doc-link:hover {
-  text-decoration: underline;
+  color: var(--amber-strong);
 }
 
 /* Link de objeto na tabela do dicionário: segue o padrão do app (.row-link usa
@@ -4336,7 +4510,7 @@ a.doc-card:hover {
 }
 
 .data-table .row-link.doc-object:hover {
-  color: var(--gold);
+  color: var(--gold-text);
 }
 
 /* Descrição é texto livre vindo de COMMENT ON: sem teto a coluna incha e
@@ -4412,4 +4586,491 @@ a.doc-card:hover {
 .doc-withheld {
   color: var(--muted);
   font-weight: 650;
+}
+
+/* ============================ Bento Grid (home) ============================
+   Composição em 12 colunas com tiles de tamanhos variados. O hero ocupa
+   5 colunas × 2 linhas; os demais tiles preenchem o resto. Abaixo de 1180px
+   vira 6 colunas; abaixo de 760px, uma coluna. */
+
+.bento {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, auto);
+  gap: var(--space-3);
+}
+
+.bento > * {
+  min-width: 0;
+}
+
+.span-2  { grid-column: span 2; }
+.span-3  { grid-column: span 3; }
+.span-4  { grid-column: span 4; }
+.span-5  { grid-column: span 5; }
+.span-6  { grid-column: span 6; }
+.span-7  { grid-column: span 7; }
+.span-8  { grid-column: span 8; }
+.span-12 { grid-column: span 12; }
+.row-2   { grid-row: span 2; }
+
+.tile {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow-sm), var(--surface-highlight);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  container-type: inline-size;
+  color: inherit;
+  text-decoration: none;
+}
+
+a.tile {
+  transition: border-color 180ms ease, transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 180ms ease;
+}
+
+a.tile:hover {
+  border-color: color-mix(in srgb, var(--accent, var(--line-strong)) 55%, var(--line));
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg), var(--surface-highlight);
+}
+
+.tile-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.tile-head .eyebrow {
+  margin-bottom: 2px;
+}
+
+.tile-head h2,
+.tile-head h3 {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.tile-value {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-size: clamp(1.1rem, 9cqi, 2rem);
+  white-space: nowrap;
+}
+
+.tile-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tile small,
+.tile .caption {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.tile-foot {
+  margin-top: auto;
+}
+
+/* Hero: receita faturada. Ouro como assinatura, sparkline ocupa a largura. */
+.tile-hero {
+  --accent: var(--gold);
+  background:
+    radial-gradient(520px 260px at 0% 0%, rgba(246, 196, 83, 0.14), transparent 65%),
+    var(--panel);
+  border-color: color-mix(in srgb, var(--gold) 28%, var(--line));
+  padding: 22px;
+  gap: 14px;
+}
+
+.tile-hero .tile-value {
+  font-size: clamp(1.8rem, 9.5cqi, 3.2rem);
+  color: var(--text);
+}
+
+.tile-hero .metric-delta {
+  font-size: 13px;
+}
+
+.tile-spark {
+  flex: 1 1 auto;
+  min-height: 88px;
+  display: flex;
+  align-items: stretch;
+}
+
+.tile-spark svg {
+  width: 100%;
+  height: auto;
+  min-height: 88px;
+  display: block;
+  opacity: 0.95;
+}
+
+.tile-substats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.tile-substats a,
+.tile-substats div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.tile-substats strong {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tile-substats .metric-delta {
+  font-size: 11px;
+}
+
+/* Lista de stats empilhados (cobertura SKU). */
+.tile-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.tile-stack > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.tile-stack > div:last-child {
+  border-bottom: 0;
+}
+
+.tile-stack span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.tile-stack strong {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+/* Barra segmentada: composição da receita coberta (custo / impostos /
+   marketplace / lucro). Cor + rótulo + valor — nunca só a cor. */
+.comp-bar {
+  display: flex;
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--panel-soft);
+}
+
+.comp-bar span {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+}
+
+.comp-legend {
+  display: grid;
+  gap: 6px;
+}
+
+.comp-legend > div {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.comp-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: block;
+}
+
+.comp-legend span {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comp-legend strong {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tile .gauge-row {
+  margin-top: auto;
+}
+
+.tile .tax-donut,
+.tile .donut-wrap {
+  margin-top: auto;
+}
+
+/* Tiles pequenos (operacional auxiliar) reutilizam .metric dentro do grid. */
+.bento > .metric {
+  min-height: 0;
+}
+
+/* Nota metodológica recolhida — o texto longo não compete com os números. */
+.tile-note {
+  padding: 0;
+}
+
+.tile-note summary {
+  padding: 14px 18px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tile-note summary::-webkit-details-marker { display: none; }
+
+.tile-note summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 160ms ease;
+}
+
+.tile-note[open] summary::before { transform: rotate(45deg); }
+
+.tile-note .fiscal-note {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+}
+
+@media (max-width: 1180px) {
+  .bento { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .span-5, .span-6, .span-7, .span-8, .span-12 { grid-column: span 6; }
+  .span-3, .span-4 { grid-column: span 3; }
+  .span-2 { grid-column: span 2; }
+  .row-2 { grid-row: auto; }
+}
+
+@media (max-width: 760px) {
+  .bento { grid-template-columns: 1fr; }
+  .bento > * { grid-column: auto; }
+  .tile { padding: 16px; }
+  .tile-hero .tile-value { font-size: 2rem; }
+}
+
+/* ====================== Sidebar compacta com ícones ====================== */
+
+@media (min-width: 1181px) {
+  .app-shell {
+    grid-template-columns: 232px minmax(0, 1fr);
+  }
+
+  .nav-group a {
+    min-height: 36px;
+    font-size: 13.5px;
+    font-weight: 500;
+    gap: 10px;
+  }
+
+  .nav-group .nav-active {
+    font-weight: 600;
+  }
+
+  .nav-sector-links a {
+    padding-left: 12px;
+  }
+
+  .nav-sector > summary {
+    min-height: 30px;
+  }
+}
+
+.nav-icon {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  color: var(--faint);
+  transition: color 160ms ease;
+}
+
+.nav-group a:hover .nav-icon,
+.nav-group .nav-active .nav-icon {
+  color: var(--gold-text);
+}
+
+
+/* Ajustes de conteúdo herdado dentro de tiles do bento. */
+
+/* Fontes (3 stats num tile de 4 colunas): número escala pela largura do
+   tile e a grade cai para 2 colunas quando aperta. */
+.tile .source-summary-stats {
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+}
+
+.tile .source-summary-stats strong {
+  font-size: clamp(0.95rem, 5.2cqi, 1.25rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Receita por canal num tile de 4 colunas: rótulo flexível, barra, e valor
+   sem largura fixa de 120px (cortava "R$ 1.602.xxx"). */
+.tile .funnel-row {
+  grid-template-columns: minmax(0, 1.2fr) minmax(40px, 1fr) auto auto;
+  gap: 10px;
+  font-size: 12.5px;
+}
+
+.tile .funnel-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tile .funnel-row strong,
+.tile .funnel-row em {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .tile-head .pill {
+    width: auto;
+    flex: none;
+  }
+}
+
+/* ============================ Toggle de tema ============================ */
+
+.theme-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--field);
+}
+
+.theme-toggle button {
+  min-height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.theme-toggle button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.theme-toggle button:hover {
+  color: var(--text);
+}
+
+.theme-toggle button.is-active {
+  background: var(--panel-soft);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+.theme-toggle button.is-active svg {
+  color: var(--gold-text);
+}
+
+@media (max-width: 1180px) {
+  .theme-toggle {
+    width: max-content;
+  }
+
+  .theme-toggle button {
+    min-height: 44px;
+  }
+}
+
+
+/* Links de linha de tabela: área de toque expandida sem mudar o layout
+   (padding compensado por margin negativa). */
+.data-table .row-link {
+  display: inline-block;
+  padding: 10px 0;
+  margin: -10px 0;
+}
+
+
+/* Pills clicáveis (abas de canal/período, Exportar): hover por cor e fundo,
+   nunca sublinhado. Pills não-clicáveis (span) ficam como estão. */
+a.pill {
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease, filter 150ms ease;
+}
+
+a.pill:not(.pill-gold):hover {
+  background: color-mix(in srgb, var(--panel-soft) 55%, var(--line));
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+a.pill-gold:hover,
+.pill-row .pill-gold:hover {
+  filter: brightness(1.06);
 }

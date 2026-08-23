@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { SidebarNav } from "./sidebar-nav";
 import { BrandMark } from "./brand-mark";
+import { ThemeToggle } from "./theme-toggle";
+import { readTheme } from "../../lib/theme-server";
+import type { Theme } from "../../lib/theme";
 import { getCurrentUser } from "../../lib/auth/session";
 import { allowedTabs } from "../../lib/auth/access";
 import { loadAgendaPendingCount } from "../../lib/agenda-count";
@@ -8,7 +11,17 @@ import { effectiveUserId } from "../../lib/users";
 
 // Casca visual compartilhada. Fica separada do AppShell porque o skeleton
 // (app/loading.tsx) não pode ser async — fallback de Suspense é sempre síncrono.
-function Frame({ nav, children, footer }: { nav: ReactNode; children: ReactNode; footer?: ReactNode }) {
+function Frame({
+  nav,
+  children,
+  footer,
+  theme
+}: {
+  nav: ReactNode;
+  children: ReactNode;
+  footer?: ReactNode;
+  theme: Theme;
+}) {
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -21,6 +34,8 @@ function Frame({ nav, children, footer }: { nav: ReactNode; children: ReactNode;
         </div>
 
         {nav}
+
+        <ThemeToggle initial={theme} />
 
         <div className="sidebar-footer">
           {footer ?? (
@@ -64,6 +79,7 @@ export async function AppShell({
     <Frame
       nav={<SidebarNav badges={{ "/alertas": alertCount, "/agenda": agendaCount }} tabs={tabs} />}
       footer={footer}
+      theme={await readTheme()}
     >
       {children}
     </Frame>
@@ -74,5 +90,5 @@ export async function AppShell({
 // Renderiza o próprio SidebarNav sem abas — mesma forma de árvore do AppShell,
 // para o React trocar o fallback pelo conteúdo sem deixar nó órfão na sidebar.
 export function AppShellSkeleton({ children }: { children: ReactNode }) {
-  return <Frame nav={<SidebarNav tabs={[]} />}>{children}</Frame>;
+  return <Frame nav={<SidebarNav tabs={[]} />} theme="dark">{children}</Frame>;
 }

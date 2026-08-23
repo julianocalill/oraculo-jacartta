@@ -1029,6 +1029,10 @@ export default async function HomePage({
       ? { ...relativeDelta(hLast.marketplaceFee, hFirst.marketplaceFee, historyTitle)!, invert: true }
       : null;
 
+  // Tiles de fonte dividem as 12 colunas do bento: 2 tiles → 6 col, 3 → 4, 4+ → 3.
+  const sourceTiles = data.sourceSummaries.length + 1;
+  const sourceSpan = sourceTiles <= 2 ? "span-6" : sourceTiles === 3 ? "span-4" : "span-3";
+
   const revenueSpark = data.fiscalDailyChart.map((row) => asMetricNumber(row.billed_revenue));
   const invoicesSpark = data.fiscalDailyChart.map((row) => asMetricNumber(row.invoices_count));
   const ticketSpark = data.fiscalDailyChart.map((row) => asMetricNumber(row.average_invoice_value));
@@ -1076,100 +1080,197 @@ export default async function HomePage({
           </form>
         </header>
 
-        <section className="dashboard-section">
-          <div className="section-head section-row">
-            <div>
-              <p className="eyebrow">Fiscal oficial</p>
-              <h2>Venda por NF faturada</h2>
+        {/* ---------------- Bento: leitura fiscal do período ---------------- */}
+        <section className="bento" aria-label="Resumo fiscal">
+          <Link className="tile tile-hero span-5 row-2" href={`/pedidos${filterQuery}`}>
+            <div className="tile-head">
+              <div>
+                <p className="eyebrow">Fiscal oficial · NF faturada</p>
+                <h2>Receita faturada</h2>
+              </div>
+              <span className="pill">{formatMonthYearFromDate(filters.start)}</span>
             </div>
-          </div>
-          <div className="metric-grid metric-grid-eight">
-            <MetricCard
-              accent="accent-yellow"
-              href={`/pedidos${filterQuery}`}
-              label="Receita faturada"
-              value={formatCurrency(data.fiscalMetrics.billedRevenue)}
-              caption="Valor total das NFs emitidas/autorizadas"
-              delta={revenueDelta}
-              spark={revenueSpark}
-              sparkColor="var(--gold)"
-            />
-            <MetricCard
-              accent="accent-blue"
-              href={`/pedidos${filterQuery}`}
-              label="NFs emitidas"
-              value={formatCount(data.fiscalMetrics.invoicesCount)}
-              caption="NFs fiscais válidas no período"
-              delta={invoicesDelta}
-              spark={invoicesSpark}
-              sparkColor="var(--indigo)"
-            />
-            <MetricCard
-              accent="accent-violet"
-              href={`/pedidos${filterQuery}`}
-              label="Ticket médio faturado"
-              value={data.fiscalMetrics.invoicesCount <= 0 ? "-" : formatCurrency(data.fiscalMetrics.averageInvoiceValue)}
-              caption="Receita faturada / NFs emitidas"
-              delta={ticketDelta}
-              spark={ticketSpark}
-              sparkColor="var(--violet)"
-            />
-          </div>
-        </section>
+            <div className="tile-value-row">
+              <span className="tile-value">{formatCurrency(data.fiscalMetrics.billedRevenue)}</span>
+              {revenueDelta ? (
+                <span className={`metric-delta ${revenueDelta.direction}`} title={revenueDelta.title}>
+                  {revenueDelta.direction === "up" ? "▲" : "▼"} {revenueDelta.text}
+                </span>
+              ) : null}
+            </div>
+            <small>Valor total das NFs emitidas/autorizadas · {vsPrev}</small>
+            <div className="tile-spark">
+              {revenueSpark.length >= 2 ? <Sparkline values={revenueSpark} color="var(--gold)" fill /> : null}
+            </div>
+            <div className="tile-substats">
+              <div>
+                <span className="label">NFs emitidas</span>
+                <strong>{formatCount(data.fiscalMetrics.invoicesCount)}</strong>
+                {invoicesDelta ? (
+                  <span className={`metric-delta ${invoicesDelta.direction}`} title={invoicesDelta.title}>
+                    {invoicesDelta.direction === "up" ? "▲" : "▼"} {invoicesDelta.text}
+                  </span>
+                ) : null}
+              </div>
+              <div>
+                <span className="label">Ticket médio</span>
+                <strong>
+                  {data.fiscalMetrics.invoicesCount <= 0 ? "-" : formatCurrency(data.fiscalMetrics.averageInvoiceValue)}
+                </strong>
+                {ticketDelta ? (
+                  <span className={`metric-delta ${ticketDelta.direction}`} title={ticketDelta.title}>
+                    {ticketDelta.direction === "up" ? "▲" : "▼"} {ticketDelta.text}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          </Link>
 
-        <section className="panel coverage-panel">
-          <div className="section-head section-row">
-            <div>
-              <p className="eyebrow">Cobertura SKU · {formatMonthYearFromDate(filters.start)}</p>
-              <h2>Margem e ROI operacionais</h2>
-            </div>
-            <span className="pill warning-pill">Leitura parcial liberada</span>
-          </div>
-          <div className="coverage-grid">
-            <article>
-              <span>NFs com itens sincronizados</span>
-              <strong>{formatCount(data.fiscalCoverage.invoicesWithOrderItems)}</strong>
-              <small>{formatDecimal(data.fiscalCoverage.orderItemsInvoicePct, 1)}% das NFs válidas</small>
-            </article>
-            <article>
-              <span>Receita coberta</span>
-              <strong>{formatCurrency(data.fiscalCoverage.revenueWithOrderItems)}</strong>
-              <small>{formatDecimal(data.fiscalCoverage.orderItemsRevenuePct, 1)}% da receita faturada</small>
-            </article>
-            <article>
-              <span>Receita sem cobertura</span>
-              <strong>{formatCurrency(data.fiscalCoverage.revenueWithoutOrderItems)}</strong>
-              <small>{formatDecimal(data.fiscalCoverage.missingOrderItemsRevenuePct, 1)}% aguardando sync de itens</small>
-            </article>
-            <article>
-              <span>SKUs identificados</span>
-              <strong>{formatCount(data.fiscalCoverage.distinctOrderItemSkus)}</strong>
-              <small>Parcial, não é ranking definitivo</small>
-            </article>
-          </div>
-        </section>
+          {data.fiscalMargin.available ? (
+            <>
+              <article className="tile span-4 accent-emerald">
+                <div className="tile-head">
+                  <div>
+                    <p className="eyebrow">Fiscal · regras do Financeiro</p>
+                    <h2>Lucro fiscal</h2>
+                  </div>
+                  <span className="pill warning-pill">
+                    Cobertura {formatDecimal(data.fiscalMargin.coverageCostRevenuePct, 1)}%
+                  </span>
+                </div>
+                <div className="tile-value-row">
+                  <span className="tile-value" style={{ color: fm.totalProfit < 0 ? "var(--rose)" : "var(--emerald)" }}>
+                    {formatCurrency(fm.totalProfit)}
+                  </span>
+                  {profitDelta ? (
+                    <span className={`metric-delta ${profitDelta.direction}`} title={profitDelta.title}>
+                      {profitDelta.direction === "up" ? "▲" : "▼"} {profitDelta.text}
+                    </span>
+                  ) : null}
+                </div>
+                <small>Receita − custo − impostos − comissão, sobre a receita com custo confiável</small>
+                <div className="gauge-row">
+                  <MarginGauge
+                    fraction={data.fiscalMargin.marginRate ?? 0}
+                    display={data.fiscalMargin.marginRate == null ? "-" : `${formatDecimal(data.fiscalMargin.marginRate * 100, 1)}%`}
+                    label="Margem"
+                    color="var(--emerald)"
+                  />
+                  <MarginGauge
+                    fraction={data.fiscalMargin.roi == null ? 0 : Math.min(data.fiscalMargin.roi / 2, 1)}
+                    display={data.fiscalMargin.roi == null ? "-" : `${formatDecimal(data.fiscalMargin.roi * 100, 1)}%`}
+                    label="ROI"
+                    color="var(--violet)"
+                  />
+                </div>
+              </article>
 
-        <section className="dashboard-section">
-          <div className="section-head section-row">
-            <div>
-              <p className="eyebrow">Fiscal · regras do Financeiro</p>
-              <h2>Margem e ROI fiscais</h2>
-            </div>
-            <span className="pill warning-pill">
-              {data.fiscalMargin.available
-                ? `Cobertura ${formatDecimal(data.fiscalMargin.coverageCostRevenuePct, 1)}% da receita · parcial`
-                : "Indisponível no momento"}
-            </span>
-          </div>
-          {!data.fiscalMargin.available ? (
-            <p className="fiscal-note">
-              O cálculo fiscal do período está temporariamente indisponível (consulta pesada
-              excedeu o tempo limite). O restante do dashboard segue atualizado.
-            </p>
+              <article className="tile span-3">
+                <div className="tile-head">
+                  <div>
+                    <p className="eyebrow">Cobertura SKU</p>
+                    <h2>Itens sincronizados</h2>
+                  </div>
+                </div>
+                <div className="tile-stack">
+                  <div>
+                    <span>NFs com itens</span>
+                    <strong>{formatCount(data.fiscalCoverage.invoicesWithOrderItems)}</strong>
+                  </div>
+                  <div>
+                    <span>Receita coberta</span>
+                    <strong>{formatCurrency(data.fiscalCoverage.revenueWithOrderItems)}</strong>
+                  </div>
+                  <div>
+                    <span>Sem cobertura</span>
+                    <strong>{formatCurrency(data.fiscalCoverage.revenueWithoutOrderItems)}</strong>
+                  </div>
+                  <div>
+                    <span>SKUs identificados</span>
+                    <strong>{formatCount(data.fiscalCoverage.distinctOrderItemSkus)}</strong>
+                  </div>
+                </div>
+                <small className="tile-foot">
+                  {formatDecimal(data.fiscalCoverage.orderItemsRevenuePct, 1)}% da receita faturada · leitura parcial
+                </small>
+              </article>
+
+              <article className="tile span-4">
+                <div className="tile-head">
+                  <div>
+                    <p className="eyebrow">Composição de impostos</p>
+                    <h2>Carga tributária do mês</h2>
+                  </div>
+                  <span className="pill">{formatCurrency(fm.totalTaxes)}</span>
+                </div>
+                <TaxDonut
+                  slices={[
+                    { label: "DIFAL", value: data.fiscalMargin.totalDifal, color: "var(--rose)" },
+                    { label: "PIS/COFINS", value: data.fiscalMargin.totalPisCofins, color: "var(--cyan)" },
+                    { label: "ICMS", value: data.fiscalMargin.totalIcms, color: "var(--violet)" }
+                  ]}
+                />
+              </article>
+
+              <article className="tile span-3">
+                <div className="tile-head">
+                  <div>
+                    <p className="eyebrow">Para onde vai a receita</p>
+                    <h2>Composição do resultado</h2>
+                  </div>
+                </div>
+                <div className="tile-value-row">
+                  <span className="tile-value">{formatCurrency(fm.revenueWithCost)}</span>
+                </div>
+                <small>Receita com custo confiável</small>
+                <div className="comp-bar" role="img" aria-label={`Despesas consomem ${formatDecimal(fiscalExpenseShare * 100, 1)}% da receita coberta`}>
+                  {fiscalDiagnosisItems.map((item) => (
+                    <span
+                      key={item.label}
+                      style={{ width: `${Math.min(fiscalShareOfRevenue(item.value) * 100, 100)}%`, background: item.color }}
+                    />
+                  ))}
+                  {fm.totalProfit > 0 ? (
+                    <span style={{ width: `${Math.min(fiscalShareOfRevenue(fm.totalProfit) * 100, 100)}%`, background: "var(--emerald)" }} />
+                  ) : null}
+                </div>
+                <div className="comp-legend">
+                  {fiscalDiagnosisItems.map((item) => (
+                    <div key={item.label}>
+                      <i style={{ background: item.color }} />
+                      <span>{item.label}</span>
+                      <strong>{formatDecimal(fiscalShareOfRevenue(item.value) * 100, 1)}%</strong>
+                    </div>
+                  ))}
+                  <div>
+                    <i style={{ background: fm.totalProfit >= 0 ? "var(--emerald)" : "var(--rose)" }} />
+                    <span>Lucro</span>
+                    <strong>{formatDecimal(fiscalShareOfRevenue(fm.totalProfit) * 100, 1)}%</strong>
+                  </div>
+                </div>
+              </article>
+            </>
           ) : (
-          <>
-          <div className="metric-grid metric-grid-seven">
+            <article className="tile span-7 row-2">
+              <div className="tile-head">
+                <div>
+                  <p className="eyebrow">Fiscal · regras do Financeiro</p>
+                  <h2>Margem e ROI fiscais</h2>
+                </div>
+                <span className="pill warning-pill">Indisponível no momento</span>
+              </div>
+              <p className="fiscal-note">
+                O cálculo fiscal do período está temporariamente indisponível (consulta pesada
+                excedeu o tempo limite). O restante do dashboard segue atualizado.
+              </p>
+            </article>
+          )}
+        </section>
+
+        {data.fiscalMargin.available ? (
+          <section className="bento" aria-label="Detalhamento fiscal">
             <MetricCard
+              className="span-2"
               accent="accent-blue"
               label="Receita com custo"
               value={formatCurrency(fm.revenueWithCost)}
@@ -1179,6 +1280,7 @@ export default async function HomePage({
               sparkColor="var(--indigo)"
             />
             <MetricCard
+              className="span-2"
               accent="accent-cyan"
               label="Custo do produto"
               value={formatCurrency(fm.totalCost)}
@@ -1188,6 +1290,7 @@ export default async function HomePage({
               sparkColor="var(--cyan)"
             />
             <MetricCard
+              className="span-2"
               accent="accent-red"
               label="Impostos"
               value={formatCurrency(fm.totalTaxes)}
@@ -1197,6 +1300,7 @@ export default async function HomePage({
               sparkColor="var(--rose)"
             />
             <MetricCard
+              className="span-2"
               accent="accent-white"
               label="Comissão marketplace"
               value={formatCurrency(fm.totalMarketplaceFee)}
@@ -1206,15 +1310,7 @@ export default async function HomePage({
               sparkColor="#9aa8c0"
             />
             <MetricCard
-              accent="accent-emerald"
-              label="Lucro fiscal"
-              value={formatCurrency(fm.totalProfit)}
-              caption="Receita − custo − impostos − comissão"
-              delta={profitDelta}
-              spark={history.map((point) => point.profit)}
-              sparkColor="var(--emerald)"
-            />
-            <MetricCard
+              className="span-2"
               accent="accent-yellow"
               label="Margem fiscal"
               value={fm.marginRate == null ? "-" : `${formatDecimal(fm.marginRate * 100, 1)}%`}
@@ -1224,6 +1320,7 @@ export default async function HomePage({
               sparkColor="var(--gold)"
             />
             <MetricCard
+              className="span-2"
               accent="accent-violet"
               label="ROI fiscal"
               value={fm.roi == null ? "-" : `${formatDecimal(fm.roi * 100, 1)}%`}
@@ -1232,7 +1329,11 @@ export default async function HomePage({
               spark={history.map((point) => point.roi ?? 0)}
               sparkColor="var(--violet)"
             />
-          </div>
+          </section>
+        ) : null}
+
+        {data.fiscalMargin.available ? (
+          <>
           {fm.totalProfit < 0 && fm.revenueWithCost > 0 ? (
             <aside className="fiscal-diagnosis" aria-labelledby="fiscal-diagnosis-title">
               <div className="fiscal-diagnosis-copy">
@@ -1313,45 +1414,8 @@ export default async function HomePage({
               ) : null}
             </aside>
           ) : null}
-          <div className="fiscal-viz-row">
-            <div className="viz-card">
-              <div className="viz-head">
-                <div>
-                  <p className="eyebrow">Composição de impostos</p>
-                  <h3>Carga tributária do mês</h3>
-                </div>
-              </div>
-              <TaxDonut
-                slices={[
-                  { label: "DIFAL", value: data.fiscalMargin.totalDifal, color: "var(--rose)" },
-                  { label: "PIS/COFINS", value: data.fiscalMargin.totalPisCofins, color: "var(--cyan)" },
-                  { label: "ICMS", value: data.fiscalMargin.totalIcms, color: "var(--violet)" }
-                ]}
-              />
-            </div>
-            <div className="viz-card">
-              <div className="viz-head">
-                <div>
-                  <p className="eyebrow">Saúde fiscal</p>
-                  <h3>Margem e ROI</h3>
-                </div>
-              </div>
-              <div className="gauge-row">
-                <MarginGauge
-                  fraction={data.fiscalMargin.marginRate ?? 0}
-                  display={data.fiscalMargin.marginRate == null ? "-" : `${formatDecimal(data.fiscalMargin.marginRate * 100, 0)}%`}
-                  label="Margem"
-                  color="var(--emerald)"
-                />
-                <MarginGauge
-                  fraction={data.fiscalMargin.roi == null ? 0 : Math.min(data.fiscalMargin.roi / 2, 1)}
-                  display={data.fiscalMargin.roi == null ? "-" : `${formatDecimal(data.fiscalMargin.roi * 100, 0)}%`}
-                  label="ROI"
-                  color="var(--violet)"
-                />
-              </div>
-            </div>
-          </div>
+            <details className="tile tile-note">
+              <summary>Como a margem fiscal é calculada</summary>
           <p className="fiscal-note">
             Base = <strong>valor faturado na NF</strong>, rateado por item (não o valor do pedido). Custo do produto
             <strong> líquido dos créditos recuperáveis</strong> (−9,25% nacional, −11,75% importado). ICMS efetivo
@@ -1369,8 +1433,53 @@ export default async function HomePage({
             ) : null}
             .
           </p>
+            </details>
           </>
-          )}
+        ) : null}
+
+        <section className="bento" aria-label="Curva e canais">
+          <Link className="tile span-8" href={`/pedidos${filterQuery}`}>
+            <div className="tile-head">
+              <div>
+                <p className="eyebrow">Receita faturada por dia</p>
+                <h2>Curva fiscal do período</h2>
+              </div>
+              <span className="pill">Fonte: NFs emitidas</span>
+            </div>
+            <RevenueArea
+              points={data.fiscalDailyChart.map((row) => ({
+                label: formatDate(row.issued_date),
+                value: asMetricNumber(row.billed_revenue)
+              }))}
+            />
+          </Link>
+
+          <Link className="tile span-4" href={`/pedidos${filterQuery}`}>
+            <div className="tile-head">
+              <div>
+                <p className="eyebrow">Fiscal por canal</p>
+                <h2>Receita faturada por canal</h2>
+              </div>
+            </div>
+            <div className="funnel-list">
+              {data.fiscalChannels.length === 0 ? (
+                <p className="empty-state">Sem receita fiscal por canal no período selecionado.</p>
+              ) : (
+                data.fiscalChannels.slice(0, 9).map((channel) => {
+                  const max = Math.max(...data.fiscalChannels.map((item) => asMetricNumber(item.billed_revenue)), 1);
+                  const width = Math.max((asMetricNumber(channel.billed_revenue) / max) * 100, 2);
+                  return (
+                    <div className="funnel-row" key={channel.channel_label ?? "Sem canal"}>
+                      <span>{channel.channel_label ?? "Sem canal"}</span>
+                      <div><i style={{ width: `${width}%` }} /></div>
+                      <strong>{formatCount(asMetricNumber(channel.invoices_count))}</strong>
+                      <em>{formatCurrency(asMetricNumber(channel.billed_revenue))}</em>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </Link>
         </section>
 
         <section className="dashboard-section">
@@ -1378,65 +1487,73 @@ export default async function HomePage({
             <p className="eyebrow">Operacional auxiliar</p>
             <h2>Pedidos e itens ainda não oficiais para ROI</h2>
           </div>
-        <section className="metric-grid metric-grid-eight">
-          <MetricCard
-            accent="accent-yellow"
-            href={`/pedidos${filterQuery}`}
-            label="Receita de pedidos"
-            value={formatCurrency(data.nfMetrics.confirmedRevenue)}
-            caption="Auxiliar, não é a receita oficial"
-            spark={ordersRevenueSpark}
-            sparkColor="var(--gold)"
-          />
-          <MetricCard
-            accent="accent-blue"
-            href={`/pedidos${filterQuery}`}
-            label="Pedidos confirmados"
-            value={formatCount(data.nfMetrics.emittedCount)}
-            caption="Status não pendente/cancelado"
-            spark={ordersCountSpark}
-            sparkColor="var(--indigo)"
-          />
-          <MetricCard
-            accent="accent-cyan"
-            href="/skus"
-            label="Itens vendidos"
-            value={formatCount(data.monthUnits)}
-            caption={`${formatCount(data.itemCount)} linhas de item na base`}
-            spark={unitsSpark}
-            sparkColor="var(--cyan)"
-          />
-          <MetricCard
-            accent="accent-violet"
-            href={`/pedidos${filterQuery}`}
-            label="Ticket médio de pedidos"
-            value={data.nfMetrics.emittedCount <= 0 ? "-" : formatCurrency(data.nfMetrics.confirmedRevenue / data.nfMetrics.emittedCount)}
-            caption="Auxiliar, não fiscal"
-            spark={ordersTicketSpark}
-            sparkColor="var(--violet)"
-          />
-          <MetricCard
-            accent="accent-red"
-            href={`/pedidos${filterQuery}`}
-            label="Canceladas"
-            value={formatCount(data.nfMetrics.canceledCount)}
-            caption="Status cancelado no período"
-          />
-          <MetricCard
-            accent="accent-white"
-            href={`/pedidos${filterQuery}`}
-            label="Pendentes"
-            value={formatCount(data.nfMetrics.pendingCount)}
-            caption="Status pendente no período"
-          />
-        </section>
+          <div className="bento">
+            <MetricCard
+              className="span-2"
+              accent="accent-yellow"
+              href={`/pedidos${filterQuery}`}
+              label="Receita de pedidos"
+              value={formatCurrency(data.nfMetrics.confirmedRevenue)}
+              caption="Auxiliar, não é a receita oficial"
+              spark={ordersRevenueSpark}
+              sparkColor="var(--gold)"
+            />
+            <MetricCard
+              className="span-2"
+              accent="accent-blue"
+              href={`/pedidos${filterQuery}`}
+              label="Pedidos confirmados"
+              value={formatCount(data.nfMetrics.emittedCount)}
+              caption="Status não pendente/cancelado"
+              spark={ordersCountSpark}
+              sparkColor="var(--indigo)"
+            />
+            <MetricCard
+              className="span-2"
+              accent="accent-cyan"
+              href="/skus"
+              label="Itens vendidos"
+              value={formatCount(data.monthUnits)}
+              caption={`${formatCount(data.itemCount)} linhas de item na base`}
+              spark={unitsSpark}
+              sparkColor="var(--cyan)"
+            />
+            <MetricCard
+              className="span-2"
+              accent="accent-violet"
+              href={`/pedidos${filterQuery}`}
+              label="Ticket médio de pedidos"
+              value={data.nfMetrics.emittedCount <= 0 ? "-" : formatCurrency(data.nfMetrics.confirmedRevenue / data.nfMetrics.emittedCount)}
+              caption="Auxiliar, não fiscal"
+              spark={ordersTicketSpark}
+              sparkColor="var(--violet)"
+            />
+            <MetricCard
+              className="span-2"
+              accent="accent-red"
+              href={`/pedidos${filterQuery}`}
+              label="Canceladas"
+              value={formatCount(data.nfMetrics.canceledCount)}
+              caption="Status cancelado no período"
+            />
+            <MetricCard
+              className="span-2"
+              accent="accent-white"
+              href={`/pedidos${filterQuery}`}
+              label="Pendentes"
+              value={formatCount(data.nfMetrics.pendingCount)}
+              caption="Status pendente no período"
+            />
+          </div>
         </section>
 
-        <section className="source-summary-grid">
-          <Link className="panel panel-link source-summary-card" href={`/pedidos${filterQuery}`}>
-            <div className="section-head">
-              <p className="eyebrow">Consolidado</p>
-              <h2>Total multi-canal</h2>
+        <section className="bento" aria-label="Fontes">
+          <Link className={`tile ${sourceSpan} source-summary-card`} href={`/pedidos${filterQuery}`}>
+            <div className="tile-head">
+              <div>
+                <p className="eyebrow">Consolidado</p>
+                <h2>Total multi-canal</h2>
+              </div>
             </div>
             <div className="source-summary-stats">
               <article>
@@ -1457,12 +1574,14 @@ export default async function HomePage({
           {data.sourceSummaries.map((summary) => (
             <Link
               key={summary.source}
-              className="panel panel-link source-summary-card"
+              className={`tile ${sourceSpan} source-summary-card`}
               href={`/pedidos${filterQuery}&source=${encodeURIComponent(summary.source)}`}
             >
-              <div className="section-head">
-                <p className="eyebrow">Fonte</p>
-                <h2>{summary.label}</h2>
+              <div className="tile-head">
+                <div>
+                  <p className="eyebrow">Fonte</p>
+                  <h2>{summary.label}</h2>
+                </div>
               </div>
               <div className="source-summary-stats">
                 <article>
@@ -1480,51 +1599,6 @@ export default async function HomePage({
               </div>
             </Link>
           ))}
-        </section>
-
-        <section className="control-grid">
-          <Link className="panel panel-link chart-panel" href={`/pedidos${filterQuery}`}>
-            <div className="section-head section-row">
-              <div>
-                <p className="eyebrow">Receita faturada por dia</p>
-                <h2>Curva fiscal do período</h2>
-              </div>
-              <span className="pill">Fonte: NFs emitidas</span>
-            </div>
-
-            <RevenueArea
-              points={data.fiscalDailyChart.map((row) => ({
-                label: formatDate(row.issued_date),
-                value: asMetricNumber(row.billed_revenue)
-              }))}
-            />
-          </Link>
-
-          <Link className="panel panel-link funnel-panel" href={`/pedidos${filterQuery}`}>
-            <div>
-              <p className="eyebrow">Fiscal por canal</p>
-              <h2>Receita faturada por canal</h2>
-            </div>
-
-            <div className="funnel-list">
-              {data.fiscalChannels.length === 0 ? (
-                <p className="empty-state">Sem receita fiscal por canal no período selecionado.</p>
-              ) : (
-                data.fiscalChannels.slice(0, 9).map((channel) => {
-                  const max = Math.max(...data.fiscalChannels.map((item) => asMetricNumber(item.billed_revenue)), 1);
-                  const width = Math.max((asMetricNumber(channel.billed_revenue) / max) * 100, 2);
-                  return (
-                    <div className="funnel-row" key={channel.channel_label ?? "Sem canal"}>
-                      <span>{channel.channel_label ?? "Sem canal"}</span>
-                      <div><i style={{ width: `${width}%` }} /></div>
-                      <strong>{formatCount(asMetricNumber(channel.invoices_count))}</strong>
-                      <em>{formatCurrency(asMetricNumber(channel.billed_revenue))}</em>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </Link>
         </section>
 
         <section className="panel product-panel">

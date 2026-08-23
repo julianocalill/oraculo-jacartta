@@ -24,9 +24,12 @@ export function MetricCard({
   caption,
   delta,
   spark,
-  sparkColor
+  sparkColor,
+  className
 }: {
   accent: string;
+  /** Classes extras no card (ex.: `span-2` dentro de um .bento). */
+  className?: string;
   href?: string;
   label: string;
   value: React.ReactNode;
@@ -54,10 +57,10 @@ export function MetricCard({
 
   if (href) {
     return (
-      <Link className={`metric metric-link ${accent}`} href={href}>
+      <Link className={`metric metric-link ${accent}${className ? ` ${className}` : ""}`} href={href}>
         {body}
       </Link>
     );
   }
-  return <div className={`metric ${accent}`}>{body}</div>;
+  return <div className={`metric ${accent}${className ? ` ${className}` : ""}`}>{body}</div>;
 }

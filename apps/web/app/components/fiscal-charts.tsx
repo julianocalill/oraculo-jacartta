@@ -16,9 +16,50 @@ export function compactNumberBR(value: number): string {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(value);
 }
 
+/* ---------------- Curva suavizada (Catmull-Rom → Bézier) ----------------
+   Compartilhada por Sparkline e RevenueArea: mesma linguagem de linha em
+   todo o sistema. Tensão 0.5 preserva os picos sem "derreter" a série. */
+
+type XY = { x: number; y: number };
+
+function smoothPath(pts: XY[]): string {
+  if (pts.length < 2) return "";
+  if (pts.length === 2) {
+    return `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)} L${pts[1].x.toFixed(1)},${pts[1].y.toFixed(1)}`;
+  }
+  const d: string[] = [`M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] ?? pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] ?? p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d.push(`C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`);
+  }
+  return d.join(" ");
+}
+
+// id estável por cor para o gradiente (RSC não usa hooks; ids duplicados de
+// gradientes idênticos são inofensivos).
+function gradId(prefix: string, color: string): string {
+  return `${prefix}-${color.replace(/[^a-zA-Z0-9]/g, "")}`;
+}
+
 /* ---------------- Sparkline (hero cards) ---------------- */
 
-export function Sparkline({ values, color }: { values: number[]; color: string }) {
+export function Sparkline({
+  values,
+  color,
+  fill = false
+}: {
+  values: number[];
+  color: string;
+  /** Preenche a área sob a linha (usado no tile hero). */
+  fill?: boolean;
+}) {
   if (values.length < 2) return null;
   const W = 120;
   const H = 34;
@@ -28,12 +69,26 @@ export function Sparkline({ values, color }: { values: number[]; color: string }
   const span = max - min || 1;
   const x = (i: number) => pad + (i / (values.length - 1)) * (W - pad * 2);
   const y = (v: number) => pad + (1 - (v - min) / span) * (H - pad * 2);
-  const points = values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const pts = values.map((v, i) => ({ x: x(i), y: y(v) }));
+  const line = smoothPath(pts);
+  const id = gradId("spark", color);
+  const area = `${line} L${x(values.length - 1).toFixed(1)},${H} L${x(0).toFixed(1)},${H} Z`;
 
   return (
-    <svg className="hero-spark" viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
-      <polyline
-        points={points}
+    <svg className="hero-spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+      {fill ? (
+        <>
+          <defs>
+            <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor={color} stopOpacity="0.28" />
+              <stop offset="1" stopColor={color} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path d={area} fill={`url(#${id})`} />
+        </>
+      ) : null}
+      <path
+        d={line}
         fill="none"
         stroke={color}
         strokeWidth="2"
@@ -42,6 +97,101 @@ export function Sparkline({ values, color }: { values: number[]; color: string }
         vectorEffect="non-scaling-stroke"
       />
     </svg>
+  );
+}
+
+/* ---------------- Barras diárias (volume por dia) ----------------
+   Substitui o antigo bar-chart em div: gridlines, média tracejada em ouro,
+   pico destacado e tooltip nativo por barra (<title>). Mesma gramática
+   visual do RevenueArea. */
+
+type BarPoint = { label: string; value: number; title?: string };
+
+export function DailyBars({
+  points,
+  color = "var(--gold)"
+}: {
+  points: BarPoint[];
+  color?: string;
+}) {
+  const W = 720;
+  const H = 210;
+  const padTop = 16;
+  const padBottom = 8;
+  const usableH = H - padTop - padBottom;
+
+  if (points.length === 0) {
+    return <p className="empty-state">Sem dados no período.</p>;
+  }
+
+  const values = points.map((p) => p.value);
+  const max = Math.max(...values, 1);
+  const avg = values.reduce((s, v) => s + v, 0) / values.length;
+  const peakIdx = values.indexOf(Math.max(...values));
+  const n = points.length;
+  const gap = Math.min(6, 240 / n);
+  const bw = (W - gap * (n - 1)) / n;
+  const x = (i: number) => i * (bw + gap);
+  const y = (v: number) => padTop + (1 - v / max) * usableH;
+  const midIdx = Math.floor((n - 1) / 2);
+  const id = gradId("bars", color);
+
+  return (
+    <div className="area-chart">
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="Volume por dia">
+        <defs>
+          <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor={color} stopOpacity="0.95" />
+            <stop offset="1" stopColor={color} stopOpacity="0.45" />
+          </linearGradient>
+        </defs>
+        {[0.25, 0.5, 0.75].map((g) => (
+          <line key={g} x1="0" y1={padTop + g * usableH} x2={W} y2={padTop + g * usableH} stroke="var(--line)" strokeWidth="1" />
+        ))}
+        {points.map((p, i) => {
+          const h = Math.max(((p.value / max) * usableH), 2);
+          return (
+            <g key={p.label + i}>
+              <rect
+                x={x(i)}
+                y={H - padBottom - h}
+                width={bw}
+                height={h}
+                rx={Math.min(3, bw / 3)}
+                fill={i === peakIdx ? color : `url(#${id})`}
+                opacity={i === peakIdx ? 1 : 0.92}
+              >
+                <title>{p.title ?? `${p.label}: ${compactNumberBR(p.value)}`}</title>
+              </rect>
+            </g>
+          );
+        })}
+        <line
+          x1="0"
+          y1={y(avg)}
+          x2={W}
+          y2={y(avg)}
+          stroke="var(--gold-text)"
+          strokeWidth="1.5"
+          strokeDasharray="6 5"
+          opacity="0.75"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+      <div className="axis-row" aria-hidden="true">
+        <span>{points[0].label}</span>
+        {n > 2 ? <span>{points[midIdx].label}</span> : <span />}
+        <span>{points[n - 1].label}</span>
+      </div>
+      <div className="chart-legend">
+        <span className="lg">
+          <span className="sw" style={{ background: color }} /> Pico {points[peakIdx].label} · <b>{compactNumberBR(values[peakIdx])}</b>
+        </span>
+        <span className="lg">
+          <span className="sw sw-dash" style={{ borderColor: "var(--gold-text)" }} /> Média diária · <b>{compactNumberBR(avg)}</b>
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -180,9 +330,8 @@ export function RevenueArea({ points }: { points: AreaPoint[] }) {
   const x = (i: number) => (n === 1 ? W / 2 : (i / (n - 1)) * W);
   const y = (v: number) => padTop + (1 - v / max) * usableH;
 
-  const linePts = points.map((p, i) => `${x(i).toFixed(1)},${y(p.value).toFixed(1)}`);
-  const linePath = `M${linePts.join(" L")}`;
-  const areaPath = `M${x(0).toFixed(1)},${H} L${linePts.join(" L")} L${x(n - 1).toFixed(1)},${H} Z`;
+  const linePath = smoothPath(points.map((p, i) => ({ x: x(i), y: y(p.value) })));
+  const areaPath = `${linePath} L${x(n - 1).toFixed(1)},${H} L${x(0).toFixed(1)},${H} Z`;
 
   const peakIdx = values.indexOf(Math.max(...values));
   const avg = values.reduce((s, v) => s + v, 0) / n;

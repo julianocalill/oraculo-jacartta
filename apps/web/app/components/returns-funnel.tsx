@@ -105,7 +105,7 @@ export function ReturnsFunnel({ steps }: { steps: FunnelStep[] }) {
                   <text
                     x={(x1 + x2) / 2}
                     y={padTop - 32}
-                    fill="#93a0b7"
+                    fill="var(--muted)"
                     fontSize="11"
                     textAnchor="middle"
                   >
@@ -114,7 +114,7 @@ export function ReturnsFunnel({ steps }: { steps: FunnelStep[] }) {
                   <text
                     x={(x1 + x2) / 2}
                     y={padTop - 18}
-                    fill="#5d6980"
+                    fill="var(--faint)"
                     fontSize="10"
                     textAnchor="middle"
                   >
@@ -168,14 +168,14 @@ export function ReturnsFunnel({ steps }: { steps: FunnelStep[] }) {
               <text
                 x={x}
                 y={mid + band / 2 + 65}
-                fill="#93a0b7"
+                fill="var(--muted)"
                 fontSize="12"
                 textAnchor="middle"
                 fontFamily="var(--mono)"
               >
                 {money(step.amount)}
               </text>
-              <text x={x} y={mid - h - 10} fill="#5d6980" fontSize="11" textAnchor="middle">
+              <text x={x} y={mid - h - 10} fill="var(--faint)" fontSize="11" textAnchor="middle">
                 {(share * 100).toFixed(0)}%
               </text>
             </g>
@@ -221,7 +221,7 @@ export function DecisionBar({ slices, total }: { slices: DecisionSlice[]; total:
                   <text
                     x={x + w / 2}
                     y={H / 2 + 4}
-                    fill="#0b0e15"
+                    fill="var(--bg)"
                     fontSize="12"
                     fontWeight={700}
                     textAnchor="middle"

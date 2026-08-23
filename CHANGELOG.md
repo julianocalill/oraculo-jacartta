@@ -2,6 +2,37 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-23] — Redesign da UI: bento, tema claro, tipografia e gráficos
+
+- **Visão geral recomposta em bento grid** (12 colunas, tiles de tamanhos
+  variados): hero de Receita faturada com sparkline preenchida e sub-stats,
+  Lucro fiscal com gauges, cobertura SKU compacta, donut de impostos e o novo
+  tile "Composição do resultado" (barra segmentada custo/impostos/marketplace/
+  lucro). Nota metodológica virou `<details>` recolhido.
+- **Tema claro completo + seletor por usuário**: toggle Escuro/Claro na
+  sidebar, cookie de 1 ano lido no servidor (`lib/theme-server.ts`) — o HTML
+  já sai com o `data-theme` certo, sem flash. Ouro ganhou papéis tokenizados
+  (`--gold-text`, `--on-gold`) para manter contraste 4.5:1 no claro.
+- **Tipografia**: Aptos (só Windows) → IBM Plex Sans + IBM Plex Mono via
+  `next/font` (self-hosted, sem request externo em runtime).
+- **Gráficos com linguagem única** (SVG server-side, sem lib): novo
+  `DailyBars` substitui as barras em div de /pedidos (gradiente, pico sólido,
+  média tracejada, tooltip nativo); curvas suavizadas (Catmull-Rom) no
+  `RevenueArea` e nas sparklines.
+- **KPIs sem truncar**: cards `.metric` usam container queries — o valor
+  escala pela largura do card (adeus "R$ 5.902.8…").
+- **Mobile**: sidebar não estoura mais o viewport (min-width 0 no shell),
+  `.dashboard-section` com `minmax(0,1fr)` (SVG de 720px estourava
+  /devolucoes), alvos de toque ≥44px (nav, filtros, pills, toggle, links de
+  tabela com área expandida).
+- **Interação**: fim do sublinhado em links — hover é mudança de cor com
+  transição em todo o sistema (pills de aba, row-links, doc-links); anel de
+  foco único `:focus-visible`; `prefers-reduced-motion` global.
+- **Sidebar compacta (232px) com ícones SVG** por aba
+  (`app/components/nav-icons.tsx`).
+- Documentação: novo `docs/design-system.md` (tokens, temas, bento, gramática
+  dos gráficos, regras de interação e mobile).
+
 ## [2026-08-22] — Logística Fase 2: recebimento e conferência
 
 - Nova pill **/logistica/recebimento**: lista as faturas de importação sem

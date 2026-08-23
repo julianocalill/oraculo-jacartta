@@ -1,5 +1,24 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
+import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { readTheme } from "../lib/theme-server";
+
+// Pareamento "Financial Trust": Plex Sans para rótulos e texto, Plex Mono para
+// o readout numérico (tabular, sem ligaduras). next/font baixa no build e serve
+// do próprio domínio — nenhum request a fonts.googleapis.com em runtime.
+const plexSans = IBM_Plex_Sans({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-sans"
+});
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  display: "swap",
+  variable: "--font-mono"
+});
 
 export const viewport: Viewport = {
   themeColor: "#0b0e15"
@@ -29,11 +48,12 @@ export const metadata: Metadata = {
   }
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: Readonly<{ children: React.ReactNode }>) {
+  const theme = await readTheme();
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" data-theme={theme} className={`${plexSans.variable} ${plexMono.variable}`}>
       <body>{children}</body>
     </html>
   );

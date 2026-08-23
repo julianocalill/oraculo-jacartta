@@ -3,6 +3,7 @@ import { createSupabaseUserClient } from "../../lib/supabase/user";
 import { requireTabAccess } from "../../lib/auth/access";
 import { NoAccess } from "../components/no-access";
 import { AppShell } from "../components/app-shell";
+import { DailyBars } from "../components/fiscal-charts";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 
 export const dynamic = "force-dynamic";
@@ -390,21 +391,13 @@ export default async function PedidosPage({
             <p className="eyebrow">Volume diário</p>
             <h2>Pedidos por dia</h2>
           </div>
-          <div className="bar-chart" aria-label="Pedidos por dia">
-            {chart.map((row) => {
-              const ordersCount = n(row.orders_count);
-              const tooltip = `${shortDate(row.order_date)}: ${count(ordersCount)} pedidos · ${money(row.net_revenue)}`;
-
-              return (
-                <div className="bar-item has-tooltip" key={row.order_date} title={tooltip} aria-label={tooltip} data-tooltip={tooltip}>
-                  <div className="bar-track">
-                    <span style={{ height: `${Math.max((ordersCount / max) * 100, 3)}%` }} />
-                  </div>
-                  <small>{shortDate(row.order_date)}</small>
-                </div>
-              );
-            })}
-          </div>
+          <DailyBars
+            points={chart.map((row) => ({
+              label: shortDate(row.order_date),
+              value: n(row.orders_count),
+              title: `${shortDate(row.order_date)}: ${count(n(row.orders_count))} pedidos · ${money(row.net_revenue)}`
+            }))}
+          />
         </article>
 
         <article className="panel">

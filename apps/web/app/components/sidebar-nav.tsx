@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SECTORS, TABS, type TabKey } from "../../lib/auth/tabs";
+import { NavIcon } from "./nav-icons";
 
 type Tab = (typeof TABS)[number];
 
@@ -44,6 +45,7 @@ export function SidebarNav({ badges, tabs }: { badges?: Record<string, number | 
         className={active ? "nav-active" : undefined}
         aria-current={active ? "page" : undefined}
       >
+        <NavIcon tab={tab.key} />
         {tab.label}
         {badge != null && badge > 0 ? <b>{badge}</b> : null}
       </Link>
