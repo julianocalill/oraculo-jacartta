@@ -3143,6 +3143,10 @@ h2 {
   gap: 8px;
 }
 
+.calc-calculation-mode {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .calc-mode label {
   display: flex;
   align-items: center;
@@ -3166,6 +3170,10 @@ h2 {
 
 .calc-mode input {
   accent-color: var(--gold);
+}
+
+.calc-target-error {
+  color: var(--danger-text);
 }
 
 .calc-rates-head {

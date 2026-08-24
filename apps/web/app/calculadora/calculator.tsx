@@ -103,6 +103,16 @@ function formatPercentValue(rate: number) {
 }
 
 type Tier = { max: number; rate: number; fixed: number };
+type CalculationMode = "markup" | "price" | "netProfit";
+
+type CalculatorRates = {
+  icmsMg: number;
+  difal: number;
+  pisCofins: number;
+  ads: number;
+  fixedOperational: number;
+  averageRefund: number;
+};
 
 function getTierLabel(tier: Tier, tiers: Tier[]) {
   const index = tiers.indexOf(tier);
@@ -116,18 +126,97 @@ function getTierLabel(tier: Tier, tiers: Tier[]) {
   return `${range}: ${formatPercentValue(tier.rate)} + ${money(tier.fixed)}`;
 }
 
-// Cálculo idêntico ao app.js original (calculate()).
+function roundUpToCent(value: number) {
+  return Math.ceil((value - 1e-9) * 100) / 100;
+}
+
+function netProfitAtPrice(
+  salePrice: number,
+  totalProductCost: number,
+  rates: CalculatorRates,
+  tier: Tier
+) {
+  const addedValue = salePrice - totalProductCost;
+  const totalCosts =
+    totalProductCost +
+    salePrice * tier.rate +
+    tier.fixed +
+    salePrice * rates.icmsMg +
+    salePrice * rates.difal +
+    addedValue * rates.pisCofins +
+    salePrice * rates.ads +
+    salePrice * rates.fixedOperational +
+    rates.averageRefund;
+
+  return salePrice - totalCosts;
+}
+
+function findSalePriceForNetProfit(
+  targetNetProfit: number,
+  totalProductCost: number,
+  rates: CalculatorRates,
+  marketplaceTiers: Tier[]
+) {
+  const candidates: number[] = [];
+  let previousMax = -0.01;
+
+  for (const tier of marketplaceTiers) {
+    const priceShare =
+      1 -
+      tier.rate -
+      rates.icmsMg -
+      rates.difal -
+      rates.pisCofins -
+      rates.ads -
+      rates.fixedOperational;
+
+    if (priceShare > 0) {
+      const exactPrice =
+        (targetNetProfit +
+          totalProductCost * (1 - rates.pisCofins) +
+          tier.fixed +
+          rates.averageRefund) /
+        priceShare;
+      const tierMinimum = roundUpToCent(previousMax + 0.01);
+      const candidate = Math.max(roundUpToCent(exactPrice), tierMinimum, 0);
+
+      if (
+        candidate <= tier.max + Number.EPSILON &&
+        netProfitAtPrice(candidate, totalProductCost, rates, tier) >= targetNetProfit - 0.005
+      ) {
+        candidates.push(candidate);
+      }
+    }
+
+    previousMax = tier.max;
+  }
+
+  return candidates.length > 0 ? Math.min(...candidates) : null;
+}
+
+// Preserva o cálculo do app.js original nos modos markup e preço. O modo lucro
+// apenas resolve o preço antes de passar pela mesma decomposição de custos.
 function calculate(
   unitCost: number,
   quantity: number,
-  mode: "markup" | "price",
+  mode: CalculationMode,
   markupInput: number,
   salePriceInput: number,
-  rates: { icmsMg: number; difal: number; pisCofins: number; ads: number; fixedOperational: number; averageRefund: number },
+  netProfitInput: number,
+  rates: CalculatorRates,
   marketplaceTiers: Tier[]
 ) {
   const totalProductCost = unitCost * quantity;
-  const salePrice = mode === "markup" ? totalProductCost * markupInput : salePriceInput;
+  const targetSalePrice =
+    mode === "netProfit"
+      ? findSalePriceForNetProfit(netProfitInput, totalProductCost, rates, marketplaceTiers)
+      : null;
+  const salePrice =
+    mode === "markup"
+      ? totalProductCost * markupInput
+      : mode === "price"
+        ? salePriceInput
+        : targetSalePrice ?? 0;
   const appliedMarkup = totalProductCost > 0 ? salePrice / totalProductCost : 0;
   const addedValue = salePrice - totalProductCost;
   const marketplaceTier =
@@ -164,7 +253,8 @@ function calculate(
     costs,
     totalCosts,
     netProfit,
-    netMargin
+    netMargin,
+    targetReachable: mode !== "netProfit" || targetSalePrice !== null
   };
 }
 
@@ -183,9 +273,10 @@ function tierStringsFor(key: MarketplaceKey) {
 export function PricingCalculator() {
   const [unitCost, setUnitCost] = useState("50,00");
   const [quantity, setQuantity] = useState("1");
-  const [mode, setMode] = useState<"markup" | "price">("markup");
+  const [mode, setMode] = useState<CalculationMode>("markup");
   const [markup, setMarkup] = useState("2,50");
   const [salePrice, setSalePrice] = useState("125,00");
+  const [netProfit, setNetProfit] = useState("25,00");
   const [rateStrings, setRateStrings] = useState(DEFAULT_RATE_STRINGS);
   const [marketplace, setMarketplace] = useState<MarketplaceKey>("shopee");
   const [tierStrings, setTierStrings] = useState(() => tierStringsFor("shopee"));
@@ -216,13 +307,16 @@ export function PricingCalculator() {
       mode,
       Math.max(asNumber(markup), 0),
       Math.max(asNumber(salePrice), 0),
+      Math.max(asNumber(netProfit), 0),
       rates,
       tiers
     );
-  }, [unitCost, quantity, mode, markup, salePrice, rateStrings, tierStrings]);
+  }, [unitCost, quantity, mode, markup, salePrice, netProfit, rateStrings, tierStrings]);
 
   const status =
-    result.netProfit < 0
+    !result.targetReachable
+      ? { label: "Meta inviável", className: "signal-danger" }
+      : result.netProfit < 0
       ? { label: "Prejuízo", className: "signal-danger" }
       : result.netMargin < 0.1
         ? { label: "Margem baixa", className: "signal-warning" }
@@ -252,7 +346,7 @@ export function PricingCalculator() {
           </label>
         </div>
 
-        <div className="calc-mode" role="radiogroup" aria-label="Modo de cálculo">
+        <div className="calc-mode calc-calculation-mode" role="radiogroup" aria-label="Modo de cálculo">
           <label className={mode === "markup" ? "is-active" : undefined}>
             <input
               type="radio"
@@ -271,6 +365,15 @@ export function PricingCalculator() {
             />
             Por preço de venda
           </label>
+          <label className={mode === "netProfit" ? "is-active" : undefined}>
+            <input
+              type="radio"
+              name="calculationMode"
+              checked={mode === "netProfit"}
+              onChange={() => setMode("netProfit")}
+            />
+            Por lucro líquido
+          </label>
         </div>
 
         <div className="calc-field-grid">
@@ -279,13 +382,26 @@ export function PricingCalculator() {
               <span>Markup (×)</span>
               <input inputMode="decimal" value={markup} onChange={(e) => setMarkup(e.target.value)} />
             </label>
-          ) : (
+          ) : mode === "price" ? (
             <label className="calc-field">
               <span>Preço de venda (R$)</span>
               <input inputMode="decimal" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} />
             </label>
+          ) : (
+            <label className="calc-field">
+              <span>Lucro líquido desejado (R$)</span>
+              <input inputMode="decimal" value={netProfit} onChange={(e) => setNetProfit(e.target.value)} />
+            </label>
           )}
         </div>
+
+        {mode === "netProfit" && (
+          <p className={`table-note${result.targetReachable ? "" : " calc-target-error"}`}>
+            {result.targetReachable
+              ? "Menor preço de venda que atinge o lucro desejado nas faixas atuais."
+              : "Não existe preço que atinja esse lucro com as taxas atuais."}
+          </p>
+        )}
 
         <div className="section-head calc-rates-head">
           <div>

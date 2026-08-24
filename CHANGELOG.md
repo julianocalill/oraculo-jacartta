@@ -2,6 +2,16 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-24] — Preço calculado pelo lucro líquido desejado
+
+- A Calculadora de Precificação ganhou o terceiro modo **Por lucro líquido**,
+  além de Por markup e Por preço de venda.
+- Ao informar o lucro desejado em reais, a tela encontra o menor preço de venda
+  em centavos que atinge a meta, respeitando as faixas, percentuais e tarifas
+  fixas editáveis do marketplace selecionado.
+- Se as taxas informadas tornarem a meta matematicamente inviável, a tela avisa
+  em vez de apresentar um preço enganoso.
+
 ## [2026-08-24] — Etiqueta A4 horizontal, quantidade total e QR público
 
 - A impressão migrou de 100×150 mm vertical para **A4 horizontal**, com a

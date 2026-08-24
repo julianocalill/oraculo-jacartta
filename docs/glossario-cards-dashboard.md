@@ -749,11 +749,14 @@ sistema — usa taxas fixas digitadas na hora, não o livro de custos real.
 
 ### Como calcular o preço de venda
 
-Você escolhe um de dois modos:
+Você escolhe um de três modos:
 - **Por markup**: informa quantas vezes quer multiplicar o custo (ex.: 2,5×)
   → o preço de venda sai sozinho.
 - **Por preço de venda**: informa o preço direto e a calculadora acha o
   markup implícito.
+- **Por lucro líquido**: informa quanto quer ganhar em reais e a calculadora
+  encontra o menor preço de venda, em centavos, que atinge essa meta. O cálculo
+  respeita a comissão percentual e a tarifa fixa da faixa em que o preço cair.
 
 ### A fórmula completa
 
