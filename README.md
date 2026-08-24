@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-08-21.md](docs/project-status-2026-08-21.md) **← start here** (current state)
+1. [docs/project-status-2026-08-24.md](docs/project-status-2026-08-24.md) **← start here** (current state; complements the broad 21/08 snapshot)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
    — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every card/column/config field across the whole system — analytics, alerts, calculator, imports, params, sync status — exact formula, PT-BR, for team walkthroughs)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
@@ -58,7 +58,10 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-08-19.md](
 
 ## Current production state
 
-**Last update**: `2026-08-22` (see `docs/project-status-2026-08-21.md`, adendos de 22/08) —
+**Last update**: `2026-08-24` (see `docs/project-status-2026-08-24.md`) —
+**Expedição reconciliada com vendas pagas** (pedidos/unidades pela data do
+pagamento separados da carga por prazo de envio; sincronização Shopee segue a
+cada 15 minutos, cobertura de pacotes validada em 100% desde a ativação),
 **menu lateral por setores** (Analítico · Comercial · Operações em acordeão nativo),
 **Logística Fase 1** (`/logistica` como hub + `/logistica/estoque`: saldo do ERP
 quebrado pelos 8 depósitos do Olist via `GET /estoque/{id}`, capital a custo,

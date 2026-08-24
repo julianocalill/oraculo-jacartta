@@ -33,6 +33,16 @@ type Daily = {
   divergences: number;
 };
 
+type SalesDaily = {
+  sale_day: string;
+  sold_orders: number;
+  sold_units: number;
+  packages_from_sold_orders: number;
+  sold_orders_without_package: number;
+  orders_without_tracking: number;
+  data_refreshed_at: string | null;
+};
+
 type Shop = {
   shop_id: number;
   shop_name: string | null;
@@ -85,9 +95,10 @@ const STATUS_LABEL: Record<string, string> = {
 
 async function loadData(from: string, to: string) {
   const supabase = createSupabaseAdminClient();
-  const [summary, daily, shops, exceptions] = await Promise.all([
+  const [summary, daily, salesDaily, shops, exceptions] = await Promise.all([
     supabase.rpc("oraculo_fulfillment_summary", { p_from: from, p_to: to, p_shop_id: null }),
     supabase.rpc("oraculo_fulfillment_daily", { p_from: from, p_to: to, p_shop_id: null }),
+    supabase.rpc("oraculo_fulfillment_sales_daily", { p_from: from, p_to: to, p_shop_id: null }),
     supabase.rpc("oraculo_fulfillment_by_shop", { p_from: from, p_to: to }),
     supabase
       .from("oraculo_fulfillment_pipeline")
@@ -108,9 +119,10 @@ async function loadData(from: string, to: string) {
   return {
     summary: ((summary.data ?? [])[0] ?? null) as Summary | null,
     daily: (daily.data ?? []) as Daily[],
+    salesDaily: (salesDaily.data ?? []) as SalesDaily[],
     shops: (shops.data ?? []) as Shop[],
     exceptions: (exceptions.data ?? []) as ExceptionRow[],
-    error: summary.error?.message || daily.error?.message || shops.error?.message || exceptions.error?.message || null
+    error: summary.error?.message || daily.error?.message || salesDaily.error?.message || shops.error?.message || exceptions.error?.message || null
   };
 }
 
@@ -139,6 +151,19 @@ export default async function ExpedicaoPage({
     avg_minutes_commercial_to_logistics: null, avg_minutes_logistics_to_carrier: null,
     shopee_refreshed_at: null, bip_refreshed_at: null
   };
+  const sales = data.salesDaily.reduce((total, row) => ({
+    soldOrders: total.soldOrders + Number(row.sold_orders),
+    soldUnits: total.soldUnits + Number(row.sold_units),
+    packages: total.packages + Number(row.packages_from_sold_orders),
+    missingPackages: total.missingPackages + Number(row.sold_orders_without_package)
+  }), { soldOrders: 0, soldUnits: 0, packages: 0, missingPackages: 0 });
+  const salesUpdatedAt = data.salesDaily.reduce<string | null>((latest, row) => {
+    if (!row.data_refreshed_at) return latest;
+    return !latest || row.data_refreshed_at > latest ? row.data_refreshed_at : latest;
+  }, null);
+  const salesByDay = new Map(data.salesDaily.map((row) => [row.sale_day, row]));
+  const fulfillmentByDay = new Map(data.daily.map((row) => [row.due_day, row]));
+  const historyDays = [...new Set([...salesByDay.keys(), ...fulfillmentByDay.keys()])].sort();
 
   return (
     <AppShell alertCount={alertCount}>
@@ -158,19 +183,33 @@ export default async function ExpedicaoPage({
         <section className="status-alerts"><div className="status-alert status-alert-critical">Funil ainda não disponível: {data.error}</div></section>
       ) : null}
 
-      <section className="metric-grid fulfillment-metric-grid">
-        <MetricCard accent="accent-blue" label="Pacotes Shopee" value={count(summary.total_packages)} caption={`${count(summary.tracking_available)} com rastreio disponível`} />
-        <MetricCard accent="accent-violet" label="Bipados Comercial" value={count(summary.commercial_scanned)} caption={`${pct(summary.commercial_scanned, summary.total_packages)} da carga`} />
-        <MetricCard accent="accent-cyan" label="Recebidos Logística" value={count(summary.logistics_received)} caption={`${pct(summary.logistics_received, summary.total_packages)} da carga`} />
-        <MetricCard accent="accent-green" label="Coleta confirmada" value={count(summary.carrier_collected)} caption={`${pct(summary.carrier_collected, summary.total_packages)} da carga`} />
-        <MetricCard accent="accent-red" label="Fora do prazo" value={count(summary.overdue)} caption={`${count(summary.divergences)} divergências de sequência`} />
+      <section>
+        <div className="section-head"><p className="eyebrow">Vendas no período</p><h2>O que foi vendido</h2></div>
+        <div className="metric-grid">
+          <MetricCard accent="accent-blue" label="Pedidos pagos" value={count(sales.soldOrders)} caption="Pela data de pagamento na Shopee" />
+          <MetricCard accent="accent-violet" label="Unidades vendidas" value={count(sales.soldUnits)} caption="Quantidade somada dos itens" />
+          <MetricCard accent="accent-cyan" label="Pacotes dessas vendas" value={count(sales.packages)} caption="Um pedido pode gerar mais de um pacote" />
+          <MetricCard accent={sales.missingPackages ? "accent-red" : "accent-green"} label="Vendas sem pacote" value={count(sales.missingPackages)} caption={sales.missingPackages ? "Exigem correção na sincronização" : "Cobertura completa no período"} />
+        </div>
+        <p className="muted">Vendas atualizadas em {dateTime(salesUpdatedAt)}. A Shopee sincroniza cada loja a cada 15 minutos.</p>
+      </section>
+
+      <section>
+        <div className="section-head"><p className="eyebrow">Carga operacional</p><h2>O que precisa ser expedido pelo prazo</h2></div>
+        <div className="metric-grid fulfillment-metric-grid">
+          <MetricCard accent="accent-blue" label="Pacotes com prazo" value={count(summary.total_packages)} caption={`${count(summary.tracking_available)} com rastreio disponível`} />
+          <MetricCard accent="accent-violet" label="Bipados Comercial" value={count(summary.commercial_scanned)} caption={`${pct(summary.commercial_scanned, summary.total_packages)} da carga`} />
+          <MetricCard accent="accent-cyan" label="Recebidos Logística" value={count(summary.logistics_received)} caption={`${pct(summary.logistics_received, summary.total_packages)} da carga`} />
+          <MetricCard accent="accent-green" label="Coleta confirmada" value={count(summary.carrier_collected)} caption={`${pct(summary.carrier_collected, summary.total_packages)} da carga`} />
+          <MetricCard accent="accent-red" label="Fora do prazo" value={count(summary.overdue)} caption={`${count(summary.divergences)} divergências de sequência`} />
+        </div>
       </section>
 
       <section className="panel fulfillment-funnel-panel">
         <div className="section-head"><p className="eyebrow">Funil consolidado</p><h2>Onde os pacotes estão parando</h2></div>
         <div className="fulfillment-funnel">
           {[
-            ["Shopee", summary.total_packages, "carga do período"],
+            ["Shopee", summary.total_packages, "pacotes pelo prazo de envio"],
             ["Comercial", summary.commercial_scanned, `${summary.pending_commercial} pendentes`],
             ["Logística", summary.logistics_received, `${summary.between_departments} entre setores`],
             ["Coleta", summary.carrier_collected, `${summary.waiting_carrier} aguardando`]
@@ -220,15 +259,30 @@ export default async function ExpedicaoPage({
       </section>
 
       <section className="panel">
-        <div className="section-head"><p className="eyebrow">Histórico diário</p><h2>Conversão das quatro etapas</h2></div>
+        <div className="section-head"><p className="eyebrow">Histórico diário</p><h2>Venda e prazo de envio, sem misturar as datas</h2></div>
         <div className="table-wrap dense-table-wrap">
           <table className="data-table dense-table">
-            <thead><tr><th>Dia de envio</th><th>Pacotes</th><th>Comercial</th><th>Logística</th><th>Coleta</th><th>Divergências</th></tr></thead>
-            <tbody>{data.daily.map((row) => (
-              <tr key={row.due_day}><td>{new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${row.due_day}T12:00:00Z`))}</td><td>{count(row.total_packages)}</td><td>{count(row.commercial_scanned)} · {pct(row.commercial_scanned, row.total_packages)}</td><td>{count(row.logistics_received)} · {pct(row.logistics_received, row.total_packages)}</td><td>{count(row.carrier_collected)} · {pct(row.carrier_collected, row.total_packages)}</td><td>{count(row.divergences)}</td></tr>
-            ))}</tbody>
+            <thead><tr><th>Dia</th><th>Pedidos pagos</th><th>Unidades vendidas</th><th>Pacotes com prazo</th><th>Comercial</th><th>Logística</th><th>Coleta</th><th>Divergências</th></tr></thead>
+            <tbody>{historyDays.map((day) => {
+              const sale = salesByDay.get(day);
+              const fulfillment = fulfillmentByDay.get(day);
+              const totalPackages = Number(fulfillment?.total_packages ?? 0);
+              return (
+                <tr key={day}>
+                  <td>{new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`))}</td>
+                  <td>{count(sale?.sold_orders)}</td>
+                  <td>{count(sale?.sold_units)}</td>
+                  <td>{count(totalPackages)}</td>
+                  <td>{count(fulfillment?.commercial_scanned)} · {pct(Number(fulfillment?.commercial_scanned ?? 0), totalPackages)}</td>
+                  <td>{count(fulfillment?.logistics_received)} · {pct(Number(fulfillment?.logistics_received ?? 0), totalPackages)}</td>
+                  <td>{count(fulfillment?.carrier_collected)} · {pct(Number(fulfillment?.carrier_collected ?? 0), totalPackages)}</td>
+                  <td>{count(fulfillment?.divergences)}</td>
+                </tr>
+              );
+            })}</tbody>
           </table>
         </div>
+        <p className="muted">Pedidos e unidades usam a data do pagamento. As etapas operacionais usam o prazo de envio informado pela Shopee.</p>
       </section>
     </AppShell>
   );

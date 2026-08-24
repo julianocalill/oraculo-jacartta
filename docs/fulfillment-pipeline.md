@@ -79,6 +79,23 @@ cada dois minutos.
 Os quatro jobs incrementais da Shopee rodam a cada 15 minutos, escalonados. A
 Jacartta usa o minuto 9 do ciclo.
 
+A aba estratégica separa duas datas que não podem ser comparadas como se fossem
+a mesma coisa:
+
+- **venda**: dia do pagamento (`shopee_orders.pay_time`);
+- **carga operacional**: prazo de envio do pacote
+  (`shopee_fulfillment_packages.ship_by_at`).
+
+`oraculo_fulfillment_sales_daily` fornece pedidos pagos, unidades e cobertura
+de pacotes para o primeiro bloco; o funil original continua agrupado pelo prazo.
+A RPC é `service_role`-only porque pedidos e itens carregam dados pessoais de
+terceiros, e `/expedicao` a chama apenas no servidor após `requireTabAccess()`.
+
+Desde 24/08, quando a Shopee divide o mesmo item/modelo em mais de uma linha
+promocional, `shopee-sync` soma as quantidades antes do upsert e preserva as
+linhas originais em `raw_json.oraculo_source_lines`. Antes disso, a colisão da
+chave abortava o lote de itens e impedia a gravação posterior dos pacotes.
+
 Variáveis no Bip:
 
 - `ORACULO_FULFILLMENT_EXPORT_SECRET`

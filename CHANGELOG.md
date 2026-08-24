@@ -2,6 +2,17 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-24] — Expedição conciliada com vendas pagas
+
+- `/expedicao` separa pedidos/unidades pela data do pagamento dos pacotes e
+  etapas operacionais agrupados pelo prazo de envio.
+- Nova RPC service-role-only `oraculo_fulfillment_sales_daily`; consulta medida
+  em 1,32 s e sincronização mantida a cada 15 minutos.
+- `shopee-sync` passou a colapsar linhas promocionais repetidas do mesmo
+  item/modelo antes do upsert, sem perder quantidade nem o payload original.
+- Os dois pedidos afetados foram reparados; a cobertura desde a ativação ficou
+  em 52.679 pedidos pagos e zero sem pacote (100%).
+
 ## [2026-08-24] — Preço calculado pelo lucro líquido desejado
 
 - A Calculadora de Precificação ganhou o terceiro modo **Por lucro líquido**,

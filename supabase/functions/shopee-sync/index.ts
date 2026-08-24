@@ -95,6 +95,60 @@ function carrierHasCollected(logisticsStatus: unknown): boolean {
   ].includes(String(logisticsStatus ?? "").toUpperCase());
 }
 
+// A Shopee pode devolver duas linhas comerciais para o mesmo item/modelo no
+// mesmo pedido (por exemplo, um bundle dividido em duas line_item_id). A chave
+// histórica da tabela é pedido + item + modelo, então mandar as duas linhas no
+// mesmo upsert faz o Postgres abortar o lote inteiro. Colapsamos somente essas
+// colisões, somando a quantidade e preservando as linhas originais no raw.
+// deno-lint-ignore no-explicit-any
+function buildItemRows(shop: Shop, orders: any[], nowIso: string) {
+  // deno-lint-ignore no-explicit-any
+  const byId = new Map<string, any>();
+
+  for (const order of orders) {
+    for (const item of order.item_list ?? []) {
+      const id = `${shop.shop_id}-${order.order_sn}-${item.item_id}-${item.model_id ?? 0}`;
+      const quantity = Number(item.model_quantity_purchased ?? item.quantity_purchased ?? 0);
+      const existing = byId.get(id);
+
+      if (!existing) {
+        byId.set(id, {
+          id,
+          order_id: `${shop.shop_id}-${order.order_sn}`,
+          shop_id: shop.shop_id,
+          order_sn: order.order_sn,
+          item_id: item.item_id != null ? String(item.item_id) : null,
+          item_name: item.item_name ?? null,
+          model_id: item.model_id != null ? String(item.model_id) : null,
+          model_name: item.model_name ?? null,
+          sku: item.model_sku || item.item_sku || null,
+          quantity,
+          raw_json: item,
+          synced_at: nowIso
+        });
+        continue;
+      }
+
+      const sourceLines = Array.isArray(existing.raw_json?.oraculo_source_lines)
+        ? existing.raw_json.oraculo_source_lines
+        : [existing.raw_json];
+      const mergedQuantity = Number(existing.quantity) + quantity;
+      byId.set(id, {
+        ...existing,
+        quantity: mergedQuantity,
+        raw_json: {
+          ...existing.raw_json,
+          model_quantity_purchased: mergedQuantity,
+          quantity_purchased: mergedQuantity,
+          oraculo_source_lines: [...sourceLines, item]
+        }
+      });
+    }
+  }
+
+  return [...byId.values()];
+}
+
 // deno-lint-ignore no-explicit-any
 async function upsertPackages(
   supabase: any,
@@ -219,23 +273,7 @@ async function upsertOrders(supabase: any, shop: Shop, orders: any[]): Promise<n
     synced_at: nowIso
   }));
 
-  // deno-lint-ignore no-explicit-any
-  const itemRows = orders.flatMap((o: any) =>
-    (o.item_list ?? []).map((it: any) => ({
-      id: `${shop.shop_id}-${o.order_sn}-${it.item_id}-${it.model_id ?? 0}`,
-      order_id: `${shop.shop_id}-${o.order_sn}`,
-      shop_id: shop.shop_id,
-      order_sn: o.order_sn,
-      item_id: it.item_id != null ? String(it.item_id) : null,
-      item_name: it.item_name ?? null,
-      model_id: it.model_id != null ? String(it.model_id) : null,
-      model_name: it.model_name ?? null,
-      sku: it.model_sku || it.item_sku || null,
-      quantity: it.model_quantity_purchased ?? it.quantity_purchased ?? null,
-      raw_json: it,
-      synced_at: nowIso
-    }))
-  );
+  const itemRows = buildItemRows(shop, orders, nowIso);
 
   const { error: oErr } = await supabase.from("shopee_orders").upsert(orderRows, { onConflict: "id" });
   if (oErr) throw new Error(`upsert orders ${shop.shop_id}: ${oErr.message}`);
