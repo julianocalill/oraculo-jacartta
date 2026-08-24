@@ -2,6 +2,14 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-24] — Parâmetros com concessão restrita por usuário
+
+- A aba Parâmetros continua automática apenas para os administradores fixos,
+  mas agora pode ser concedida individualmente em `/usuarios`.
+- A concessão usa `app_metadata.restricted_tabs`, separada de `tabs`, para que
+  chaves antigas gravadas pelo backfill não reabram a aba para outros usuários.
+- Daniel Merola recebeu a concessão explícita de Parâmetros.
+
 ## [2026-08-24] — Expedição conciliada com vendas pagas
 
 - `/expedicao` separa pedidos/unidades pela data do pagamento dos pacotes e

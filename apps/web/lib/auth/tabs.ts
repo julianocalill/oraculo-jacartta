@@ -29,8 +29,9 @@ export type TabDefinition = {
   group: TabGroup;
   paths: string[];
   sector?: TabSector;
-  // Aba restrita aos administradores fixos (isMaster): não aparece na matriz
-  // de /usuarios e é ignorada mesmo se estiver gravada em app_metadata.tabs.
+  // Aba restrita: administradores fixos (isMaster) entram automaticamente;
+  // usuários comuns só entram por concessão explícita em
+  // app_metadata.restricted_tabs, separada das abas comuns legadas.
   adminOnly?: boolean;
 };
 

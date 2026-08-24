@@ -65,13 +65,20 @@ export function allowedTabs(user: MaybeUser): TabKey[] {
   }
 
   const raw = user.app_metadata?.tabs;
-  if (!Array.isArray(raw)) return [];
+  const restrictedRaw = user.app_metadata?.restricted_tabs;
+  if (!Array.isArray(raw) && !Array.isArray(restrictedRaw)) return [];
 
-  const granted = new Set(raw.filter(isTabKey));
+  const granted = new Set(Array.isArray(raw) ? raw.filter(isTabKey) : []);
+  const restrictedGranted = new Set(
+    Array.isArray(restrictedRaw) ? restrictedRaw.filter(isTabKey) : []
+  );
   // Mantém a ordem canônica do menu, não a ordem gravada no metadata.
-  // Abas adminOnly (ex.: Parâmetros) são exclusivas dos administradores fixos:
-  // mesmo gravadas no metadata por engano, não contam para quem não é master.
-  return ALL_TAB_KEYS.filter((key) => granted.has(key) && !isAdminOnlyTab(key));
+  // Chaves adminOnly antigas gravadas em `tabs` continuam sem efeito. Uma aba
+  // restrita só é liberada pelo campo separado `restricted_tabs`, evitando que
+  // o backfill histórico reabra Parâmetros para todos de uma vez.
+  return ALL_TAB_KEYS.filter((key) =>
+    isAdminOnlyTab(key) ? restrictedGranted.has(key) : granted.has(key)
+  );
 }
 
 export function canAccess(user: MaybeUser, tab: TabKey) {

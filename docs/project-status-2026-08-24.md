@@ -4,6 +4,18 @@ Este registro complementa o panorama amplo de
 [`project-status-2026-08-21.md`](project-status-2026-08-21.md) e as entregas de
 [`project-status-2026-08-23.md`](project-status-2026-08-23.md).
 
+## Acesso individual à aba Parâmetros
+
+`/parametros` permanece uma aba restrita: os administradores fixos entram
+automaticamente e usuários comuns só entram quando recebem uma concessão
+explícita em `app_metadata.restricted_tabs`. Esse campo é separado do
+`app_metadata.tabs` comum de propósito: o backfill histórico gravou a chave
+`parametros` em vários usuários, e reaproveitá-la reabriria a tela sem intenção.
+
+O painel `/usuarios` ganhou o grupo **Restrito**; essas abas não entram no botão
+"Marcar todas". Daniel Merola (`daniel.merola@oliverhome.com.br`) é o primeiro
+usuário com a concessão individual de Parâmetros.
+
 ## Expedição: vendas e carga operacional
 
 A auditoria de produção confirmou que `/expedicao` estava correto como funil

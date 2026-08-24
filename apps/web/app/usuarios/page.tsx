@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { assertMaster, isMaster, requireMaster } from "../../lib/auth/access";
-import { ALL_TAB_KEYS, isTabKey, tabLabel, type TabKey } from "../../lib/auth/tabs";
+import { ALL_TAB_KEYS, isAdminOnlyTab, isTabKey, tabLabel, type TabKey } from "../../lib/auth/tabs";
 import { AppShell } from "../components/app-shell";
 import { NoAccess } from "../components/no-access";
 import { loadActionableAlertCount } from "../../lib/alert-count";
@@ -35,9 +35,14 @@ function displayName(user: AuthUser) {
 
 function tabsOf(user: AuthUser): TabKey[] {
   const raw = user.app_metadata?.tabs;
-  if (!Array.isArray(raw)) return [];
-  const granted = new Set(raw.filter(isTabKey));
-  return ALL_TAB_KEYS.filter((key) => granted.has(key));
+  const restrictedRaw = user.app_metadata?.restricted_tabs;
+  const granted = new Set(Array.isArray(raw) ? raw.filter(isTabKey) : []);
+  const restrictedGranted = new Set(
+    Array.isArray(restrictedRaw) ? restrictedRaw.filter(isTabKey) : []
+  );
+  return ALL_TAB_KEYS.filter((key) =>
+    isAdminOnlyTab(key) ? restrictedGranted.has(key) : granted.has(key)
+  );
 }
 
 function isBlocked(user: AuthUser) {
@@ -47,7 +52,12 @@ function isBlocked(user: AuthUser) {
 // Só as chaves conhecidas entram no metadata — o formulário não define o vocabulário.
 function readTabs(formData: FormData): TabKey[] {
   const submitted = new Set(formData.getAll("tabs").map(String).filter(isTabKey));
-  return ALL_TAB_KEYS.filter((key) => submitted.has(key));
+  return ALL_TAB_KEYS.filter((key) => submitted.has(key) && !isAdminOnlyTab(key));
+}
+
+function readRestrictedTabs(formData: FormData): TabKey[] {
+  const submitted = new Set(formData.getAll("restricted_tabs").map(String).filter(isTabKey));
+  return ALL_TAB_KEYS.filter((key) => submitted.has(key) && isAdminOnlyTab(key));
 }
 
 async function loadUsers() {
@@ -71,7 +81,10 @@ async function createUser(formData: FormData) {
     password,
     email_confirm: true,
     user_metadata: { full_name: fullName },
-    app_metadata: { tabs: readTabs(formData) }
+    app_metadata: {
+      tabs: readTabs(formData),
+      restricted_tabs: readRestrictedTabs(formData)
+    }
   });
 
   if (error) throw error;
@@ -98,7 +111,10 @@ async function updateUser(formData: FormData) {
   // Administradores fixos não têm caixinhas no formulário: preservar o metadata
   // deles evita zerar o acesso de quem edita a própria linha.
   if (!isMaster({ id: userId, email })) {
-    attributes.app_metadata = { tabs: readTabs(formData) };
+    attributes.app_metadata = {
+      tabs: readTabs(formData),
+      restricted_tabs: readRestrictedTabs(formData)
+    };
   }
 
   if (password) {

@@ -20,16 +20,18 @@ export function TabCheckboxes({ selected = [] }: { selected?: TabKey[] }) {
   }
 
   // Mesma organização do menu lateral: setores, depois as abas soltas, depois
-  // Admin. Abas adminOnly ficam fora da matriz — são exclusivas dos masters e
-  // marcar a caixinha não teria efeito (lib/auth/access.ts as ignora).
+  // Admin. Abas restritas ficam em um grupo próprio e não entram no atalho
+  // "Marcar todas": precisam sempre de uma concessão deliberada.
   const grantable = TABS.filter((tab) => !("adminOnly" in tab && tab.adminOnly));
+  const restricted = TABS.filter((tab) => "adminOnly" in tab && tab.adminOnly);
   const groups = [
     ...SECTORS.map((sector) => ({
       label: sector.label,
       items: grantable.filter((tab) => tab.group === "main" && "sector" in tab && tab.sector === sector.key)
     })),
     { label: "Geral", items: grantable.filter((tab) => tab.group === "main" && !("sector" in tab)) },
-    { label: "Admin", items: grantable.filter((tab) => tab.group === "admin") }
+    { label: "Admin", items: grantable.filter((tab) => tab.group === "admin") },
+    { label: "Restrito", items: restricted }
   ];
 
   return (
@@ -37,7 +39,17 @@ export function TabCheckboxes({ selected = [] }: { selected?: TabKey[] }) {
       <div className="tab-access-head">
         <span>Abas liberadas</span>
         <div className="tab-access-actions">
-          <button type="button" onClick={() => setChecked(new Set(grantable.map((tab) => tab.key)))}>
+          <button
+            type="button"
+            onClick={() =>
+              setChecked((current) =>
+                new Set([
+                  ...grantable.map((tab) => tab.key),
+                  ...restricted.filter((tab) => current.has(tab.key)).map((tab) => tab.key)
+                ])
+              )
+            }
+          >
             Marcar todas
           </button>
           <button type="button" onClick={() => setChecked(new Set())}>
@@ -55,7 +67,7 @@ export function TabCheckboxes({ selected = [] }: { selected?: TabKey[] }) {
                 <input
                   id={`${groupId}-${tab.key}`}
                   type="checkbox"
-                  name="tabs"
+                  name={"adminOnly" in tab && tab.adminOnly ? "restricted_tabs" : "tabs"}
                   value={tab.key}
                   checked={checked.has(tab.key)}
                   onChange={(event) => toggle(tab.key, event.target.checked)}
