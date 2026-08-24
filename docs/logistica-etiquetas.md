@@ -1,8 +1,8 @@
 # Logística · Etiqueta de palete
 
 Primeira peça do módulo de Logística (2026-08-11). Gera a etiqueta 100×150 mm
-que vai colada no palete, com produto, variações, quantidades, NF, caixas por
-palete e um QR Code que abre a ficha do palete dentro do Oráculo.
+que vai colada no palete, com SKU, produto, variações, quantidades, NF, caixas
+por palete e um QR Code que abre a ficha do palete dentro do Oráculo.
 
 ## Por que existe
 
@@ -13,8 +13,10 @@ base para cruzar com expedição e importações depois.
 
 ## Texto livre, sem vínculo com o cadastro (2026-08-13)
 
-Produto e variações são **digitados à mão**. A etiqueta não consulta o cadastro
-de produtos, não valida nada contra o ERP e não guarda referência a SKU.
+SKU, produto e variações são **digitados à mão**. A etiqueta não consulta o
+cadastro de produtos nem valida nada contra o ERP. Desde 24/08, o SKU físico é
+congelado em `logistica_paletes.product_sku` e sai à esquerda do nome do produto;
+ele é só texto operacional, não uma referência ao catálogo.
 
 A primeira versão (11/08) amarrava cada variação a um SKU real da Olist, via
 `<datalist>`. Não sobreviveu ao primeiro palete de verdade. O motivo está no
@@ -45,7 +47,8 @@ uma tela nova ao cadastro, olhe o texto que ele realmente contém.
 ## Fluxo
 
 1. `/logistica/etiqueta` — formulário (Server Action `gerarEtiqueta`).
-2. Grava `logistica_paletes` + `logistica_palete_itens` e gera o `code`.
+2. Grava o SKU e o produto em `logistica_paletes`, as variações em
+   `logistica_palete_itens` e gera o `code`.
 3. Redireciona para `/logistica/etiqueta/imprimir?code=<code>`, que renderiza N
    etiquetas idênticas e chama `window.print()` sozinho.
 4. O QR aponta para `/logistica/palete/<code>` — ficha do palete, **exige login**
@@ -60,6 +63,7 @@ uma tela nova ao cadastro, olhe o texto que ele realmente contém.
 | Correção de erro do QR | Nível `M` (15%) | Etiqueta em palete pega sujeira e raspão; `H` inflaria o QR sem necessidade |
 | `code` | 12 chars, alfabeto sem `0/O/1/I/L` | Fica impresso embaixo do QR para digitar quando o leitor não pega — e é aí que a confusão de caracteres acontece |
 | Produto e variação | Texto livre, sem validação | O vocabulário do ERP é de anúncio de marketplace, não serve para etiqueta física (ver seção acima) |
+| SKU | Texto livre no palete | Identifica fisicamente o produto e aparece antes do nome, sem reatar o documento ao catálogo Olist |
 | Acesso à ficha | Exige login | Decisão do produto. Quem bipar sem sessão cai no `/login?next=` e volta depois |
 | N etiquetas | Cópias idênticas | Um palete, um código. Numeração 1/12, 2/12 ficou fora do escopo |
 
@@ -80,6 +84,7 @@ quando a linha tem quantidade — linha em branco é simplesmente ignorada.
 | Caminho | Papel |
 |---|---|
 | `supabase/migrations/20260811210000_logistica_paletes.sql` | Tabelas, RLS e grants |
+| `supabase/migrations/20260824125726_logistica_palete_product_sku.sql` | SKU livre congelado no palete |
 | `apps/web/lib/auth/tabs.ts` | Registro da aba (1 linha) |
 | `apps/web/lib/qrcode.ts` | Wrapper do `qrcode` → SVG dimensionado em mm |
 | `apps/web/app/logistica/data.ts` | `loadPaleteByCode`, `formatLabelLine`, `generatePaleteCode` |

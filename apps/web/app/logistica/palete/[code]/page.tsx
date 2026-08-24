@@ -55,7 +55,7 @@ export default async function PaletePage({ params }: { params: Promise<{ code: s
       <header className="topbar">
         <div>
           <h1>{palete.product_label}</h1>
-          <p>Palete {palete.code}</p>
+          <p>{palete.product_sku ? `SKU ${palete.product_sku} · ` : ""}Palete {palete.code}</p>
         </div>
       </header>
 
@@ -74,6 +74,10 @@ export default async function PaletePage({ params }: { params: Promise<{ code: s
         </ul>
 
         <dl className="palete-dados">
+          <div>
+            <dt>SKU</dt>
+            <dd>{palete.product_sku ?? "—"}</dd>
+          </div>
           <div>
             <dt>Nota fiscal</dt>
             <dd>{palete.invoice_number ?? "—"}</dd>

@@ -99,7 +99,11 @@ export default async function ImprimirPage({
               overflow: hidden;
             }
 
-            .etiqueta-produto {
+            .etiqueta-cabecalho {
+              display: flex;
+              flex-wrap: wrap;
+              align-items: baseline;
+              gap: 2mm;
               font-size: 7mm;
               line-height: 1.1;
               font-weight: 700;
@@ -107,6 +111,13 @@ export default async function ImprimirPage({
               letter-spacing: 0.02em;
               margin: 0 0 3mm;
             }
+
+            .etiqueta-sku {
+              flex: none;
+              white-space: nowrap;
+            }
+
+            .etiqueta-produto { min-width: 0; }
 
             .etiqueta-linhas {
               list-style: none;
@@ -179,7 +190,10 @@ export default async function ImprimirPage({
 
       {copias.map((index) => (
         <article className="etiqueta" key={index}>
-          <h1 className="etiqueta-produto">{palete.product_label}</h1>
+          <h1 className="etiqueta-cabecalho">
+            {palete.product_sku ? <span className="etiqueta-sku">SKU: {palete.product_sku}</span> : null}
+            <span className="etiqueta-produto">{palete.product_label}</span>
+          </h1>
 
           <ul className="etiqueta-linhas">
             {linhas.map((linha, linhaIndex) => (

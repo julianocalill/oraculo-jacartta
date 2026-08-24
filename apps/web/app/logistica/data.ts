@@ -9,6 +9,7 @@ export type PaleteItem = {
 export type Palete = {
   id: string;
   code: string;
+  product_sku: string | null;
   product_label: string;
   invoice_number: string | null;
   boxes_per_pallet: number | null;
@@ -86,7 +87,7 @@ export async function loadPaleteByCode(code: string): Promise<Palete | null> {
 
   const { data: palete, error } = await supabase
     .from("logistica_paletes")
-    .select("id, code, product_label, invoice_number, boxes_per_pallet, label_count, created_at")
+    .select("id, code, product_sku, product_label, invoice_number, boxes_per_pallet, label_count, created_at")
     .eq("code", code)
     .maybeSingle();
 
@@ -104,6 +105,7 @@ export async function loadPaleteByCode(code: string): Promise<Palete | null> {
   return {
     id: String(palete.id),
     code: String(palete.code),
+    product_sku: palete.product_sku ? String(palete.product_sku) : null,
     product_label: String(palete.product_label),
     invoice_number: palete.invoice_number ? String(palete.invoice_number) : null,
     boxes_per_pallet: palete.boxes_per_pallet == null ? null : Number(palete.boxes_per_pallet),

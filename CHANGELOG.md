@@ -2,6 +2,16 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-24] — SKU na etiqueta de palete
+
+- O formulário de `/logistica/etiqueta` ganhou o campo obrigatório **SKU** logo
+  após Produto.
+- O SKU é congelado como texto livre em `logistica_paletes.product_sku` e sai
+  na impressão à esquerda do nome do produto. Etiquetas antigas continuam
+  reimprimindo normalmente, sem SKU.
+- A ficha aberta pelo QR também mostra o SKU. O campo não cria vínculo com o
+  catálogo Olist; preserva a decisão de usar o vocabulário físico da doca.
+
 ## [2026-08-23] — Status do sync sem falsos alertas
 
 - **Pedidos**: `/status` deixou de ler `olist_sync_runs`, tabela legada escrita

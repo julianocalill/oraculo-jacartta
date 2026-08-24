@@ -43,6 +43,9 @@ async function gerarEtiqueta(formData: FormData) {
   const productLabel = text(formData.get("product_label"));
   if (!productLabel) fail("Informe o produto.");
 
+  const productSku = text(formData.get("product_sku"));
+  if (!productSku) fail("Informe o SKU.");
+
   const labelCount = parseInteger(formData.get("label_count")) ?? 1;
   if (labelCount < 1 || labelCount > 100) fail("A quantidade de etiquetas deve ficar entre 1 e 100.");
 
@@ -73,6 +76,7 @@ async function gerarEtiqueta(formData: FormData) {
     .from("logistica_paletes")
     .insert({
       code,
+      product_sku: productSku,
       product_label: productLabel,
       invoice_number: text(formData.get("invoice_number")),
       boxes_per_pallet: boxesPerPallet,
@@ -136,6 +140,12 @@ export default async function EtiquetaPage({
             <span>Produto *</span>
             <input name="product_label" required placeholder="Pote de Vidro" autoComplete="off" />
             <small>Nome que abre a etiqueta e prefixa cada linha.</small>
+          </label>
+
+          <label>
+            <span>SKU *</span>
+            <input name="product_sku" required placeholder="214013" autoComplete="off" />
+            <small>Código que aparece à esquerda do produto na impressão.</small>
           </label>
 
           <fieldset className="etiqueta-variacoes">
