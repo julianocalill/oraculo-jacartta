@@ -754,9 +754,10 @@ Você escolhe um de três modos:
   → o preço de venda sai sozinho.
 - **Por preço de venda**: informa o preço direto e a calculadora acha o
   markup implícito.
-- **Por lucro líquido**: informa quanto quer ganhar em reais e a calculadora
-  encontra o menor preço de venda, em centavos, que atinge essa meta. O cálculo
-  respeita a comissão percentual e a tarifa fixa da faixa em que o preço cair.
+- **Por lucro líquido**: informa a margem líquida desejada em percentual
+  (ex.: 20%) e a calculadora encontra o menor preço de venda, em centavos, em
+  que o lucro representa ao menos essa parcela do preço. O cálculo respeita a
+  comissão percentual e a tarifa fixa da faixa em que o preço cair.
 
 ### A fórmula completa
 

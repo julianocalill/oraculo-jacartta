@@ -118,7 +118,7 @@ Leitura combinada: produto **curva A de venda** com **pouca cobertura** = repor 
 
 Responde à pergunta: **"por quanto preciso vender para cobrir custos, taxas e impostos e ainda ter lucro?"** Funciona para produto unitário e para kits.
 
-- **Três modos**: informo o **markup** (multiplicador sobre o custo), o **preço de venda** direto ou o **lucro líquido desejado**. Neste último, ela encontra o menor preço que entrega o lucro informado, já considerando a faixa de comissão do marketplace.
+- **Três modos**: informo o **markup** (multiplicador sobre o custo), o **preço de venda** direto ou o **percentual de lucro líquido desejado**. Neste último, ela encontra o menor preço em que o lucro representa a porcentagem informada do preço de venda, já considerando a faixa de comissão do marketplace.
 - **Marketplace selecionável**: Shopee, Mercado Livre Clássico, Mercado Livre Premium e TikTok Shop — cada um com suas comissões e taxas fixas por faixa de preço já preenchidas (e editáveis, pois comissão varia por categoria).
 - **Resultado**: preço de venda, lucro líquido, margem líquida, markup aplicado e a decomposição "para onde vai o preço" (custo, comissão, impostos, ads, reembolso).
 - **Status**: **Rentável** (verde), **Margem baixa** (amarelo, abaixo de 10%) ou **Prejuízo** (vermelho).

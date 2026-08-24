@@ -25,9 +25,9 @@ Histórico de entregas e mudanças significativas.
 
 - A Calculadora de Precificação ganhou o terceiro modo **Por lucro líquido**,
   além de Por markup e Por preço de venda.
-- Ao informar o lucro desejado em reais, a tela encontra o menor preço de venda
-  em centavos que atinge a meta, respeitando as faixas, percentuais e tarifas
-  fixas editáveis do marketplace selecionado.
+- Ao informar o lucro líquido desejado em percentual, a tela encontra o menor
+  preço de venda em centavos cuja margem líquida atinge a meta, respeitando as
+  faixas, percentuais e tarifas fixas editáveis do marketplace selecionado.
 - Se as taxas informadas tornarem a meta matematicamente inviável, a tela avisa
   em vez de apresentar um preço enganoso.
 
