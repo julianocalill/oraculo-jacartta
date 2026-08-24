@@ -1,4 +1,4 @@
-import { createSupabaseUserClient } from "../../lib/supabase/user";
+import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 
 export type PaleteItem = {
   position: number;
@@ -13,6 +13,7 @@ export type Palete = {
   product_label: string;
   invoice_number: string | null;
   boxes_per_pallet: number | null;
+  unit_quantity: number | null;
   label_count: number;
   created_at: string;
   itens: PaleteItem[];
@@ -75,7 +76,11 @@ export function formatLabelLine(productLabel: string, variationLabel: string, qu
 }
 
 /**
- * Palete + itens pelo código do QR. `null` quando o código não existe.
+ * Palete + itens pelo código público do QR. `null` quando o código não existe.
+ *
+ * O loader roda somente no servidor e usa service role para que a ficha do QR
+ * possa ser pública sem conceder `select` ao papel `anon` nem expor a tabela na
+ * Data API. O código aleatório de 12 caracteres funciona como capability URL.
  *
  * As colunas `sku`/`olist_product_id` da tabela de itens não são lidas: a
  * etiqueta deixou de ter vínculo com o cadastro da Olist (2026-08-13) e o texto
@@ -83,11 +88,11 @@ export function formatLabelLine(productLabel: string, variationLabel: string, qu
  * gerados antes da mudança.
  */
 export async function loadPaleteByCode(code: string): Promise<Palete | null> {
-  const supabase = await createSupabaseUserClient();
+  const supabase = createSupabaseAdminClient();
 
   const { data: palete, error } = await supabase
     .from("logistica_paletes")
-    .select("id, code, product_sku, product_label, invoice_number, boxes_per_pallet, label_count, created_at")
+    .select("id, code, product_sku, product_label, invoice_number, boxes_per_pallet, unit_quantity, label_count, created_at")
     .eq("code", code)
     .maybeSingle();
 
@@ -109,6 +114,7 @@ export async function loadPaleteByCode(code: string): Promise<Palete | null> {
     product_label: String(palete.product_label),
     invoice_number: palete.invoice_number ? String(palete.invoice_number) : null,
     boxes_per_pallet: palete.boxes_per_pallet == null ? null : Number(palete.boxes_per_pallet),
+    unit_quantity: palete.unit_quantity == null ? null : Number(palete.unit_quantity),
     label_count: Number(palete.label_count ?? 1),
     created_at: String(palete.created_at),
     itens: (itens ?? []).map((item) => ({

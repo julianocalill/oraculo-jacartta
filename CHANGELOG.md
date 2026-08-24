@@ -2,6 +2,19 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-24] — Etiqueta A4 horizontal, quantidade total e QR público
+
+- A impressão migrou de 100×150 mm vertical para **A4 horizontal**, com a
+  etiqueta centralizada ocupando 85% da folha e redução automática de escala
+  quando textos longos exigirem.
+- O SKU aparece à esquerda com corpo exatamente 10% maior que o nome do
+  produto.
+- Novo campo opcional **Qtd Unidade**, salvo em
+  `logistica_paletes.unit_quantity` e impresso abaixo de Caixas / palete.
+- A ficha `/logistica/palete/<code>` aberta pelo QR não exige mais login. A
+  tabela continua sem acesso `anon`: a página pública consulta no servidor pelo
+  código aleatório de 12 caracteres e não expõe a service role ao navegador.
+
 ## [2026-08-24] — SKU na etiqueta de palete
 
 - O formulário de `/logistica/etiqueta` ganhou o campo obrigatório **SKU** logo

@@ -52,6 +52,9 @@ async function gerarEtiqueta(formData: FormData) {
   const boxesPerPallet = parseInteger(formData.get("boxes_per_pallet"));
   if (boxesPerPallet != null && boxesPerPallet < 1) fail("Caixas por palete deve ser maior que zero.");
 
+  const unitQuantity = parseNumber(formData.get("unit_quantity"));
+  if (unitQuantity != null && unitQuantity <= 0) fail("Qtd Unidade deve ser maior que zero.");
+
   const itens: { position: number; variation_label: string; quantity: number }[] = [];
 
   for (const position of POSITIONS) {
@@ -80,6 +83,7 @@ async function gerarEtiqueta(formData: FormData) {
       product_label: productLabel,
       invoice_number: text(formData.get("invoice_number")),
       boxes_per_pallet: boxesPerPallet,
+      unit_quantity: unitQuantity,
       label_count: labelCount,
       created_by: effectiveUserId(user)
     })
@@ -117,7 +121,7 @@ export default async function EtiquetaPage({
       <header className="topbar">
         <div>
           <h1>Logística · Etiqueta</h1>
-          <p>Gere a etiqueta 100×150 mm do palete com QR Code rastreável</p>
+          <p>Gere a etiqueta do palete em A4 horizontal com QR Code rastreável</p>
         </div>
       </header>
 
@@ -189,6 +193,10 @@ export default async function EtiquetaPage({
           <label>
             <span>Caixas por palete</span>
             <input name="boxes_per_pallet" inputMode="numeric" placeholder="24" />
+          </label>
+          <label>
+            <span>Qtd Unidade</span>
+            <input name="unit_quantity" inputMode="decimal" placeholder="100" />
           </label>
 
           <button type="submit">Gerar Etiqueta</button>

@@ -4,6 +4,7 @@ const PUBLIC_PATHS = [
   "/login",
   "/politica-de-dados",
   "/termos-de-servico",
+  "/logistica/palete/",
   "/tiktokUdTXf8xKegiqtg4LrWcbwYa9Yd1UVu8t.txt"
 ];
 

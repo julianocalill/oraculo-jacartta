@@ -136,7 +136,7 @@ export default async function LogisticaPage() {
               estoque ainda sem custo resolvido.
             </p>
             <p>
-              <Link href="/logistica/etiqueta">Etiqueta de palete</Link> — gera a etiqueta 100×150 mm
+              <Link href="/logistica/etiqueta">Etiqueta de palete</Link> — gera a etiqueta A4 horizontal
               com QR Code para rastrear paletes no galpão.
             </p>
             <p>
