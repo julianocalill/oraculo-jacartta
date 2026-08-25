@@ -51,5 +51,11 @@ export const HINTS = {
   prevPeso:
     "Participação deste dia da semana nas unidades das semanas completas do histórico (até 8). A soma dos 7 dias é 100%.",
   prevSemanaBase:
-    "Semanas usadas no cálculo. O histórico começa em 20/07/2026; semana anterior a 03/08 só entra quando a cobertura de itens dela atinge 90% (o backfill reescreve julho automaticamente). Cobertura abaixo de 90% gera aviso na tela."
+    "Semanas usadas no cálculo. O histórico começa em 20/07/2026; semana anterior a 03/08 só entra quando a cobertura de itens dela atinge 90% (o backfill reescreve julho automaticamente). Cobertura abaixo de 90% gera aviso na tela.",
+  reconciliacaoData: "Data de criação do pedido Shopee. É esta data que o filtro de período usa.",
+  reconciliacaoBruto: "Valor total pago no pedido Shopee antes das deduções do repasse.",
+  reconciliacaoNf: "Soma de olist_invoices.total_amount das NFs de venda válidas ligadas a este pedido.",
+  reconciliacaoAReceber: "Líquido do escrow quando liberado ou valor estimado pela Shopee enquanto o pedido está pendente.",
+  reconciliacaoPago: "Crédito efetivo ESCROW_VERIFIED_ADD lançado no saldo da carteira para este pedido.",
+  reconciliacaoSaldo: "Saldo total da carteira logo após o crédito. Não é o valor pago deste pedido."
 } as const;

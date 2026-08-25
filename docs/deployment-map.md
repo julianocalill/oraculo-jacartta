@@ -11,7 +11,7 @@
 - Primary GitHub repository: `https://github.com/Grupo-Jacartta/oraculo.git`
 - Personal mirror: `https://github.com/julianocalill/oraculo-jacartta`
 - Current deployment mode: production deploys through Vercel CLI/GitHub integration.
-- Auth: Supabase Auth protects every app route — `/`, `/pedidos`, `/skus`, `/curva-de-venda`, `/curva-de-estoque`, `/shopee` (+ `/shopee/estoque`, `/shopee/reposicao`), `/mercado-livre` (+ `/mercado-livre/envio`), `/importacoes` (+ `/importacoes/cadastro`), `/calculadora`, `/agenda`, `/alertas`, `/parametros`, `/usuarios`, `/status`. `/login` is public.
+- Auth: Supabase Auth protects every app route — `/`, `/pedidos`, `/skus`, `/curva-de-venda`, `/curva-de-estoque`, `/shopee` (+ `/shopee/estoque`, `/shopee/reposicao`), `/reconciliacao`, `/mercado-livre` (+ `/mercado-livre/envio`), `/importacoes` (+ `/importacoes/cadastro`), `/calculadora`, `/agenda`, `/alertas`, `/parametros`, `/usuarios`, `/status`. `/login` is public.
 - Defense in depth: besides the middleware, every protected page calls `requireCurrentUser()` at the top of its server component, and every export route returns `401` when there is no authenticated user — CSV (`/curva-de-venda/export`, `/curva-de-estoque/export`) and `.xlsx` (`/mercado-livre/envio/export`, `/shopee/reposicao/export`). Pages use the service-role client, so this page-level check is the second barrier if the middleware is ever bypassed.
 - Gotcha when verifying a new route: the middleware redirects anonymous requests to `/login`, so an external `curl` returns `307` even for a route that does not exist — a `307` proves nothing. Confirm new routes in the deploy build output instead.
 - Middleware rule: when a local JWT is still valid, do not call Supabase Auth on every request; refresh only near token expiration to keep navigation light.
@@ -30,7 +30,7 @@
 
 ## Edge Functions
 
-> Levantado ao vivo em 2026-08-23 via `npx supabase functions list` + `select * from cron.job`. 23 functions implantadas; duas delas (`olist-sync`, `olist-stock-sync`) são versões legadas sem nenhum cron apontando para elas — candidatas a remoção. `tiktok-sync`/`tiktok-oauth-callback` existem em `supabase/functions/` mas **não estão implantadas** (sem tabelas `tiktok_*` em prod).
+> Levantado ao vivo em 2026-08-25 via `npx supabase functions list` + `select * from cron.job`. 25 functions implantadas; duas delas (`olist-sync`, `olist-stock-sync`) são versões legadas sem nenhum cron apontando para elas — candidatas a remoção. `tiktok-sync`/`tiktok-oauth-callback` existem em `supabase/functions/` mas **não estão implantadas** (sem tabelas `tiktok_*` em prod).
 
 - `olist-oauth-callback`
   - Handles Olist OAuth callback and stores refresh token. Sob demanda (sem cron).
@@ -89,6 +89,19 @@
 - `shopee-escrow-sync` — **ativo a cada 30 min, defasado por loja (`:11/:41` donacor, `:13/:43` espaço-de-bicho, `:17/:47` oliverhome, `:19/:49` jacartta)**
   - Pulls escrow detail per order (commission, fees, net) — the source of the
     take rate / net ROI on `/shopee`. Read-only on tokens.
+- `shopee-reconciliation-sync` — **ciclo semanal aos domingos, retomável e separado por loja**
+  - Cruza bruto do pedido, total da NF Olist, líquido previsto/escrow e crédito
+    efetivo da carteira em `shopee_order_reconciliation`; alimenta
+    `/reconciliacao` e registra a conclusão integral em `shopee_sync_runs`.
+  - Lê `get_wallet_transaction_list` em blocos de 14 dias e
+    `get_income_detail` status 2. Nunca renova token e assina cada loja com sua
+    própria partner app.
+  - Carteira e pendências persistem cursores independentes em
+    `shopee_reconciliation_sync_state`. Cada chamada processa quatro páginas de
+    cada fluxo; domingo reserva até 90 lotes por loja, escalonados de 05h a
+    19h59 BRT. Depois da conclusão, as chamadas restantes não consultam a API.
+  - Medição inicial 01–25/08: até 28.593 créditos e 10.829 pendências por loja;
+    uma chamada única excedia o teto de 150 s.
 - `bip-fulfillment-sync` — **ativo a cada 2 min (todo minuto par)**
   - Pulls the Bip's protected incremental export and upserts
     `bip_fulfillment_events`; it never writes back to the Bip.
@@ -216,7 +229,7 @@
 
 ## Supabase Cron
 
-> Levantado ao vivo em 2026-08-23 (`select * from cron.job`). `pg_cron` roda em UTC — coluna "BRT" já convertida (UTC-3). 39 jobs ativos.
+> Levantado ao vivo em 2026-08-25 (`select * from cron.job`). `pg_cron` roda em UTC — coluna "BRT" já convertida (UTC-3). 44 jobs ativos.
 
 ### Tabela direta: horário BRT, vezes/dia, o que chama
 
@@ -257,6 +270,10 @@
 | `shopee-returns-espaco-de-bicho` | 01:08 03:08 05:08 07:08 09:08 11:08 13:08 15:08 17:08 19:08 21:08 23:08 | 12 | `shopee-returns-sync?days=3` | permanente |
 | `shopee-returns-donacor` | 01:27 03:27 05:27 07:27 09:27 11:27 13:27 15:27 17:27 19:27 21:27 23:27 | 12 | `shopee-returns-sync?days=3` | permanente |
 | `shopee-returns-oliverhome` | 01:59 03:59 05:59 07:59 09:59 11:59 13:59 15:59 17:59 19:59 21:59 23:59 | 12 | `shopee-returns-sync?days=3` | permanente |
+| `shopee-reconciliation-jacartta` | a cada 10 min, 05h–19h59, só domingo (:00) | 90/domingo | `shopee-reconciliation-sync` retomável | permanente |
+| `shopee-reconciliation-espaco-de-bicho` | a cada 10 min, 05h–19h59, só domingo (:02) | 90/domingo | `shopee-reconciliation-sync` retomável | permanente |
+| `shopee-reconciliation-donacor` | a cada 10 min, 05h–19h59, só domingo (:05) | 90/domingo | `shopee-reconciliation-sync` retomável | permanente |
+| `shopee-reconciliation-oliverhome` | a cada 10 min, 05h–19h59, só domingo (:07) | 90/domingo | `shopee-reconciliation-sync` retomável | permanente |
 | `oraculo-importacoes-ais-sync` | 03:29 09:29 15:29 21:29 | 4 | `importacoes-ais-sync` | permanente |
 | `oraculo-olist-order-items-backfill-overnight` | 00:57 01:57 02:57 03:57 04:57 05:57 | 6 | `olist-backfill-order-items` (mês corrente) | permanente |
 | `oraculo-olist-products-daily` | 04:43 | 1 | `olist-derived-refresh` (produtos + snapshot) | permanente |

@@ -1090,6 +1090,43 @@ não conta. É o análogo por usuário do badge global de Alertas.
 
 ---
 
+## 3.9. Reconciliação (`/reconciliacao`)
+
+Cruza o pedido Shopee com a NF emitida no Olist, o líquido que a Shopee informa
+como devido e o crédito que realmente entrou na carteira. O período é sempre a
+**data de criação do pedido**, não a data do crédito.
+
+### Cards do topo
+
+| Card | O que significa |
+|---|---|
+| Pedidos | Quantidade no filtro e soma do valor bruto dos pedidos |
+| Valor das NFs | Soma de `olist_invoices.total_amount`; informa quantos pedidos ainda não têm NF localizada |
+| Pendente a receber | Soma do `estimated_escrow_amount` dos pedidos ainda não liberados |
+| Pago na carteira | Soma dos créditos `ESCROW_VERIFIED_ADD` já efetivados |
+| Alertas | Diferença real entre líquido esperado e crédito, ou crédito cujo líquido esperado ainda não está no cache |
+
+### Colunas da tabela
+
+| Coluna | O que significa |
+|---|---|
+| Data | Data de criação do pedido Shopee |
+| Loja / Pedido | Loja e `order_sn`; o status comercial aparece abaixo do número |
+| Bruto | Total pago no pedido, antes das deduções do repasse |
+| NF | Soma do total das NFs de venda válidas; abaixo aparecem os números das NFs e a diferença bruto − NF |
+| A receber | `escrow_amount` para liberados ou `estimated_escrow_amount` para pendentes |
+| Pago carteira | Crédito efetivo deste pedido — é a coluna que se compara com A receber |
+| Saldo após | Saldo total da carteira depois do crédito; **não** é o valor pago deste pedido |
+| Situação | Pendente, Liberado ou Encerrado; conserva a explicação devolvida pela Shopee |
+| Liberação | Data do crédito quando liberado; previsão da Shopee quando pendente; “Aguardando conclusão” quando a API ainda não prevê data |
+| Alerta | Confere, Divergente, A receber, Dado ausente ou Encerrado |
+
+O alerta tolera diferença de até R$ 0,01. Diferença entre bruto e NF não vira
+alerta financeiro automaticamente: frete pago pelo comprador pode estar no
+pedido e fora da NF do produto.
+
+---
+
 ## Tabela-resumo dos limiares hardcoded (para consulta rápida)
 
 | Limiar | Valor | Onde se aplica |

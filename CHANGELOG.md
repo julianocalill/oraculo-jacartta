@@ -2,6 +2,21 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-25] — Reconciliação financeira Shopee
+
+- Nova aba `/reconciliacao`, com filtro de período, loja e situação, paginação
+  server-side e cruzamento pedido × NF × líquido a receber × crédito da carteira.
+- Pendências mostram o valor estimado e a previsão real da Shopee; quando a API
+  devolve `estimated_payout_time=0`, a tela diz “Aguardando conclusão”.
+- Nova Edge Function `shopee-reconciliation-sync`, somente leitura de tokens,
+  com cursores persistidos para carteira e pendências. O cron semanal processa
+  uma loja por vez em lotes retomáveis e `/status` acompanha o ciclo integral.
+- Tabelas financeiras permanecem `service_role`-only; o Server Component exige
+  acesso à aba antes de usar o cliente admin.
+- Carga inicial 01–25/08: 88.211 pedidos; R$ 1.220.418,47 pendentes em 28.257
+  pedidos; 43 com previsão informada; 59.954 liberados; 428 divergências reais
+  e 971 créditos ainda sem líquido esperado no cache.
+
 ## [2026-08-24] — Parâmetros com concessão restrita por usuário
 
 - A aba Parâmetros continua automática apenas para os administradores fixos,

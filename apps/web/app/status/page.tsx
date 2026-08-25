@@ -8,6 +8,7 @@ import { loadActionableAlertCount } from "../../lib/alert-count";
 export const dynamic = "force-dynamic";
 
 type SyncRun = {
+  source?: string | null;
   started_at: string | null;
   finished_at: string | null;
   status: string | null;
@@ -22,6 +23,7 @@ type SyncRun = {
   positions_updated?: number | null;
   error_message: string | null;
   metadata?: Record<string, unknown> | null;
+  meta?: Record<string, unknown> | null;
 };
 
 type TokenRow = {
@@ -183,6 +185,55 @@ async function latestRunBySource(
   return (data as SyncRun | null) ?? null;
 }
 
+// Rotinas Shopee agendadas por loja precisam ser avaliadas como conjunto. Ler
+// só a execução mais recente esconderia uma falha em outra loja atrás de um
+// sucesso posterior.
+async function latestShopRunsBySource(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  sourcePrefix: string
+): Promise<SyncRun | null> {
+  const { data, error } = await supabase
+    .from("shopee_sync_runs")
+    .select("source,started_at,finished_at,status,records_fetched,records_upserted,error_message,meta")
+    .like("source", `${sourcePrefix}:%`)
+    .order("started_at", { ascending: false })
+    .limit(40);
+  if (error || !data?.length) return null;
+  const latestBySource = new Map<string, SyncRun>();
+  for (const row of data as SyncRun[]) {
+    const source = String(row.source ?? "");
+    if (source && !latestBySource.has(source)) latestBySource.set(source, row);
+  }
+  const runs = [...latestBySource.values()];
+  const failed = runs.filter((run) => runFailed(run));
+  const missingShops = Math.max(4 - runs.length, 0);
+  const started = runs.map((run) => run.started_at).filter((value): value is string => Boolean(value)).sort();
+  const finished = runs.map((run) => run.finished_at).filter((value): value is string => Boolean(value)).sort();
+  return {
+    started_at: started[0] ?? null,
+    // O conjunto só está fresco quando a loja mais antiga também está fresca.
+    finished_at: finished[0] ?? null,
+    status: failed.length > 0 || missingShops > 0 ? "failed" : "success",
+    records_fetched: runs.reduce((sum, run) => sum + Number(run.records_fetched ?? 0), 0),
+    records_upserted: runs.reduce((sum, run) => {
+      const wallet = Number(run.meta?.walletRecordsCycle ?? 0);
+      const pending = Number(run.meta?.pendingRecordsCycle ?? 0);
+      return sum + (wallet + pending || Number(run.records_upserted ?? 0));
+    }, 0),
+    error_message: [
+      missingShops > 0 ? `${missingShops} loja(s) ainda sem execução registrada` : "",
+      ...failed.map((run) => `${run.source}: ${run.error_message ?? "sem mensagem"}`)
+    ].filter(Boolean).join(" · ") || null
+  };
+}
+
+function olderThan(run: SyncRun | null, milliseconds: number) {
+  const activity = runActivityAt(run);
+  if (!activity) return true;
+  const timestamp = Date.parse(activity);
+  return !Number.isFinite(timestamp) || Date.now() - timestamp > milliseconds;
+}
+
 // mercadolivre_sync_runs é compartilhada com o sync principal e não tem coluna
 // `source`; a rotina de devoluções se identifica em meta->>'source'.
 async function latestReturnsRunML(supabase: ReturnType<typeof createSupabaseAdminClient>) {
@@ -274,7 +325,7 @@ async function loadStatusUncached() {
 
   const [
     tokenResult, ordersRun, stockRun, invoicesRun, backfillRun, mercadolivreRun,
-    importacoesAisRun, shopeeReturnsRun, mercadolivreReturnsRun, returnsCacheRun,
+    importacoesAisRun, shopeeReturnsRun, shopeeReconciliationRun, mercadolivreReturnsRun, returnsCacheRun,
     bipFulfillmentRun, qtyCacheRun, watermarks
   ] = await Promise.all([
     supabase
@@ -292,6 +343,7 @@ async function loadStatusUncached() {
     latestRun(supabase, "mercadolivre_sync_runs", "started_at, finished_at, status, items_count, orders_count, error_message"),
     latestRun(supabase, "importacao_ais_sync_runs", "started_at, finished_at, status, vessels_targeted, positions_updated, error_message"),
     latestRunBySource(supabase, "shopee_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message", "shopee-returns-sync"),
+    latestShopRunsBySource(supabase, "shopee-reconciliation-sync"),
     latestReturnsRunML(supabase),
     latestCacheDay(supabase),
     latestRun(supabase, "bip_fulfillment_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message"),
@@ -332,6 +384,12 @@ async function loadStatusUncached() {
       ? "Sync do Mercado Livre ainda não rodou hoje."
       : "",
     runFailed(shopeeReturnsRun) ? `Devoluções Shopee falharam: ${shopeeReturnsRun?.error_message ?? "sem mensagem"}` : "",
+    runFailed(shopeeReconciliationRun)
+      ? `Reconciliação Shopee falhou: ${shopeeReconciliationRun?.error_message ?? "sem mensagem"}`
+      : "",
+    olderThan(shopeeReconciliationRun, 8 * 24 * 60 * 60 * 1000)
+      ? "Reconciliação Shopee não foi atualizada nos últimos 8 dias."
+      : "",
     runFailed(bipFulfillmentRun) ? `Espelho do Bip falhou: ${bipFulfillmentRun?.error_message ?? "sem mensagem"}` : "",
     brtDate(bipFulfillmentRun?.started_at) !== today
       ? "Espelho de expedição do Bip ainda não rodou hoje."
@@ -398,6 +456,12 @@ async function loadStatusUncached() {
         label: "Devoluções Shopee",
         run: shopeeReturnsRun,
         coverage: "Devoluções das 4 lojas, cada loja a cada 2 h"
+      },
+      {
+        key: "shopee-reconciliation",
+        label: "Reconciliação Shopee",
+        run: shopeeReconciliationRun,
+        coverage: "Carteira liberada, pendências e previsão das 4 lojas; ciclo semanal retomável por loja"
       },
       {
         key: "mercadolivre-returns",
