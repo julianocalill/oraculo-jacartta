@@ -359,12 +359,12 @@ export default async function ReconciliacaoPage({
         </form>
       </header>
 
-      <section className="metric-grid">
+      <section className="metric-grid reconciliation-metric-grid">
         <MetricCard accent="accent-blue" label="Pedidos" value={count(n(summary.orders_count))} caption={`${money(summary.gross_amount)} em valor bruto`} />
         <MetricCard accent="accent-violet" label="Valor das NFs" value={money(summary.invoice_amount)} caption={n(summary.missing_invoice_count) ? `${count(n(summary.missing_invoice_count))} pedidos sem NF localizada` : "NF localizada em todos os pedidos"} />
         <MetricCard accent="accent-yellow" label="Pendente a receber" value={money(summary.pending_amount)} caption={`${count(n(summary.pending_count))} pedidos ainda não liberados`} />
         <MetricCard accent="accent-cyan" label="Saldo total da carteira" value={money(walletBalance.wallet_balance_amount)} caption={`${count(walletsCount)} ${walletsCount === 1 ? "carteira" : "carteiras"} · posição em ${dateTime(walletBalance.balance_as_of)}`} />
-        <MetricCard accent="accent-emerald" label="Total a receber" value={money(totalReceivable)} caption="saldo atual da carteira + pendente a receber" />
+        <MetricCard className="reconciliation-total" accent="accent-emerald" label="Total a receber" value={money(totalReceivable)} caption="saldo atual da carteira + pendente a receber" />
         <MetricCard accent="accent-green" label="Pago na carteira" value={money(summary.paid_amount)} caption={`${count(n(summary.released_count))} pedidos liberados`} />
         <MetricCard accent={attention ? "accent-red" : "accent-green"} label="Alertas" value={count(attention)} caption={attention ? "diferença de repasse ou líquido esperado ausente" : "créditos conferem com o líquido"} />
       </section>

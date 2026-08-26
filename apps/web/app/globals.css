@@ -998,6 +998,28 @@ p {
   grid-template-columns: repeat(5, minmax(150px, 1fr));
 }
 
+/* Reconciliação tem sete cards e vários valores monetários de 7 dígitos. Quatro
+   colunas preservam o número completo; na segunda linha o total ocupa duas
+   colunas e fecha a composição com Pago e Alertas. */
+.reconciliation-metric-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.reconciliation-metric-grid .reconciliation-total {
+  grid-column: span 2;
+}
+
+.reconciliation-metric-grid .metric strong {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+@media (max-width: 1400px) {
+  .reconciliation-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .fulfillment-metric-grid {
   grid-template-columns: repeat(5, minmax(150px, 1fr));
 }
@@ -2302,8 +2324,13 @@ h2 {
 
   .metric-grid-eight,
   .metric-grid-seven,
-  .metric-grid-five {
+  .metric-grid-five,
+  .reconciliation-metric-grid {
     grid-template-columns: 1fr;
+  }
+
+  .reconciliation-metric-grid .reconciliation-total {
+    grid-column: auto;
   }
 
   .metric strong {

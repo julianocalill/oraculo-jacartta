@@ -10,6 +10,9 @@ Histórico de entregas e mudanças significativas.
   a coluna histórica “Saldo após”, que repetiria o saldo uma vez por pedido.
 - A posição da carteira respeita o filtro de loja e informa a data/hora do
   lançamento mais recente usado no cálculo.
+- Os sete cards foram redistribuídos em quatro colunas, com **Total a receber**
+  em largura dupla; em telas menores passam para duas e depois uma coluna. Os
+  valores monetários deixam de ser cortados com reticências.
 
 ## [2026-08-25] — Reconciliação financeira Shopee
 
