@@ -2,6 +2,15 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-26] — Saldo total das carteiras na Reconciliação
+
+- `/reconciliacao` passou a mostrar o saldo total atual das carteiras Shopee e
+  o novo **Total a receber**: saldo das carteiras + pendente no período.
+- O saldo usa somente a posição mais recente de cada loja selecionada; não soma
+  a coluna histórica “Saldo após”, que repetiria o saldo uma vez por pedido.
+- A posição da carteira respeita o filtro de loja e informa a data/hora do
+  lançamento mais recente usado no cálculo.
+
 ## [2026-08-25] — Reconciliação financeira Shopee
 
 - Nova aba `/reconciliacao`, com filtro de período, loja e situação, paginação

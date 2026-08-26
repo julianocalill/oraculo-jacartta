@@ -29,6 +29,13 @@ O volume real exige paginação server-side de 100 linhas. Os cards são calcula
 no conjunto integral filtrado pela RPC `shopee_reconciliation_summary`, não
 somados apenas sobre a página visível.
 
+Desde 26/08, os cards também mostram **Saldo total da carteira**, calculado com
+o último `current_balance` conhecido de cada loja selecionada, e **Total a
+receber**, definido como saldo total da carteira + pendente a receber no filtro.
+O saldo é uma posição por carteira e não acompanha o filtro de data dos pedidos;
+somar a coluna “Saldo após” de todas as linhas multiplicaria o mesmo saldo e
+estaria incorreto.
+
 ## Ingestão e segurança
 
 A Edge Function `shopee-reconciliation-sync` lê, por loja:

@@ -1103,6 +1103,8 @@ como devido e o crédito que realmente entrou na carteira. O período é sempre 
 | Pedidos | Quantidade no filtro e soma do valor bruto dos pedidos |
 | Valor das NFs | Soma de `olist_invoices.total_amount`; informa quantos pedidos ainda não têm NF localizada |
 | Pendente a receber | Soma do `estimated_escrow_amount` dos pedidos ainda não liberados |
+| Saldo total da carteira | Soma do último `current_balance` conhecido de cada loja selecionada; é uma posição atual e não acompanha o período dos pedidos |
+| Total a receber | Saldo total das carteiras + Pendente a receber no filtro |
 | Pago na carteira | Soma dos créditos `ESCROW_VERIFIED_ADD` já efetivados |
 | Alertas | Diferença real entre líquido esperado e crédito, ou crédito cujo líquido esperado ainda não está no cache |
 

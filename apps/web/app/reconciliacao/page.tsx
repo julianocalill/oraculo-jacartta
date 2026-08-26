@@ -49,6 +49,12 @@ type ReconciliationSummary = {
   last_synced_at: string | null;
 };
 
+type WalletBalanceSummary = {
+  wallet_balance_amount: number | string | null;
+  wallets_count: number | string | null;
+  balance_as_of: string | null;
+};
+
 type SearchParams = {
   inicio?: string;
   fim?: string;
@@ -216,6 +222,19 @@ async function loadShops() {
   return (data ?? []) as Shop[];
 }
 
+async function loadWalletBalance(shop: string) {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase.rpc("shopee_wallet_balance_summary", {
+    p_shop_id: shop === "all" ? null : Number(shop)
+  });
+  if (error) throw error;
+  return ((data ?? [])[0] ?? {
+    wallet_balance_amount: 0,
+    wallets_count: 0,
+    balance_as_of: null
+  }) as WalletBalanceSummary;
+}
+
 export default async function ReconciliacaoPage({
   searchParams
 }: {
@@ -233,11 +252,12 @@ export default async function ReconciliacaoPage({
   const requestedPage = Number(params.pagina ?? 1);
   const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
 
-  const [{ allowed }, alertCount, rowResult, summary, shops] = await Promise.all([
+  const [{ allowed }, alertCount, rowResult, summary, walletBalance, shops] = await Promise.all([
     requireTabAccess("reconciliacao"),
     loadActionableAlertCount(),
     loadRows(start, end, shop, situation, page),
     loadSummary(start, end, shop, situation),
+    loadWalletBalance(shop),
     loadShops()
   ]);
   if (!allowed) return <NoAccess tab="reconciliacao" />;
@@ -248,6 +268,8 @@ export default async function ReconciliacaoPage({
   const firstShown = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const lastShown = Math.min(page * PAGE_SIZE, total);
   const attention = n(summary.attention_count);
+  const walletsCount = n(walletBalance.wallets_count);
+  const totalReceivable = n(walletBalance.wallet_balance_amount) + n(summary.pending_amount);
   const pageHref = (targetPage: number) => {
     const query = new URLSearchParams({
       inicio: start,
@@ -341,6 +363,8 @@ export default async function ReconciliacaoPage({
         <MetricCard accent="accent-blue" label="Pedidos" value={count(n(summary.orders_count))} caption={`${money(summary.gross_amount)} em valor bruto`} />
         <MetricCard accent="accent-violet" label="Valor das NFs" value={money(summary.invoice_amount)} caption={n(summary.missing_invoice_count) ? `${count(n(summary.missing_invoice_count))} pedidos sem NF localizada` : "NF localizada em todos os pedidos"} />
         <MetricCard accent="accent-yellow" label="Pendente a receber" value={money(summary.pending_amount)} caption={`${count(n(summary.pending_count))} pedidos ainda não liberados`} />
+        <MetricCard accent="accent-cyan" label="Saldo total da carteira" value={money(walletBalance.wallet_balance_amount)} caption={`${count(walletsCount)} ${walletsCount === 1 ? "carteira" : "carteiras"} · posição em ${dateTime(walletBalance.balance_as_of)}`} />
+        <MetricCard accent="accent-emerald" label="Total a receber" value={money(totalReceivable)} caption="saldo atual da carteira + pendente a receber" />
         <MetricCard accent="accent-green" label="Pago na carteira" value={money(summary.paid_amount)} caption={`${count(n(summary.released_count))} pedidos liberados`} />
         <MetricCard accent={attention ? "accent-red" : "accent-green"} label="Alertas" value={count(attention)} caption={attention ? "diferença de repasse ou líquido esperado ausente" : "créditos conferem com o líquido"} />
       </section>
