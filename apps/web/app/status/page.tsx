@@ -326,7 +326,7 @@ async function loadStatusUncached() {
   const [
     tokenResult, ordersRun, stockRun, invoicesRun, backfillRun, mercadolivreRun,
     importacoesAisRun, shopeeReturnsRun, shopeeReconciliationRun, mercadolivreReturnsRun, returnsCacheRun,
-    bipFulfillmentRun, qtyCacheRun, watermarks
+    bipFulfillmentRun, qtyCacheRun, fullPlannerRun, watermarks
   ] = await Promise.all([
     supabase
       .from("olist_oauth_tokens")
@@ -348,6 +348,7 @@ async function loadStatusUncached() {
     latestCacheDay(supabase),
     latestRun(supabase, "bip_fulfillment_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message"),
     latestQtyCacheRun(supabase),
+    latestRun(supabase, "oraculo_full_planning_runs", "started_at, finished_at, status, records_upserted:suggestions_written, error_message, metadata"),
     loadDataWatermarks(supabase)
   ]);
 
@@ -401,6 +402,12 @@ async function loadStatusUncached() {
       : "",
     brtDate(qtyCacheRun?.started_at) !== today
       ? "Cache de quantidade por canal/SKU (Previsão de Vendas) não foi atualizado hoje."
+      : "",
+    runFailed(fullPlannerRun)
+      ? `Planejamento Full da Agenda falhou: ${fullPlannerRun?.error_message ?? "sem mensagem"}`
+      : "",
+    olderThan(fullPlannerRun, 2 * 24 * 60 * 60 * 1000)
+      ? "Planejamento Full da Agenda não foi recalculado nos últimos 2 dias."
       : ""
   ].filter(Boolean);
 
@@ -486,6 +493,12 @@ async function loadStatusUncached() {
         label: "Cache de quantidade (Previsão de Vendas)",
         run: qtyCacheRun,
         coverage: "Reescreve os últimos 10 dias de quantidade por canal/SKU, de hora em hora"
+      },
+      {
+        key: "agenda-full-planner",
+        label: "Agenda · coletas Full",
+        run: fullPlannerRun,
+        coverage: "Próxima coleta semanal de cada loja ativa; cobertura de 20 dias, recalculada diariamente às 07:05 BRT"
       }
     ]
   };

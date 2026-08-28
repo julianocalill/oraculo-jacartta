@@ -415,6 +415,35 @@ para o ranking A/B/C não mudar dependendo do que está sendo visualizado.
 
 ---
 
+## 2.3.1. Agenda → Coletas Full recorrentes (`/agenda`)
+
+### Cobertura fixa: 20 dias
+
+É o estoque que deve restar no fulfillment quando a coleta chegar. Não é o
+horizonte inteiro do cálculo: se faltam 4 dias para a coleta, a necessidade é
+calculada para 24 dias (4 de espera + 20 de cobertura).
+
+```text
+sugestão = teto(velocidade × (20 + dias_até_coleta))
+           − estoque_no_full − trânsito
+```
+
+- **Loja**: unidade operacional do canal (cada shop Shopee, seller do Mercado
+  Livre ou Amazon Onsite).
+- **Dia da coleta**: dia semanal configurado; a tarefa usa sempre a próxima
+  ocorrência futura desse dia.
+- **Responsável**: único participante que recebe a tarefa e o badge pessoal.
+- **Gerar toda semana**: liga o cron para a loja; sem dia ou responsável a
+  configuração permanece inativa.
+- **Até 15 SKUs**: lista priorizada por ruptura, menor cobertura e maior
+  velocidade. O limite evita uma tarefa impossível de executar.
+- **Atualizado em**: última vez em que a rotina recalculou aquela loja.
+
+Shopee considera FBS e trânsito e limita ao estoque local. Mercado Livre usa
+os anúncios já no Full e a velocidade corrigida por dias com estoque. Amazon é
+provisória: vendas de NFs Amazon + saldo Amazon Onsite no Olist, sempre
+identificado como tal.
+
 ## 2.4. Shopee → Sugestão de Reposição (`/shopee/reposicao`)
 
 ### A regra de negócio

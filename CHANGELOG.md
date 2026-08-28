@@ -2,6 +2,20 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-08-28] — Coletas Full recorrentes na Agenda
+
+- A Agenda ganhou configuração por loja de dia semanal de coleta, responsável
+  e ativação para Shopee FBS, Mercado Livre Full e Amazon Onsite.
+- Uma rotina diária às 07:05 BRT cria ou atualiza a próxima coleta sem duplicar,
+  mirando 20 dias de cobertura após a chegada e levando os dias até a coleta em
+  conta no cálculo.
+- Cada SKU sugerido vira sub-tarefa; itens já concluídos são preservados durante
+  os recálculos e uma coleta concluída fica congelada.
+- Amazon usa provisoriamente venda fiscal + depósito Amazon Onsite do Olist,
+  com a origem declarada na tarefa enquanto a SP-API não está ativa.
+- Dry-run em produção processou as seis lojas, calculou 30 sugestões e terminou
+  sem erro; dias e responsáveis continuam desativados até configuração humana.
+
 ## [2026-08-26] — Saldo total das carteiras na Reconciliação
 
 - `/reconciliacao` passou a mostrar o saldo total atual das carteiras Shopee e

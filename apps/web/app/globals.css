@@ -3786,6 +3786,91 @@ h2 {
   color: var(--muted);
 }
 
+.full-planning-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.full-planning-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--field);
+}
+
+.full-planning-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.full-planning-card h3 {
+  margin: 7px 0 0;
+  font-size: 15px;
+}
+
+.full-planning-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.full-planning-fields label {
+  display: grid;
+  gap: 6px;
+}
+
+.full-planning-fields label > span {
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.full-planning-fields select {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  padding: 0 9px;
+}
+
+.full-planning-enable {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.full-planning-card > button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--amber);
+  color: var(--on-gold);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.full-planning-error {
+  margin: 0;
+  color: var(--red);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .agenda-edit-footer {
   display: flex;
   align-items: center;
@@ -3999,6 +4084,12 @@ h2 {
 @media (max-width: 900px) {
   .agenda-day {
     min-height: 64px;
+  }
+}
+
+@media (max-width: 560px) {
+  .full-planning-fields {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -10,9 +10,11 @@ import { effectiveUserId, listOraculoUsers, type OraculoUser } from "../../lib/u
 import { formatBrDate, getSaoPauloToday, parseMonthParam } from "../../lib/date";
 import {
   loadAgendaTasksForMonth,
+  loadFullPlanningConfigs,
   loadTaskForEdit,
   loadUpcomingTasks,
-  type AgendaTask
+  type AgendaTask,
+  type FullPlanningConfig
 } from "./data";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +24,15 @@ const MONTH_ONLY = /^\d{4}-\d{2}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const WEEKDAYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+const WEEKDAY_OPTIONS = [
+  "Domingo",
+  "Segunda-feira",
+  "Terça-feira",
+  "Quarta-feira",
+  "Quinta-feira",
+  "Sexta-feira",
+  "Sábado"
+];
 
 const MONTH_LABEL = new Intl.DateTimeFormat("pt-BR", {
   month: "long",
@@ -86,6 +97,56 @@ async function createTask(formData: FormData) {
   revalidatePath("/agenda");
 }
 
+async function saveFullPlanningConfig(formData: FormData) {
+  "use server";
+  const user = await assertTabAccess("agenda");
+  const configId = String(formData.get("config_id") ?? "");
+  const weekdayRaw = String(formData.get("pickup_weekday") ?? "");
+  const assigneeId = String(formData.get("assignee_user_id") ?? "");
+  const requestedEnabled = String(formData.get("enabled") ?? "") === "on";
+
+  if (!UUID.test(configId)) throw new Error("Configuração inválida.");
+  const pickupWeekday = weekdayRaw === "" ? null : Number(weekdayRaw);
+  if (pickupWeekday != null && (!Number.isInteger(pickupWeekday) || pickupWeekday < 0 || pickupWeekday > 6)) {
+    throw new Error("Dia de coleta inválido.");
+  }
+
+  const knownUsers = new Set((await listOraculoUsers()).map((entry) => entry.id));
+  const assigneeUserId = knownUsers.has(assigneeId) ? assigneeId : null;
+  const enabled = requestedEnabled && pickupWeekday != null && assigneeUserId != null;
+
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase
+    .from("oraculo_full_planning_configs")
+    .update({
+      pickup_weekday: pickupWeekday,
+      assignee_user_id: assigneeUserId,
+      enabled,
+      coverage_days: 20,
+      last_error: null,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", configId);
+  if (error) throw error;
+
+  // O cron diário garante continuidade; esta fila imediata evita esperar até
+  // amanhã depois de configurar ou alterar uma loja.
+  const { error: queueError } = await supabase.rpc("oraculo_queue_full_planner");
+  if (queueError) throw queueError;
+
+  revalidatePath("/agenda");
+  void user;
+}
+
+async function queueFullPlanner() {
+  "use server";
+  await assertTabAccess("agenda");
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.rpc("oraculo_queue_full_planner");
+  if (error) throw error;
+  revalidatePath("/agenda");
+}
+
 async function updateTask(formData: FormData) {
   "use server";
   const user = await assertTabAccess("agenda");
@@ -97,11 +158,14 @@ async function updateTask(formData: FormData) {
   const supabase = createSupabaseAdminClient();
   const { data: task, error: loadError } = await supabase
     .from("oraculo_agenda_tasks")
-    .select("id,created_by")
+    .select("id,created_by,task_kind")
     .eq("id", taskId)
     .maybeSingle();
   if (loadError) throw loadError;
   if (!task) throw new Error("Tarefa não encontrada.");
+  if (task.task_kind === "full_replenishment") {
+    throw new Error("A coleta Full é atualizada pelo planejamento automático.");
+  }
   if (task.created_by !== me && !isMaster(user)) {
     throw new Error("Só quem criou a tarefa pode editá-la.");
   }
@@ -183,11 +247,14 @@ async function deleteTask(formData: FormData) {
   const supabase = createSupabaseAdminClient();
   const { data: task, error: loadError } = await supabase
     .from("oraculo_agenda_tasks")
-    .select("id,created_by")
+    .select("id,created_by,task_kind")
     .eq("id", taskId)
     .maybeSingle();
   if (loadError) throw loadError;
   if (!task) throw new Error("Tarefa não encontrada.");
+  if (task.task_kind === "full_replenishment") {
+    throw new Error("A coleta Full é mantida pelo planejamento automático.");
+  }
   if (task.created_by !== me && !isMaster(user)) {
     throw new Error("Só quem criou a tarefa pode excluí-la.");
   }
@@ -217,6 +284,22 @@ async function assertTaskParticipant(
   if (!data) throw new Error("Só participantes da tarefa podem mexer nas sub-tarefas.");
 }
 
+async function assertManualTask(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  taskId: string
+) {
+  const { data, error } = await supabase
+    .from("oraculo_agenda_tasks")
+    .select("task_kind")
+    .eq("id", taskId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Tarefa não encontrada.");
+  if (data.task_kind === "full_replenishment") {
+    throw new Error("Os SKUs da coleta Full são mantidos pelo planejamento automático.");
+  }
+}
+
 async function addSubtask(formData: FormData) {
   "use server";
   const user = await assertTabAccess("agenda");
@@ -229,6 +312,7 @@ async function addSubtask(formData: FormData) {
 
   const supabase = createSupabaseAdminClient();
   await assertTaskParticipant(supabase, taskId, me);
+  await assertManualTask(supabase, taskId);
 
   const { data: last, error: lastError } = await supabase
     .from("oraculo_agenda_subtasks")
@@ -298,6 +382,7 @@ async function deleteSubtask(formData: FormData) {
   if (!subtask) throw new Error("Sub-tarefa não encontrada.");
 
   await assertTaskParticipant(supabase, subtask.task_id, me);
+  await assertManualTask(supabase, subtask.task_id);
 
   const { error } = await supabase.from("oraculo_agenda_subtasks").delete().eq("id", subtaskId);
   if (error) throw error;
@@ -366,6 +451,21 @@ function chipClass(task: AgendaTask, today: string) {
   return "agenda-chip";
 }
 
+function channelLabel(channel: FullPlanningConfig["channel"]) {
+  if (channel === "shopee") return "Shopee FBS";
+  if (channel === "mercadolivre") return "Mercado Livre Full";
+  return "Amazon Onsite";
+}
+
+function generatedAtLabel(value: string | null) {
+  if (!value) return "Ainda não gerado";
+  return `Atualizado em ${new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "America/Sao_Paulo"
+  }).format(new Date(value))}`;
+}
+
 // Grade de participantes server-rendered (reusa os estilos das caixinhas de
 // /usuarios). O criador entra sempre: caixa marcada e travada, e a action
 // reimpõe a inclusão de qualquer forma.
@@ -419,10 +519,12 @@ function ParticipantChecks({
 // de toggle/remover (não pode ficar aninhada no form de edição da tarefa).
 function SubtaskChecklist({
   task,
-  usersById
+  usersById,
+  generated = false
 }: {
   task: AgendaTask;
   usersById: Map<string, OraculoUser>;
+  generated?: boolean;
 }) {
   const doneCount = task.subtasks.filter((subtask) => subtask.done).length;
 
@@ -461,22 +563,26 @@ function SubtaskChecklist({
                   <small> — {usersById.get(subtask.done_by)?.name ?? "usuário removido"}</small>
                 ) : null}
               </span>
-              <form action={deleteSubtask}>
-                <input type="hidden" name="subtask_id" value={subtask.id} />
-                <button type="submit" className="link-button">
-                  remover
-                </button>
-              </form>
+              {!generated ? (
+                <form action={deleteSubtask}>
+                  <input type="hidden" name="subtask_id" value={subtask.id} />
+                  <button type="submit" className="link-button">
+                    remover
+                  </button>
+                </form>
+              ) : null}
             </li>
           ))}
         </ul>
       )}
 
-      <form action={addSubtask} className="agenda-subtask-add">
-        <input type="hidden" name="task_id" value={task.id} />
-        <input name="title" placeholder="Nova sub-tarefa" required />
-        <button type="submit">Adicionar</button>
-      </form>
+      {!generated ? (
+        <form action={addSubtask} className="agenda-subtask-add">
+          <input type="hidden" name="task_id" value={task.id} />
+          <input name="title" placeholder="Nova sub-tarefa" required />
+          <button type="submit">Adicionar</button>
+        </form>
+      ) : null}
     </div>
   );
 }
@@ -504,11 +610,12 @@ export default async function AgendaPage({
   const mes = monthParam(year, month);
 
   const editId = params.editar && UUID.test(params.editar) ? params.editar : null;
-  const [monthTasks, upcoming, directory, editTask] = await Promise.all([
+  const [monthTasks, upcoming, directory, editTask, fullConfigs] = await Promise.all([
     loadAgendaTasksForMonth(me, start, endExclusive),
     loadUpcomingTasks(me),
     listOraculoUsers(),
-    editId ? loadTaskForEdit(me, editId) : Promise.resolve(null)
+    editId ? loadTaskForEdit(me, editId) : Promise.resolve(null),
+    loadFullPlanningConfigs()
   ]);
 
   const usersById = new Map(directory.map((entry) => [entry.id, entry]));
@@ -540,6 +647,75 @@ export default async function AgendaPage({
           </Link>
         </div>
       </header>
+
+      <section className="panel settings-panel">
+        <div className="section-head section-row">
+          <div>
+            <p className="eyebrow">Fluxo recorrente</p>
+            <h2>Coletas Full · cobertura de 20 dias</h2>
+            <p>
+              Escolha o dia semanal e o responsável de cada loja. A próxima coleta entra na
+              Agenda com a quantidade sugerida por SKU e é recalculada diariamente.
+            </p>
+          </div>
+          <form action={queueFullPlanner}>
+            <button className="button-link" type="submit">Recalcular agora</button>
+          </form>
+        </div>
+
+        <div className="full-planning-grid">
+          {fullConfigs.map((config) => (
+            <form action={saveFullPlanningConfig} className="full-planning-card" key={config.id}>
+              <input type="hidden" name="config_id" value={config.id} />
+              <div className="full-planning-card-head">
+                <div>
+                  <span className="status-pill signal-muted">{channelLabel(config.channel)}</span>
+                  <h3>{config.store_name}</h3>
+                </div>
+                <span className={config.enabled ? "status-pill signal-good" : "status-pill signal-warning"}>
+                  {config.enabled ? "ativo" : "configurar"}
+                </span>
+              </div>
+
+              <div className="full-planning-fields">
+                <label>
+                  <span>Dia da coleta</span>
+                  <select name="pickup_weekday" defaultValue={config.pickup_weekday ?? ""}>
+                    <option value="">Selecionar</option>
+                    {WEEKDAY_OPTIONS.map((label, index) => (
+                      <option value={index} key={label}>{label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>Responsável</span>
+                  <select name="assignee_user_id" defaultValue={config.assignee_user_id ?? ""}>
+                    <option value="">Selecionar</option>
+                    {directory.map((entry) => (
+                      <option value={entry.id} key={entry.id}>{entry.name}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <label className="full-planning-enable">
+                <input type="checkbox" name="enabled" defaultChecked={config.enabled} />
+                <span>Gerar toda semana</span>
+              </label>
+              <p className="agenda-form-note">
+                20 dias de cobertura · até {config.max_suggestions} SKUs · {generatedAtLabel(config.last_generated_at)}
+              </p>
+              {config.last_error ? <p className="full-planning-error">{config.last_error}</p> : null}
+              <button type="submit">Salvar e gerar</button>
+            </form>
+          ))}
+        </div>
+
+        <p className="agenda-form-note">
+          Amazon usa, por enquanto, as vendas fiscais e o depósito Amazon Onsite do Olist. A origem
+          fica indicada na tarefa até a integração SP-API estar ativa.
+        </p>
+      </section>
 
       <section className="panel">
         <div className="section-head">
@@ -593,7 +769,9 @@ export default async function AgendaPage({
           <section className="agenda-modal" role="dialog" aria-modal="true">
             <div className="agenda-modal-head">
               <div>
-                <p className="eyebrow">Editar tarefa</p>
+                <p className="eyebrow">
+                  {editTask?.task_kind === "full_replenishment" ? "Coleta Full" : "Editar tarefa"}
+                </p>
                 <h2>{editTask ? editTask.title : "Tarefa não encontrada"}</h2>
               </div>
               <Link className="agenda-modal-close" href={`/agenda?mes=${mes}`} aria-label="Fechar">
@@ -605,7 +783,7 @@ export default async function AgendaPage({
               <p className="empty-state">
                 A tarefa não existe mais ou você não participa dela.
               </p>
-            ) : editTask.created_by === me || master ? (
+            ) : editTask.task_kind === "manual" && (editTask.created_by === me || master) ? (
               <>
                 <form action={updateTask} className="upload-form user-form">
                   <input type="hidden" name="task_id" value={editTask.id} />
@@ -662,13 +840,17 @@ export default async function AgendaPage({
                     {participantNames(editTask, usersById).join(", ")}
                   </p>
                   <p className="agenda-form-note">
-                    Só quem criou a tarefa (
-                    {usersById.get(editTask.created_by)?.name ?? "usuário removido"}) edita os
-                    detalhes. Concluir ou reabrir a tarefa fica na lista de próximas tarefas.
+                    {editTask.task_kind === "full_replenishment"
+                      ? "Loja, quantidade e data são recalculadas pelo fluxo Full. Marque os SKUs separados no checklist e conclua a coleta pela lista de próximas tarefas."
+                      : `Só quem criou a tarefa (${usersById.get(editTask.created_by)?.name ?? "usuário removido"}) edita os detalhes. Concluir ou reabrir a tarefa fica na lista de próximas tarefas.`}
                   </p>
                 </div>
 
-                <SubtaskChecklist task={editTask} usersById={usersById} />
+                <SubtaskChecklist
+                  task={editTask}
+                  usersById={usersById}
+                  generated={editTask.task_kind === "full_replenishment"}
+                />
 
                 <Link className="link-button" href={`/agenda?mes=${mes}`}>
                   Fechar
@@ -737,12 +919,15 @@ export default async function AgendaPage({
                 {upcoming.map((task) => {
                   const pill = taskStatusPill(task, today);
                   const names = participantNames(task, usersById);
-                  const canManage = task.created_by === me || master;
+                  const canManage = task.task_kind === "manual" && (task.created_by === me || master);
 
                   return (
                     <tr key={task.id}>
                       <td>
                         {task.title}
+                        {task.task_kind === "full_replenishment" ? (
+                          <span className="row-subtitle">Sugestão automática · coleta Full</span>
+                        ) : null}
                         {task.description ? (
                           <span className="row-subtitle">{task.description}</span>
                         ) : null}

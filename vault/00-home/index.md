@@ -63,6 +63,16 @@ Build an operational intelligence system where Supabase is the canonical backend
 - Roteiro das fases 2–5 (recebimento, endereçamento por posição, inventário,
   expedição multi-canal, picking): `docs/plano-logistica-deposito.md`.
 
+## Update 2026-08-28 — Agenda de coletas Full
+
+- A Agenda configura dia semanal e responsável por loja para Shopee FBS,
+  Mercado Livre Full e Amazon Onsite.
+- Cron diário cria a próxima coleta sem duplicar e transforma os SKUs sugeridos
+  em checklist, com meta de 20 dias de cobertura após a chegada.
+- Amazon usa provisoriamente NF válida + depósito Amazon Onsite do Olist; a
+  tarefa declara a fonte até existir SP-API ativa.
+- Detalhes e validação: `docs/project-status-2026-08-28.md`.
+
 ## Olist/fiscal foundation — validado em 2026-07-07
 
 Bloco histórico da era Olist/fiscal. As regras seguem valendo; os números são

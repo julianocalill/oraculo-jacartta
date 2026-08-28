@@ -28,12 +28,31 @@ export type AgendaTask = {
   created_by: string;
   completed_at: string | null;
   completed_by: string | null;
+  task_kind: "manual" | "full_replenishment";
+  source_key: string | null;
+  metadata: Record<string, unknown>;
+  generated_at: string | null;
   participant_ids: string[];
   subtasks: AgendaSubtask[];
 };
 
+export type FullPlanningConfig = {
+  id: string;
+  channel: "shopee" | "mercadolivre" | "amazon";
+  store_key: string;
+  store_name: string;
+  pickup_weekday: number | null;
+  coverage_days: number;
+  max_suggestions: number;
+  assignee_user_id: string | null;
+  enabled: boolean;
+  last_generated_at: string | null;
+  last_error: string | null;
+};
+
 const TASK_COLUMNS =
   "id,title,description,due_day,status,created_by,completed_at,completed_by," +
+  "task_kind,source_key,metadata,generated_at," +
   "oraculo_agenda_task_participants(user_id)," +
   "oraculo_agenda_subtasks(id,title,done,done_by,position)";
 
@@ -46,6 +65,10 @@ type TaskRow = {
   created_by: string;
   completed_at: string | null;
   completed_by: string | null;
+  task_kind: string;
+  source_key: string | null;
+  metadata: Record<string, unknown> | null;
+  generated_at: string | null;
   oraculo_agenda_task_participants: { user_id: string }[];
   oraculo_agenda_subtasks: AgendaSubtask[];
 };
@@ -60,11 +83,29 @@ function toTask(row: TaskRow): AgendaTask {
     created_by: row.created_by,
     completed_at: row.completed_at,
     completed_by: row.completed_by,
+    task_kind: row.task_kind === "full_replenishment" ? "full_replenishment" : "manual",
+    source_key: row.source_key,
+    metadata: row.metadata ?? {},
+    generated_at: row.generated_at,
     participant_ids: (row.oraculo_agenda_task_participants ?? []).map((p) => p.user_id),
     subtasks: [...(row.oraculo_agenda_subtasks ?? [])].sort(
       (left, right) => left.position - right.position || left.title.localeCompare(right.title)
     )
   };
+}
+
+/** Configuração global do fluxo Full; escrita fica nas Server Actions. */
+export async function loadFullPlanningConfigs(): Promise<FullPlanningConfig[]> {
+  const supabase = await createSupabaseUserClient();
+  const { data, error } = await supabase
+    .from("oraculo_full_planning_configs")
+    .select(
+      "id,channel,store_key,store_name,pickup_weekday,coverage_days,max_suggestions,assignee_user_id,enabled,last_generated_at,last_error"
+    )
+    .order("channel")
+    .order("store_name");
+  if (error) throw error;
+  return (data ?? []) as FullPlanningConfig[];
 }
 
 async function loadMyTaskIds(userId: string): Promise<string[]> {

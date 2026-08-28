@@ -436,8 +436,12 @@ remain service-role-only from Server Actions, with authorization in TypeScript �
 there are no write policies for `authenticated`. App loaders additionally filter
 by user id explicitly, because in dev the user client falls back to the admin
 client (no RLS) and the mock user maps to the sentinel uuid in
-`apps/web/lib/users.ts`. No cron, no Edge Function: the sidebar badge is
-computed per request.
+`apps/web/lib/users.ts`. O badge continua calculado por request, mas desde
+2026-08-28 a Agenda também recebe coletas Full pela Edge Function
+`agenda-full-planner`, agendada no job `oraculo-agenda-full-planner-daily`
+(07:05 BRT). A rotina só lê caches internos, não chama marketplaces nem renova
+tokens; a configuração de loja/dia/responsável fica em
+`oraculo_full_planning_configs`.
 
 ## Logística — pallet labels (no cron, no Edge Function)
 

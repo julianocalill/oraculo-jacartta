@@ -161,6 +161,26 @@ entra automaticamente.
   gera aviso.
 - Só participantes enxergam cada tarefa — não existe agenda pública.
 
+### Coletas Full automáticas
+
+No topo da Agenda, o quadro **Coletas Full · cobertura de 20 dias** reúne cada
+loja Shopee, a conta Mercado Livre e a Amazon Onsite. Para ativar uma loja:
+
+1. escolha o dia semanal real da coleta;
+2. escolha o responsável;
+3. marque **Gerar toda semana**;
+4. clique em **Salvar e gerar**.
+
+A próxima coleta aparece no calendário e na lista de tarefas. Dentro dela,
+cada SKU é uma caixa da checklist com a quantidade a separar. O sistema
+recalcula a lista todos os dias até a tarefa ser concluída, sempre preservando
+o que já foi marcado. **Recalcular agora** antecipa essa atualização.
+
+A meta é ter 20 dias de cobertura depois da coleta. Por isso o cálculo soma
+também os dias que ainda faltam para a data marcada. Na Amazon, enquanto a
+integração direta não está ativa, a tarefa identifica que usa vendas fiscais e
+o depósito Amazon Onsite do Olist.
+
 ## 10. Fórmulas — resumo de bolso
 
 | Indicador | Cálculo |

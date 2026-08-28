@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-08-25.md](docs/project-status-2026-08-25.md) **← start here** (current state; complements the broad 21/08 snapshot)
+1. [docs/project-status-2026-08-28.md](docs/project-status-2026-08-28.md) **← start here** (current state; complements the broad 21/08 snapshot)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
    — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every card/column/config field across the whole system — analytics, alerts, calculator, imports, params, sync status — exact formula, PT-BR, for team walkthroughs)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
@@ -58,7 +58,9 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-08-24.md](
 
 ## Current production state
 
-**Last update**: `2026-08-25` (see `docs/project-status-2026-08-25.md`) —
+**Last update**: `2026-08-28` (see `docs/project-status-2026-08-28.md`) —
+**Agenda Full recorrente** (Shopee FBS por loja, Mercado Livre Full e Amazon
+Onsite; coleta semanal configurável, checklist por SKU e cobertura de 20 dias),
 **Reconciliação financeira Shopee** (nova aba com pedido, NF, líquido previsto,
 crédito efetivo da carteira, pendências e previsão; carga inicial de agosto e
 cron semanal retomável por loja), **Expedição reconciliada com vendas pagas** (pedidos/unidades pela data do
