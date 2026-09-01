@@ -2,6 +2,40 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-01] — Separação multicanal pela Olist
+
+- Pedidos de todos os marketplaces integrados à Olist passam a alimentar o
+  fechamento operacional das 07:00 e 13:30 no n8n.
+- A RPC `olist_multichannel_separation_report` consolida somente pedidos novos
+  pelo cursor `first_seen_at`, exclui cancelados e soma SKU + produto +
+  descritivo iguais entre canais sem expor dados pessoais.
+- O sincronismo de pedidos passou a consultar os mais recentes primeiro a cada
+  15 minutos, evitando que pedidos novos aguardem atrás do backfill retomável.
+- A automação multicanal foi ativada após prévia integral; a rotina legada que
+  consultava apenas a Shopee foi desativada com backup.
+- A cubagem reaproveita os vínculos SKU Olist ↔ perfil existentes e reconhece
+  com segurança os perfis cadastrados de potes marmita e bambu; variações sem
+  capacidade conhecida permanecem explicitamente marcadas como sem cubagem.
+
+## [2026-09-01] — Inteligência de Mercado e conferência de custos
+
+- Nova rota `/inteligencia`, no setor Comercial, com quatro blocos: Radar de
+  Ações, Produto 360, Concorrentes e Precificação.
+- O protótipo combina preço, custo, venda e estoque reais do Oráculo; sinais de
+  concorrentes permanecem demonstrativos e são identificados na interface.
+- Radar ganhou filtros e recomendações indicativas; Produto 360 concentra o
+  diagnóstico; Precificação reage ao preço simulado sem alterar anúncios.
+- Cadastro de concorrente é somente uma simulação local, sem consulta à Shopee
+  e sem gravação no banco. Nenhuma migration ou rotina de produção foi criada.
+- Parâmetros ganhou a seção **Conferência de custos**, com busca e filtros,
+  custo ERP cadastrado/médio, custo bruto e líquido realmente usados, origem,
+  alertas, correção manual inline e retorno ao valor do ERP.
+- A Inteligência deixou de confiar no custo potencialmente defasado do cache
+  horário Shopee: agora lê ao vivo `oraculo_sku_unit_cost` e abre o SKU exato na
+  conferência. Overrides passam a refletir imediatamente nas recomendações.
+- Fluxos revisados em desktop e tela de 390 × 844 px; TypeScript e build do Next
+  aprovados, além de 55 testes de domínio.
+
 ## [2026-08-28] — Coletas Full recorrentes na Agenda
 
 - A Agenda ganhou configuração por loja de dia semanal de coleta, responsável

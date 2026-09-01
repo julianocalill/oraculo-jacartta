@@ -44,6 +44,7 @@ export const TABS = [
   { key: "curva-de-estoque", label: "Curva de Estoque", href: "/curva-de-estoque", group: "main", paths: ["/curva-de-estoque"], sector: "analitico" },
   { key: "previsao-de-vendas", label: "Previsão de Vendas", href: "/previsao-de-vendas", group: "main", paths: ["/previsao-de-vendas"], sector: "analitico" },
   { key: "shopee", label: "Shopee", href: "/shopee", group: "main", paths: ["/shopee"], sector: "comercial" },
+  { key: "inteligencia", label: "Inteligência", href: "/inteligencia", group: "main", paths: ["/inteligencia"], sector: "comercial" },
   { key: "reconciliacao", label: "Reconciliação", href: "/reconciliacao", group: "main", paths: ["/reconciliacao"], sector: "comercial" },
   { key: "mercado-livre", label: "Mercado Livre", href: "/mercado-livre", group: "main", paths: ["/mercado-livre"], sector: "comercial" },
   { key: "expedicao", label: "Expedição", href: "/expedicao", group: "main", paths: ["/expedicao"], sector: "operacoes" },

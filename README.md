@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-08-28.md](docs/project-status-2026-08-28.md) **← start here** (current state; complements the broad 21/08 snapshot)
+1. [docs/project-status-2026-09-01.md](docs/project-status-2026-09-01.md) **← start here** (current production state; includes Intelligence and cost auditing)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
    — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every card/column/config field across the whole system — analytics, alerts, calculator, imports, params, sync status — exact formula, PT-BR, for team walkthroughs)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
@@ -47,7 +47,7 @@ oraculo/
 11. [CHANGELOG.md](CHANGELOG.md) (full history)
 12. [vault/00-home/index.md](vault/00-home/index.md)
 
-Earlier snapshots (historical, superseded): [docs/project-status-2026-08-24.md](docs/project-status-2026-08-24.md), [docs/project-status-2026-08-19.md](docs/project-status-2026-08-19.md), [docs/project-status-2026-08-17.md](docs/project-status-2026-08-17.md), [docs/project-status-2026-08-13.md](docs/project-status-2026-08-13.md), [docs/project-status-2026-08-12.md](docs/project-status-2026-08-12.md), [docs/project-status-2026-08-10.md](docs/project-status-2026-08-10.md), [docs/project-status-2026-07-17.md](docs/project-status-2026-07-17.md), [docs/project-status-2026-07-16.md](docs/project-status-2026-07-16.md), [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md), [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
+Earlier snapshots (historical, superseded): [docs/project-status-2026-08-28.md](docs/project-status-2026-08-28.md), [docs/project-status-2026-08-24.md](docs/project-status-2026-08-24.md), [docs/project-status-2026-08-19.md](docs/project-status-2026-08-19.md), [docs/project-status-2026-08-17.md](docs/project-status-2026-08-17.md), [docs/project-status-2026-08-13.md](docs/project-status-2026-08-13.md), [docs/project-status-2026-08-12.md](docs/project-status-2026-08-12.md), [docs/project-status-2026-08-10.md](docs/project-status-2026-08-10.md), [docs/project-status-2026-07-17.md](docs/project-status-2026-07-17.md), [docs/project-status-2026-07-16.md](docs/project-status-2026-07-16.md), [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md), [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
 
 ## Tooling choices
 
@@ -58,7 +58,9 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-08-24.md](
 
 ## Current production state
 
-**Last update**: `2026-08-28` (see `docs/project-status-2026-08-28.md`) —
+**Last update**: `2026-09-01` (see `docs/project-status-2026-09-01.md`) —
+the **Inteligência de Mercado** four-block experience and its cost double-check
+inside **Parâmetros** are in production, alongside —
 **Agenda Full recorrente** (Shopee FBS por loja, Mercado Livre Full e Amazon
 Onsite; coleta semanal configurável, checklist por SKU e cobertura de 20 dias),
 **Reconciliação financeira Shopee** (nova aba com pedido, NF, líquido previsto,

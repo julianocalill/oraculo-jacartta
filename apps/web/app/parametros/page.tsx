@@ -61,6 +61,39 @@ type MarginProbe = {
   margin_signal: string | null;
 };
 
+type ProductCostSourceRow = {
+  sku: string | null;
+  nome: string | null;
+  tipo: string | null;
+  active: boolean | null;
+  preco_custo: number | null;
+  preco_custo_medio: number | null;
+};
+
+type CanonicalCostRow = {
+  sku: string;
+  unit_cost: number | null;
+  unit_cost_gross: number | null;
+  cost_source: string | null;
+};
+
+type CostAuditStatus = "ok" | "revisar" | "sem-custo" | "override" | "kit";
+
+type CostAuditRow = {
+  sku: string;
+  name: string | null;
+  type: string | null;
+  erpCost: number | null;
+  erpAverageCost: number | null;
+  grossCost: number | null;
+  netCost: number | null;
+  costSource: string | null;
+  status: CostAuditStatus;
+  overrideSource: string | null;
+  overrideUpdatedAt: string | null;
+  overrideNotes: string | null;
+};
+
 
 function n(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -119,6 +152,24 @@ function parseBoolean(value: unknown, fallback = true) {
 function parseDateValue(value: unknown) {
   const normalized = String(value ?? "").trim();
   return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : null;
+}
+
+async function fetchAllRows<T>(
+  fetchPage: (from: number, to: number) => PromiseLike<{
+    data: unknown;
+    error: { message: string } | null;
+  }>
+) {
+  const rows: T[] = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await fetchPage(from, from + pageSize - 1);
+    if (error) throw new Error(error.message);
+    const page = (data ?? []) as T[];
+    rows.push(...page);
+    if (page.length < pageSize) break;
+  }
+  return rows;
 }
 
 async function saveChannelParam(formData: FormData) {
@@ -197,6 +248,34 @@ async function saveSkuParam(formData: FormData) {
   revalidatePath("/parametros");
   revalidatePath("/skus");
   revalidatePath("/");
+  revalidatePath("/inteligencia");
+}
+
+async function disableSkuCostOverride(formData: FormData) {
+  "use server";
+  await assertTabAccess("parametros");
+
+  const source = String(formData.get("source") ?? "olist").trim().toLowerCase();
+  const sku = String(formData.get("sku") ?? "").trim();
+  if (!source || !sku) return;
+
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase
+    .from("oraculo_margin_sku_params")
+    .update({ active: false, updated_at: new Date().toISOString() })
+    .eq("source", source)
+    .eq("sku", sku);
+  if (error) throw error;
+
+  if (source === "olist") {
+    const { error: triggerError } = await supabase.rpc("oraculo_trigger_fiscal_recompute");
+    if (triggerError) console.error("recompute fiscal falhou ao desativar custo", triggerError);
+  }
+
+  revalidatePath("/parametros");
+  revalidatePath("/skus");
+  revalidatePath("/");
+  revalidatePath("/inteligencia");
 }
 
 async function saveStateTaxParam(formData: FormData) {
@@ -324,13 +403,351 @@ async function loadParametros() {
   };
 }
 
-export default async function ParametrosPage() {
-  const [{ allowed }, alertCount, data] = await Promise.all([
+function normalizedSearch(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function costSourceLabel(source: string | null) {
+  if (!source) return "Sem custo resolvido";
+  if (source.startsWith("override:")) return `Correção manual · ${source.slice(9)}`;
+  if (source === "olist_products") return "Cadastro Olist";
+  if (source === "effective_cost") return "Kit calculado pelos componentes";
+  return source;
+}
+
+function costStatusLabel(status: CostAuditStatus) {
+  switch (status) {
+    case "sem-custo": return "Sem custo";
+    case "revisar": return "Revisar divergência";
+    case "override": return "Correção manual";
+    case "kit": return "Kit calculado";
+    default: return "Conferido pelo ERP";
+  }
+}
+
+function costStatusClass(status: CostAuditStatus) {
+  if (status === "ok") return "signal-good";
+  if (status === "override" || status === "kit") return "signal-info";
+  return "signal-warning";
+}
+
+async function loadCostAudit(query: string, statusFilter: string) {
+  const admin = createSupabaseAdminClient();
+  const [products, costs, overrides] = await Promise.all([
+    fetchAllRows<ProductCostSourceRow>((from, to) => admin
+      .from("olist_products")
+      .select("sku,nome,tipo,active,preco_custo,preco_custo_medio")
+      .not("sku", "is", null)
+      .order("sku")
+      .range(from, to)),
+    fetchAllRows<CanonicalCostRow>((from, to) => admin
+      .from("oraculo_sku_unit_cost")
+      .select("sku,unit_cost,unit_cost_gross,cost_source")
+      .order("sku")
+      .range(from, to)),
+    fetchAllRows<SkuParam>((from, to) => admin
+      .from("oraculo_margin_sku_params")
+      .select("source,sku,unit_cost_override,target_margin_rate_override,minimum_margin_rate_override,active,notes,updated_at")
+      .order("updated_at", { ascending: false })
+      .range(from, to))
+  ]);
+
+  const catalog = new Map<string, {
+    name: string | null;
+    type: string | null;
+    active: boolean;
+    erpCost: number | null;
+    erpAverageCost: number | null;
+  }>();
+
+  for (const product of products) {
+    const sku = product.sku?.trim();
+    if (!sku) continue;
+    const current = catalog.get(sku);
+    const productWins = !current || (Boolean(product.active) && !current.active);
+    catalog.set(sku, {
+      name: productWins ? product.nome : current?.name ?? product.nome,
+      type: current?.type === "K" || product.tipo === "K" ? "K" : productWins ? product.tipo : current?.type ?? product.tipo,
+      active: Boolean(product.active) || Boolean(current?.active),
+      erpCost: Math.max(n(current?.erpCost), n(product.preco_custo)) || null,
+      erpAverageCost: Math.max(n(current?.erpAverageCost), n(product.preco_custo_medio)) || null
+    });
+  }
+
+  const canonical = new Map(costs.map((row) => [row.sku.trim(), row]));
+  const overrideIndex = new Map(
+    overrides
+      .filter((row) => row.active && n(row.unit_cost_override) > 0)
+      .map((row) => [`${row.source}|${row.sku.trim()}`, row])
+  );
+
+  const rows: CostAuditRow[] = [...catalog.entries()].map(([sku, product]) => {
+    const resolved = canonical.get(sku);
+    const overrideSource = resolved?.cost_source?.startsWith("override:")
+      ? resolved.cost_source.slice(9)
+      : null;
+    const override = overrideSource ? overrideIndex.get(`${overrideSource}|${sku}`) : null;
+    const erpCost = product.erpCost;
+    const erpAverageCost = product.erpAverageCost;
+    const erpDivergence = erpCost && erpAverageCost
+      ? Math.abs(erpCost - erpAverageCost) / Math.max(erpCost, erpAverageCost)
+      : 0;
+    let status: CostAuditStatus = "ok";
+    if (!resolved || n(resolved.unit_cost_gross) <= 0) status = "sem-custo";
+    else if (overrideSource) status = "override";
+    else if (resolved.cost_source === "effective_cost" || product.type === "K") status = "kit";
+    else if (erpDivergence >= 0.2) status = "revisar";
+
+    return {
+      sku,
+      name: product.name,
+      type: product.type,
+      erpCost,
+      erpAverageCost,
+      grossCost: resolved?.unit_cost_gross ?? null,
+      netCost: resolved?.unit_cost ?? null,
+      costSource: resolved?.cost_source ?? null,
+      status,
+      overrideSource,
+      overrideUpdatedAt: override?.updated_at ?? null,
+      overrideNotes: override?.notes ?? null
+    };
+  });
+
+  const summary = {
+    total: rows.length,
+    resolved: rows.filter((row) => row.grossCost !== null && row.grossCost > 0).length,
+    missing: rows.filter((row) => row.status === "sem-custo").length,
+    manual: rows.filter((row) => row.status === "override").length,
+    review: rows.filter((row) => row.status === "revisar").length
+  };
+
+  const terms = normalizedSearch(query).split(/\s+/).filter(Boolean);
+  const matchesSearch = (row: CostAuditRow) => {
+    if (terms.length === 0) return true;
+    const haystack = normalizedSearch(`${row.sku} ${row.name ?? ""}`);
+    return terms.every((term) => haystack.includes(term));
+  };
+  const matchesStatus = (row: CostAuditRow) => {
+    if (statusFilter === "atencao") return row.status === "sem-custo" || row.status === "revisar";
+    if (["sem-custo", "override", "kit", "ok", "revisar"].includes(statusFilter)) return row.status === statusFilter;
+    return true;
+  };
+  const statusOrder: Record<CostAuditStatus, number> = {
+    "sem-custo": 0,
+    revisar: 1,
+    override: 2,
+    kit: 3,
+    ok: 4
+  };
+  const filtered = rows
+    .filter(matchesSearch)
+    .filter(matchesStatus)
+    .sort((a, b) => statusOrder[a.status] - statusOrder[b.status] || a.sku.localeCompare(b.sku, "pt-BR"));
+
+  return {
+    rows: filtered.slice(0, 250),
+    matched: filtered.length,
+    capped: filtered.length > 250,
+    summary
+  };
+}
+
+function ParametrosTabs({ active }: { active: "geral" | "custos" }) {
+  return (
+    <nav className="pill-row parameters-tabs" aria-label="Seções de Parâmetros">
+      <Link href="/parametros" className={active === "geral" ? "pill pill-gold" : "pill"}>
+        Configurações gerais
+      </Link>
+      <Link href="/parametros?secao=custos" className={active === "custos" ? "pill pill-gold" : "pill"}>
+        Conferência de custos
+      </Link>
+    </nav>
+  );
+}
+
+export default async function ParametrosPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ secao?: string; q?: string; situacao?: string }>;
+}) {
+  const params = await searchParams;
+  const section = params?.secao === "custos" ? "custos" : "geral";
+  const [{ allowed }, alertCount] = await Promise.all([
     requireTabAccess("parametros"),
-    loadActionableAlertCount(),
-    loadParametros()
+    loadActionableAlertCount()
   ]);
   if (!allowed) return <NoAccess tab="parametros" />;
+
+  if (section === "custos") {
+    const query = String(params?.q ?? "").trim();
+    const statusFilter = String(params?.situacao ?? "todos");
+    const audit = await loadCostAudit(query, statusFilter);
+
+    return (
+      <AppShell alertCount={alertCount}>
+        <header className="topbar">
+          <div>
+            <h1>Parâmetros</h1>
+            <p>Conferência do custo que alimenta margem, lucro e recomendações</p>
+          </div>
+          <div className="filter-row">
+            <Link className="button-link" href="/inteligencia">Ver Inteligência</Link>
+          </div>
+        </header>
+
+        <ParametrosTabs active="custos" />
+
+        <section className="panel cost-audit-intro">
+          <div>
+            <p className="eyebrow">Livro canônico</p>
+            <h2>Conferência de custos por produto</h2>
+          </div>
+          <p>
+            Esta é a mesma fonte usada agora pela Inteligência de Mercado. A prioridade é
+            <strong> correção manual → cadastro Olist → kit calculado pelos componentes</strong>.
+            O custo bruto é o valor de aquisição; o líquido já desconta os créditos recuperáveis
+            e é o custo canônico das análises fiscais.
+          </p>
+        </section>
+
+        <section className="metric-grid metric-grid-eight cost-audit-metrics">
+          <article className="metric accent-blue">
+            <span className="label">Produtos</span>
+            <strong>{count(audit.summary.total)}</strong>
+            <small>SKUs únicos do catálogo</small>
+          </article>
+          <article className="metric accent-yellow">
+            <span className="label">Com custo</span>
+            <strong>{count(audit.summary.resolved)}</strong>
+            <small>resolvidos no livro canônico</small>
+          </article>
+          <article className="metric accent-red">
+            <span className="label">Sem custo</span>
+            <strong>{count(audit.summary.missing)}</strong>
+            <small>precisam de correção</small>
+          </article>
+          <article className="metric accent-white">
+            <span className="label">Correções manuais</span>
+            <strong>{count(audit.summary.manual)}</strong>
+            <small>vencem o valor do ERP</small>
+          </article>
+          <article className="metric accent-white">
+            <span className="label">Divergências</span>
+            <strong>{count(audit.summary.review)}</strong>
+            <small>cadastrado × médio ≥ 20%</small>
+          </article>
+        </section>
+
+        <section className="panel product-panel">
+          <div className="sku-toolbar cost-audit-toolbar">
+            <div>
+              <p className="eyebrow">Double-check</p>
+              <h2>Valores usados nos cálculos</h2>
+            </div>
+            <form method="get" className="filter-row cost-audit-filter">
+              <input type="hidden" name="secao" value="custos" />
+              <label>
+                <span className="sr-only">Buscar por SKU ou produto</span>
+                <input name="q" defaultValue={query} placeholder="Buscar SKU ou produto" />
+              </label>
+              <label>
+                <span className="sr-only">Filtrar por situação</span>
+                <select name="situacao" defaultValue={statusFilter}>
+                  <option value="todos">Todas as situações</option>
+                  <option value="atencao">Somente atenção</option>
+                  <option value="sem-custo">Sem custo</option>
+                  <option value="revisar">Com divergência</option>
+                  <option value="override">Correção manual</option>
+                  <option value="kit">Kits calculados</option>
+                  <option value="ok">Conferidos pelo ERP</option>
+                </select>
+              </label>
+              <button type="submit">Filtrar</button>
+              {(query || statusFilter !== "todos") && (
+                <Link className="button-link" href="/parametros?secao=custos">Limpar</Link>
+              )}
+            </form>
+          </div>
+
+          <p className="table-note">
+            {audit.matched === 1 ? "1 produto encontrado" : `${count(audit.matched)} produtos encontrados`}{audit.capped ? "; exibindo os primeiros 250 — refine a busca para localizar outro SKU" : ""}.
+            Valores em amarelo pedem conferência. Salvar uma correção cria um override bruto e
+            atualiza imediatamente a fonte usada pela Inteligência; os snapshots fiscais acompanham em até 1 minuto.
+          </p>
+
+          <div className="table-wrap dense-table-wrap">
+            <table className="data-table dense-table cost-audit-table">
+              <thead>
+                <tr>
+                  <th>SKU / Produto</th>
+                  <th>Tipo</th>
+                  <th className="numeric">Custo cadastrado</th>
+                  <th className="numeric">Custo médio</th>
+                  <th className="numeric">Bruto usado</th>
+                  <th className="numeric">Líquido usado</th>
+                  <th>Origem</th>
+                  <th>Situação</th>
+                  <th>Corrigir</th>
+                </tr>
+              </thead>
+              <tbody>
+                {audit.rows.map((row) => (
+                  <tr key={row.sku} className={row.status === "sem-custo" || row.status === "revisar" ? "cost-row-warning" : undefined}>
+                    <td>
+                      <strong>{row.sku}</strong>
+                      <small>{row.name ?? "Produto sem nome no catálogo"}</small>
+                    </td>
+                    <td>{row.type === "K" ? "Kit" : "Unitário"}</td>
+                    <td className="numeric">{row.erpCost == null ? "—" : money(row.erpCost)}</td>
+                    <td className="numeric">{row.erpAverageCost == null ? "—" : money(row.erpAverageCost)}</td>
+                    <td className="numeric cost-used"><strong>{row.grossCost == null ? "—" : money(row.grossCost)}</strong></td>
+                    <td className="numeric cost-used">{row.netCost == null ? "—" : money(row.netCost)}</td>
+                    <td>
+                      <strong>{costSourceLabel(row.costSource)}</strong>
+                      {row.overrideUpdatedAt && <small>Atualizado {date(row.overrideUpdatedAt)}</small>}
+                      {row.overrideNotes && <small>{row.overrideNotes}</small>}
+                    </td>
+                    <td>
+                      <span className={`status-pill ${costStatusClass(row.status)}`}>
+                        {costStatusLabel(row.status)}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="cost-correction-actions">
+                        <form action={saveSkuParam} className="inline-cost-form cost-audit-correction">
+                          <input type="hidden" name="source" value={row.overrideSource ?? "olist"} />
+                          <input type="hidden" name="sku" value={row.sku} />
+                          <input type="hidden" name="active" value="true" />
+                          <input
+                            name="unit_cost_override"
+                            inputMode="decimal"
+                            placeholder={row.grossCost == null ? "custo bruto" : String(row.grossCost).replace(".", ",")}
+                            aria-label={`Novo custo bruto do SKU ${row.sku}`}
+                            required
+                          />
+                          <button type="submit">Salvar</button>
+                        </form>
+                        {row.overrideSource && (
+                          <form action={disableSkuCostOverride}>
+                            <input type="hidden" name="source" value={row.overrideSource} />
+                            <input type="hidden" name="sku" value={row.sku} />
+                            <button type="submit" className="button-quiet">Usar ERP</button>
+                          </form>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </AppShell>
+    );
+  }
+
+  const data = await loadParametros();
 
   return (
     <AppShell alertCount={alertCount}>
@@ -343,6 +760,8 @@ export default async function ParametrosPage() {
           <Link className="button-link" href="/skus">Ver SKUs</Link>
         </div>
       </header>
+
+      <ParametrosTabs active="geral" />
 
       <section className="metric-grid metric-grid-eight">
         <article className="metric accent-blue">
