@@ -88,6 +88,16 @@ validação e nenhuma migration foi necessária.
 - push realizado nos remotes `origin` e `personal`; a Vercel acompanha o
   `personal/main`.
 
+Publicação confirmada:
+
+- commit: `fb62105` (`feat: add market intelligence and cost audit`);
+- GitHub: `origin/main` e `personal/main` apontando para o mesmo commit;
+- Vercel: deployment `dpl_2TDLGF4iHarBbxmddAzjWD4zJtZy`, status `Ready`;
+- domínio: `https://oraculo.oliverhome.com.br`;
+- `/inteligencia` e `/parametros?secao=custos` redirecionam visitantes sem
+  sessão para `/login`, preservando a proteção esperada. O conteúdo autenticado
+  foi exercitado no localhost antes do push.
+
 Arquivos centrais:
 
 - `apps/web/app/inteligencia/page.tsx`;

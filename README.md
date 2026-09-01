@@ -95,7 +95,8 @@ terceiros em escala e primeira geração de PDF por biblioteca).
 
 ### Deployment & auth
 - Production URL: `https://oraculo.oliverhome.com.br`
-- Latest Vercel deploy: `oraculo-jacartta-2ummky4j2` (2026-08-10, aba Agenda com pop-up e sub-tarefas)
+- Latest documented feature deploy: `dpl_2TDLGF4iHarBbxmddAzjWD4zJtZy`
+  (2026-09-01, Inteligência de Mercado + conferência de custos, `Ready` em produção)
 - **Dois remotes**: `origin` = `Grupo-Jacartta/oraculo`, `personal` = `julianocalill/oraculo-jacartta`.
   A Vercel escuta o **`personal`** — push só no `origin` não publica.
 - Business-data reads run under RLS via an authenticated client (anon key + user
