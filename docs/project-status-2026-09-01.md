@@ -74,6 +74,37 @@ usa a mesma view canônica e seus snapshots continuam sendo recalculados em até
 1 minuto pelo mecanismo existente. Nenhum custo foi alterado durante a
 validação e nenhuma migration foi necessária.
 
+## Novidades pós-login — pronta em localhost
+
+O shell autenticado agora consulta um manifesto versionado de publicações e
+abre um pop-up quando há uma ou mais novidades com menos de 48 horas. A janela
+resume a mudança, pode oferecer atalhos para a área correspondente e informa o
+horário exato em que o aviso deixa de aparecer.
+
+O comportamento é por evento de login:
+
+- uma autenticação bem-sucedida cria um identificador aleatório com a mesma
+  duração da sessão de uma hora;
+- o aviso aparece uma vez para aquele login, mesmo que o usuário navegue entre
+  páginas ou abra outra aba;
+- sair e entrar novamente cria outro identificador e mostra as novidades outra
+  vez enquanto elas estiverem dentro das 48 horas;
+- uma publicação nova, adicionada durante uma sessão já aberta, também volta a
+  abrir o pop-up porque altera o conjunto de versões ativas;
+- ao marcar **Não mostrar novamente esta atualização**, os IDs exibidos ficam
+  silenciados também nos próximos logins; somente um ID de publicação ainda
+  não visto torna o pop-up elegível outra vez;
+- depois das 48 horas, a publicação expira automaticamente, sem banco, cron ou
+  limpeza manual.
+
+A primeira edição reúne Inteligência de Mercado, Conferência de custos e a
+explicação do próprio aviso. Desktop e viewport de 390 × 844 px foram
+revisados; fechamento, recarga, navegação e múltiplas abas foram exercitados.
+Esta mudança está implementada somente no workspace local e ainda não foi
+enviada aos remotes nem publicada na Vercel.
+
+Runbook: [`release-notes.md`](release-notes.md).
+
 ## Validação e publicação
 
 - TypeScript sem erros;

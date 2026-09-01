@@ -11,6 +11,10 @@ const REFRESH_COOKIE = "oraculo_refresh_token";
 // O middleware exige este cookie — quando ele expira, o próximo clique cai no
 // /login, independente de refresh token. É o "deslogue de hora em hora".
 const SESSION_WINDOW_COOKIE = "oraculo_session_window";
+// Identificador novo a cada autenticação bem-sucedida. O pop-up de novidades
+// usa este valor para aparecer uma vez por login (e voltar no próximo login),
+// sem confundir navegação entre páginas com uma nova sessão.
+const LOGIN_EVENT_COOKIE = "oraculo_login_event";
 const SESSION_WINDOW_SECONDS = 60 * 60;
 
 // O parse do .env da raiz é I/O síncrono no event loop; sem memoização ele
@@ -101,6 +105,14 @@ export async function setAuthCookies(accessToken: string, refreshToken: string) 
     path: "/",
     maxAge: SESSION_WINDOW_SECONDS
   });
+
+  store.set(LOGIN_EVENT_COOKIE, crypto.randomUUID(), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure,
+    path: "/",
+    maxAge: SESSION_WINDOW_SECONDS
+  });
 }
 
 export async function clearAuthCookies() {
@@ -108,6 +120,16 @@ export async function clearAuthCookies() {
   store.delete(ACCESS_COOKIE);
   store.delete(REFRESH_COOKIE);
   store.delete(SESSION_WINDOW_COOKIE);
+  store.delete(LOGIN_EVENT_COOKIE);
+}
+
+export async function getLoginEventMarker() {
+  const store = await cookies();
+  const marker = store.get(LOGIN_EVENT_COOKIE)?.value;
+  // Em localhost não há formulário de login. O marcador estável ainda permite
+  // testar o pop-up sempre que a lista de novidades ganha uma nova versão.
+  if (!marker && process.env.NODE_ENV !== "production") return "local-dev";
+  return marker ?? null;
 }
 
 // React.cache: deduplica por request — a página (via requireTabAccess) e o

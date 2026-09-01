@@ -2,6 +2,22 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-01] — Novidades pós-login por 48 horas
+
+- O shell autenticado ganhou um pop-up de novidades com resumo e atalhos para
+  as mudanças recentes do sistema.
+- Cada publicação fica ativa por exatamente 48 horas e volta a aparecer em
+  todo novo login; depois de fechada, não se repete durante o mesmo login,
+  inclusive ao navegar ou abrir outra aba.
+- A opção **Não mostrar novamente esta atualização** silencia os avisos já
+  vistos em logins futuros; um novo ID de publicação reabre o pop-up
+  automaticamente.
+- As publicações ativas vivem em um manifesto versionado no repositório. Se
+  duas entregas ocorrerem dentro da janela, o mesmo pop-up apresenta ambas.
+- A primeira edição divulga Inteligência de Mercado, Conferência de custos e a
+  própria rotina de avisos. Implementação validada localmente, ainda sem nova
+  publicação em produção.
+
 ## [2026-09-01] — Separação multicanal pela Olist
 
 - Pedidos de todos os marketplaces integrados à Olist passam a alimentar o

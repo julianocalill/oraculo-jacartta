@@ -10,6 +10,9 @@ Context must survive tool changes, account changes and conversation loss.
 2. Update ADRs when a structural decision is made.
 3. Keep runbooks close to the real execution path.
 4. Prefer markdown files in the repository over chat-only memory.
+5. Toda entrega visível ao usuário deve atualizar o manifesto de novidades em
+   `apps/web/lib/release-notes.ts` no mesmo commit; siga
+   `docs/release-notes.md` para texto, horário e validação.
 
 ## Tool roles
 

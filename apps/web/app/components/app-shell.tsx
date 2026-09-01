@@ -4,10 +4,12 @@ import { BrandMark } from "./brand-mark";
 import { ThemeToggle } from "./theme-toggle";
 import { readTheme } from "../../lib/theme-server";
 import type { Theme } from "../../lib/theme";
-import { getCurrentUser } from "../../lib/auth/session";
+import { getCurrentUser, getLoginEventMarker } from "../../lib/auth/session";
 import { allowedTabs } from "../../lib/auth/access";
 import { loadAgendaPendingCount } from "../../lib/agenda-count";
 import { effectiveUserId } from "../../lib/users";
+import { getActiveReleaseNotes } from "../../lib/release-notes";
+import { ReleaseNotesPopup } from "./release-notes-popup";
 
 // Casca visual compartilhada. Fica separada do AppShell porque o skeleton
 // (app/loading.tsx) não pode ser async — fallback de Suspense é sempre síncrono.
@@ -75,14 +77,25 @@ export async function AppShell({
       ? await loadAgendaPendingCount(effectiveUserId(user))
       : undefined;
 
+  const [theme, loginMarker] = await Promise.all([
+    readTheme(),
+    getLoginEventMarker()
+  ]);
+  const activeReleases = loginMarker ? getActiveReleaseNotes() : [];
+
   return (
-    <Frame
-      nav={<SidebarNav badges={{ "/alertas": alertCount, "/agenda": agendaCount }} tabs={tabs} />}
-      footer={footer}
-      theme={await readTheme()}
-    >
-      {children}
-    </Frame>
+    <>
+      <Frame
+        nav={<SidebarNav badges={{ "/alertas": alertCount, "/agenda": agendaCount }} tabs={tabs} />}
+        footer={footer}
+        theme={theme}
+      >
+        {children}
+      </Frame>
+      {loginMarker && activeReleases.length > 0 && (
+        <ReleaseNotesPopup releases={activeReleases} loginMarker={loginMarker} />
+      )}
+    </>
   );
 }
 
