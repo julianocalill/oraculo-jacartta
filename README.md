@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-01.md](docs/project-status-2026-09-01.md) **← start here** (current production state; includes Intelligence and cost auditing)
+1. [docs/project-status-2026-09-01.md](docs/project-status-2026-09-01.md) **← start here** (current production state; includes Intelligence, cost auditing and post-login release notes)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
    — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every card/column/config field across the whole system — analytics, alerts, calculator, imports, params, sync status — exact formula, PT-BR, for team walkthroughs)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
@@ -59,8 +59,10 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-08-28.md](
 ## Current production state
 
 **Last update**: `2026-09-01` (see `docs/project-status-2026-09-01.md`) —
-the **Inteligência de Mercado** four-block experience and its cost double-check
-inside **Parâmetros** are in production, alongside —
+the **post-login Novidades pop-up** communicates each release for 48 hours,
+with a per-update "do not show again" option; the **Inteligência de Mercado**
+four-block experience and its cost double-check inside **Parâmetros** are in
+production, alongside —
 **Agenda Full recorrente** (Shopee FBS por loja, Mercado Livre Full e Amazon
 Onsite; coleta semanal configurável, checklist por SKU e cobertura de 20 dias),
 **Reconciliação financeira Shopee** (nova aba com pedido, NF, líquido previsto,
@@ -95,8 +97,8 @@ terceiros em escala e primeira geração de PDF por biblioteca).
 
 ### Deployment & auth
 - Production URL: `https://oraculo.oliverhome.com.br`
-- Latest documented feature deploy: `dpl_2TDLGF4iHarBbxmddAzjWD4zJtZy`
-  (2026-09-01, Inteligência de Mercado + conferência de custos, `Ready` em produção)
+- Latest documented feature deploy: `dpl_3ZtT1c3R8ey1Q9eqcBDYtLooV64h`
+  (2026-09-01, novidades pós-login por 48 horas, `Ready` em produção)
 - **Dois remotes**: `origin` = `Grupo-Jacartta/oraculo`, `personal` = `julianocalill/oraculo-jacartta`.
   A Vercel escuta o **`personal`** — push só no `origin` não publica.
 - Business-data reads run under RLS via an authenticated client (anon key + user
@@ -123,6 +125,9 @@ terceiros em escala e primeira geração de PDF por biblioteca).
   alertas (`loadActionableAlertCount()`, global — same number on every page) e
   Agenda (`loadAgendaPendingCount()`, por usuário: pendentes com prazo até hoje).
 - `app/loading.tsx` skeleton keeps the sidebar solid between navigations.
+- `AppShell` também entrega o pop-up de novidades: cada publicação fica ativa
+  por 48 horas, aparece a cada novo login e pode ser silenciada pelo usuário
+  até que um novo ID de publicação seja lançado.
 
 ### UI/Visual
 - **Dark theme**: cool near-black background (#0b0e15), ouro accent (#f6c453),

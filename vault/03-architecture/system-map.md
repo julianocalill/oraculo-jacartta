@@ -6,8 +6,10 @@
 - `Next.js`
 - dashboards, workflows, alerts, product views
 - production domain: `https://oraculo.oliverhome.com.br`
-- latest documented Vercel deploy: `dpl_ARv9uGp7C6sF2z6ode69r6cYxyGf`
+- latest documented Vercel deploy: `dpl_3ZtT1c3R8ey1Q9eqcBDYtLooV64h`
 - mobile responsive layout
+- post-login release notes from a versioned 48-hour manifest; dismissal is
+  browser-side and scoped by release ID, with no database dependency
 
 ## Operational core
 

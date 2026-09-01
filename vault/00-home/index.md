@@ -73,6 +73,17 @@ Build an operational intelligence system where Supabase is the canonical backend
   tarefa declara a fonte até existir SP-API ativa.
 - Detalhes e validação: `docs/project-status-2026-08-28.md`.
 
+## Update 2026-09-01 — Inteligência, custos e novidades pós-login
+
+- `/inteligencia` reúne Radar de Ações, Produto 360, Concorrentes e
+  Precificação; `/parametros?secao=custos` permite conferir e corrigir o custo
+  canônico antes da decisão.
+- O shell autenticado mostra novidades por 48 horas após cada publicação. O
+  usuário pode silenciar os IDs atuais; uma publicação com ID novo volta a
+  aparecer automaticamente.
+- Estado e validação: `docs/project-status-2026-09-01.md`. Operação do
+  manifesto: `docs/release-notes.md`.
+
 ## Olist/fiscal foundation — validado em 2026-07-07
 
 Bloco histórico da era Olist/fiscal. As regras seguem valendo; os números são

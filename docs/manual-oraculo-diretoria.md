@@ -1,6 +1,6 @@
 # Oráculo — Manual da Plataforma
 
-**Guia para diretoria e treinamento · Grupo Jacartta · Atualizado em agosto de 2026**
+**Guia para diretoria e treinamento · Grupo Jacartta · Atualizado em setembro de 2026**
 
 ---
 
@@ -13,6 +13,14 @@ O Oráculo é a plataforma de inteligência de vendas do Grupo Jacartta. Ele re�
 - **Acesso**: oraculo.oliverhome.com.br, com login individual por usuário.
 - **Atualização**: automática, ao longo de todo o dia. O selo **"Sync fiscal saudável"** (verde) no topo indica que os dados chegam até hoje; se aparecer "Dados até [data]", é até onde os números vão.
 - **Período**: por padrão, o mês corrente. Dá para escolher qualquer período nos campos de data.
+
+### Novidades depois do login
+
+Durante as primeiras 48 horas de uma atualização, o Oráculo abre um resumo das
+novidades depois do login. Fechar normalmente mantém o aviso fora apenas
+daquele login. Se marcar **Não mostrar novamente esta atualização**, aquela
+edição deixa de aparecer também nos próximos acessos e só retorna quando uma
+nova atualização for publicada.
 
 ## 2. Como ler os números — 5 conceitos
 

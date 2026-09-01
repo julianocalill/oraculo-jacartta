@@ -7,8 +7,8 @@
 - Framework: `Next.js`
 - Data access: business-data reads use an authenticated server client (anon key + user JWT) under RLS via `createSupabaseUserClient()`; the `SUPABASE_SERVICE_ROLE_KEY` client is reserved for writes, `/usuarios` (auth.admin) and `/status` (sensitive tokens). See migration `20260710092000_rls_authenticated_read.sql`.
 - Production domain: `https://oraculo.oliverhome.com.br`
-- Latest documented feature deploy: `dpl_2TDLGF4iHarBbxmddAzjWD4zJtZy`
-  (2026-09-01, Inteligência de Mercado + conferência de custos, `Ready`)
+- Latest documented feature deploy: `dpl_3ZtT1c3R8ey1Q9eqcBDYtLooV64h`
+  (2026-09-01, novidades pós-login por 48 horas, `Ready`)
 - Primary GitHub repository: `https://github.com/Grupo-Jacartta/oraculo.git`
 - Personal mirror: `https://github.com/julianocalill/oraculo-jacartta`
 - Current deployment mode: production deploys through Vercel CLI/GitHub integration.
@@ -16,6 +16,11 @@
 - Defense in depth: besides the middleware, every protected page calls `requireCurrentUser()` at the top of its server component, and every export route returns `401` when there is no authenticated user — CSV (`/curva-de-venda/export`, `/curva-de-estoque/export`) and `.xlsx` (`/mercado-livre/envio/export`, `/shopee/reposicao/export`). Pages use the service-role client, so this page-level check is the second barrier if the middleware is ever bypassed.
 - Gotcha when verifying a new route: the middleware redirects anonymous requests to `/login`, so an external `curl` returns `307` even for a route that does not exist — a `307` proves nothing. Confirm new routes in the deploy build output instead.
 - Middleware rule: when a local JWT is still valid, do not call Supabase Auth on every request; refresh only near token expiration to keep navigation light.
+- Post-login release notes: `setAuthCookies()` creates the HTTP-only
+  `oraculo_login_event` marker; `AppShell` selects entries younger than 48 hours
+  from `apps/web/lib/release-notes.ts`. Normal dismissal lasts for that login;
+  the optional permanent dismissal stores only release IDs in the browser and
+  a new ID makes the pop-up eligible again. No database or backend job.
 - Sync health page: `/status` reads the latest `*_sync_runs`/`olist_order_items_backfill_runs` rows and the Olist token directly (service-role) and surfaces the same alerts as `olist-sync-health`.
 
 ## Backend

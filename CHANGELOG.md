@@ -15,8 +15,8 @@ Histórico de entregas e mudanças significativas.
 - As publicações ativas vivem em um manifesto versionado no repositório. Se
   duas entregas ocorrerem dentro da janela, o mesmo pop-up apresenta ambas.
 - A primeira edição divulga Inteligência de Mercado, Conferência de custos e a
-  própria rotina de avisos. Implementação validada localmente, ainda sem nova
-  publicação em produção.
+  própria rotina de avisos. Publicada em produção no commit `7f2fa78`, deploy
+  Vercel `dpl_3ZtT1c3R8ey1Q9eqcBDYtLooV64h` (`Ready`).
 
 ## [2026-09-01] — Separação multicanal pela Olist
 

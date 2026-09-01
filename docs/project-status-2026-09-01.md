@@ -74,7 +74,7 @@ usa a mesma view canônica e seus snapshots continuam sendo recalculados em até
 1 minuto pelo mecanismo existente. Nenhum custo foi alterado durante a
 validação e nenhuma migration foi necessária.
 
-## Novidades pós-login — pronta em localhost
+## Novidades pós-login — em produção
 
 O shell autenticado agora consulta um manifesto versionado de publicações e
 abre um pop-up quando há uma ou mais novidades com menos de 48 horas. A janela
@@ -100,8 +100,13 @@ O comportamento é por evento de login:
 A primeira edição reúne Inteligência de Mercado, Conferência de custos e a
 explicação do próprio aviso. Desktop e viewport de 390 × 844 px foram
 revisados; fechamento, recarga, navegação e múltiplas abas foram exercitados.
-Esta mudança está implementada somente no workspace local e ainda não foi
-enviada aos remotes nem publicada na Vercel.
+O build de produção e os 55 testes de domínio foram aprovados. A mudança foi
+publicada nos dois remotes no commit `7f2fa78`; o deploy Vercel
+`dpl_3ZtT1c3R8ey1Q9eqcBDYtLooV64h` chegou a `Ready` e recebeu o alias
+`https://oraculo.oliverhome.com.br`.
+
+A primeira publicação começa em 01/09/2026 às 17:00 BRT e expira em 03/09/2026
+às 17:00 BRT. Não houve migration, tabela, cron ou alteração de dados.
 
 Runbook: [`release-notes.md`](release-notes.md).
 

@@ -27,6 +27,17 @@ The current product direction is practical executive intelligence for the operat
 - `Obsidian` can store durable project memory, but repository docs are the source of truth.
 - `AI agents` assist architecture, coding, review and documentation, but repository files remain the source of truth.
 
+## Current state on 2026-09-01
+
+- **Inteligência de Mercado** and the cost double-check in **Parâmetros** are in
+  production; details live in `docs/project-status-2026-09-01.md`.
+- Every authenticated page can present curated release notes for 48 hours after
+  publication. The notice appears again on a new login unless the user marks
+  that release as no longer wanted; a new release ID always becomes eligible.
+- The release-note manifest is versioned in
+  `apps/web/lib/release-notes.ts`; its operating runbook is
+  `docs/release-notes.md`.
+
 ## Current state on 2026-08-12
 
 See `docs/project-status-2026-08-12.md` (and the chain of status docs it
