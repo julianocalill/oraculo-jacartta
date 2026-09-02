@@ -69,3 +69,15 @@ Arquivos centrais:
 - `apps/web/app/globals.css`;
 - `apps/web/lib/column-hints.ts`;
 - `apps/web/lib/release-notes.ts`.
+
+## Decisão fiscal confirmada com Eduardo
+
+Após validação com Eduardo, foi mantida a decisão do ADR-005: margem, lucro,
+ROI e recomendações usam o **custo líquido**. O custo bruto permanece visível
+somente como valor de aquisição e auditoria.
+
+A revisão encontrou uma exceção no protótipo de Inteligência: ele carregava
+`unit_cost_gross` e compensava o crédito dentro do PIS/COFINS. O trecho foi
+alinhado ao contrato canônico: passa a carregar `unit_cost` e desconta o débito
+cheio de PIS/COFINS sobre a venda, sem dupla contagem do crédito. Nenhuma view,
+tabela ou fórmula do banco foi alterada.

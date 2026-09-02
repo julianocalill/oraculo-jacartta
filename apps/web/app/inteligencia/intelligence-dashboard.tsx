@@ -218,7 +218,7 @@ export function IntelligenceDashboard({ payload }: { payload: IntelligencePayloa
             <div className="market-context-list">
               <div><span>Receita 30 dias</span><strong>{brl(selected.revenue30)}</strong></div>
               <div>
-                <span>Custo bruto por venda</span>
+                <span>Custo líquido por venda</span>
                 <strong>{brl(selected.totalCost)}</strong>
                 <small>
                   livro canônico · <a href={`/parametros?secao=custos&q=${encodeURIComponent(selected.sku)}`}>conferir em Parâmetros</a>

@@ -17,6 +17,10 @@ Histórico de entregas e mudanças significativas.
   silenciou a publicação anterior e expira automaticamente após 48 horas.
 - Publicada no commit `037d701`, deployment Vercel
   `dpl_95UMr7x6C2dTFqZPRcme7XgopWZe` (`Ready`).
+- Após validação fiscal com Eduardo, foi mantido o custo líquido como base de
+  margem, lucro, ROI e recomendações. A Inteligência foi alinhada à view
+  canônica: deixou de exibir o bruto como custo usado e passou a reconhecer o
+  crédito somente no custo líquido, sem duplicá-lo no PIS/COFINS.
 
 ## [2026-09-01] — Novidades pós-login por 48 horas
 

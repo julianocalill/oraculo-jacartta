@@ -121,7 +121,6 @@ type IntelligenceProductRow = {
 type CanonicalCostRow = {
   sku: string;
   unit_cost: number | null;
-  unit_cost_gross: number | null;
   cost_source: string | null;
 };
 
@@ -141,25 +140,25 @@ async function loadCanonicalCosts() {
   return fetchAllPages<CanonicalCostRow>((from, to) =>
     admin
       .from("oraculo_sku_unit_cost")
-      .select("sku,unit_cost,unit_cost_gross,cost_source")
+      .select("sku,unit_cost,cost_source")
       .order("sku")
       .range(from, to)
   );
 }
 
-// Mesma fórmula operacional usada no cache Preço × Custo da Shopee. A diferença
-// é que o custo bruto vem ao vivo do livro canônico (override > ERP > kit), então
-// uma correção em /parametros passa a valer aqui sem esperar o refresh horário.
-function shopeeProfit(price: number, grossCostTotal: number) {
+// O custo já vem líquido do livro canônico (override > ERP > kit). Por isso o
+// PIS/COFINS abaixo é o débito cheio sobre a venda: o crédito da entrada já foi
+// reconhecido uma única vez ao transformar o bruto em líquido.
+function shopeeProfit(price: number, netCostTotal: number) {
   const commission = price * (price <= 79.99 ? 0.20 : 0.14);
   const fixedFee = price <= 79.99 ? 4 : price <= 99.99 ? 16 : price <= 199.99 ? 20 : price <= 499.99 ? 26 : 28;
   return Number((
     price
-    - grossCostTotal
+    - netCostTotal
     - (commission + fixedFee)
     - price * 0.013
     - price * 0.06
-    - (price - grossCostTotal) * 0.0925
+    - price * 0.0925
     - price * 0.03
     - price * 0.03
     - 1
@@ -218,14 +217,14 @@ export async function loadIntelligencePayload(): Promise<IntelligencePayload> {
       if (row.price === null || row.price <= 0) continue;
       const internal = productIndex.get(rowKey(row));
       const canonicalCost = row.sku_olist ? costIndex.get(row.sku_olist.trim().toUpperCase()) : null;
-      const grossUnitCost = canonicalCost?.unit_cost_gross ?? row.unit_cost;
-      if (grossUnitCost === null || grossUnitCost <= 0) continue;
+      const netUnitCost = canonicalCost?.unit_cost ?? row.unit_cost;
+      if (netUnitCost === null || netUnitCost <= 0) continue;
       const sold30 = Number(internal?.sold_qty_30d ?? 0);
       const soldPrevious30 = Math.max(0, Number(internal?.sold_qty_60d ?? 0) - sold30);
       const stock = Number(internal?.model_stock ?? internal?.stock_total ?? 0);
       const trend = [0, 0, soldPrevious30, sold30] as [number, number, number, number];
       const coverageDays = sold30 > 0 ? stock / (sold30 / 30) : null;
-      const totalCost = grossUnitCost * (row.qtd ?? 1);
+      const totalCost = netUnitCost * (row.qtd ?? 1);
       const profitUnit = shopeeProfit(row.price, totalCost);
       const base = {
         id: rowKey(row),
@@ -234,7 +233,7 @@ export async function loadIntelligencePayload(): Promise<IntelligencePayload> {
         variation: row.model_name,
         shop: row.shop_name ?? String(row.shop_id),
         price: row.price,
-        unitCost: grossUnitCost,
+        unitCost: netUnitCost,
         totalCost,
         profitUnit,
         marginPct: (profitUnit / row.price) * 100,
