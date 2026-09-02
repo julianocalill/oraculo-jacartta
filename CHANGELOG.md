@@ -15,6 +15,8 @@ Histórico de entregas e mudanças significativas.
   explicações rápidas.
 - A entrega possui um novo ID de Novidades, portanto reaparece mesmo para quem
   silenciou a publicação anterior e expira automaticamente após 48 horas.
+- Publicada no commit `037d701`, deployment Vercel
+  `dpl_95UMr7x6C2dTFqZPRcme7XgopWZe` (`Ready`).
 
 ## [2026-09-01] — Novidades pós-login por 48 horas
 

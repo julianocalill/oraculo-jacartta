@@ -56,8 +56,12 @@ publicação anterior. O atalho leva diretamente a
 
 ## Publicação
 
-A publicação acompanha `personal/main` na Vercel e será registrada aqui com o
-commit e o deployment definitivos assim que o deploy concluir.
+A melhoria foi publicada nos dois remotes no commit `037d701`. O deployment
+Vercel `dpl_95UMr7x6C2dTFqZPRcme7XgopWZe` chegou a `Ready` e recebeu o alias
+`https://oraculo.oliverhome.com.br`.
+
+`origin/main` e `personal/main` apontam para o mesmo commit; a Vercel acompanha
+`personal/main`.
 
 Arquivos centrais:
 
