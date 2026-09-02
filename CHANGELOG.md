@@ -21,6 +21,8 @@ Histórico de entregas e mudanças significativas.
   margem, lucro, ROI e recomendações. A Inteligência foi alinhada à view
   canônica: deixou de exibir o bruto como custo usado e passou a reconhecer o
   crédito somente no custo líquido, sem duplicá-lo no PIS/COFINS.
+- Correção publicada no commit `c366197`, deployment Vercel
+  `dpl_51ujVePAEgWjq5xqpWHumjCUPW1P` (`Ready`).
 
 ## [2026-09-01] — Novidades pós-login por 48 horas
 

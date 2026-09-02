@@ -81,3 +81,7 @@ A revisão encontrou uma exceção no protótipo de Inteligência: ele carregava
 alinhado ao contrato canônico: passa a carregar `unit_cost` e desconta o débito
 cheio de PIS/COFINS sobre a venda, sem dupla contagem do crédito. Nenhuma view,
 tabela ou fórmula do banco foi alterada.
+
+Correção publicada no commit `c366197`; deployment Vercel
+`dpl_51ujVePAEgWjq5xqpWHumjCUPW1P` confirmado como `Ready` no domínio
+`https://oraculo.oliverhome.com.br`.
