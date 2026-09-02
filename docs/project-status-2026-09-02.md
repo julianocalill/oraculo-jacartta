@@ -123,3 +123,7 @@ No SKU `213169` da validação, a Olist registra R$ 29,12 por unidade e o anúnc
 vende duas unidades: o Produto 360 mostra R$ 58,24 cadastrado e R$ 52,85 líquido
 usado. O fluxo foi conferido no localhost em desktop e em 390 × 844 px. Nenhuma
 migration ou alteração de dados foi necessária.
+
+Publicada no commit `41324e3`; deployment Vercel
+`dpl_3yNFhTNTEg9YrkdRnjJsTeDWJKUy` confirmado como `Ready` no domínio
+`https://oraculo.oliverhome.com.br`.
