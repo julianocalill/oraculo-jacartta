@@ -85,3 +85,19 @@ tabela ou fórmula do banco foi alterada.
 Correção publicada no commit `c366197`; deployment Vercel
 `dpl_51ujVePAEgWjq5xqpWHumjCUPW1P` confirmado como `Ready` no domínio
 `https://oraculo.oliverhome.com.br`.
+
+## Busca de produto na Inteligência
+
+A Inteligência ganhou uma consulta global antes dos cards de resumo. A busca
+aceita SKU, nome, variação ou loja, ignora acentos e prioriza correspondência
+exata de SKU, início do SKU e início do nome.
+
+Até oito resultados são exibidos enquanto o usuário digita. Cada resultado já
+responde se o produto **precisa de ação** ou está **sem ação imediata**, mostra
+a recomendação e seu motivo. Ao selecionar o item — ou pressionar Enter no
+primeiro resultado — o sistema abre diretamente o Produto 360 correspondente.
+
+A experiência foi validada com busca por SKU, busca textual, estado sem
+resultado e abertura do diagnóstico; o layout também foi revisado em viewport
+de 390 × 844 px. A mudança recebeu um ID próprio no manifesto de Novidades para
+ser comunicada por 48 horas mesmo a usuários que silenciaram avisos anteriores.

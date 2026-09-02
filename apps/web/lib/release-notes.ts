@@ -24,6 +24,20 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-09-02-busca-inteligencia-produto",
+    title: "Busca rápida na Inteligência",
+    summary: "Agora ficou mais fácil descobrir se um produto precisa de ação.",
+    publishedAt: "2026-09-02T15:15:00-03:00",
+    changes: [
+      {
+        title: "Consulte qualquer produto",
+        description: "Busque por SKU, nome, variação ou loja, veja a ação recomendada e abra o diagnóstico completo no Produto 360.",
+        href: "/inteligencia",
+        linkLabel: "Buscar produto"
+      }
+    ]
+  },
+  {
     id: "2026-09-02-explicacao-custo-bruto-liquido",
     title: "Custos mais transparentes",
     summary: "A conferência de custos agora explica exatamente quais valores alimentam as análises.",

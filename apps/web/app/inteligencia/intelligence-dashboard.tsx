@@ -47,6 +47,18 @@ function compactName(value: string) {
   return value.length > 74 ? `${value.slice(0, 71)}…` : value;
 }
 
+function normalizeSearch(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR")
+    .trim();
+}
+
+function needsAction(product: IntelligenceProduct) {
+  return product.priority >= 60;
+}
+
 function actionTone(action: MarketAction) {
   if (action === "reprecificar" || action === "liquidar") return "danger";
   if (action === "repor" || action === "investigar") return "warning";
@@ -76,6 +88,7 @@ export function IntelligenceDashboard({ payload }: { payload: IntelligencePayloa
   const [block, setBlock] = useState<Block>("radar");
   const [selectedId, setSelectedId] = useState(payload.products[0]?.id ?? "");
   const [actionFilter, setActionFilter] = useState<MarketAction | "todos">("todos");
+  const [searchQuery, setSearchQuery] = useState("");
   const [monitorUrl, setMonitorUrl] = useState("");
   const [localMonitors, setLocalMonitors] = useState<Competitor[]>([]);
 
@@ -84,6 +97,31 @@ export function IntelligenceDashboard({ payload }: { payload: IntelligencePayloa
     () => payload.products.filter((product) => actionFilter === "todos" || product.action === actionFilter),
     [actionFilter, payload.products]
   );
+  const normalizedQuery = normalizeSearch(searchQuery);
+  const searchResults = useMemo(() => {
+    if (!normalizedQuery) return [];
+    return payload.products
+      .map((product) => {
+        const sku = normalizeSearch(product.sku);
+        const name = normalizeSearch(product.name);
+        const variation = normalizeSearch(product.variation ?? "");
+        const shop = normalizeSearch(product.shop);
+        const matches = sku.includes(normalizedQuery)
+          || name.includes(normalizedQuery)
+          || variation.includes(normalizedQuery)
+          || shop.includes(normalizedQuery);
+        const score = sku === normalizedQuery ? 0
+          : sku.startsWith(normalizedQuery) ? 1
+          : name.startsWith(normalizedQuery) ? 2
+          : variation.startsWith(normalizedQuery) ? 3
+          : 4;
+        return { product, matches, score };
+      })
+      .filter((row) => row.matches)
+      .sort((a, b) => a.score - b.score || b.product.priority - a.product.priority || a.product.name.localeCompare(b.product.name, "pt-BR"))
+      .slice(0, 8)
+      .map((row) => row.product);
+  }, [normalizedQuery, payload.products]);
   const externalCompetitors = useMemo(() => competitorsFor(selected), [selected]);
   const competitors = [...externalCompetitors, ...localMonitors];
   const competitorPrices = externalCompetitors.flatMap((row) => (row.price === null ? [] : [row.price]));
@@ -129,6 +167,17 @@ export function IntelligenceDashboard({ payload }: { payload: IntelligencePayloa
     setMonitorUrl("");
   }
 
+  function openSearchedProduct(product: IntelligenceProduct) {
+    setSelectedId(product.id);
+    setBlock("produto");
+    setSearchQuery("");
+  }
+
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (searchResults[0]) openSearchedProduct(searchResults[0]);
+  }
+
   return (
     <>
       <header className="topbar market-topbar">
@@ -152,6 +201,56 @@ export function IntelligenceDashboard({ payload }: { payload: IntelligencePayloa
             <span><strong>{item.label}</strong><small>{item.caption}</small></span>
           </button>
         ))}
+      </section>
+
+      <section className="panel market-product-search" aria-label="Buscar produto para analisar">
+        <div className="market-search-copy">
+          <p className="eyebrow">Consulta rápida</p>
+          <h2>Este produto precisa de ação?</h2>
+          <p>Busque por SKU, nome, variação ou loja e abra o diagnóstico completo.</p>
+        </div>
+        <form className="market-search-form" onSubmit={submitSearch} role="search">
+          <label htmlFor="market-product-query">Produto</label>
+          <div>
+            <input
+              id="market-product-query"
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Ex.: 213169, cabide, panela…"
+              autoComplete="off"
+            />
+            <button type="submit" disabled={searchResults.length === 0}>Analisar</button>
+          </div>
+          <small aria-live="polite">
+            {normalizedQuery
+              ? searchResults.length > 0
+                ? `${searchResults.length} ${searchResults.length === 1 ? "resultado encontrado" : "resultados encontrados"}`
+                : "Nenhum produto encontrado"
+              : "Digite ao menos parte do SKU ou do nome."}
+          </small>
+        </form>
+        {normalizedQuery ? (
+          <div className="market-search-results" aria-label="Resultados da busca">
+            {searchResults.map((product) => {
+              const actionable = needsAction(product);
+              return (
+                <button key={product.id} type="button" onClick={() => openSearchedProduct(product)}>
+                  <span className="market-product-name">
+                    <strong>{compactName(product.name)}</strong>
+                    <small>{product.shop} · SKU {product.sku}{product.variation ? ` · ${product.variation}` : ""}</small>
+                  </span>
+                  <span className={`market-search-status ${actionable ? actionTone(product.action) : "good"}`}>
+                    <strong>{actionable ? "Precisa de ação" : "Sem ação imediata"}</strong>
+                    <small>{actionable ? product.actionLabel : "Acompanhar"}</small>
+                  </span>
+                  <span className="market-search-reason">{product.reason}</span>
+                  <span className="market-row-arrow">›</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
       </section>
 
       <section className="market-summary-grid" aria-label="Resumo">

@@ -2,6 +2,17 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-02] — Busca de produto na Inteligência
+
+- A Inteligência de Mercado ganhou uma busca global por SKU, nome, variação ou
+  loja, com correspondência textual sem depender de acentos.
+- Cada resultado informa se o produto precisa de ação, qual é a recomendação e
+  o motivo; selecionar o item abre diretamente seu Produto 360.
+- A busca possui estado vazio, funciona pelo botão ou Enter e foi adaptada para
+  celular.
+- Um novo ID de Novidades comunica a entrega por 48 horas, inclusive para quem
+  silenciou publicações anteriores.
+
 ## [2026-09-02] — Explicação do custo bruto e líquido
 
 - A seção **Parâmetros → Conferência de custos** passou a explicar, antes da

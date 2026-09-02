@@ -5366,6 +5366,162 @@ a.pill-gold:hover,
   white-space: nowrap;
 }
 
+.market-product-search {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.65fr) minmax(320px, 1.35fr);
+  gap: 18px 26px;
+  padding: 18px;
+}
+
+.market-search-copy .eyebrow,
+.market-search-copy h2,
+.market-search-copy p {
+  margin-top: 0;
+}
+
+.market-search-copy .eyebrow {
+  color: var(--gold-text);
+  margin-bottom: 6px;
+}
+
+.market-search-copy h2 {
+  margin-bottom: 7px;
+  font-size: 18px;
+}
+
+.market-search-copy p {
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.market-search-form {
+  display: grid;
+  gap: 6px;
+}
+
+.market-search-form > label {
+  color: var(--faint);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.market-search-form > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.market-search-form input {
+  min-width: 0;
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--field);
+  color: var(--text);
+  padding: 0 12px;
+  font: inherit;
+}
+
+.market-search-form input:focus {
+  border-color: color-mix(in srgb, var(--gold) 68%, var(--line));
+  outline: 2px solid color-mix(in srgb, var(--gold) 18%, transparent);
+  outline-offset: 1px;
+}
+
+.market-search-form button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 9px;
+  background: linear-gradient(180deg, var(--gold), var(--amber-strong));
+  color: var(--on-gold);
+  padding: 0 16px;
+  font: inherit;
+  font-weight: 800;
+}
+
+.market-search-form button:disabled {
+  cursor: not-allowed;
+  filter: saturate(0.35);
+  opacity: 0.5;
+}
+
+.market-search-form small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.market-search-results {
+  grid-column: 1 / -1;
+  display: grid;
+  margin-top: -4px;
+}
+
+.market-search-results > button {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  display: grid;
+  grid-template-columns: minmax(220px, 1.15fr) 145px minmax(210px, 1fr) 14px;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 4px;
+  text-align: left;
+}
+
+.market-search-results > button:hover {
+  background: var(--zebra);
+}
+
+.market-search-status {
+  width: max-content;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  display: grid;
+  gap: 1px;
+  padding: 6px 9px;
+}
+
+.market-search-status strong {
+  font-size: 11px;
+}
+
+.market-search-status small {
+  font-size: 10px;
+  opacity: 0.82;
+}
+
+.market-search-status.good {
+  background: var(--good-soft);
+  border-color: var(--good-line);
+  color: var(--emerald);
+}
+
+.market-search-status.warning {
+  background: var(--warn-soft);
+  border-color: var(--warn-line);
+  color: var(--warn-text);
+}
+
+.market-search-status.danger {
+  background: var(--crit-soft);
+  border-color: var(--crit-line);
+  color: var(--rose);
+}
+
+.market-search-reason {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .market-summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -5858,6 +6014,22 @@ a.pill-gold:hover,
     grid-template-columns: 1fr;
   }
 
+  .market-product-search {
+    grid-template-columns: 1fr;
+  }
+
+  .market-search-results {
+    grid-column: 1;
+  }
+
+  .market-search-results > button {
+    grid-template-columns: minmax(0, 1fr) 145px 14px;
+  }
+
+  .market-search-reason {
+    grid-column: 1 / -1;
+  }
+
   .market-action-row {
     grid-template-columns: 100px minmax(0, 1fr) 56px;
   }
@@ -5887,6 +6059,25 @@ a.pill-gold:hover,
 
   .market-block-nav small {
     white-space: normal;
+  }
+
+  .market-search-form > div,
+  .market-search-results > button {
+    grid-template-columns: 1fr;
+  }
+
+  .market-search-form button {
+    width: 100%;
+  }
+
+  .market-search-status,
+  .market-search-reason,
+  .market-search-results .market-row-arrow {
+    grid-column: 1;
+  }
+
+  .market-search-results .market-row-arrow {
+    display: none;
   }
 
   .market-action-row {
