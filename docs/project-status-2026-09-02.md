@@ -101,3 +101,7 @@ A experiência foi validada com busca por SKU, busca textual, estado sem
 resultado e abertura do diagnóstico; o layout também foi revisado em viewport
 de 390 × 844 px. A mudança recebeu um ID próprio no manifesto de Novidades para
 ser comunicada por 48 horas mesmo a usuários que silenciaram avisos anteriores.
+
+Publicada no commit `c644041`; deployment Vercel
+`dpl_4JYL74Ae9avL4Ram4nnoPQFmbo3c` confirmado como `Ready` no domínio
+`https://oraculo.oliverhome.com.br`.

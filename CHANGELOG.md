@@ -12,6 +12,8 @@ Histórico de entregas e mudanças significativas.
   celular.
 - Um novo ID de Novidades comunica a entrega por 48 horas, inclusive para quem
   silenciou publicações anteriores.
+- Publicada no commit `c644041`, deployment Vercel
+  `dpl_4JYL74Ae9avL4Ram4nnoPQFmbo3c` (`Ready`).
 
 ## [2026-09-02] — Explicação do custo bruto e líquido
 
