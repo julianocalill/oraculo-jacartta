@@ -2,6 +2,20 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-02] — Explicação do custo bruto e líquido
+
+- A seção **Parâmetros → Conferência de custos** passou a explicar, antes da
+  tabela, a diferença entre o custo bruto de aquisição e o custo líquido usado
+  em margem, lucro, ROI e recomendações.
+- A interface documenta a prioridade de resolução do custo, o tratamento dos
+  kits e os fatores atuais de crédito: `0,9075` para origem nacional e `0,8825`
+  para importada, com exemplos em reais.
+- Um alerta contábil deixa explícito que mercadorias sem crédito integral devem
+  ser confirmadas com a contabilidade; os cabeçalhos da tabela também ganharam
+  explicações rápidas.
+- A entrega possui um novo ID de Novidades, portanto reaparece mesmo para quem
+  silenciou a publicação anterior e expira automaticamente após 48 horas.
+
 ## [2026-09-01] — Novidades pós-login por 48 horas
 
 - O shell autenticado ganhou um pop-up de novidades com resumo e atalhos para

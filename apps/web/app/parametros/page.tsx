@@ -7,6 +7,7 @@ import { NoAccess } from "../components/no-access";
 import { AppShell } from "../components/app-shell";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 import { loadFiscalCostGapSnapshot } from "../../lib/fiscal-snapshots";
+import { HINTS } from "../../lib/column-hints";
 
 export const dynamic = "force-dynamic";
 
@@ -670,6 +671,43 @@ export default async function ParametrosPage({
             </form>
           </div>
 
+          <div className="cost-values-explainer" aria-label="Como o Oráculo calcula o custo bruto e o custo líquido">
+            <article>
+              <div className="cost-value-title">
+                <span className="cost-value-step">1</span>
+                <strong>Bruto usado</strong>
+              </div>
+              <p>
+                É o custo unitário de aquisição <strong>antes dos créditos tributários</strong>.
+                O Oráculo prioriza a correção manual; sem ela, usa o custo médio do ERP e depois
+                o custo cadastrado. Nos kits, soma o custo bruto dos componentes.
+              </p>
+              <small>Exemplo: se o produto custou R$ 100,00, o bruto usado é R$ 100,00.</small>
+            </article>
+            <article>
+              <div className="cost-value-title">
+                <span className="cost-value-step">2</span>
+                <strong>Líquido usado</strong>
+              </div>
+              <p>
+                É o bruto menos os <strong>créditos recuperáveis de PIS/COFINS</strong>. Este é o
+                custo que entra nos cálculos de margem, lucro, ROI e recomendações.
+              </p>
+              <div className="cost-value-formulas" aria-label="Fórmulas por origem">
+                <span><strong>Nacional:</strong> bruto × 0,9075</span>
+                <span><strong>Importado:</strong> bruto × 0,8825</span>
+              </div>
+              <small>
+                Em R$ 100,00: nacional vira R$ 90,75; importado vira R$ 88,25. A origem cadastrada precisa estar correta.
+              </small>
+            </article>
+            <p className="cost-value-caution">
+              <strong>Importante:</strong> estes percentuais são a regra contábil atual do Oráculo.
+              Mercadorias sem crédito integral — por exemplo, alguns casos de regime monofásico,
+              substituição tributária ou fornecedor do Simples — precisam ser confirmadas com a contabilidade.
+            </p>
+          </div>
+
           <p className="table-note">
             {audit.matched === 1 ? "1 produto encontrado" : `${count(audit.matched)} produtos encontrados`}{audit.capped ? "; exibindo os primeiros 250 — refine a busca para localizar outro SKU" : ""}.
             Valores em amarelo pedem conferência. Salvar uma correção cria um override bruto e
@@ -684,8 +722,14 @@ export default async function ParametrosPage({
                   <th>Tipo</th>
                   <th className="numeric">Custo cadastrado</th>
                   <th className="numeric">Custo médio</th>
-                  <th className="numeric">Bruto usado</th>
-                  <th className="numeric">Líquido usado</th>
+                  <th className="numeric th-has-hint" data-hint={HINTS.costAuditGrossUsed}>
+                    Bruto usado <span className="th-hint-mark" aria-hidden="true">?</span>
+                    <span className="sr-only">{HINTS.costAuditGrossUsed}</span>
+                  </th>
+                  <th className="numeric th-has-hint" data-hint={HINTS.costAuditNetUsed}>
+                    Líquido usado <span className="th-hint-mark" aria-hidden="true">?</span>
+                    <span className="sr-only">{HINTS.costAuditNetUsed}</span>
+                  </th>
                   <th>Origem</th>
                   <th>Situação</th>
                   <th>Corrigir</th>

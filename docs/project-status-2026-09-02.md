@@ -1,0 +1,67 @@
+# Status do projeto — 2026-09-02
+
+Este registro complementa o panorama de produção de
+[`project-status-2026-09-01.md`](project-status-2026-09-01.md). A entrega é uma
+melhoria de explicação na aplicação web: não altera banco, custos cadastrados,
+motor fiscal, sincronizações ou automações.
+
+## Bruto usado e líquido usado mais transparentes
+
+A seção **Parâmetros → Conferência de custos** ganhou uma explicação visível,
+antes da tabela, sobre os dois valores que alimentam as análises do Oráculo:
+
+- **Bruto usado:** custo unitário de aquisição antes dos créditos tributários.
+  A prioridade é correção manual, custo médio do ERP e custo cadastrado; nos
+  kits, o valor é a soma dos componentes.
+- **Líquido usado:** custo bruto depois dos créditos recuperáveis de PIS/COFINS.
+  É este valor que entra nos cálculos de margem, lucro, ROI e recomendações.
+
+A tela mostra os fatores atuais da regra contábil — `bruto × 0,9075` para
+produto nacional e `bruto × 0,8825` para importado — e traduz a fórmula em um
+exemplo simples: um custo bruto de R$ 100,00 resulta em R$ 90,75 ou R$ 88,25,
+respectivamente.
+
+Os cabeçalhos **Bruto usado** e **Líquido usado** também receberam tooltips
+centralizados em `apps/web/lib/column-hints.ts`. A origem do item continua
+visível na própria linha para permitir o double-check antes de confiar na
+margem.
+
+## Limite contábil explicitado
+
+A interface avisa que os percentuais representam a regra contábil vigente no
+Oráculo. Mercadorias que não permitem crédito integral — como determinados
+casos de regime monofásico, substituição tributária ou fornecedor do Simples —
+precisam de confirmação da contabilidade.
+
+Essa ressalva preserva a distinção entre a regra implementada e a situação
+fiscal específica de cada mercadoria. Nenhuma fórmula foi alterada nesta
+entrega.
+
+## Novidades pós-login
+
+A mudança foi adicionada ao manifesto de Novidades com um ID próprio:
+`2026-09-02-explicacao-custo-bruto-liquido`. Assim, o aviso reaparece para todos
+durante 48 horas, inclusive para quem marcou **Não mostrar novamente** na
+publicação anterior. O atalho leva diretamente a
+`/parametros?secao=custos`.
+
+## Validação
+
+- TypeScript sem erros;
+- revisão visual em desktop e viewport móvel de 390 × 844 px;
+- conteúdo e tooltips conferidos no navegador;
+- SKU nacional real validado: bruto de R$ 0,35 e líquido de R$ 0,32, coerente
+  com o fator de origem nacional;
+- nenhuma gravação de custo e nenhuma migration executada.
+
+## Publicação
+
+A publicação acompanha `personal/main` na Vercel e será registrada aqui com o
+commit e o deployment definitivos assim que o deploy concluir.
+
+Arquivos centrais:
+
+- `apps/web/app/parametros/page.tsx`;
+- `apps/web/app/globals.css`;
+- `apps/web/lib/column-hints.ts`;
+- `apps/web/lib/release-notes.ts`.

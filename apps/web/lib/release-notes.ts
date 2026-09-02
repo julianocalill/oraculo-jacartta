@@ -24,6 +24,20 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-09-02-explicacao-custo-bruto-liquido",
+    title: "Custos mais transparentes",
+    summary: "A conferência de custos agora explica exatamente quais valores alimentam as análises.",
+    publishedAt: "2026-09-02T14:25:00-03:00",
+    changes: [
+      {
+        title: "Bruto usado × líquido usado",
+        description: "Veja a origem do custo, os créditos recuperáveis aplicados e exemplos práticos antes de validar a margem.",
+        href: "/parametros?secao=custos",
+        linkLabel: "Entender os custos"
+      }
+    ]
+  },
+  {
     id: "2026-09-01-inteligencia-custos-novidades-v2",
     title: "Novidades no Oráculo",
     summary: "Uma nova camada de inteligência comercial, custos auditáveis e avisos de atualização.",

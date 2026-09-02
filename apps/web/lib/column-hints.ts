@@ -1,6 +1,10 @@
 // Explicações das colunas calculadas (tooltip no hover do cabeçalho).
 // Ficam num só lugar para que ML e Shopee digam exatamente a mesma coisa.
 export const HINTS = {
+  costAuditGrossUsed:
+    "Custo unitário de aquisição antes dos créditos tributários. Prioridade: correção manual, custo médio do ERP, custo cadastrado e, para kits, soma dos componentes.",
+  costAuditNetUsed:
+    "Custo bruto menos créditos recuperáveis de PIS/COFINS: 9,25% para nacional e 11,75% para importado. É este valor que entra em margem, lucro, ROI e recomendações.",
   curva:
     "Curva ABC por faturamento dos últimos 30 dias: A = os produtos que somam os primeiros 80% da receita, B = os próximos 15%, C = os últimos 5%. Sem venda no período fica sem curva.",
   tendencia:

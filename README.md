@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-01.md](docs/project-status-2026-09-01.md) **← start here** (current production state; includes Intelligence, cost auditing and post-login release notes)
+1. [docs/project-status-2026-09-02.md](docs/project-status-2026-09-02.md) **← start here** (current production state; includes the explanation of gross and net costs)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
    — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every card/column/config field across the whole system — analytics, alerts, calculator, imports, params, sync status — exact formula, PT-BR, for team walkthroughs)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
@@ -47,7 +47,7 @@ oraculo/
 11. [CHANGELOG.md](CHANGELOG.md) (full history)
 12. [vault/00-home/index.md](vault/00-home/index.md)
 
-Earlier snapshots (historical, superseded): [docs/project-status-2026-08-28.md](docs/project-status-2026-08-28.md), [docs/project-status-2026-08-24.md](docs/project-status-2026-08-24.md), [docs/project-status-2026-08-19.md](docs/project-status-2026-08-19.md), [docs/project-status-2026-08-17.md](docs/project-status-2026-08-17.md), [docs/project-status-2026-08-13.md](docs/project-status-2026-08-13.md), [docs/project-status-2026-08-12.md](docs/project-status-2026-08-12.md), [docs/project-status-2026-08-10.md](docs/project-status-2026-08-10.md), [docs/project-status-2026-07-17.md](docs/project-status-2026-07-17.md), [docs/project-status-2026-07-16.md](docs/project-status-2026-07-16.md), [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md), [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
+Earlier snapshots (historical, superseded): [docs/project-status-2026-09-01.md](docs/project-status-2026-09-01.md), [docs/project-status-2026-08-28.md](docs/project-status-2026-08-28.md), [docs/project-status-2026-08-24.md](docs/project-status-2026-08-24.md), [docs/project-status-2026-08-19.md](docs/project-status-2026-08-19.md), [docs/project-status-2026-08-17.md](docs/project-status-2026-08-17.md), [docs/project-status-2026-08-13.md](docs/project-status-2026-08-13.md), [docs/project-status-2026-08-12.md](docs/project-status-2026-08-12.md), [docs/project-status-2026-08-10.md](docs/project-status-2026-08-10.md), [docs/project-status-2026-07-17.md](docs/project-status-2026-07-17.md), [docs/project-status-2026-07-16.md](docs/project-status-2026-07-16.md), [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md), [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
 
 ## Tooling choices
 
@@ -58,7 +58,10 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-08-28.md](
 
 ## Current production state
 
-**Last update**: `2026-09-01` (see `docs/project-status-2026-09-01.md`) —
+**Last update**: `2026-09-02` (see `docs/project-status-2026-09-02.md`) —
+the cost-audit screen now explains the exact difference between **gross cost used**
+and **net cost used**, including source priority, tax-credit factors, kit behavior
+and the accounting caveat; the release is announced in the post-login pop-up —
 the **post-login Novidades pop-up** communicates each release for 48 hours,
 with a per-update "do not show again" option; the **Inteligência de Mercado**
 four-block experience and its cost double-check inside **Parâmetros** are in
