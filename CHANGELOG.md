@@ -2,6 +2,16 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-02] — Custo cadastrado no Produto 360
+
+- O Produto 360 passou a mostrar o custo bruto cadastrado diretamente na Olist,
+  separado do custo líquido usado em margem e lucro.
+- O card detalha custo unitário × quantidade do SKU por venda; cadastro vazio
+  ou zerado aparece explicitamente como indisponível.
+- O SKU `213169` foi validado com R$ 29,12 por unidade, R$ 58,24 por venda e
+  R$ 52,85 de custo líquido usado.
+- A entrega possui um novo ID de Novidades e não exigiu mudança no banco.
+
 ## [2026-09-02] — Busca de produto na Inteligência
 
 - A Inteligência de Mercado ganhou uma busca global por SKU, nome, variação ou

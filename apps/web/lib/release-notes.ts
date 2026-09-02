@@ -24,6 +24,20 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-09-02-custo-cadastrado-produto-360",
+    title: "Custo cadastrado no Produto 360",
+    summary: "O diagnóstico agora mostra o custo bruto da Olist ao lado do custo líquido usado.",
+    publishedAt: "2026-09-02T15:25:00-03:00",
+    changes: [
+      {
+        title: "Confira a composição do custo",
+        description: "Veja o custo cadastrado por unidade, a quantidade do SKU em cada venda e o custo líquido que alimenta margem e lucro.",
+        href: "/inteligencia",
+        linkLabel: "Abrir Produto 360"
+      }
+    ]
+  },
+  {
     id: "2026-09-02-busca-inteligencia-produto",
     title: "Busca rápida na Inteligência",
     summary: "Agora ficou mais fácil descobrir se um produto precisa de ação.",

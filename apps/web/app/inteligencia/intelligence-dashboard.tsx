@@ -299,6 +299,20 @@ export function IntelligenceDashboard({ payload }: { payload: IntelligencePayloa
             </div>
             <div className="market-product-kpis">
               <div><span>Preço atual</span><strong>{brl(selected.price)}</strong></div>
+              <div className="market-cost-kpi">
+                <span>Custo cadastrado Olist</span>
+                <strong>{selected.registeredTotalCost === null ? "—" : brl(selected.registeredTotalCost)}</strong>
+                <small>
+                  {selected.registeredUnitCost === null
+                    ? "Sem custo bruto cadastrado"
+                    : `${brl(selected.registeredUnitCost)} × ${number(selected.unitsPerSale)} un.`}
+                </small>
+              </div>
+              <div className="market-cost-kpi">
+                <span>Custo líquido usado</span>
+                <strong>{brl(selected.totalCost)}</strong>
+                <small>valor que alimenta margem e lucro</small>
+              </div>
               <div><span>Margem estimada</span><strong className={selected.marginPct < 0 ? "is-negative" : ""}>{pct(selected.marginPct)}</strong></div>
               <div><span>Vendas 30 dias</span><strong>{number(selected.sold30)}</strong></div>
               <div><span>Estoque</span><strong>{number(selected.stock)}</strong></div>

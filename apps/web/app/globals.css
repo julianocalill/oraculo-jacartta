@@ -5766,7 +5766,7 @@ a.pill-gold:hover,
 .market-product-kpis,
 .market-price-comparison {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -5787,6 +5787,16 @@ a.pill-gold:hover,
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.market-product-kpis small {
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+.market-cost-kpi {
+  border-color: color-mix(in srgb, var(--gold) 28%, var(--line)) !important;
 }
 
 .market-recommendation {
@@ -5986,6 +5996,10 @@ a.pill-gold:hover,
 
   .market-action-row {
     grid-template-columns: 104px minmax(180px, 1fr) minmax(220px, 1.2fr) 110px 52px;
+  }
+
+  .market-product-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .market-row-arrow {

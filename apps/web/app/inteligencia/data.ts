@@ -15,6 +15,9 @@ export type IntelligenceProduct = {
   variation: string | null;
   shop: string;
   price: number;
+  registeredUnitCost: number | null;
+  registeredTotalCost: number | null;
+  unitsPerSale: number;
   unitCost: number;
   totalCost: number;
   profitUnit: number;
@@ -124,6 +127,11 @@ type CanonicalCostRow = {
   cost_source: string | null;
 };
 
+type RegisteredCostRow = {
+  sku: string | null;
+  preco_custo: number | null;
+};
+
 async function loadLeanShopeeProducts() {
   const admin = createSupabaseAdminClient();
   return fetchAllPages<IntelligenceProductRow>((from, to) =>
@@ -141,6 +149,18 @@ async function loadCanonicalCosts() {
     admin
       .from("oraculo_sku_unit_cost")
       .select("sku,unit_cost,cost_source")
+      .order("sku")
+      .range(from, to)
+  );
+}
+
+async function loadRegisteredCosts() {
+  const admin = createSupabaseAdminClient();
+  return fetchAllPages<RegisteredCostRow>((from, to) =>
+    admin
+      .from("olist_products")
+      .select("sku,preco_custo")
+      .not("sku", "is", null)
       .order("sku")
       .range(from, to)
   );
@@ -185,6 +205,9 @@ function demoProducts(): IntelligenceProduct[] {
       variation: null,
       shop,
       price,
+      registeredUnitCost: cost,
+      registeredTotalCost: cost,
+      unitsPerSale: 1,
       unitCost: cost,
       totalCost: cost,
       profitUnit: profit,
@@ -202,21 +225,31 @@ function demoProducts(): IntelligenceProduct[] {
 
 export async function loadIntelligencePayload(): Promise<IntelligencePayload> {
   try {
-    const [priceRows, shopeeProducts, canonicalCosts] = await Promise.all([
+    const [priceRows, shopeeProducts, canonicalCosts, registeredCosts] = await Promise.all([
       loadPrecoProduto(),
       loadLeanShopeeProducts(),
-      loadCanonicalCosts()
+      loadCanonicalCosts(),
+      loadRegisteredCosts()
     ]);
     if (shopeeProducts.length === 0 || priceRows.length === 0) throw new Error("Dados internos indisponíveis");
 
     const productIndex = new Map(shopeeProducts.map((product) => [productKey(product.shop_id, product.item_id, product.model_id), product]));
     const costIndex = new Map(canonicalCosts.map((cost) => [cost.sku.trim().toUpperCase(), cost]));
+    const registeredCostIndex = new Map<string, number>();
+    for (const cost of registeredCosts) {
+      const sku = cost.sku?.trim().toUpperCase();
+      const value = Number(cost.preco_custo ?? 0);
+      if (!sku || value <= 0) continue;
+      registeredCostIndex.set(sku, Math.max(value, registeredCostIndex.get(sku) ?? 0));
+    }
     const products: IntelligenceProduct[] = [];
 
     for (const row of priceRows) {
       if (row.price === null || row.price <= 0) continue;
       const internal = productIndex.get(rowKey(row));
-      const canonicalCost = row.sku_olist ? costIndex.get(row.sku_olist.trim().toUpperCase()) : null;
+      const normalizedSku = row.sku_olist?.trim().toUpperCase();
+      const canonicalCost = normalizedSku ? costIndex.get(normalizedSku) : null;
+      const registeredUnitCost = normalizedSku ? registeredCostIndex.get(normalizedSku) ?? null : null;
       const netUnitCost = canonicalCost?.unit_cost ?? row.unit_cost;
       if (netUnitCost === null || netUnitCost <= 0) continue;
       const sold30 = Number(internal?.sold_qty_30d ?? 0);
@@ -224,7 +257,9 @@ export async function loadIntelligencePayload(): Promise<IntelligencePayload> {
       const stock = Number(internal?.model_stock ?? internal?.stock_total ?? 0);
       const trend = [0, 0, soldPrevious30, sold30] as [number, number, number, number];
       const coverageDays = sold30 > 0 ? stock / (sold30 / 30) : null;
-      const totalCost = netUnitCost * (row.qtd ?? 1);
+      const unitsPerSale = row.qtd ?? 1;
+      const totalCost = netUnitCost * unitsPerSale;
+      const registeredTotalCost = registeredUnitCost === null ? null : registeredUnitCost * unitsPerSale;
       const profitUnit = shopeeProfit(row.price, totalCost);
       const base = {
         id: rowKey(row),
@@ -233,6 +268,9 @@ export async function loadIntelligencePayload(): Promise<IntelligencePayload> {
         variation: row.model_name,
         shop: row.shop_name ?? String(row.shop_id),
         price: row.price,
+        registeredUnitCost,
+        registeredTotalCost,
+        unitsPerSale,
         unitCost: netUnitCost,
         totalCost,
         profitUnit,

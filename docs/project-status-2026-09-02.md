@@ -105,3 +105,21 @@ ser comunicada por 48 horas mesmo a usuários que silenciaram avisos anteriores.
 Publicada no commit `c644041`; deployment Vercel
 `dpl_4JYL74Ae9avL4Ram4nnoPQFmbo3c` confirmado como `Ready` no domínio
 `https://oraculo.oliverhome.com.br`.
+
+## Custo cadastrado no Produto 360
+
+O diagnóstico do produto passou a separar visualmente o valor bruto cadastrado
+na Olist do custo líquido usado pelo cálculo. O card **Custo cadastrado Olist**
+mostra o total do anúncio e sua composição (`custo unitário × quantidade do SKU
+por venda`); o card vizinho **Custo líquido usado** deixa explícito qual valor
+alimenta margem e lucro.
+
+O dado bruto vem diretamente de `olist_products.preco_custo`, consolidado pelo
+SKU. Não é substituído silenciosamente pelo custo médio, por override manual ou
+pelo custo líquido canônico. Quando o cadastro está vazio ou zerado, a tela
+mostra “Sem custo bruto cadastrado”.
+
+No SKU `213169` da validação, a Olist registra R$ 29,12 por unidade e o anúncio
+vende duas unidades: o Produto 360 mostra R$ 58,24 cadastrado e R$ 52,85 líquido
+usado. O fluxo foi conferido no localhost em desktop e em 390 × 844 px. Nenhuma
+migration ou alteração de dados foi necessária.
