@@ -6632,3 +6632,22 @@ a.pill-gold:hover,
     width: 100%;
   }
 }
+
+/* Análise comercial: filtros e mensagens dentro da largura do workspace. */
+.commercial-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.commercial-form { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+.commercial-form label { flex: 1 1 150px; min-width: 0; }
+.commercial-form input, .commercial-form select { width: 100%; min-width: 0; }
+.commercial-form button { min-height: 42px; }
+.commercial-context { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 8px 0 20px; }
+.commercial-context span, .commercial-muted { color: var(--muted); font-size: 13px; }
+.commercial-notice { border-left: 3px solid var(--gold); }
+.commercial-notice p { margin-bottom: 0; }
+.commercial-coverage { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+.commercial-coverage > * { flex: 1 1 280px; min-width: 0; }
+.commercial-presets .pill { background: var(--panel-soft); color: var(--text); border: 1px solid var(--line); }
+.commercial-presets .pill-gold { background: var(--gold); color: var(--on-gold); border-color: var(--gold); }
+.commercial-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1100px) { .commercial-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .commercial-metrics { grid-template-columns: minmax(0, 1fr); } }
+.commercial-ranking .dense-table td:nth-child(2) { white-space: normal; min-width: 200px; max-width: 260px; overflow-wrap: anywhere; }

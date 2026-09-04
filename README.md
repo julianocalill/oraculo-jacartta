@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-02.md](docs/project-status-2026-09-02.md) **← start here** (current production state; includes the explanation of gross and net costs)
+1. [docs/project-status-2026-09-04.md](docs/project-status-2026-09-04.md) **← start here** (Análise Comercial: implementação, validação e estado de publicação)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
    — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every card/column/config field across the whole system — analytics, alerts, calculator, imports, params, sync status — exact formula, PT-BR, for team walkthroughs)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
@@ -58,7 +58,10 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-01.md](
 
 ## Current production state
 
-**Last update**: `2026-09-02` (see `docs/project-status-2026-09-02.md`) —
+**Last update**: `2026-09-04` (see `docs/project-status-2026-09-04.md`) —
+Análise Comercial por dia/período implementada; backend agregado e cron aplicados,
+frontend validado, publicação em andamento. Contrato: `docs/analise-comercial.md`.
+Estado anterior em produção:
 the cost-audit screen now explains the exact difference between **gross cost used**
 and **net cost used**, including source priority, tax-credit factors, kit behavior
 and the accounting caveat; the release is announced in the post-login pop-up —

@@ -9,6 +9,7 @@
   "exports": {
     ".": "./index.ts",
     "./fiscal.js": "./fiscal.js",
-    "./rpa.js": "./rpa.js"
+    "./rpa.js": "./rpa.js",
+    "./commercial-analysis.js": "./commercial-analysis.js"
   }
 }

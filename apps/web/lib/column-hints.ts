@@ -1,6 +1,14 @@
 // Explicações das colunas calculadas (tooltip no hover do cabeçalho).
 // Ficam num só lugar para que ML e Shopee digam exatamente a mesma coisa.
 export const HINTS = {
+  commercialUnits: "Quantidade dos itens vinculados às NFs válidas do período. Item comercial preferencial; item fiscal como fallback. Kits e peças seguem a unidade da fonte.",
+  commercialRevenue: "Receita da NF válida distribuída entre seus produtos, pela data de emissão. Não soma a venda Shopee direta novamente.",
+  commercialPrice: "Receita faturada do SKU dividida pelas unidades apuradas no período.",
+  commercialCost: "Custo líquido total das unidades vendidas, calculado pelo motor fiscal canônico com overrides e componentes de kits. Pendente se alguma linha não tem custo válido.",
+  commercialTaxes: "ICMS, PIS/COFINS e DIFAL calculados pelo motor fiscal sobre as vendas do período.",
+  commercialFees: "Comissão estimada pelas regras de cada marketplace no motor fiscal. Pendente quando falta configuração para alguma venda.",
+  commercialProfit: "Receita menos custo líquido, impostos e comissão. Exibido somente quando todas as linhas do SKU têm custo e comissão. Não desconta Ads, despesas fixas, frete externo ou devoluções posteriores.",
+  commercialMargin: "Resultado dividido pela receita do SKU neste período. Pendente se falta custo ou comissão em qualquer linha; não reutiliza margem de 30 dias.",
   costAuditGrossUsed:
     "Custo unitário de aquisição antes dos créditos tributários. Prioridade: correção manual, custo médio do ERP, custo cadastrado e, para kits, soma dos componentes.",
   costAuditNetUsed:

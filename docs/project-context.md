@@ -27,6 +27,14 @@ The current product direction is practical executive intelligence for the operat
 - `Obsidian` can store durable project memory, but repository docs are the source of truth.
 - `AI agents` assist architecture, coding, review and documentation, but repository files remain the source of truth.
 
+## Current state on 2026-09-04
+
+Análise Comercial diária/por intervalo implementada em `/analise-comercial`.
+A data é a emissão da NF e a margem vem do motor fiscal existente. Consulta em
+cache com cron horário e cobertura explícita de itens/custo/comissão.
+Estado de validação/publicação: `docs/project-status-2026-09-04.md`.
+Contrato e operação: `docs/analise-comercial.md`.
+
 ## Current state on 2026-09-01
 
 - **Inteligência de Mercado** and the cost double-check in **Parâmetros** are in

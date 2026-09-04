@@ -500,3 +500,15 @@ Keep the following documented in the repo:
 - cron ownership
 - rollback notes
 - local fallback env loading for `apps/web`
+
+
+## Análise Comercial — 04/09/2026
+
+`/analise-comercial` consulta `oraculo_commercial_analysis` como authenticated.
+Cache diário por canal/SKU, totais de NFs e controle de dias processados nas
+tabelas `oraculo_commercial_daily`, `oraculo_commercial_coverage` e
+`oraculo_commercial_days`. O cron `oraculo-commercial-hourly` executa
+`oraculo_commercial_tick()` em `:42`, timeout de 5min: últimos 10 dias + lote
+histórico de até 7 dias. Saúde acompanhada por `refreshed_at` em `/status`.
+Motor reaproveitado: `oraculo_fiscal_margin_lines` (data de emissão da NF).
+Contrato, limites e recuperação: `docs/analise-comercial.md`.

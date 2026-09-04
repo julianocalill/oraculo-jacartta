@@ -289,6 +289,16 @@ async function latestQtyCacheRun(supabase: ReturnType<typeof createSupabaseAdmin
   } as SyncRun;
 }
 
+// Dia mais recente, inclusive sem vendas: o controle não depende de linhas de SKU.
+async function latestCommercialRun(supabase: ReturnType<typeof createSupabaseAdminClient>) {
+  const { data, error } = await supabase.from("oraculo_commercial_days")
+    .select("day, refreshed_at").order("day", { ascending: false }).limit(1).maybeSingle();
+  if (error || !data) return null;
+  const stale = data.day !== todayBrt() || Date.now() - Date.parse(data.refreshed_at) > 2 * 60 * 60 * 1000;
+  return { started_at: data.refreshed_at, finished_at: data.refreshed_at,
+    status: stale ? "partial" : "success", error_message: stale ? "Resumo diário atrasado" : null } as SyncRun;
+}
+
 // Cache curto (60s): é página de monitoramento, mas as rotinas rodam em
 // escala de minutos/horas — 60s de defasagem não muda nenhum selo, e evita
 // refazer as queries a cada F5 do operador.
@@ -326,7 +336,7 @@ async function loadStatusUncached() {
   const [
     tokenResult, ordersRun, stockRun, invoicesRun, backfillRun, mercadolivreRun,
     importacoesAisRun, shopeeReturnsRun, shopeeReconciliationRun, mercadolivreReturnsRun, returnsCacheRun,
-    bipFulfillmentRun, qtyCacheRun, fullPlannerRun, watermarks
+    bipFulfillmentRun, qtyCacheRun, fullPlannerRun, watermarks, commercialRun
   ] = await Promise.all([
     supabase
       .from("olist_oauth_tokens")
@@ -349,7 +359,8 @@ async function loadStatusUncached() {
     latestRun(supabase, "bip_fulfillment_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message"),
     latestQtyCacheRun(supabase),
     latestRun(supabase, "oraculo_full_planning_runs", "started_at, finished_at, status, records_upserted:suggestions_written, error_message, metadata"),
-    loadDataWatermarks(supabase)
+    loadDataWatermarks(supabase),
+    latestCommercialRun(supabase)
   ]);
 
   const token = (tokenResult.data as TokenRow | null) ?? null;
@@ -402,6 +413,9 @@ async function loadStatusUncached() {
       : "",
     brtDate(qtyCacheRun?.started_at) !== today
       ? "Cache de quantidade por canal/SKU (Previsão de Vendas) não foi atualizado hoje."
+      : "",
+    !commercialRun || commercialRun.status !== "success"
+      ? "Análise Comercial: resumo diário ausente ou atrasado há mais de 2 horas."
       : "",
     runFailed(fullPlannerRun)
       ? `Planejamento Full da Agenda falhou: ${fullPlannerRun?.error_message ?? "sem mensagem"}`
@@ -493,6 +507,12 @@ async function loadStatusUncached() {
         label: "Cache de quantidade (Previsão de Vendas)",
         run: qtyCacheRun,
         coverage: "Reescreve os últimos 10 dias de quantidade por canal/SKU, de hora em hora"
+      },
+      {
+        key: "commercial-cache",
+        label: "Análise Comercial · vendas e margem",
+        run: commercialRun,
+        coverage: "Recalcula últimos 10 dias de hora em hora (:42) e revisa histórico em lotes de 7 dias"
       },
       {
         key: "agenda-full-planner",

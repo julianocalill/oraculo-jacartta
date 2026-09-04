@@ -37,6 +37,7 @@ export type TabDefinition = {
 
 export const TABS = [
   { key: "analytics", label: "Analytics", href: "/", group: "main", paths: ["/", "/export-fiscal"], sector: "analitico" },
+  { key: "analise-comercial", label: "Análise Comercial", href: "/analise-comercial", group: "main", paths: ["/analise-comercial"], sector: "comercial" },
   { key: "pedidos", label: "Pedidos", href: "/pedidos", group: "main", paths: ["/pedidos"], sector: "comercial" },
   { key: "mais-vendidos", label: "Mais Vendidos", href: "/mais-vendidos", group: "main", paths: ["/mais-vendidos"], sector: "analitico" },
   { key: "skus", label: "SKUs", href: "/skus", group: "main", paths: ["/skus"], sector: "analitico" },

@@ -24,6 +24,18 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-09-04-analise-comercial",
+    title: "Análise comercial por dia e período",
+    summary: "Veja quais produtos mais venderam e qual margem cada um deixou.",
+    publishedAt: "2026-09-04T11:52:00-03:00",
+    changes: [{
+      title: "Vendas e margem na mesma tela",
+      description: "Escolha hoje, ontem ou um intervalo de datas, filtre a loja e ordene os produtos por unidades, receita ou margem. Custos e comissões pendentes ficam sinalizados.",
+      href: "/analise-comercial",
+      linkLabel: "Abrir Análise Comercial"
+    }]
+  },
+  {
     id: "2026-09-02-custo-cadastrado-produto-360",
     title: "Custo cadastrado no Produto 360",
     summary: "O diagnóstico agora mostra o custo bruto da Olist ao lado do custo líquido usado.",

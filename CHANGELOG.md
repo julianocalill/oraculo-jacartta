@@ -2,6 +2,16 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-04] — Análise Comercial diária e por intervalo
+
+- Nova aba no setor Comercial com datas inclusivas, atalhos de período, loja,
+  busca por produto/SKU e ranking ordenável por unidades, receita e margem.
+- Quantidade, receita e resultado usam as mesmas NFs válidas e o motor fiscal
+  existente. SKUs sem custo ou comissão permanecem com margem pendente.
+- Cache diário, cron horário, RLS e monitoramento em `/status`; consulta de
+  11 dias medida em 20,773 ms como usuário autenticado.
+- Documentação: `docs/analise-comercial.md` e `docs/project-status-2026-09-04.md`.
+
 ## [2026-09-02] — Custo cadastrado no Produto 360
 
 - O Produto 360 passou a mostrar o custo bruto cadastrado diretamente na Olist,
