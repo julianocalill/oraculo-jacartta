@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { OperationLink as Link } from "../components/operation-provider";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
 import { requireTabAccess } from "../../lib/auth/access";
 import { NoAccess } from "../components/no-access";

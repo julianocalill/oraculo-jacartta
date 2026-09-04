@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { getRequestOperation, type OperationId } from "../../lib/operation-context";
+import { OperationLink as Link } from "../components/operation-provider";
 import { unstable_cache } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { requireTabAccess } from "../../lib/auth/access";
@@ -130,12 +131,14 @@ function summarize(items: CurveItem[], byVolume: boolean): CurveSummary[] {
 // Cache de 5min compartilhado entre usuários: a curva vem de RPC global (mesmo
 // resultado para todo mundo) e muda no ritmo dos syncs, não por navegação.
 // unstable_cache não pode ler cookies(), por isso o client aqui é o admin.
-const loadSalesCurve = unstable_cache(loadSalesCurveUncached, ["sales-curve"], {
+const loadSalesCurveCached = unstable_cache(loadSalesCurveUncached, ["sales-curve"], {
   revalidate: 300
 });
 
-async function loadSalesCurveUncached() {
-  const supabase = createSupabaseAdminClient();
+async function loadSalesCurve() { return loadSalesCurveCached(await getRequestOperation()); }
+
+async function loadSalesCurveUncached(operation: OperationId) {
+  const supabase = createSupabaseAdminClient({ operation });
   const { data, error } = await supabase.rpc("oraculo_sales_curve");
   if (error) throw error;
   const items = (data ?? []) as CurveItem[];
@@ -171,12 +174,14 @@ async function loadSalesCurveByVolume(
 
 // Nomes de canal vêm do cache diário de quantidade por canal (barato) e mudam
 // pouco: 1h de cache basta e evita uma ida ao banco por navegação.
-const loadChannels = unstable_cache(loadChannelsUncached, ["sales-curve-channels"], {
+const loadChannelsCached = unstable_cache(loadChannelsUncached, ["sales-curve-channels"], {
   revalidate: 3600
 });
 
-async function loadChannelsUncached() {
-  const supabase = createSupabaseAdminClient();
+async function loadChannels() { return loadChannelsCached(await getRequestOperation()); }
+
+async function loadChannelsUncached(operation: OperationId) {
+  const supabase = createSupabaseAdminClient({ operation });
   const { data, error } = await supabase.rpc("oraculo_sales_curve_channels");
   if (error) throw error;
   return ((data ?? []) as { channel_name: string }[])

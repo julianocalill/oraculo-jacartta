@@ -1,3 +1,5 @@
+import { parseOperationPath, operationHref } from "@oraculo/domain/operations.js";
+import { tabForPath } from "./lib/auth/path-tabs";
 import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_PATHS = [
@@ -8,8 +10,8 @@ const PUBLIC_PATHS = [
   "/tiktokUdTXf8xKegiqtg4LrWcbwYa9Yd1UVu8t.txt"
 ];
 
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+async function authenticate(request: NextRequest) {
+  const { path: pathname } = parseOperationPath(request.nextUrl.pathname);
 
   if (process.env.NODE_ENV !== "production") {
     return NextResponse.next();
@@ -126,6 +128,36 @@ function readJwtExpiration(token: string) {
   } catch {
     return null;
   }
+}
+
+
+export async function middleware(request: NextRequest) {
+  const parsed = parseOperationPath(request.nextUrl.pathname);
+  if (request.nextUrl.pathname.startsWith("/o/") && !parsed.operation) {
+    return new NextResponse("Operação inválida", { status: 404 });
+  }
+  const operation = parsed.operation?.id ?? "uberlandia";
+  request.headers.set("x-oraculo-operation", operation);
+  request.headers.set("x-oraculo-path", parsed.path);
+  const response = await authenticate(request);
+  if (!response.headers.has("x-middleware-next")) return response;
+  if (parsed.operation) {
+    const url = request.nextUrl.clone();
+    url.pathname = parsed.path;
+    const rewritten = NextResponse.rewrite(url, { request: { headers: request.headers } });
+    for (const cookie of response.cookies.getAll()) rewritten.cookies.set(cookie);
+    return rewritten;
+  }
+  if ((request.method === "GET" || request.method === "HEAD") && tabForPath(parsed.path)) {
+    const url = request.nextUrl.clone();
+    url.pathname = operationHref(parsed.path, "uberlandia");
+    const redirected = NextResponse.redirect(url);
+    for (const cookie of response.cookies.getAll()) redirected.cookies.set(cookie);
+    return redirected;
+  }
+  const next = NextResponse.next({ request: { headers: request.headers } });
+  for (const cookie of response.cookies.getAll()) next.cookies.set(cookie);
+  return next;
 }
 
 export const config = {

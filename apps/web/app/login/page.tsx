@@ -42,11 +42,7 @@ async function login(formData: FormData) {
 
   await setAuthCookies(data.session.access_token, data.session.refresh_token);
 
-  // Manda para `next` só se a aba estiver liberada; senão, primeira aba do usuário.
-  const target = next.startsWith("/") ? next : "/";
-  const targetPath = target.split("?")[0] ?? "/";
-  if (isAllowedPath(data.user, targetPath)) redirect(target);
-  redirect(firstAllowedHref(data.user) ?? "/");
+  redirect("/operacoes");
 }
 
 async function createFirstAdmin(formData: FormData) {

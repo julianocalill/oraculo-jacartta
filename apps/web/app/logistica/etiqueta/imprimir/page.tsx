@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { scopedHref } from "../../../../lib/operation-context";
+import { OperationLink as Link } from "../../../components/operation-provider";
 import { headers } from "next/headers";
 import { requireTabAccess } from "../../../../lib/auth/access";
 import { renderQrSvg } from "../../../../lib/qrcode";
@@ -106,7 +107,7 @@ export default async function ImprimirPage({
     );
   }
 
-  const paleteUrl = await absoluteUrl(`/logistica/palete/${palete.code}`);
+  const paleteUrl = await absoluteUrl(await scopedHref(`/logistica/palete/${palete.code}`));
   const linhas = palete.itens.map((item) =>
     formatLabelLine(palete.product_label, item.variation_label, item.quantity)
   );

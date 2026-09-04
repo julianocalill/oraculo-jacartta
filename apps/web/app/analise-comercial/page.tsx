@@ -1,4 +1,5 @@
-import Link from 'next/link';
+import { OperationForm } from "../components/operation-provider";
+import { OperationLink as Link } from "../components/operation-provider";
 import { commercialPeriod, commercialTotals, commercialMargin } from '@oraculo/domain/commercial-analysis.js';
 import { requireTabAccess } from '../../lib/auth/access';
 import { loadActionableAlertCount } from '../../lib/alert-count';
@@ -73,7 +74,7 @@ export default async function CommercialPage({ searchParams }: { searchParams?: 
         {presets.map((preset) => <Link key={preset.label} className={preset.start === start && preset.end === end ? 'pill pill-gold' : 'pill'}
           href={`/analise-comercial?${new URLSearchParams({ start: preset.start, end: preset.end, ...(params.canal ? { canal: params.canal } : {}) })}`}>{preset.label}</Link>)}
       </nav>
-      <form key={`${start}:${end}:${params.canal ?? ""}:${query}`} className="filter-form commercial-form" action="/analise-comercial">
+      <OperationForm key={`${start}:${end}:${params.canal ?? ""}:${query}`} className="filter-form commercial-form" action="/analise-comercial">
         <label><span>Data inicial</span><input name="start" type="date" defaultValue={start} max={today} required /></label>
         <label><span>Data final</span><input name="end" type="date" defaultValue={end} max={today} required /></label>
         <label><span>Loja / canal</span><select name="canal" defaultValue={params.canal ?? ''}><option value="">Todas as lojas</option>
@@ -81,7 +82,7 @@ export default async function CommercialPage({ searchParams }: { searchParams?: 
         </select></label>
         <label><span>Buscar no ranking</span><input name="q" type="search" defaultValue={query} placeholder="Nome do produto ou SKU" /></label>
         <button type="submit">Analisar período</button>
-      </form>
+      </OperationForm>
     </section>
     {failure ? <section className="panel" role="alert"><h2>Análise indisponível</h2><p>{failure}</p></section> : data ? <>
       <div className="commercial-context"><strong>{rangeLabel}</strong><span>{params.canal || 'Todas as lojas'} · Última atualização: {timestamp(data.latest_refresh)}</span></div>

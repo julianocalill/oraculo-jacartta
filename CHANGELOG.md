@@ -2,6 +2,18 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-04] — Explicações em todas as colunas
+
+- Todos os cabeçalhos das tabelas exibem um marcador `?` com explicação em
+  hover, foco por teclado e toque.
+- O glossário central preserva descrições precisas de métricas como margem,
+  cobertura, custo, previsão e reconciliação, e acrescenta contexto específico
+  para as demais telas.
+- `SortableTable` e a tabela própria de SKUs já renderizam as ajudas; um
+  reforço global cobre tabelas legadas e futuros cabeçalhos `data-table`.
+- Inventário automatizado confirmou descrição específica para todos os
+  cabeçalhos literais existentes no frontend.
+
 ## [2026-09-04] — Análise Comercial diária e por intervalo
 
 - Nova aba no setor Comercial com datas inclusivas, atalhos de período, loja,
@@ -13,6 +25,18 @@ Histórico de entregas e mudanças significativas.
 - Documentação: `docs/analise-comercial.md` e `docs/project-status-2026-09-04.md`.
 - Publicada no commit `96ad31c`, Vercel `dpl_EaNG4CybVy9KZbY2kUsNKNMgnAbC`
   (`Ready`), nos dois remotes; histórico de 01/06 a 04/09 carregado.
+
+## [2026-09-02] — Recuperação da separação multicanal das 13h30
+
+- A execução agendada das 13:30 foi interrompida com segurança porque 1.126
+  pedidos Olist chegaram ao cursor operacional com `itens: []`; nenhuma
+  mensagem incompleta foi enviada e o cursor permaneceu na posição das 07:00.
+- A hidratação de detalhes passou a considerar arrays de itens vazios como
+  pendentes e ganhou atraso configurável, mais tentativas e respeito ao
+  `Retry-After` para reduzir falhas por limite da API Olist.
+- Após a hidratação, a recuperação processou 3.534 pedidos sem lacunas, enviou
+  a mensagem e o CSV pelo WhatsApp e avançou o cursor para
+  `2026-09-02T18:20:33.276Z` na execução n8n `41522`.
 
 ## [2026-09-02] — Custo cadastrado no Produto 360
 
@@ -80,8 +104,8 @@ Histórico de entregas e mudanças significativas.
 - Pedidos de todos os marketplaces integrados à Olist passam a alimentar o
   fechamento operacional das 07:00 e 13:30 no n8n.
 - A RPC `olist_multichannel_separation_report` consolida somente pedidos novos
-  pelo cursor `first_seen_at`, exclui cancelados e soma SKU + produto +
-  descritivo iguais entre canais sem expor dados pessoais.
+  pelo cursor `first_seen_at`, exclui cancelados e entrega os itens sem expor
+  dados pessoais; a saída operacional soma todas as ocorrências do mesmo SKU.
 - O sincronismo de pedidos passou a consultar os mais recentes primeiro a cada
   15 minutos, evitando que pedidos novos aguardem atrás do backfill retomável.
 - A automação multicanal foi ativada após prévia integral; a rotina legada que
@@ -89,6 +113,9 @@ Histórico de entregas e mudanças significativas.
 - A cubagem reaproveita os vínculos SKU Olist ↔ perfil existentes e reconhece
   com segurança os perfis cadastrados de potes marmita e bambu; variações sem
   capacidade conhecida permanecem explicitamente marcadas como sem cubagem.
+- A lista final mantém uma linha por SKU, exibe somente SKU, produto,
+  descritivo, itens vendidos, caixas e unidades avulsas, remove resultados
+  abaixo de duas caixas e ordena da maior para a menor quantidade de caixas.
 
 ## [2026-09-01] — Inteligência de Mercado e conferência de custos
 
@@ -2028,3 +2055,10 @@ Validação: teste de paridade extraiu o `calculate()` do app.js original e comp
 - SKU ranking, rupture watchlist, stock coverage estimation.
 - Manual parameter management per channel, SKU, UF.
 - Read-only Shopee Donacor data.
+
+## 2026-09-04 — Fundação multioperação e Giracasa
+
+- URLs e menu passaram a carregar a operação ativa; usuários podem receber abas independentes em Uberlândia e Giracasa.
+- Dados e funções da Giracasa ganharam namespace, RLS e guards próprios, sem fallback para a base de MG; permissões antigas migram só para Uberlândia.
+- Motor fiscal `gira-casa-v1`, regras financeiras por SKU/vigência, teste de isolamento, geração segura dos conectores e carga inicial de 90 dias adicionados.
+- Giracasa permanece desativada até credenciais, carga e números serem validados.

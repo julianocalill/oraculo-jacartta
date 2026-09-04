@@ -1,3 +1,4 @@
+import { getRequestOperation, type OperationId } from "../../lib/operation-context";
 import { unstable_cache } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { requireTabAccess } from "../../lib/auth/access";
@@ -302,7 +303,7 @@ async function latestCommercialRun(supabase: ReturnType<typeof createSupabaseAdm
 // Cache curto (60s): é página de monitoramento, mas as rotinas rodam em
 // escala de minutos/horas — 60s de defasagem não muda nenhum selo, e evita
 // refazer as queries a cada F5 do operador.
-const loadStatus = unstable_cache(loadStatusUncached, ["status-panel"], {
+const loadStatusCached = unstable_cache(loadStatusUncached, ["status-panel"], {
   revalidate: 60
 });
 
@@ -330,8 +331,10 @@ async function loadDataWatermarks(supabase: ReturnType<typeof createSupabaseAdmi
   };
 }
 
-async function loadStatusUncached() {
-  const supabase = createSupabaseAdminClient();
+async function loadStatus() { return loadStatusCached(await getRequestOperation()); }
+
+async function loadStatusUncached(operation: OperationId) {
+  const supabase = createSupabaseAdminClient({ operation });
 
   const [
     tokenResult, ordersRun, stockRun, invoicesRun, backfillRun, mercadolivreRun,

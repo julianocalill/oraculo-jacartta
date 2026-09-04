@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { OperationLink as Link } from "../../components/operation-provider";
 import { askOllama } from "../ollama";
 import type { Candidates } from "../ask";
 import type { CatalogObject } from "../data";

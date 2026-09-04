@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { OperationLink as Link } from "../components/operation-provider";
 
 // Sub-abas da Documentação, no padrão de ImportacoesTabs/DevolucoesTabs.
 const TABS = [

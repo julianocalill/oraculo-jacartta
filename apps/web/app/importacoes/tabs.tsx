@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { OperationLink as Link } from "../components/operation-provider";
 
 // Navegação entre as abas de Importações
 export function ImportacoesTabs({ active }: { active: "mapa" | "cadastro" }) {

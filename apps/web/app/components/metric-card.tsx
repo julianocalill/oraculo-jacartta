@@ -5,7 +5,7 @@
 // e duas cópias divergiriam na primeira mudança de design. Mesmo componente,
 // mesma linguagem visual em toda a aplicação.
 
-import Link from "next/link";
+import { OperationLink as Link } from "./operation-provider";
 import { Sparkline } from "./fiscal-charts";
 
 export type MetricDelta = {

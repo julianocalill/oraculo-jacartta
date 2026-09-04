@@ -2983,7 +2983,7 @@ h2 {
   font-family: var(--mono);
 }
 
-/* Colunas com explicação: marca "?" + tooltip no hover do cabeçalho */
+/* Toda coluna tem explicação: hover no desktop, foco/toque e teclado. */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -2998,6 +2998,10 @@ h2 {
 .data-table th.th-has-hint {
   position: relative;
 }
+.data-table th.th-has-hint:focus-visible {
+  outline: 2px solid var(--indigo);
+  outline-offset: -2px;
+}
 .th-hint-mark {
   display: inline-flex;
   align-items: center;
@@ -3010,9 +3014,13 @@ h2 {
   font-size: 9px;
   font-weight: 700;
   line-height: 1;
+  margin-inline-start: 5px;
+  cursor: help;
   transition: color 140ms ease, border-color 140ms ease;
 }
-.data-table th.th-has-hint:hover .th-hint-mark {
+.data-table th.th-has-hint:hover .th-hint-mark,
+.data-table th.th-has-hint:focus .th-hint-mark,
+.data-table th.th-has-hint:focus-within .th-hint-mark {
   color: var(--gold-text);
   border-color: var(--gold);
 }
@@ -3048,7 +3056,9 @@ h2 {
   left: auto;
   right: 0;
 }
-.data-table th.th-has-hint:hover::after {
+.data-table th.th-has-hint:hover::after,
+.data-table th.th-has-hint:focus::after,
+.data-table th.th-has-hint:focus-within::after {
   opacity: 1;
   transform: translateY(0);
 }
@@ -6651,3 +6661,14 @@ a.pill-gold:hover,
 @media (max-width: 1100px) { .commercial-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 520px) { .commercial-metrics { grid-template-columns: minmax(0, 1fr); } }
 .commercial-ranking .dense-table td:nth-child(2) { white-space: normal; min-width: 200px; max-width: 260px; overflow-wrap: anywhere; }
+
+/* A operação faz parte de cada URL e permanece visível durante a navegação. */
+.operation-switcher { display: grid; gap: 6px; padding: 12px 0 18px; font-size: 13px; }
+.operation-switcher a { color: var(--gold); font-size: 12px; }
+.operation-picker { width: min(640px, 100%); }
+.operation-options { display: grid; gap: 16px; margin: 24px 0; }
+.operation-option { display: flex; justify-content: space-between; gap: 16px; padding: 24px; text-decoration: none; }
+.operation-option:hover { border-color: var(--gold); }
+.operation-permissions { display: grid; gap: 18px; grid-column: 1 / -1; min-width: 0; }
+.operation-permissions fieldset { border: 1px solid var(--border); border-radius: 12px; padding: 16px; min-width: 0; }
+.operation-permissions legend { padding: 0 8px; color: var(--gold); }

@@ -1,3 +1,4 @@
+import { getRequestOperation, type OperationId } from "../../lib/operation-context";
 // Camada de dados compartilhada das abas do canal Mercado Livre
 // (Visão geral e Sugestão de Envio Full).
 import { unstable_cache } from "next/cache";
@@ -186,12 +187,14 @@ export type MlData = {
 // navegação. Dado global, muda no ritmo do sync horário. unstable_cache não
 // pode ler cookies(), por isso o client é o admin. Se o payload passar de
 // ~2MB o Next não armazena (fail-open: comportamento igual ao de antes).
-export const loadMlData = unstable_cache(loadMlDataUncached, ["ml-data"], {
+const loadMlDataCached = unstable_cache(loadMlDataUncached, ["ml-data"], {
   revalidate: 300
 });
 
-async function loadMlDataUncached(): Promise<MlData | null> {
-  const supabase = createSupabaseAdminClient();
+export async function loadMlData() { return loadMlDataCached(await getRequestOperation()); }
+
+async function loadMlDataUncached(operation: OperationId): Promise<MlData | null> {
+  const supabase = createSupabaseAdminClient({ operation });
 
   const items = await fetchAllPages<MlItem>((from, to) =>
     supabase

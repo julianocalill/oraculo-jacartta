@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { OperationLink as Link } from "../components/operation-provider";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { requireTabAccess } from "../../lib/auth/access";
 import { loadActionableAlertCount } from "../../lib/alert-count";

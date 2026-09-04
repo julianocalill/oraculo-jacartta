@@ -1,4 +1,6 @@
-import { unstable_cache } from "next/cache";
+import { cache } from "react";
+import { operationGrant } from "@oraculo/domain/operations.js";
+import { getRequestOperation } from "./operation-context";
 import { createSupabaseAdminClient } from "./supabase/admin";
 
 // Diretório de usuários do Oráculo para features colaborativas (Agenda).
@@ -26,26 +28,25 @@ export function effectiveUserId(user: { id: string }): string {
 // Diretório é dado global (igual para todo usuário logado) e muda raramente —
 // cache compartilhado de 5 min, mesmo racional do alert-count: o fetch interno
 // usa o admin client porque unstable_cache não pode ler cookies().
-const listOraculoUsersCached = unstable_cache(
-  async (): Promise<OraculoUser[]> => {
+const listOraculoUsersCached = cache(
+  async (operation: string): Promise<OraculoUser[]> => {
     const supabase = createSupabaseAdminClient();
     const { data, error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
     if (error) throw error;
 
     return data.users
+      .filter((user) => operationGrant(user, operation) && !(user.banned_until && new Date(user.banned_until).getTime() > Date.now()))
       .map((user) => ({
         id: user.id,
         name: String(user.user_metadata?.full_name || user.email || "Sem nome"),
         email: user.email ?? ""
       }))
       .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-  },
-  ["oraculo-users-directory"],
-  { revalidate: 300 }
+  }
 );
 
 export async function listOraculoUsers(): Promise<OraculoUser[]> {
-  return listOraculoUsersCached();
+  return listOraculoUsersCached(await getRequestOperation());
 }
 
 export async function mapOraculoUsersById(): Promise<Map<string, OraculoUser>> {

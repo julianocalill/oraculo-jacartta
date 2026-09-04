@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { OperationLink as Link } from "../components/operation-provider";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
 import {
   loadFiscalSkuCoverageSnapshot,

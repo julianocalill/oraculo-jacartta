@@ -1,3 +1,4 @@
+import { OperationAnchor } from "../../components/operation-provider";
 // Consolidado de um lote: o que será emitido, quanto sai de retenção, e o
 // botão que transforma isso em ZIP de PDFs.
 //
@@ -5,8 +6,9 @@
 // os recibos existem como documento — e um recibo emitido com a retenção errada
 // é retrabalho na contabilidade, não um F5.
 
-import { redirect, notFound } from "next/navigation";
-import Link from "next/link";
+import { notFound } from "next/navigation";
+import { redirect } from "../../../lib/operation-navigation";
+import { OperationLink as Link } from "../../components/operation-provider";
 import { assertTabAccess, requireTabAccess } from "../../../lib/auth/access";
 import { effectiveUserId } from "../../../lib/users";
 import { loadActionableAlertCount } from "../../../lib/alert-count";
@@ -25,9 +27,9 @@ async function aprovarLote(formData: FormData) {
   "use server";
   const user = await assertTabAccess("rpa");
   const id = String(formData.get("batch_id") ?? "");
-  if (!id) redirect("/rpa");
+  if (!id) await redirect("/rpa");
   await approveRpaBatch(id, effectiveUserId(user));
-  redirect(`/rpa/${id}?baixar=1`);
+  await redirect(`/rpa/${id}?baixar=1`);
 }
 
 async function excluirLote(formData: FormData) {
@@ -35,7 +37,7 @@ async function excluirLote(formData: FormData) {
   await assertTabAccess("rpa");
   const id = String(formData.get("batch_id") ?? "");
   if (id) await deleteRpaBatch(id);
-  redirect("/rpa");
+  await redirect("/rpa");
 }
 
 export default async function RpaLotePage({
@@ -164,9 +166,9 @@ export default async function RpaLotePage({
 
         {aprovado ? (
           <div className="upload-form">
-            <a className="button-link" href={zipHref}>
+            <OperationAnchor className="button-link" href={zipHref}>
               Baixar ZIP com {batch.emitidos} RPAs
-            </a>
+            </OperationAnchor>
           </div>
         ) : (
           <form action={aprovarLote} className="upload-form">
