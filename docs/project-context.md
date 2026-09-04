@@ -29,7 +29,7 @@ The current product direction is practical executive intelligence for the operat
 
 ## Current state on 2026-09-04
 
-Análise Comercial diária/por intervalo implementada em `/analise-comercial`.
+Análise Comercial diária/por intervalo em produção em `/analise-comercial`.
 A data é a emissão da NF e a margem vem do motor fiscal existente. Consulta em
 cache com cron horário e cobertura explícita de itens/custo/comissão.
 Estado de validação/publicação: `docs/project-status-2026-09-04.md`.

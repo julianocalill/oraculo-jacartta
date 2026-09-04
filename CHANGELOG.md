@@ -11,6 +11,8 @@ Histórico de entregas e mudanças significativas.
 - Cache diário, cron horário, RLS e monitoramento em `/status`; consulta de
   11 dias medida em 20,773 ms como usuário autenticado.
 - Documentação: `docs/analise-comercial.md` e `docs/project-status-2026-09-04.md`.
+- Publicada no commit `96ad31c`, Vercel `dpl_EaNG4CybVy9KZbY2kUsNKNMgnAbC`
+  (`Ready`), nos dois remotes; histórico de 01/06 a 04/09 carregado.
 
 ## [2026-09-02] — Custo cadastrado no Produto 360
 

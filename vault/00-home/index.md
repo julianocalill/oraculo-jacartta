@@ -145,3 +145,13 @@ Canonical list: "Fora do escopo / próximos naturais" em
 - Backfill throughput: keep `--delay-ms=900 --concurrency=2 --limit=2000 --skip-audit` unless a new rate-limit test proves safer.
 - Official fiscal margin, ROI and ROAS stay gated until the SKU candidate view is audited. Operational `/skus` margin/ROI can stay visible with partial-label copy.
 - Classify NF `394638` / `Sem canal` business-wise before changing channel mapping.
+
+
+## Update 2026-09-04 — Análise Comercial
+
+- Nova aba em Comercial: produtos mais vendidos e margem por dia/intervalo,
+  com filtro por loja e busca por SKU/nome.
+- Usa a data de emissão da NF e o motor fiscal canônico; cobre explicitamente
+  receita sem itens e SKUs com custo/comissão pendente. Cache diário com cron.
+- Publicada e validada: `docs/project-status-2026-09-04.md`.
+- Contrato e recuperação: `docs/analise-comercial.md`.

@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-04.md](docs/project-status-2026-09-04.md) **← start here** (Análise Comercial: implementação, validação e estado de publicação)
+1. [docs/project-status-2026-09-04.md](docs/project-status-2026-09-04.md) **← start here** (Análise Comercial em produção: implementação e validação)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
    — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every card/column/config field across the whole system — analytics, alerts, calculator, imports, params, sync status — exact formula, PT-BR, for team walkthroughs)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
@@ -59,8 +59,8 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-01.md](
 ## Current production state
 
 **Last update**: `2026-09-04` (see `docs/project-status-2026-09-04.md`) —
-Análise Comercial por dia/período implementada; backend agregado e cron aplicados,
-frontend validado, publicação em andamento. Contrato: `docs/analise-comercial.md`.
+Análise Comercial por dia/período em produção, com backend agregado, cron
+horário, ranking por quantidade e margem no período. Contrato: `docs/analise-comercial.md`.
 Estado anterior em produção:
 the cost-audit screen now explains the exact difference between **gross cost used**
 and **net cost used**, including source priority, tax-credit factors, kit behavior
@@ -103,8 +103,8 @@ terceiros em escala e primeira geração de PDF por biblioteca).
 
 ### Deployment & auth
 - Production URL: `https://oraculo.oliverhome.com.br`
-- Latest documented feature deploy: `dpl_3ZtT1c3R8ey1Q9eqcBDYtLooV64h`
-  (2026-09-01, novidades pós-login por 48 horas, `Ready` em produção)
+- Latest documented feature deploy: `dpl_EaNG4CybVy9KZbY2kUsNKNMgnAbC`
+  (2026-09-04, Análise Comercial diária e por intervalo, `Ready` em produção)
 - **Dois remotes**: `origin` = `Grupo-Jacartta/oraculo`, `personal` = `julianocalill/oraculo-jacartta`.
   A Vercel escuta o **`personal`** — push só no `origin` não publica.
 - Business-data reads run under RLS via an authenticated client (anon key + user

@@ -45,6 +45,14 @@ SKUs, impedindo corte de 1.000 linhas do PostgREST.
 - Cron horário executou com sucesso em 04/09 às 11:42 BRT (40s). Anonymous
   sem acesso à RPC e authenticated sem acesso à função de refresh.
 
-Frontend validado; publicação em andamento nos dois remotes do projeto.
+## Publicação
+
+Frontend em produção, commit `96ad31c`, enviado a `origin` e `personal`.
+Deployment Vercel `dpl_EaNG4CybVy9KZbY2kUsNKNMgnAbC`, **READY**, com alias
+`oraculo.oliverhome.com.br`; a função `/analise-comercial` consta no build
+publicado em `gru1`. A rota pública mantém o redirecionamento para login;
+validação funcional autenticada foi feita localmente e no banco com RLS.
+A novidade pós-login tem ID `2026-09-04-analise-comercial`.
+
 Alterações locais anteriores em hidratação/separação multicanal e documentos de
 01/09 e 02/09 foram preservadas.
