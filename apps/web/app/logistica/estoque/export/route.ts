@@ -1,7 +1,7 @@
 // Export xlsx do estoque por depósito — reusa o builder da tela (regra #9).
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "../../../../lib/auth/session";
-import { canAccess } from "../../../../lib/auth/access";
+import { canAccessRequest } from "../../../../lib/auth/access";
 import { buildXlsx, fileStamp, xlsxResponse, type XlsxColumn } from "../../../../lib/xlsx";
 import { filterItems, loadEstoqueData } from "../data";
 
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return new Response("Não autorizado", { status: 401 });
-  if (!canAccess(user, "logistica")) return new Response("Sem acesso a esta aba", { status: 403 });
+  if (!(await canAccessRequest(user, "logistica"))) return new Response("Sem acesso a esta aba", { status: 403 });
 
   const params = req.nextUrl.searchParams;
   const filters = {

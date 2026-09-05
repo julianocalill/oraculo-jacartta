@@ -3,7 +3,7 @@
 // (analises/preco-produto-shopee-2026-08/).
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "../../../../lib/auth/session";
-import { canAccess } from "../../../../lib/auth/access";
+import { canAccessRequest } from "../../../../lib/auth/access";
 import { buildXlsx, fileStamp, xlsxResponse, type XlsxColumn } from "../../../../lib/xlsx";
 import {
   agrupaPorSku,
@@ -58,7 +58,7 @@ const COLUMNS: XlsxColumn[] = [
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return new Response("Não autorizado", { status: 401 });
-  if (!canAccess(user, "shopee")) return new Response("Sem acesso a esta aba", { status: 403 });
+  if (!(await canAccessRequest(user, "shopee"))) return new Response("Sem acesso a esta aba", { status: 403 });
 
   const sp = req.nextUrl.searchParams;
   const loja = Number(sp.get("loja")) || null;
