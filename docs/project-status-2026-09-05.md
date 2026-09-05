@@ -14,6 +14,12 @@ O web app usa rotas `/o/uberlandia/*` e `/o/giracasa/*`. Usuários com uma opera
 
 Páginas, Server Actions, formulários e exportações conferem operação ativa e aba no servidor. Clientes Supabase enviam `Accept-Profile` e `Content-Profile`; caches globais incluem a operação na chave. A tela da Giracasa permanece em preparação enquanto a operação estiver desativada.
 
+## Hotfix de disponibilidade
+
+Após a publicação do isolamento, as policies `operation_membership` chamavam a função de autorização diretamente e o PostgreSQL podia repeti-la para cada linha lida. Isso deixou páginas com tabelas grandes presas no carregamento. A migration `20260905211834_optimize_operation_membership_guards.sql` preserva a mesma autorização e transforma a chamada em initPlan, executado uma vez por consulta.
+
+Em produção, uma leitura autenticada dos 323.068 pedidos concluiu em 2,45 s e mostrou `InitPlan 1` com um único loop. No teste HTTP completo, `/o/uberlandia/skus` respondeu em 0,7 s e o painel `/o/uberlandia` em 6,5 s no primeiro carregamento, ambos com status 200 e conteúdo renderizado.
+
 ## Validação executada
 
 - clone local limpo com as cinco migrations na ordem de produção;
@@ -26,6 +32,7 @@ Páginas, Server Actions, formulários e exportações conferem operação ativa
 - exemplo SP→SP: receita 100, custo 40, ICMS 18, PIS/COFINS 5,55, DIFAL zero e lucro 26,45;
 - REST `public` e `giracasa` respondendo 200, com Giracasa vazia;
 - 26/26 Edge Functions Giracasa publicadas.
+- hotfix de RLS confirmado por `EXPLAIN ANALYZE` e smoke test HTTP autenticado.
 
 ## Próximo passo operacional
 
