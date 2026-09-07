@@ -512,3 +512,10 @@ tabelas `oraculo_commercial_daily`, `oraculo_commercial_coverage` e
 histórico de até 7 dias. Saúde acompanhada por `refreshed_at` em `/status`.
 Motor reaproveitado: `oraculo_fiscal_margin_lines` (data de emissão da NF).
 Contrato, limites e recuperação: `docs/analise-comercial.md`.
+
+## Operações (2026-09-05)
+
+- Uberlândia: schema `public`, perfil `jacarta`, rotas `/o/uberlandia/*`.
+- Giracasa/SP: schema `giracasa`, perfil `gira-casa`, rotas `/o/giracasa/*`; desativada até o checklist de `docs/giracasa-onboarding.md`.
+- Funções SP são geradas do mesmo fonte com nomes `giracasa-*`, schema fixo e secrets obrigatoriamente prefixados `GIRACASA_`; não existe fallback para credenciais MG.
+- Banco e motor `gira-casa-v1` aplicados em produção; 26 funções `giracasa-*` publicadas. Sem secrets, dados, usuários ou crons até concluir a carga e a conferência.

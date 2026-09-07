@@ -2028,3 +2028,10 @@ Validação: teste de paridade extraiu o `calculate()` do app.js original e comp
 - SKU ranking, rupture watchlist, stock coverage estimation.
 - Manual parameter management per channel, SKU, UF.
 - Read-only Shopee Donacor data.
+
+## 2026-09-07 — Restauração de disponibilidade
+
+- O domínio de produção foi restaurado para o deploy estável `dpl_4seDnHYCyQydNmYzgioTYSGs8iEe`, anterior à interface multioperação.
+- O código web voltou ao estado do commit `69f73f2`; as rotas originais voltaram a ser a entrada oficial.
+- Migrations, scripts, testes e documentação da Giracasa foram preservados, enquanto a operação continua desativada, sem usuários, credenciais, jobs ou carga.
+- Smoke test autenticado confirmou `/` e `/skus` com HTTP 200 e conteúdo renderizado.

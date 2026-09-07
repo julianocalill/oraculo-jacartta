@@ -155,8 +155,11 @@ claramente marcado como demonstração.
 Em 01/09, o fechamento de separação deixou de depender exclusivamente da API
 Shopee. A nova automação lê os pedidos de marketplace sincronizados da Olist,
 roda diariamente às 07:00 e 13:30 (America/Sao_Paulo) e entrega mensagens
-paginadas mais um CSV completo. A regra de consolidação soma somente linhas com
-o mesmo SKU, produto e descritivo.
+paginadas mais um CSV completo. A regra de consolidação soma todas as
+ocorrências do mesmo SKU e mantém apenas uma linha por SKU. A saída contém
+somente SKU, produto, descritivo, itens vendidos, caixas e unidades avulsas.
+Somente SKUs que totalizam ao menos duas caixas entram na lista, ordenados do
+maior para o menor número de caixas; unidades avulsas resolvem os empates.
 
 A migration `20260901181241_olist_multichannel_separation_cursor.sql` adiciona
 o cursor de primeira observação em `olist_orders` e a RPC agregada

@@ -2,6 +2,20 @@
 
 Continuidade: [estado anterior de 02/09](project-status-2026-09-02.md).
 
+## Explicações de colunas em todo o sistema
+
+Todas as tabelas `data-table` agora apresentam um `?` em cada cabeçalho. A
+explicação abre ao passar o mouse e também por foco/toque, para funcionar em
+desktop, celular e navegação por teclado. As tabelas ordenáveis recebem a
+descrição no próprio componente; um reforço no layout cobre os cabeçalhos
+legados e observa conteúdo incluído depois da navegação.
+
+O glossário fica centralizado em `apps/web/lib/column-hints.ts`, com definições
+compartilhadas e complementos por rota para termos que mudam de significado
+entre telas. Um inventário de todos os `<th>` e arrays de `SortableTable`
+confirmou que os cabeçalhos literais existentes possuem descrição específica.
+Mudança implementada localmente; publicação ainda não executada neste registro.
+
 ## Análise Comercial diária e por intervalo
 
 Implementada a aba `/analise-comercial`, em **Comercial**, com filtro de datas
@@ -56,3 +70,11 @@ A novidade pós-login tem ID `2026-09-04-analise-comercial`.
 
 Alterações locais anteriores em hidratação/separação multicanal e documentos de
 01/09 e 02/09 foram preservadas.
+
+## Preparação multioperação — Giracasa/SP
+
+O Oráculo agora tem contexto explícito de operação nas URLs e nas permissões por usuário/aba. O schema `giracasa` nasce isolado, vazio e desativado; não reutiliza dados ou credenciais de Uberlândia. O motor `gira-casa-v1`, testes de isolamento, builder de Edge Functions e runbook de carga de 90 dias estão versionados. A operação só será ativada em migration posterior à configuração das contas e à conferência dos números. Decisão: `docs/adr/ADR-006-operation-isolation.md`; operação: `docs/giracasa-onboarding.md`.
+
+### Estado de implantação da Giracasa às 18:10
+
+A migration de cadastro das operações foi aplicada em produção: 7/7 usuários foram migrados apenas para Uberlândia e nenhuma permissão Giracasa foi concedida; `giracasa.enabled=false`. A revisão automática bloqueou a migration seguinte porque ela altera em uma transação as 101 tabelas, 34 views, 94 funções próprias, RLS e grants. O SQL passou integralmente no clone local, mas não foi aplicado em produção e o web app não foi publicado. É necessária autorização explícita para esse blast radius. Não foram encontradas credenciais Giracasa no ambiente, portanto funções, backfill e jobs também não foram ativados.
