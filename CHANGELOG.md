@@ -2068,5 +2068,4 @@ Validação: teste de paridade extraiu o `calculate()` do app.js original e comp
 - Aplicadas as migrations de isolamento e do motor financeiro `gira-casa-v1`; o schema paulista nasceu vazio e a base de Uberlândia permaneceu disponível.
 - Publicadas 26 Edge Functions `giracasa-*`, todas usando o schema próprio e secrets prefixados, sem fallback para contas de MG.
 - Corrigido o contrato JavaScript para nunca cobrar DIFAL em SP→SP e adicionada validação explícita da operação em ações e exportações.
-- Corrigida a lentidão pós-login causada pela checagem de operação repetida por linha nas policies RLS; a autorização agora é avaliada uma vez por consulta.
 - Giracasa permanece desativada, sem usuários e sem crons até cadastrar credenciais próprias, importar 90 dias e validar a cobertura.
