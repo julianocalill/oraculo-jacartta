@@ -44,10 +44,6 @@ export function SidebarNav({ badges, tabs }: { badges?: Record<string, number | 
       <Link
         key={tab.href}
         href={tab.href}
-        // Todas as páginas são dinâmicas e consultam o banco. O prefetch
-        // automático disparava todas as abas do menu juntas após o login e
-        // saturava o caminho crítico do painel.
-        prefetch={false}
         className={active ? "nav-active" : undefined}
         aria-current={active ? "page" : undefined}
       >

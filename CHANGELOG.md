@@ -2069,6 +2069,4 @@ Validação: teste de paridade extraiu o `calculate()` do app.js original e comp
 - Publicadas 26 Edge Functions `giracasa-*`, todas usando o schema próprio e secrets prefixados, sem fallback para contas de MG.
 - Corrigido o contrato JavaScript para nunca cobrar DIFAL em SP→SP e adicionada validação explícita da operação em ações e exportações.
 - Corrigida a lentidão pós-login causada pela checagem de operação repetida por linha nas policies RLS; a autorização agora é avaliada uma vez por consulta.
-- Eliminada a espera indefinida na validação pós-login: a sessão passou a ser validada pelo PostgREST com leitura atual de `auth.users` e timeout de 8 s.
-- Desativado o prefetch das abas do menu, que disparava páginas dinâmicas e consultas pesadas em paralelo após o login.
 - Giracasa permanece desativada, sem usuários e sem crons até cadastrar credenciais próprias, importar 90 dias e validar a cobertura.

@@ -11,7 +11,7 @@ export { tabForPath } from "./path-tabs";
 // que editam os acessos dos outros.
 //
 // A verificação roda sempre no servidor, em cima do usuário devolvido por
-// `getCurrentUser()` (JWT validado pelo PostgREST e identidade lida ao vivo). O
+// `getCurrentUser()` (que valida o token via supabase.auth.getUser). O
 // middleware continua cuidando apenas de "logado ou não".
 
 import { readEnvValue, requireCurrentUser } from "./session";

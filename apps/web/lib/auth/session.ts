@@ -78,36 +78,6 @@ export function createSupabaseAuthClient() {
   });
 }
 
-type DatabaseCurrentUser = {
-  id: string;
-  email: string | null;
-  app_metadata: Record<string, unknown>;
-  user_metadata: Record<string, unknown>;
-};
-
-async function loadDatabaseCurrentUser(accessToken: string): Promise<DatabaseCurrentUser | null> {
-  try {
-    const response = await fetch(`${getSupabaseUrl().replace(/\/$/, "")}/rest/v1/rpc/oraculo_current_user`, {
-      method: "POST",
-      cache: "no-store",
-      signal: AbortSignal.timeout(8_000),
-      headers: {
-        apikey: getSupabaseAnonKey(),
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json"
-      },
-      body: "{}"
-    });
-
-    if (!response.ok) return null;
-    const value = await response.json() as DatabaseCurrentUser | null;
-    if (!value || typeof value.id !== "string") return null;
-    return value;
-  } catch {
-    return null;
-  }
-}
-
 export async function setAuthCookies(accessToken: string, refreshToken: string) {
   const store = await cookies();
   const secure = process.env.NODE_ENV === "production";
@@ -186,13 +156,15 @@ export const getCurrentUser = cache(async () => {
 
   if (!accessToken || !refreshToken) return null;
 
-  // PostgREST valida a assinatura e a função consulta auth.users ao vivo. Isso
-  // mantém revogações imediatas sem prender cada render no endpoint do GoTrue.
-  // O timeout impede uma indisponibilidade externa de deixar o skeleton eterno.
-  const user = await loadDatabaseCurrentUser(accessToken);
-  if (!user) return null;
+  // Valida o JWT direto (getUser(jwt)), sem setSession: setSession renovava o
+  // refresh token por fora do middleware e a rotação dupla derrubava a sessão
+  // em minutos (reuse detection do Supabase revoga a família inteira). Quem
+  // renova token agora é só o middleware.
+  const supabase = createSupabaseAuthClient();
+  const { data, error } = await supabase.auth.getUser(accessToken);
+  if (error) return null;
 
-  return projectOperationUser(user, await getRequestOperation());
+  return projectOperationUser(data.user, await getRequestOperation());
 });
 
 export async function requireCurrentUser() {
