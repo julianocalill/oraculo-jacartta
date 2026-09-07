@@ -1,5 +1,3 @@
-import { projectOperationUser, OPERATIONS } from "@oraculo/domain/operations.js";
-import { getRequestOperation } from "../operation-context";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -146,12 +144,12 @@ export const getCurrentUser = cache(async () => {
   // `isMaster` (lib/auth/access.ts). Para testar o bloqueio por aba localmente,
   // defina ORACULO_DEV_TABS no .env da raiz.
   if (process.env.NODE_ENV !== "production" && (!accessToken || !refreshToken)) {
-    return projectOperationUser({
+    return {
       id: "local-dev",
       email: "localhost@oraculo.local",
-      app_metadata: { operations: Object.fromEntries(OPERATIONS.map((o) => [o.id, { enabled: true, tabs: [] }])) },
+      app_metadata: {},
       user_metadata: { full_name: "Localhost" }
-    }, await getRequestOperation());
+    };
   }
 
   if (!accessToken || !refreshToken) return null;
@@ -164,7 +162,7 @@ export const getCurrentUser = cache(async () => {
   const { data, error } = await supabase.auth.getUser(accessToken);
   if (error) return null;
 
-  return projectOperationUser(data.user, await getRequestOperation());
+  return data.user;
 });
 
 export async function requireCurrentUser() {

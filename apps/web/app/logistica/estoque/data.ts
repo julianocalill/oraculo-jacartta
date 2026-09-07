@@ -1,4 +1,3 @@
-import { getRequestOperation, type OperationId } from "../../../lib/operation-context";
 // Loader do estoque unificado por depósito (/logistica/estoque).
 //
 // Lê a view oraculo_estoque_por_deposito (uma linha por produto ativo, quebra
@@ -100,14 +99,12 @@ async function fetchAllPages<T>(
 // Cache de 5min compartilhado entre usuários — dado global que muda no ritmo
 // do sync de estoque (30 min). Client admin porque unstable_cache não pode
 // ler cookies(); a view é grant select to authenticated de todo jeito.
-const loadEstoqueDataCached = unstable_cache(loadEstoqueDataUncached, ["logistica-estoque"], {
+export const loadEstoqueData = unstable_cache(loadEstoqueDataUncached, ["logistica-estoque"], {
   revalidate: 300
 });
 
-export async function loadEstoqueData() { return loadEstoqueDataCached(await getRequestOperation()); }
-
-async function loadEstoqueDataUncached(operation: OperationId): Promise<EstoqueData> {
-  const supabase = createSupabaseAdminClient({ operation });
+async function loadEstoqueDataUncached(): Promise<EstoqueData> {
+  const supabase = createSupabaseAdminClient();
 
   const [rows, watchlist, depositosDim] = await Promise.all([
     fetchAllPages<EstoqueRow>((from, to) =>

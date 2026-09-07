@@ -86,37 +86,6 @@ Correção publicada no commit `c366197`; deployment Vercel
 `dpl_51ujVePAEgWjq5xqpWHumjCUPW1P` confirmado como `Ready` no domínio
 `https://oraculo.oliverhome.com.br`.
 
-## Incidente e recuperação da separação multicanal das 13h30
-
-Em 02/09, a execução n8n `41405`, iniciada às 13:30 em
-`America/Sao_Paulo`, parou no nó **Montar consolidado multicanal**. A trava de
-integridade encontrou 1.126 pedidos sem itens entre 2.870 pedidos consultados,
-impediu o envio parcial e preservou o cursor das 07:00.
-
-A causa foi uma carga retroativa de cabeçalhos da Olist que gravou pedidos com
-`payload.itens = []`. O hidratador de detalhes tratava qualquer array como já
-preenchido e, por isso, não revisava o array vazio. O script
-`scripts/hydrate-olist-order-details.js` passou a considerar arrays vazios como
-pendentes. A consulta de detalhes também ganhou atraso configurável por
-`DETAIL_DELAY_MS`, dez tentativas e respeito ao cabeçalho `Retry-After` para
-conviver melhor com o limite da API Olist.
-
-Depois da hidratação, uma execução nova validou 3.534 pedidos e zero pedidos
-sem itens. A recuperação n8n `41522` enviou com sucesso a mensagem e o arquivo
-`separacao-todos-marketplaces-2026-09-02-1330.csv`, confirmou os dois nós da
-Evolution e avançou o cursor global para `2026-09-02T18:20:33.276Z`. O
-workflow ficou ativo, com `last_sent_slot = 2026-09-02-1330`, e a lógica
-temporária usada para a recuperação foi removida imediatamente após o disparo.
-
-Ainda em 02/09, o campo `sold_quantity`, que já somava as quantidades vendidas
-do mesmo SKU entre marketplaces, passou a aparecer como **Itens vendidos** em
-cada linha da mensagem e como uma nova coluna do CSV, entre **Descritivo** e
-**Caixas**. A prévia de produção confirmou o campo no WhatsApp e no arquivo,
-sem enviar mensagem e sem avançar o cursor.
-
-O ajuste está somente no workspace local; não houve commit nem push nesta
-sessão.
-
 ## Busca de produto na Inteligência
 
 A Inteligência ganhou uma consulta global antes dos cards de resumo. A busca

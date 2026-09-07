@@ -102,7 +102,6 @@ Pagamento a Autônomo em PDF por CPF; primeira feature com dado pessoal de
 terceiros em escala e primeira geração de PDF por biblioteca).
 
 ### Deployment & auth
-- **Multioperação**: URLs `/o/uberlandia/*` e `/o/giracasa/*`; permissões são por operação + aba. Giracasa permanece desativada até concluir `docs/giracasa-onboarding.md`.
 - Production URL: `https://oraculo.oliverhome.com.br`
 - Latest documented feature deploy: `dpl_EaNG4CybVy9KZbY2kUsNKNMgnAbC`
   (2026-09-04, Análise Comercial diária e por intervalo, `Ready` em produção)

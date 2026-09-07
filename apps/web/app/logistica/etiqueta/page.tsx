@@ -1,4 +1,4 @@
-import { redirect } from "../../../lib/operation-navigation";
+import { redirect } from "next/navigation";
 import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
 import { assertTabAccess, requireTabAccess } from "../../../lib/auth/access";
 import { effectiveUserId } from "../../../lib/users";
@@ -31,8 +31,8 @@ function parseInteger(value: unknown) {
 }
 
 // Sem toast no projeto: o erro volta na querystring e a página o exibe.
-async function fail(message: string): Promise<never> {
-  return await redirect(`/logistica/etiqueta?erro=${encodeURIComponent(message)}`);
+function fail(message: string): never {
+  redirect(`/logistica/etiqueta?erro=${encodeURIComponent(message)}`);
 }
 
 async function gerarEtiqueta(formData: FormData) {
@@ -41,19 +41,19 @@ async function gerarEtiqueta(formData: FormData) {
   const user = await assertTabAccess("logistica");
 
   const productLabel = text(formData.get("product_label"));
-  if (!productLabel) return await fail("Informe o produto.");
+  if (!productLabel) fail("Informe o produto.");
 
   const productSku = text(formData.get("product_sku"));
-  if (!productSku) return await fail("Informe o SKU.");
+  if (!productSku) fail("Informe o SKU.");
 
   const labelCount = parseInteger(formData.get("label_count")) ?? 1;
-  if (labelCount < 1 || labelCount > 100) return await fail("A quantidade de etiquetas deve ficar entre 1 e 100.");
+  if (labelCount < 1 || labelCount > 100) fail("A quantidade de etiquetas deve ficar entre 1 e 100.");
 
   const boxesPerPallet = parseInteger(formData.get("boxes_per_pallet"));
-  if (boxesPerPallet != null && boxesPerPallet < 1) return await fail("Caixas por palete deve ser maior que zero.");
+  if (boxesPerPallet != null && boxesPerPallet < 1) fail("Caixas por palete deve ser maior que zero.");
 
   const unitQuantity = parseNumber(formData.get("unit_quantity"));
-  if (unitQuantity != null && unitQuantity <= 0) return await fail("Qtd Unidade deve ser maior que zero.");
+  if (unitQuantity != null && unitQuantity <= 0) fail("Qtd Unidade deve ser maior que zero.");
 
   const itens: { position: number; variation_label: string; quantity: number }[] = [];
 
@@ -64,13 +64,13 @@ async function gerarEtiqueta(formData: FormData) {
     // Linha totalmente vazia é normal — o formulário sempre mostra as 4.
     if (!label && quantity == null) continue;
 
-    if (!label) return await fail(`Informe a variação ${position}.`);
-    if (quantity == null || quantity <= 0) return await fail(`Informe a quantidade da variação ${position}.`);
+    if (!label) fail(`Informe a variação ${position}.`);
+    if (quantity == null || quantity <= 0) fail(`Informe a quantidade da variação ${position}.`);
 
     itens.push({ position, variation_label: label, quantity });
   }
 
-  if (itens.length === 0) return await fail("Informe ao menos uma variação com quantidade.");
+  if (itens.length === 0) fail("Informe ao menos uma variação com quantidade.");
 
   const supabase = createSupabaseAdminClient();
 
@@ -101,7 +101,7 @@ async function gerarEtiqueta(formData: FormData) {
   );
   if (itensError) throw itensError;
 
-  return await redirect(`/logistica/etiqueta/imprimir?code=${code}`);
+  redirect(`/logistica/etiqueta/imprimir?code=${code}`);
 }
 
 export default async function EtiquetaPage({

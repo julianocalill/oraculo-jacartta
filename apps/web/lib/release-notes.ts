@@ -24,28 +24,6 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
-    id: "2026-09-04-explicacoes-colunas",
-    title: "Todas as colunas agora se explicam",
-    summary: "Passe o mouse ou toque no “?” de qualquer coluna para entender o dado exibido.",
-    publishedAt: "2026-09-04T17:20:00-03:00",
-    changes: [{
-      title: "Glossário em todas as tabelas",
-      description: "Cabeçalhos de todas as telas ganharam explicações rápidas, incluindo fórmulas, origem do dado e ressalvas importantes quando se aplicam. O recurso também funciona por teclado."
-    }]
-  },
-  {
-    id: "2026-09-04-operacoes",
-    title: "Oráculo preparado para mais de uma operação",
-    summary: "Acesso e dados agora reconhecem Uberlândia e Giracasa separadamente.",
-    publishedAt: "2026-09-04T18:00:00-03:00",
-    changes: [{
-      title: "Escolha segura da operação",
-      description: "Quem receber acesso à Giracasa poderá escolher a operação ao entrar. A base de São Paulo será exibida somente depois da validação das integrações e do financeiro.",
-      href: "/operacoes?trocar=1",
-      linkLabel: "Ver operações"
-    }]
-  },
-  {
     id: "2026-09-04-analise-comercial",
     title: "Análise comercial por dia e período",
     summary: "Veja quais produtos mais venderam e qual margem cada um deixou.",

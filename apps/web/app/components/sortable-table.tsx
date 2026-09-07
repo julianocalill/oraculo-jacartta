@@ -1,9 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
-import { getColumnHint } from "../../lib/column-hints";
-import { OperationLink as Link } from "./operation-provider";
+import Link from "next/link";
 
 // Tabela ordenável genérica. As células chegam serializadas do server
 // component (texto + valor de ordenação + extras opcionais), então qualquer
@@ -53,7 +51,6 @@ export function SortableTable({
   /** Exibe coluna # com a posição na ordem atual. */
   showRank?: boolean;
 }) {
-  const pathname = usePathname();
   const [sortIdx, setSortIdx] = useState(initialSort);
   const [dir, setDir] = useState<"asc" | "desc">(
     initialDir ?? (columns[initialSort]?.numeric ? "desc" : "asc")
@@ -78,31 +75,21 @@ export function SortableTable({
     }
   }
 
-  const rankHint = getColumnHint("#", pathname);
-
   return (
     <div className="table-wrap dense-table-wrap">
       <table className="data-table dense-table">
         <thead>
           <tr>
-            {showRank && (
-              <th className="th-has-hint" data-hint={rankHint} title={rankHint} tabIndex={0}>
-                #
-                <span className="th-hint-mark" aria-hidden="true">?</span>
-                <span className="sr-only">{rankHint}</span>
-              </th>
-            )}
+            {showRank && <th>#</th>}
             {columns.map((col, idx) => {
               const active = idx === sortIdx;
-              const hint = col.hint ?? getColumnHint(col.label, pathname);
               return (
                 <th
                   key={col.label}
-                  className={[col.numeric ? "numeric" : null, "th-has-hint"]
+                  className={[col.numeric ? "numeric" : null, col.hint ? "th-has-hint" : null]
                     .filter(Boolean)
                     .join(" ") || undefined}
-                  data-hint={hint}
-                  title={hint}
+                  data-hint={col.hint}
                 >
                   <button
                     type="button"
@@ -111,9 +98,15 @@ export function SortableTable({
                     aria-label={`Ordenar por ${col.label}`}
                   >
                     <span>{col.label}</span>
-                    {/* leitores de tela recebem a explicação; o visual é o tooltip do th */}
-                    <span className="sr-only">{hint}</span>
-                    <span className="th-hint-mark" aria-hidden="true">?</span>
+                    {col.hint ? (
+                      <>
+                        {/* leitores de tela recebem a explicação; o visual é o tooltip do th */}
+                        <span className="sr-only">{col.hint}</span>
+                        <span className="th-hint-mark" aria-hidden="true">
+                          ?
+                        </span>
+                      </>
+                    ) : null}
                     <span className="th-caret" aria-hidden="true">
                       {active ? (dir === "desc" ? "▼" : "▲") : "↕"}
                     </span>

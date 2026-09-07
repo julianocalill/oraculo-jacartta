@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { OperationLink as Link } from "../../components/operation-provider";
+import Link from "next/link";
 import { requireTabAccess } from "../../../lib/auth/access";
 import { NoAccess } from "../../components/no-access";
 import { AppShell } from "../../components/app-shell";

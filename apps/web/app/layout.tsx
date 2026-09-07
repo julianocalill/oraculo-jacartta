@@ -1,6 +1,3 @@
-import { OperationProvider } from "./components/operation-provider";
-import { TableColumnHints } from "./components/table-column-hints";
-import { getRequestOperation } from "../lib/operation-context";
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
@@ -57,12 +54,7 @@ export default async function RootLayout({
   const theme = await readTheme();
   return (
     <html lang="pt-BR" data-theme={theme} className={`${plexSans.variable} ${plexMono.variable}`}>
-      <body>
-        <OperationProvider operation={await getRequestOperation()}>
-          <TableColumnHints />
-          {children}
-        </OperationProvider>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

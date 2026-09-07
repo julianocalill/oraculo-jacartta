@@ -1,8 +1,6 @@
 "use client";
-import { parseOperationPath } from "@oraculo/domain/operations.js";
 
-
-import { OperationLink as Link } from "./operation-provider";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SECTORS, TABS, type TabKey } from "../../lib/auth/tabs";
 import { NavIcon } from "./nav-icons";
@@ -24,7 +22,7 @@ function isActive(pathname: string, href: string) {
 // nasce aberto. Abas sem setor (Agenda, Parâmetros) ficam soltas, sempre
 // visíveis; Admin continua como grupo próprio no rodapé.
 export function SidebarNav({ badges, tabs }: { badges?: Record<string, number | undefined>; tabs: TabKey[] }) {
-  const pathname = parseOperationPath(usePathname() ?? "/").path;
+  const pathname = usePathname() ?? "/";
   const granted = new Set<string>(tabs);
 
   const mainLinks = TABS.filter((tab) => tab.group === "main" && granted.has(tab.key));

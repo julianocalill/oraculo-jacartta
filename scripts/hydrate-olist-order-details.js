@@ -131,16 +131,14 @@ async function listOrdersNeedingDetail(env, limit, startDate, endDate, offset) {
   const rows = JSON.parse(text);
   return {
     page: rows,
-    pending: rows.filter((row) => !Array.isArray(row.payload?.itens) || row.payload.itens.length === 0)
+    pending: rows.filter((row) => !Array.isArray(row.payload?.itens))
   };
 }
 
-async function fetchOrderDetail(env, accessToken, orderId, detailDelayMs) {
+async function fetchOrderDetail(env, accessToken, orderId) {
   const url = new URL(`pedidos/${orderId}`, env.OLIST_API_BASE_URL.endsWith("/") ? env.OLIST_API_BASE_URL : `${env.OLIST_API_BASE_URL}/`);
 
-  if (detailDelayMs > 0) await sleep(detailDelayMs);
-
-  for (let attempt = 1; attempt <= 10; attempt += 1) {
+  for (let attempt = 1; attempt <= 6; attempt += 1) {
     const response = await fetch(url, {
       headers: {
         Accept: "application/json",
@@ -155,14 +153,8 @@ async function fetchOrderDetail(env, accessToken, orderId, detailDelayMs) {
       return JSON.parse(text);
     }
 
-    if ((response.status === 429 || response.status >= 500) && attempt < 10) {
-      const retryAfterSeconds = Number(response.headers.get("retry-after") || 0);
-      const retryDelayMs = retryAfterSeconds > 0
-        ? retryAfterSeconds * 1000
-        : response.status === 429
-          ? Math.min(30000, 3000 * attempt)
-          : 500 * attempt;
-      await sleep(retryDelayMs);
+    if ((response.status === 429 || response.status >= 500) && attempt < 6) {
+      await sleep(response.status === 429 ? 2000 * attempt : 500 * attempt);
       continue;
     }
 
@@ -217,7 +209,6 @@ async function main() {
     ? Number(process.env.DETAIL_MAX_ORDERS)
     : Number.POSITIVE_INFINITY;
   const concurrency = Number(process.env.DETAIL_CONCURRENCY || "2");
-  const detailDelayMs = Number(process.env.DETAIL_DELAY_MS || "0");
 
   const accessToken = await getAccessToken(env);
   let offset = 0;
@@ -238,7 +229,7 @@ async function main() {
     }
 
     const detailed = await mapConcurrent(targetRows, concurrency, async (row) => {
-      const detail = await fetchOrderDetail(env, accessToken, row.id, detailDelayMs);
+      const detail = await fetchOrderDetail(env, accessToken, row.id);
       return normalizeDetailedOrder(detail);
     });
 
@@ -258,7 +249,6 @@ async function main() {
     startDate,
     endDate,
     hydrated,
-    detailDelayMs,
     maxOrders: Number.isFinite(maxOrders) ? maxOrders : "all"
   }, null, 2));
 }

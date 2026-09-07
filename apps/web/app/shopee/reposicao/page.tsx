@@ -1,5 +1,5 @@
-import { OperationLink as Link } from "../../components/operation-provider";
-import { revalidatePath } from "../../../lib/operation-navigation";
+import Link from "next/link";
+import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
 import { assertTabAccess, requireTabAccess } from "../../../lib/auth/access";
 import { NoAccess } from "../../components/no-access";
@@ -55,11 +55,11 @@ async function saveCustos(formData: FormData) {
     { onConflict: "source,sku" }
   );
   if (error) throw error;
-  await revalidatePath("/shopee/reposicao");
-  await revalidatePath("/shopee/estoque");
-  await revalidatePath("/shopee");
-  await revalidatePath("/mercado-livre");
-  await revalidatePath("/mercado-livre/envio");
+  revalidatePath("/shopee/reposicao");
+  revalidatePath("/shopee/estoque");
+  revalidatePath("/shopee");
+  revalidatePath("/mercado-livre");
+  revalidatePath("/mercado-livre/envio");
 }
 
 const curveBadge: Record<Exclude<Curve, null>, string> = {

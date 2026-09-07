@@ -1,4 +1,4 @@
-import { OperationLink as Link } from "../components/operation-provider";
+import Link from "next/link";
 
 // Uma aba por canal, no padrão de ImportacoesTabs. Só aparecem canais que têm
 // dado no período: aba vazia de canal não integrado é ruído, e pior, sugere

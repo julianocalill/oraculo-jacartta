@@ -10,8 +10,6 @@
     ".": "./index.ts",
     "./fiscal.js": "./fiscal.js",
     "./rpa.js": "./rpa.js",
-    "./commercial-analysis.js": "./commercial-analysis.js",
-    "./operations.js": "./operations.js",
-    "./operation-fiscal.js": "./operation-fiscal.js"
+    "./commercial-analysis.js": "./commercial-analysis.js"
   }
 }

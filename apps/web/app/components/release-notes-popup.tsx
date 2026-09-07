@@ -1,5 +1,4 @@
 "use client";
-import { OperationAnchor } from "./operation-provider";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ActiveReleaseNote } from "../../lib/release-notes";
@@ -106,7 +105,7 @@ export function ReleaseNotesPopup({
                       <strong>{change.title}</strong>
                       <p>{change.description}</p>
                       {change.href && (
-                        <OperationAnchor href={change.href} onClick={dismiss}>{change.linkLabel ?? "Abrir"} →</OperationAnchor>
+                        <a href={change.href} onClick={dismiss}>{change.linkLabel ?? "Abrir"} →</a>
                       )}
                     </div>
                   </div>

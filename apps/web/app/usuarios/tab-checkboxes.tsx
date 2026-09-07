@@ -6,7 +6,7 @@ import { SECTORS, TABS, type TabKey } from "../../lib/auth/tabs";
 // Matriz de acesso de um usuário: uma caixinha por aba do menu.
 // Client component só por causa dos atalhos "marcar todas"/"limpar" — com 15
 // caixas por usuário, marcar uma a uma é inviável no dia a dia.
-export function TabCheckboxes({ selected = [], prefix = "" }: { selected?: TabKey[]; prefix?: string }) {
+export function TabCheckboxes({ selected = [] }: { selected?: TabKey[] }) {
   const [checked, setChecked] = useState<Set<string>>(() => new Set(selected));
   const groupId = useId();
 
@@ -67,7 +67,7 @@ export function TabCheckboxes({ selected = [], prefix = "" }: { selected?: TabKe
                 <input
                   id={`${groupId}-${tab.key}`}
                   type="checkbox"
-                  name={`${prefix}${"adminOnly" in tab && tab.adminOnly ? "restricted_tabs" : "tabs"}`}
+                  name={"adminOnly" in tab && tab.adminOnly ? "restricted_tabs" : "tabs"}
                   value={tab.key}
                   checked={checked.has(tab.key)}
                   onChange={(event) => toggle(tab.key, event.target.checked)}

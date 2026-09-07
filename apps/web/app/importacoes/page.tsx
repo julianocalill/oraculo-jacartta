@@ -1,5 +1,5 @@
-import { OperationLink as Link } from "../components/operation-provider";
-import { revalidatePath } from "../../lib/operation-navigation";
+import Link from "next/link";
+import { revalidatePath } from "next/cache";
 import { assertTabAccess, requireTabAccess } from "../../lib/auth/access";
 import { NoAccess } from "../components/no-access";
 import { loadActionableAlertCount } from "../../lib/alert-count";
@@ -38,7 +38,7 @@ async function setDeliveryStatus(formData: FormData) {
     .eq("invoice_number", invoiceNumber);
 
   if (error) throw error;
-  await revalidatePath("/importacoes");
+  revalidatePath("/importacoes");
 }
 
 function count(value: number) {

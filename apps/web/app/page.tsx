@@ -1,4 +1,3 @@
-import { OperationAnchor } from "./components/operation-provider";
 import { createSupabaseAdminClient } from "../lib/supabase/admin";
 import {
   loadFiscalDashboardSnapshot,
@@ -9,8 +8,8 @@ import {
   type FiscalDashboardSnapshot,
   type FiscalSkuMarginRow
 } from "../lib/fiscal-snapshots";
-import { OperationLink as Link } from "./components/operation-provider";
-import { redirect } from "../lib/operation-navigation";
+import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireCurrentUser } from "../lib/auth/session";
 import { canAccess, firstAllowedHref } from "../lib/auth/access";
 import { NoAccess } from "./components/no-access";
@@ -958,7 +957,7 @@ export default async function HomePage({
   const user = await requireCurrentUser();
   if (!canAccess(user, "analytics")) {
     const fallback = firstAllowedHref(user);
-    if (fallback) await redirect(fallback);
+    if (fallback) redirect(fallback);
     return <NoAccess hasAnyTab={false} />;
   }
 
@@ -1098,9 +1097,9 @@ export default async function HomePage({
                 {`Dados até ${formatDateShort(lastDataDate)}`}
               </span>
               <span className="pill">{formatMonthYearFromDate(filters.start)}</span>
-              <OperationAnchor className="pill pill-gold" href={`/export-fiscal?start=${filters.start}&end=${filters.end}`}>
+              <a className="pill pill-gold" href={`/export-fiscal?start=${filters.start}&end=${filters.end}`}>
                 Exportar
-              </OperationAnchor>
+              </a>
             </div>
           </div>
           <form className="filter-row filter-form" method="get">

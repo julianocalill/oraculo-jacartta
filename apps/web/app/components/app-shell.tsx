@@ -1,6 +1,3 @@
-import { operationById, userOperations } from "@oraculo/domain/operations.js";
-import { getRequestOperation } from "../../lib/operation-context";
-import { OperationLink } from "./operation-provider";
 import type { ReactNode } from "react";
 import { SidebarNav } from "./sidebar-nav";
 import { BrandMark } from "./brand-mark";
@@ -72,8 +69,6 @@ export async function AppShell({
 }) {
   const user = await getCurrentUser();
   const tabs = allowedTabs(user);
-  const operation = operationById(await getRequestOperation())!;
-  const operations = userOperations(user);
 
   // O badge da Agenda é por usuário, então é o próprio shell que o carrega —
   // as páginas continuam passando só o alertCount (global) que já recebiam.
@@ -91,13 +86,7 @@ export async function AppShell({
   return (
     <>
       <Frame
-        nav={<>
-          <div className="operation-switcher">
-            <strong>{operation.label}</strong>
-            {operations.length > 1 && <OperationLink href="/operacoes?trocar=1">Trocar operação</OperationLink>}
-          </div>
-          <SidebarNav badges={{ "/alertas": alertCount, "/agenda": agendaCount }} tabs={tabs} />
-        </>}
+        nav={<SidebarNav badges={{ "/alertas": alertCount, "/agenda": agendaCount }} tabs={tabs} />}
         footer={footer}
         theme={theme}
       >

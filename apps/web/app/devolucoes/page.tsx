@@ -1,4 +1,3 @@
-import { OperationAnchor } from "../components/operation-provider";
 // Aba Devoluções — funil horizontal por canal, com a mesma linguagem de
 // analytics do dashboard principal (cards com sparkline e variação, área
 // diária, donut de motivos).
@@ -9,7 +8,7 @@ import { OperationAnchor } from "../components/operation-provider";
 //
 // Plano e decisões: docs/plano-devolucoes.md e docs/plano-devolucoes-funil.md
 
-import { revalidatePath } from "../../lib/operation-navigation";
+import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { assertTabAccess, requireTabAccess } from "../../lib/auth/access";
 import { NoAccess } from "../components/no-access";
@@ -101,7 +100,7 @@ async function uploadReturns(formData: FormData) {
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return;
   await importTikTokReturns(file, user.id ?? null);
-  await revalidatePath("/devolucoes");
+  revalidatePath("/devolucoes");
 }
 
 const nf = new Intl.NumberFormat("pt-BR");
@@ -319,13 +318,13 @@ export default async function DevolucoesPage({
         </div>
         <div className="filter-row">
           {months.map((m) => (
-            <OperationAnchor
+            <a
               key={m.value}
               href={`/devolucoes?mes=${m.value}&canal=${activeTab}`}
               className={m.value === win.value ? "chip chip-active" : "chip"}
             >
               {m.label}
-            </OperationAnchor>
+            </a>
           ))}
         </div>
       </header>

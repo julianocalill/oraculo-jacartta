@@ -1,8 +1,3 @@
-import { redirect } from "next/navigation";
-import { operationIsReady } from "../operation-status";
-import { getRequestOperation } from "../operation-context";
-import { tabForPath } from "./path-tabs";
-export { tabForPath } from "./path-tabs";
 // Controle de acesso por aba.
 //
 // Não existem perfis nomeados: cada usuário carrega em `app_metadata.tabs` a
@@ -23,7 +18,6 @@ type MaybeUser = {
   id?: string;
   email?: string | null;
   app_metadata?: Record<string, unknown> | null;
-  oraculo_operation_allowed?: boolean;
 } | null;
 
 function masterEmails() {
@@ -63,7 +57,7 @@ function devTabsOverride() {
 }
 
 export function allowedTabs(user: MaybeUser): TabKey[] {
-  if (!user || user.oraculo_operation_allowed === false) return [];
+  if (!user) return [];
 
   if (isMaster(user)) {
     const override = devTabsOverride();
@@ -96,6 +90,23 @@ export function firstAllowedHref(user: MaybeUser) {
   return first ? tabByKey(first)?.href ?? null : null;
 }
 
+// Resolve a aba dona de um caminho (sub-rotas e exports herdam a aba-mãe).
+export function tabForPath(pathname: string): TabKey | null {
+  let match: { key: TabKey; length: number } | null = null;
+
+  for (const tab of TABS) {
+    for (const path of tab.paths) {
+      const hit = path === "/" ? pathname === "/" : pathname === path || pathname.startsWith(`${path}/`);
+      if (!hit) continue;
+      if (!match || path.length > match.length) {
+        match = { key: tab.key, length: path.length };
+      }
+    }
+  }
+
+  return match?.key ?? null;
+}
+
 export function isAllowedPath(user: MaybeUser, pathname: string) {
   const tab = tabForPath(pathname);
   if (!tab) return false;
@@ -109,13 +120,12 @@ export function isAllowedPath(user: MaybeUser, pathname: string) {
  */
 export async function requireTabAccess(tab: TabKey) {
   const user = await requireCurrentUser();
-  if (user.oraculo_operation_allowed && !(await operationIsReady(await getRequestOperation()))) redirect("/operacoes/giracasa");
   return { user, allowed: canAccess(user, tab) };
 }
 
 export async function requireMaster() {
   const user = await requireCurrentUser();
-  return { user, allowed: isMaster(user) && user.oraculo_operation_allowed };
+  return { user, allowed: isMaster(user) };
 }
 
 /**

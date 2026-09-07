@@ -1,5 +1,3 @@
-import { operationFetch } from "./operation-fetch";
-import type { OperationId } from "../operation-context";
 import { createClient } from "@supabase/supabase-js";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -41,7 +39,7 @@ function loadFallbackEnv() {
   }
 }
 
-export function createSupabaseAdminClient(options?: { operation: OperationId }) {
+export function createSupabaseAdminClient() {
   const url = process.env.SUPABASE_URL ?? readFallbackEnv().SUPABASE_URL;
   const serviceRoleKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY ?? readFallbackEnv().SUPABASE_SERVICE_ROLE_KEY;
@@ -55,7 +53,6 @@ export function createSupabaseAdminClient(options?: { operation: OperationId }) 
   }
 
   return createClient(url, serviceRoleKey, {
-    global: { fetch: operationFetch(options?.operation) },
     auth: {
       autoRefreshToken: false,
       persistSession: false

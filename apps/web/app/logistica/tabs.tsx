@@ -1,4 +1,4 @@
-import { OperationLink as Link } from "../components/operation-provider";
+import Link from "next/link";
 
 // Navegação entre as abas de Logística
 export type LogisticaTab = "visao-geral" | "estoque" | "recebimento" | "etiqueta";
