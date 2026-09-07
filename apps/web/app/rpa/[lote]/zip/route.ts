@@ -6,7 +6,7 @@
 // RPA não têm grant para `authenticated` — elas guardam CPF e endereço.
 
 import { getCurrentUser } from "../../../../lib/auth/session";
-import { canAccessRequest } from "../../../../lib/auth/access";
+import { canAccess } from "../../../../lib/auth/access";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 import { fileStamp } from "../../../../lib/xlsx";
 import { buildRpaZip } from "../../../../lib/rpa-zip";
@@ -23,7 +23,7 @@ export async function GET(
 ) {
   const user = await getCurrentUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
-  if (!(await canAccessRequest(user, "rpa"))) return new Response("Sem acesso a esta aba", { status: 403 });
+  if (!canAccess(user, "rpa")) return new Response("Sem acesso a esta aba", { status: 403 });
 
   const { lote } = await params;
   const batch = await loadBatch(lote);

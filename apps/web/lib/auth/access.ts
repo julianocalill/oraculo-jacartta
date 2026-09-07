@@ -91,12 +91,6 @@ export function canAccess(user: MaybeUser, tab: TabKey) {
   return allowedTabs(user).includes(tab);
 }
 
-/** Route handlers must reject a disabled operation before building an export. */
-export async function canAccessRequest(user: MaybeUser, tab: TabKey) {
-  if (!canAccess(user, tab)) return false;
-  return operationIsReady(await getRequestOperation());
-}
-
 export function firstAllowedHref(user: MaybeUser) {
   const [first] = allowedTabs(user);
   return first ? tabByKey(first)?.href ?? null : null;
@@ -121,7 +115,6 @@ export async function requireTabAccess(tab: TabKey) {
 
 export async function requireMaster() {
   const user = await requireCurrentUser();
-  if (user.oraculo_operation_allowed && !(await operationIsReady(await getRequestOperation()))) redirect("/operacoes/giracasa");
   return { user, allowed: isMaster(user) && user.oraculo_operation_allowed };
 }
 
@@ -132,7 +125,7 @@ export async function requireMaster() {
  */
 export async function assertTabAccess(tab: TabKey) {
   const user = await requireCurrentUser();
-  if (!canAccess(user, tab) || !(await operationIsReady(await getRequestOperation()))) {
+  if (!canAccess(user, tab)) {
     throw new Error(`Sem permissão para a aba ${tabByKey(tab)?.label ?? tab}.`);
   }
   return user;
@@ -140,7 +133,7 @@ export async function assertTabAccess(tab: TabKey) {
 
 export async function assertMaster() {
   const user = await requireCurrentUser();
-  if (!isMaster(user) || !user.oraculo_operation_allowed || !(await operationIsReady(await getRequestOperation()))) {
+  if (!isMaster(user)) {
     throw new Error("Apenas administradores podem alterar acessos.");
   }
   return user;

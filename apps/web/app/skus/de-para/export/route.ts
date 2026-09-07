@@ -4,7 +4,7 @@
 // de anúncios. O refresh do cache roda aqui mesmo (throttle de 6h no banco):
 // quem baixa a planilha é quem mantém o dado fresco, sem job de cron.
 import { getCurrentUser } from "../../../../lib/auth/session";
-import { canAccessRequest } from "../../../../lib/auth/access";
+import { canAccess } from "../../../../lib/auth/access";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 import { buildXlsxWorkbook, fileStamp, xlsxResponse, type XlsxColumn } from "../../../../lib/xlsx";
 
@@ -85,7 +85,7 @@ function toRow(r: MapRow) {
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return new Response("Não autorizado", { status: 401 });
-  if (!(await canAccessRequest(user, "skus"))) return new Response("Sem acesso a esta aba", { status: 403 });
+  if (!canAccess(user, "skus")) return new Response("Sem acesso a esta aba", { status: 403 });
 
   const admin = createSupabaseAdminClient();
 

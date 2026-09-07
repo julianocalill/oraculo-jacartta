@@ -22,8 +22,7 @@ export function calcOperationFiscalOrder({ operationId, invoiceValue, grossCost,
   const icms = base == null || icmsRate == null ? null : base * icmsRate / 100;
   const pisCofins = base == null || cost == null ? null : calcPisCofins({ base, netCost: cost,
     rate: pisCofinsRate, creditEnabled: pisCofinsCreditEnabled ?? sp });
-  const intrastate = String(destState ?? "").toUpperCase() === String(operation.state).toUpperCase();
-  const difal = base == null || icmsRate == null ? null : intrastate ? 0 : calcDifal({ base, destState,
+  const difal = base == null || icmsRate == null ? null : calcDifal({ base, destState,
     sourceState: operation.state, origin, explicitAmount: difalOverrideAmount, explicitRate: difalOverrideRate }).amount;
   const taxesTotal = icms == null || pisCofins == null || difal == null ? null : icms + pisCofins + difal;
   const profit = pending ? null : base - cost - taxesTotal - Number(marketplaceFee) - Number(expenses);

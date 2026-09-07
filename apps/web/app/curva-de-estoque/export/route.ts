@@ -1,6 +1,6 @@
 import { createSupabaseUserClient } from "../../../lib/supabase/user";
 import { getCurrentUser } from "../../../lib/auth/session";
-import { canAccessRequest } from "../../../lib/auth/access";
+import { canAccess } from "../../../lib/auth/access";
 
 type StockCurve = "A" | "B" | "C" | "sem_venda";
 type StockCurveFilter = "all" | Exclude<StockCurve, "sem_venda">;
@@ -53,7 +53,7 @@ async function loadItems(curveFilter: StockCurveFilter) {
 export async function GET(request: Request) {
   const user = await getCurrentUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
-  if (!(await canAccessRequest(user, "curva-de-estoque"))) return new Response("Sem acesso a esta aba", { status: 403 });
+  if (!canAccess(user, "curva-de-estoque")) return new Response("Sem acesso a esta aba", { status: 403 });
 
   const url = new URL(request.url);
   const curveFilter = asCurveFilter(url.searchParams.get("curva"));

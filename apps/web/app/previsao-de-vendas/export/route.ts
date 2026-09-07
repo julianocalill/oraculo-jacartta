@@ -4,7 +4,7 @@
 
 import { createSupabaseUserClient } from "../../../lib/supabase/user";
 import { getCurrentUser } from "../../../lib/auth/session";
-import { canAccessRequest } from "../../../lib/auth/access";
+import { canAccess } from "../../../lib/auth/access";
 import { asTargetWeek, type ForecastSku, type ForecastWeek } from "../data";
 
 function n(value: number | null | undefined) {
@@ -23,7 +23,7 @@ function csvNumber(value: number | null | undefined, digits = 2) {
 export async function GET(request: Request) {
   const user = await getCurrentUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
-  if (!(await canAccessRequest(user, "previsao-de-vendas"))) {
+  if (!canAccess(user, "previsao-de-vendas")) {
     return new Response("Sem acesso a esta aba", { status: 403 });
   }
 

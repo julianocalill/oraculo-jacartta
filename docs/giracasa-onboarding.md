@@ -41,6 +41,6 @@ Versão inicial `gira-casa-v1`: origem SP; ICMS nacional de 18% para SP, 12% par
 
 Custos seguem o Financeiro: líquido explícito, créditos recuperáveis explícitos, transferência comprovada de importado (4% + 11,75%) e custo bruto. Sem comprovação, Giracasa conserva o custo bruto. Exceções ficam em `giracasa.oraculo_financial_product_rules` por SKU e vigência.
 
-## Registro da implantação
+## Registro da implantação inicial
 
-Em 05/09/2026 as migrations de cadastro, isolamento, motor financeiro e exposição controlada do schema foram executadas em produção. Pós-check: 101 tabelas, 94 funções e 34 views no schema Giracasa; zero pedidos, zero notas, zero concessões e `enabled=false`. As 26 Edge Functions `giracasa-*` foram publicadas. Não existem secrets `GIRACASA_*`, portanto a carga e os crons continuam bloqueados por configuração, sem risco de usar as contas de Uberlândia.
+Em 04/09/2026 somente `20260904173904_operation_access_foundation.sql` foi executada em produção. Pós-check: 7 usuários migrados para Uberlândia, zero concessões Giracasa e operação desativada. As migrations de isolamento e motor financeiro estão validadas localmente e aguardam autorização explícita para a alteração ampla. Web, Edge Functions, carga e crons não foram publicados.
