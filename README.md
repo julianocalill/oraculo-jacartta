@@ -42,10 +42,11 @@ oraculo/
 6. [docs/deployment-map.md](docs/deployment-map.md)
 7. [docs/shopee-sales-whatsapp-report.md](docs/shopee-sales-whatsapp-report.md) (relatório Shopee direto → WhatsApp)
 8. [docs/fiscal-financeiro-port.md](docs/fiscal-financeiro-port.md)
-9. [docs/metric-contract.md](docs/metric-contract.md)
-10. [docs/oraculo-master-plan.md](docs/oraculo-master-plan.md)
-11. [CHANGELOG.md](CHANGELOG.md) (full history)
-12. [vault/00-home/index.md](vault/00-home/index.md)
+9. [docs/giracasa-financial-contract.md](docs/giracasa-financial-contract.md)
+10. [docs/metric-contract.md](docs/metric-contract.md)
+11. [docs/oraculo-master-plan.md](docs/oraculo-master-plan.md)
+12. [CHANGELOG.md](CHANGELOG.md) (full history)
+13. [vault/00-home/index.md](vault/00-home/index.md)
 
 Earlier snapshots (historical, superseded): [docs/project-status-2026-09-01.md](docs/project-status-2026-09-01.md), [docs/project-status-2026-08-28.md](docs/project-status-2026-08-28.md), [docs/project-status-2026-08-24.md](docs/project-status-2026-08-24.md), [docs/project-status-2026-08-19.md](docs/project-status-2026-08-19.md), [docs/project-status-2026-08-17.md](docs/project-status-2026-08-17.md), [docs/project-status-2026-08-13.md](docs/project-status-2026-08-13.md), [docs/project-status-2026-08-12.md](docs/project-status-2026-08-12.md), [docs/project-status-2026-08-10.md](docs/project-status-2026-08-10.md), [docs/project-status-2026-07-17.md](docs/project-status-2026-07-17.md), [docs/project-status-2026-07-16.md](docs/project-status-2026-07-16.md), [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md), [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
 

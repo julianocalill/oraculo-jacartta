@@ -23,6 +23,12 @@ O gerador das 26 Edge Functions ganhou cobertura automatizada para o limite de
 credenciais: somente as duas chaves compartilhadas do projeto Supabase podem
 ficar sem prefixo; qualquer outra variável precisa começar com `GIRACASA_`.
 
+O `gira-casa-v1` foi comparado novamente com a implementação local do
+Financeiro. A matriz e a precedência do custo conferem. O contrato registra a
+adaptação central do Oráculo: receita somente pela NF válida, sem fallback para
+venda bruta, e controle por SKU para impedir crédito duplicado de PIS/COFINS.
+Detalhes: `docs/giracasa-financial-contract.md`.
+
 ## Estado operacional
 
 - Uberlândia permanece ativa nas rotas originais.
@@ -39,7 +45,7 @@ ficar sem prefixo; qualquer outra variável precisa começar com `GIRACASA_`.
 2. Carregar e reconciliar uma janela fechada de um dia.
 3. Executar os 40 dias e medir volume, duração e cobertura.
 4. Conferir nacional, importado, kit, créditos, SP interno e destinos
-   interestaduais contra o Financeiro.
+   interestaduais contra `docs/giracasa-financial-contract.md` e o Financeiro.
 5. Construir as rotas reais da Giracasa em preview e validar com uma conta real.
 6. Conceder o piloto e ativar jobs somente depois dos gates anteriores.
 

@@ -49,6 +49,26 @@ test("Giracasa imported SP→SP keeps 18% ICMS and zero DIFAL", () => {
   assert.equal(value.difal, 0);
 });
 
+test("Giracasa can disable PIS/COFINS credit when measured cost already contains it", () => {
+  const enabled = calcOperationFiscalOrder({ operationId: "giracasa", invoiceValue: 100,
+    grossCost: 40, recoverableTaxes: 6, origin: "nacional", destState: "SP",
+    marketplaceFee: 10, pisCofinsCreditEnabled: true });
+  const disabled = calcOperationFiscalOrder({ operationId: "giracasa", invoiceValue: 100,
+    grossCost: 40, recoverableTaxes: 6, origin: "nacional", destState: "SP",
+    marketplaceFee: 10, pisCofinsCreditEnabled: false });
+  assert.equal(enabled.cost, 34);
+  assert.equal(enabled.pisCofins, 6.105);
+  assert.equal(disabled.pisCofins, 9.25);
+});
+
+test("Giracasa never replaces a missing invoice with artificial revenue", () => {
+  const value = calcOperationFiscalOrder({ operationId: "giracasa", invoiceValue: null,
+    grossCost: 40, origin: "nacional", destState: "SP", marketplaceFee: 10 });
+  assert.equal(value.base, null);
+  assert.equal(value.pending, true);
+  assert.equal(value.profit, null);
+});
+
 test("financial result stays pending instead of inventing missing inputs", () => {
   assert.equal(calcOperationFiscalOrder({ operationId: "giracasa", invoiceValue: 100,
     grossCost: null, origin: "nacional", destState: "SP", marketplaceFee: 10 }).profit, null);

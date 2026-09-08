@@ -17,10 +17,10 @@ reduzidas do perfil Jacarta. Não há componente de RET calculado à parte.
 Precedência (`calcNetCost`):
 
 1. **custo líquido explícito**, se informado;
-2. **importado por transferência** → `custo = valor_nf × (1 − 0,1575)` = `× 0,8425`
+2. **bruto − créditos recuperáveis explícitos** (`max(0, bruto − créditos)`);
+3. **importado por transferência** → `custo = valor_nf × (1 − 0,1575)` = `× 0,8425`
    (0,04 ICMS + 0,1175 PIS/COFINS). Ex.: NF R$ 393.300 → R$ 331.355,25.
    **Não se aplica ao Oráculo** — ver abaixo.
-3. **bruto − créditos recuperáveis explícitos** (`max(0, bruto − créditos)`);
 4. **bruto puro** (fallback).
 
 > **Decisão do negócio (14/08/2026), que substitui a de 04/08:** o custo entra

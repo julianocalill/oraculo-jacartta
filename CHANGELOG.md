@@ -14,6 +14,8 @@ Histórico de entregas e mudanças significativas.
   custo líquido explícito, créditos medidos, transferência importada e bruto.
 - Um teste dos 26 artefatos gerados impede a leitura de secrets de Uberlândia;
   fora das chaves do próprio Supabase, toda variável deve usar `GIRACASA_`.
+- O contrato `gira-casa-v1` documenta NF válida como receita, matriz SP,
+  custos, DIFAL, PIS/COFINS e o controle contra crédito duplicado por SKU.
 - Login, seletor e rotas multioperação ficam para depois da validação de dados e
   cálculos, conforme `docs/adr/ADR-007-giracasa-progressive-rollout.md`.
 
