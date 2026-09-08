@@ -23,6 +23,9 @@ type SyncRun = {
   vessels_targeted?: number | null;
   positions_updated?: number | null;
   error_message: string | null;
+  window_start?: string | null;
+  window_end?: string | null;
+  candidates_total?: number | null;
   metadata?: Record<string, unknown> | null;
   meta?: Record<string, unknown> | null;
 };
@@ -85,6 +88,13 @@ function hasTokenFailure(run?: SyncRun | null) {
 
 const ACTIVE_RUN_MAX_AGE_MS = 90 * 60 * 1000;
 
+function activeRunMaxAge(run?: SyncRun | null) {
+  const configured = Number(run?.metadata?.stale_after_ms);
+  return Number.isFinite(configured) && configured >= 30_000
+    ? configured
+    : ACTIVE_RUN_MAX_AGE_MS;
+}
+
 function runActivityAt(run?: SyncRun | null) {
   const metadataActivity = run?.metadata?.updated_at;
   if (typeof metadataActivity === "string") return metadataActivity;
@@ -95,7 +105,7 @@ function hasFreshActivity(run?: SyncRun | null) {
   const activityAt = runActivityAt(run);
   if (!activityAt) return false;
   const timestamp = new Date(activityAt).getTime();
-  return Number.isFinite(timestamp) && Date.now() - timestamp <= ACTIVE_RUN_MAX_AGE_MS;
+  return Number.isFinite(timestamp) && Date.now() - timestamp <= activeRunMaxAge(run);
 }
 
 function isResumablePause(run?: SyncRun | null) {
@@ -123,8 +133,48 @@ async function latestRun(
     .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) return null;
+  if (error) {
+    return {
+      started_at: null,
+      finished_at: null,
+      status: "failed",
+      error_message: `Falha ao consultar ${table}: ${error.message}`
+    };
+  }
   return (data as SyncRun | null) ?? null;
+}
+
+async function latestBackfillActivity(supabase: ReturnType<typeof createSupabaseAdminClient>) {
+  const run = await latestRun(
+    supabase,
+    "olist_order_items_backfill_runs",
+    "started_at, finished_at, status, window_start, window_end, candidates_total, orders_processed, orders_with_error, items_upserted, error_message, metadata"
+  );
+  if (!run?.window_start || !run.window_end) return run;
+
+  const { count: pending, error } = await supabase
+    .from("olist_order_item_backfill_queue")
+    .select("id", { count: "exact", head: true })
+    .eq("window_start", run.window_start)
+    .eq("window_end", run.window_end)
+    .eq("status", "pending")
+    .is("processed_at", null);
+
+  if (error) {
+    return {
+      ...run,
+      status: "failed",
+      error_message: `Falha ao medir a fila do backfill: ${error.message}`
+    };
+  }
+
+  const queueDetail = pending === 0
+    ? "Fila concluída."
+    : `Fila pendente: ${count(pending)} pedido(s); retomada automática no próximo ciclo.`;
+  return {
+    ...run,
+    error_message: [run.error_message, queueDetail].filter(Boolean).join(" · ")
+  };
 }
 
 async function latestStockActivity(supabase: ReturnType<typeof createSupabaseAdminClient>) {
@@ -140,6 +190,15 @@ async function latestStockActivity(supabase: ReturnType<typeof createSupabaseAdm
       .eq("id", 1)
       .maybeSingle()
   ]);
+
+  if (stateResult.error) {
+    return {
+      started_at: null,
+      finished_at: null,
+      status: "failed",
+      error_message: `Falha ao consultar o cursor de estoque: ${stateResult.error.message}`
+    } satisfies SyncRun;
+  }
 
   const state = stateResult.data as {
     batch_id: string | null;
@@ -182,7 +241,14 @@ async function latestRunBySource(
     .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) return null;
+  if (error) {
+    return {
+      started_at: null,
+      finished_at: null,
+      status: "failed",
+      error_message: `Falha ao consultar ${table}: ${error.message}`
+    };
+  }
   return (data as SyncRun | null) ?? null;
 }
 
@@ -199,7 +265,15 @@ async function latestShopRunsBySource(
     .like("source", `${sourcePrefix}:%`)
     .order("started_at", { ascending: false })
     .limit(40);
-  if (error || !data?.length) return null;
+  if (error) {
+    return {
+      started_at: null,
+      finished_at: null,
+      status: "failed",
+      error_message: `Falha ao consultar shopee_sync_runs: ${error.message}`
+    };
+  }
+  if (!data?.length) return null;
   const latestBySource = new Map<string, SyncRun>();
   for (const row of data as SyncRun[]) {
     const source = String(row.source ?? "");
@@ -245,7 +319,14 @@ async function latestReturnsRunML(supabase: ReturnType<typeof createSupabaseAdmi
     .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) return null;
+  if (error) {
+    return {
+      started_at: null,
+      finished_at: null,
+      status: "failed",
+      error_message: `Falha ao consultar devoluções do Mercado Livre: ${error.message}`
+    };
+  }
   return (data as SyncRun | null) ?? null;
 }
 
@@ -258,7 +339,11 @@ async function latestCacheDay(supabase: ReturnType<typeof createSupabaseAdminCli
     .order("day", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error || !data) return null;
+  if (error) {
+    return { started_at: null, finished_at: null, status: "failed",
+      error_message: `Falha ao consultar o cache de devoluções: ${error.message}` } as SyncRun;
+  }
+  if (!data) return null;
   const row = data as { day: string; rows_upserted: number; refreshed_at: string };
   return {
     started_at: row.refreshed_at,
@@ -280,7 +365,11 @@ async function latestQtyCacheRun(supabase: ReturnType<typeof createSupabaseAdmin
     .order("order_date", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error || !data) return null;
+  if (error) {
+    return { started_at: null, finished_at: null, status: "failed",
+      error_message: `Falha ao consultar o cache de quantidade: ${error.message}` } as SyncRun;
+  }
+  if (!data) return null;
   const row = data as { order_date: string; refreshed_at: string };
   return {
     started_at: row.refreshed_at,
@@ -294,7 +383,11 @@ async function latestQtyCacheRun(supabase: ReturnType<typeof createSupabaseAdmin
 async function latestCommercialRun(supabase: ReturnType<typeof createSupabaseAdminClient>) {
   const { data, error } = await supabase.from("oraculo_commercial_days")
     .select("day, refreshed_at").order("day", { ascending: false }).limit(1).maybeSingle();
-  if (error || !data) return null;
+  if (error) {
+    return { started_at: null, finished_at: null, status: "failed",
+      error_message: `Falha ao consultar a Análise Comercial: ${error.message}` } as SyncRun;
+  }
+  if (!data) return null;
   const stale = data.day !== todayBrt() || Date.now() - Date.parse(data.refreshed_at) > 2 * 60 * 60 * 1000;
   return { started_at: data.refreshed_at, finished_at: data.refreshed_at,
     status: stale ? "partial" : "success", error_message: stale ? "Resumo diário atrasado" : null } as SyncRun;
@@ -352,7 +445,7 @@ async function loadStatusUncached(operation: OperationId) {
     latestRun(supabase, "olist_order_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message, metadata"),
     latestStockActivity(supabase),
     latestRun(supabase, "olist_invoice_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, items_upserted, error_message, metadata"),
-    latestRun(supabase, "olist_order_items_backfill_runs", "started_at, finished_at, status, orders_processed, orders_with_error, items_upserted, error_message"),
+    latestBackfillActivity(supabase),
     latestRun(supabase, "mercadolivre_sync_runs", "started_at, finished_at, status, items_count, orders_count, error_message"),
     latestRun(supabase, "importacao_ais_sync_runs", "started_at, finished_at, status, vessels_targeted, positions_updated, error_message"),
     latestRunBySource(supabase, "shopee_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message", "shopee-returns-sync"),
@@ -384,6 +477,10 @@ async function loadStatusUncached(operation: OperationId) {
     runFailed(ordersRun) ? `Sync de pedidos falhou: ${ordersRun?.error_message ?? "sem mensagem"}` : "",
     runFailed(stockRun) ? `Sync de estoque falhou: ${stockRun?.error_message ?? "sem mensagem"}` : "",
     runFailed(invoicesRun) ? `Sync de notas falhou: ${invoicesRun?.error_message ?? "sem mensagem"}` : "",
+    runFailed(backfillRun) ? `Backfill de itens falhou: ${backfillRun?.error_message ?? "sem mensagem"}` : "",
+    backfillRun?.status === "partial" && Number(backfillRun.orders_with_error ?? 0) > 0
+      ? `Backfill de itens parcial: ${count(backfillRun.orders_with_error)} pedido(s) com erro.`
+      : "",
     runFailed(mercadolivreRun)
       ? `Sync Mercado Livre falhou: ${mercadolivreRun?.error_message ?? "sem mensagem"}`
       : "",
@@ -443,7 +540,7 @@ async function loadStatusUncached(operation: OperationId) {
         key: "orders",
         label: "Pedidos",
         run: ordersRun,
-        coverage: "Pedidos Olist alterados numa janela móvel de ~3 dias; a varredura completa leva horas, então o dia corrente entra com atraso"
+        coverage: "500 pedidos mais recentes da janela móvel de ~3 dias, a cada 15 min; cada ciclo reinicia no topo para priorizar alterações novas"
       },
       {
         key: "stock",
@@ -461,7 +558,7 @@ async function loadStatusUncached(operation: OperationId) {
         key: "backfill",
         label: "Backfill de itens",
         run: backfillRun,
-        coverage: "Completa itens de pedidos antigos; roda só de madrugada"
+        coverage: "Completa itens de pedidos antigos em lotes retomáveis; o detalhe mostra a fila ainda pendente"
       },
       {
         key: "mercadolivre",
@@ -539,6 +636,9 @@ function runBadge(run: SyncRun | null) {
 
 function runMessage(run: SyncRun | null) {
   if (isResumablePause(run)) return "Pausa controlada; retomada automática no próximo ciclo.";
+  if (run?.status === "success" && run.metadata?.stop_reason === "bounded_top_scan") {
+    return "Lote configurado concluído; o próximo ciclo volta aos pedidos mais recentes.";
+  }
   return run?.error_message ?? "—";
 }
 
@@ -624,7 +724,7 @@ export default async function StatusPage() {
                 <th>Início</th>
                 <th>Fim / atividade</th>
                 <th className="numeric">Registros</th>
-                <th>Erro</th>
+                <th>Detalhe</th>
               </tr>
             </thead>
             <tbody>

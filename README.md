@@ -33,7 +33,8 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-05.md](docs/project-status-2026-09-05.md) **← start here** (Giracasa isolada em produção; aguardando credenciais e carga)
+1. [docs/project-status-2026-09-08.md](docs/project-status-2026-09-08.md) **← start here** (status dos syncs corrigido e backfill Olist retomado)
+   — [docs/project-status-2026-09-05.md](docs/project-status-2026-09-05.md) (Giracasa isolada em produção; aguardando credenciais e carga)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
    — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every card/column/config field across the whole system — analytics, alerts, calculator, imports, params, sync status — exact formula, PT-BR, for team walkthroughs)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
@@ -58,7 +59,11 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 ## Current production state
 
-**Last update**: `2026-09-05` (see `docs/project-status-2026-09-05.md`) —
+**Last update**: `2026-09-08` (see `docs/project-status-2026-09-08.md`) —
+os status de pedidos e backfill Olist agora representam ciclos reais: lotes de
+pedidos encerram como sucesso, runs interrompidos deixam de parecer ativos e o
+backfill voltou a avançar com heartbeat, timeout e isolamento por pedido. —
+Estado multioperação de `2026-09-05`:
 Giracasa/SP isolada no banco, motor financeiro instalado e 26 Edge Functions publicadas. A operação permanece desativada e vazia até cadastrar suas credenciais, carregar 90 dias e validar a cobertura.
 Estado anterior em produção:
 the cost-audit screen now explains the exact difference between **gross cost used**

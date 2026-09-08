@@ -2,6 +2,18 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-08] — Status fiel dos syncs e retomada do backfill Olist
+
+- `/status` passa a mostrar detalhe operacional e fila pendente, respeita o
+  heartbeat específico de cada rotina e expõe falhas de consulta do monitor.
+- O ciclo de pedidos mais recentes fecha como `success` após cumprir o lote de
+  500; 689 runs antigos deixaram de aparecer falsamente como ativos.
+- O backfill fecha execuções interrompidas, impede sobreposição, usa timeouts
+  HTTP e continua após erro individual; o primeiro lote corrigido avançou
+  100 pedidos (99 concluídos, 1 erro isolado).
+- Migration `20260908120216_fix_sync_run_statuses.sql` saneia o histórico de
+  pedidos e as 13.588 execuções fantasmas do backfill.
+
 ## [2026-09-04] — Explicações em todas as colunas
 
 - Todos os cabeçalhos das tabelas exibem um marcador `?` com explicação em
