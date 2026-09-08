@@ -30,7 +30,12 @@ export function operationGrant(user, operation) {
     return grant?.enabled === true ? grant : null;
   }
   return operation === "uberlandia"
-    ? { enabled: true, tabs: metadata.tabs ?? [], restricted_tabs: metadata.restricted_tabs ?? [] }
+    ? {
+        enabled: true,
+        tabs: metadata.tabs ?? [],
+        restricted_tabs: metadata.restricted_tabs ?? [],
+        full_manager: metadata.full_manager === true
+      }
     : null;
 }
 
@@ -45,6 +50,11 @@ export function projectOperationUser(user, operation) {
     ...user,
     oraculo_operation: operation,
     oraculo_operation_allowed: grant !== null,
-    app_metadata: { ...user.app_metadata, tabs: grant?.tabs ?? [], restricted_tabs: grant?.restricted_tabs ?? [] }
+    app_metadata: {
+      ...user.app_metadata,
+      tabs: grant?.tabs ?? [],
+      restricted_tabs: grant?.restricted_tabs ?? [],
+      full_manager: grant?.full_manager === true
+    }
   };
 }

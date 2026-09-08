@@ -33,8 +33,8 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-08.md](docs/project-status-2026-09-08.md) **← start here** (status dos syncs corrigido e backfill Olist retomado)
-   — [docs/project-status-2026-09-07.md](docs/project-status-2026-09-07.md) (Oráculo restaurado; Giracasa pausada na interface)
+1. [docs/project-status-2026-09-08.md](docs/project-status-2026-09-08.md) **← start here** (fluxo operacional Full e status dos syncs)
+   — [docs/project-status-2026-09-05.md](docs/project-status-2026-09-05.md) (Giracasa isolada em produção; aguardando credenciais e carga)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
    — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every card/column/config field across the whole system — analytics, alerts, calculator, imports, params, sync status — exact formula, PT-BR, for team walkthroughs)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
@@ -60,6 +60,10 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 ## Current production state
 
 **Last update**: `2026-09-08` (see `docs/project-status-2026-09-08.md`) —
+novo módulo **Full/FBS/Onsite** em `/full`, com remessa manual rastreável,
+revisões congeladas, produção física, aprovações pela Agenda, anexos privados e
+monitoramento externo bloqueado por canal até validação real; o planejador
+semanal legado foi desativado. Também,
 Shopee → Estoque & FBS agora abre a posição completa por SKU × armazém e
 distingue vendável FBS, reservado, não vendável, trânsito e vendável total do
 anúncio; a nomenclatura antiga de "estoque local" foi corrigida porque o campo
@@ -81,8 +85,8 @@ the **post-login Novidades pop-up** communicates each release for 48 hours,
 with a per-update "do not show again" option; the **Inteligência de Mercado**
 four-block experience and its cost double-check inside **Parâmetros** are in
 production, alongside —
-**Agenda Full recorrente** (Shopee FBS por loja, Mercado Livre Full e Amazon
-Onsite; coleta semanal configurável, checklist por SKU e cobertura de 20 dias),
+**Agenda Full recorrente legada desativada** (histórico preservado; novos marcos
+nascem exclusivamente de remessas reais criadas no módulo `/full`),
 **Reconciliação financeira Shopee** (nova aba com pedido, NF, líquido previsto,
 crédito efetivo da carteira, pendências e previsão; carga inicial de agosto e
 cron semanal retomável por loja), **Expedição reconciliada com vendas pagas** (pedidos/unidades pela data do

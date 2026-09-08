@@ -432,7 +432,7 @@ async function loadStatusUncached(operation: OperationId) {
   const [
     tokenResult, ordersRun, stockRun, invoicesRun, backfillRun, mercadolivreRun,
     importacoesAisRun, shopeeReturnsRun, shopeeReconciliationRun, mercadolivreReturnsRun, returnsCacheRun,
-    bipFulfillmentRun, qtyCacheRun, fullPlannerRun, watermarks, commercialRun
+    bipFulfillmentRun, qtyCacheRun, fullInboundRun, fullInboundQueue, watermarks, commercialRun
   ] = await Promise.all([
     supabase
       .from("olist_oauth_tokens")
@@ -454,7 +454,8 @@ async function loadStatusUncached(operation: OperationId) {
     latestCacheDay(supabase),
     latestRun(supabase, "bip_fulfillment_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message"),
     latestQtyCacheRun(supabase),
-    latestRun(supabase, "oraculo_full_planning_runs", "started_at, finished_at, status, records_upserted:suggestions_written, error_message, metadata"),
+    latestRun(supabase, "oraculo_full_sync_runs", "started_at, finished_at, status, records_checked:records_checked, records_upserted:events_written, error_message, metadata"),
+    supabase.from("oraculo_fulls").select("id", { count: "exact", head: true }).eq("workflow_status", "monitorando"),
     loadDataWatermarks(supabase),
     latestCommercialRun(supabase)
   ]);
@@ -517,12 +518,11 @@ async function loadStatusUncached(operation: OperationId) {
     !commercialRun || commercialRun.status !== "success"
       ? "Análise Comercial: resumo diário ausente ou atrasado há mais de 2 horas."
       : "",
-    runFailed(fullPlannerRun)
-      ? `Planejamento Full da Agenda falhou: ${fullPlannerRun?.error_message ?? "sem mensagem"}`
+    fullInboundQueue.error ? `Fluxo Full: falha ao medir fila: ${fullInboundQueue.error.message}` : "",
+    Number(fullInboundQueue.count ?? 0) > 0 && !fullInboundRun
+      ? `Fluxo Full tem ${count(fullInboundQueue.count)} remessa(s) aguardando integração sem execução registrada.`
       : "",
-    olderThan(fullPlannerRun, 2 * 24 * 60 * 60 * 1000)
-      ? "Planejamento Full da Agenda não foi recalculado nos últimos 2 dias."
-      : ""
+    runFailed(fullInboundRun) ? `Monitoramento Full falhou: ${fullInboundRun?.error_message ?? "sem mensagem"}` : ""
   ].filter(Boolean);
 
   return {
@@ -615,10 +615,10 @@ async function loadStatusUncached(operation: OperationId) {
         coverage: "Recalcula últimos 10 dias de hora em hora (:42) e revisa histórico em lotes de 7 dias"
       },
       {
-        key: "agenda-full-planner",
-        label: "Agenda · coletas Full",
-        run: fullPlannerRun,
-        coverage: "Próxima coleta semanal de cada loja ativa; cobertura de 20 dias, recalculada diariamente às 07:05 BRT"
+        key: "full-inbound",
+        label: "Full · coleta e recebimento",
+        run: fullInboundRun,
+        coverage: `${count(fullInboundQueue.count)} remessa(s) aguardando atualização; conectores entram em produção um canal por vez após validação real`
       }
     ]
   };

@@ -2,6 +2,21 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-08] — Fluxo operacional de Full/FBS/Onsite
+
+- Nova aba `/full`, em Operações, com criação manual por marketplace, loja,
+  anúncio/variação, produto físico Olist e quantidade.
+- Revisões transacionais e congeladas preservam fotografia comercial, expansão
+  de kits, produção anterior, aprovações e linha do tempo append-only.
+- Agenda virou camada idempotente de prazos do Full; o planejador semanal foi
+  desativado e as sugestões pendentes legadas são encerradas com histórico.
+- RLS por participante e `full_manager` por operação; documentos em bucket
+  privado com download temporário autorizado.
+- Contrato único de monitoramento externo e saúde em `/status`; todos os canais
+  começam bloqueados até uma remessa real validar coleta e recebimento.
+- Arquitetura e rollout: `docs/full-workflow.md` e
+  `docs/adr/ADR-007-full-inbound-workflow.md`.
+
 ## [2026-09-08] — Posição vendável completa da Shopee
 
 - `Shopee → Estoque & FBS` passa a listar todos os SKUs × armazém do SBS com

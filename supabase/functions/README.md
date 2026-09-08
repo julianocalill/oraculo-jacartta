@@ -18,6 +18,8 @@ Current functions:
 - `shopee-escrow-sync` — extrato financeiro por pedido (comissão/taxas/líquido); nunca renova token
 - `mercadolivre-oauth-callback` — conclui OAuth com PKCE, valida `/users/me` e salva conta/tokens
 - `mercadolivre-webhook` — inbox idempotente de notificações; não processa recursos no request
+- `full-inbound-sync` — contrato de monitoramento por remessa; sem adapter ativo,
+  sem deploy e sem cron até a primeira validação real
 
 ## Runtime model
 
@@ -46,6 +48,8 @@ npx supabase functions deploy mercadolivre-webhook --no-verify-jwt
 - `olist-sync-health`: health/status endpoint.
 - `mercadolivre-oauth-callback`: conexão inicial por seller; ainda não importa dados.
 - `mercadolivre-webhook`: recebe notificações do app Mercado Livre e grava a fila `pending`.
+- `full-inbound-sync`: lê apenas lojas com coleta e recebimento validados,
+  registra observações idempotentes e nunca renova tokens nem infere evento por estoque.
 
 `olist-sync-invoices` is scheduled by:
 

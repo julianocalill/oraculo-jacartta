@@ -1,5 +1,44 @@
 # Status do projeto — 08/09/2026
 
+## Fluxo operacional de Full/FBS/Onsite implementado
+
+O Oráculo ganhou o módulo `/full`, separado do funil de expedição, para
+acompanhar reposições reais do rascunho ao recebimento. A entrega inclui criação
+guiada, vínculo explícito entre anúncio e produto Olist, confirmação e expansão
+de kits, revisões imutáveis, produção por SKU físico, negociação da coleta,
+registro da remessa externa, anexos privados e timeline completa.
+
+Cada troca de responsabilidade gera um marco idempotente na Agenda com prazo de
+um dia útil. A ação é concluída no módulo Full; a Agenda não pode simular a
+decisão. O planejador semanal legado foi retirado da interface e seu cron é
+desativado pela migration. Sugestões ainda pendentes são encerradas como legado,
+preservando conteúdo e tabelas de auditoria.
+
+A leitura usa RLS por participante ou `full_manager` de Uberlândia. Escritas
+continuam no servidor. `oraculo_write_full_revision` grava revisão, itens,
+componentes e necessidade consolidada na mesma transação. Documentos usam o
+bucket privado `full-documents` e URL assinada de 60 segundos após autorização.
+
+O contrato `full-inbound-sync` foi criado sem adapter ativo nem cron. Mercado
+Livre, Shopee e Amazon aceitam consulta de catálogo e criação de rascunho, mas o
+envio à logística fica bloqueado até coleta e recebimento serem comprovados em
+uma remessa real, na ordem ML → Shopee → Amazon. A saúde e a fila aparecem em
+`/status`.
+
+Arquitetura e operação: [full-workflow.md](full-workflow.md) e
+[ADR-007](adr/ADR-007-full-inbound-workflow.md).
+
+### Validação local desta entrega
+
+- 70 testes do domínio aprovados;
+- TypeScript aprovado;
+- build de produção do Next.js aprovado;
+- teste SQL descartável de RLS, revisão congelada, expansão e escrita bloqueada
+  adicionado em `supabase/tests/full-workflow.sql`;
+- migration aplicada no projeto vinculado; teste SQL transacional aprovado;
+- interface ainda precisa do push/deploy Vercel; a Edge Function permanece
+  propositalmente não publicada e sem cron até a remessa piloto do primeiro canal.
+
 ## Posição vendável da Shopee ficou completa e sem ambiguidade
 
 A aba `/shopee/estoque` agora abre a posição completa de todos os SKUs ×
