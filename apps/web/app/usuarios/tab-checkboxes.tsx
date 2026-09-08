@@ -6,7 +6,7 @@ import { SECTORS, TABS, type TabKey } from "../../lib/auth/tabs";
 // Matriz de acesso de um usuário: uma caixinha por aba do menu.
 // Client component só por causa dos atalhos "marcar todas"/"limpar" — com 15
 // caixas por usuário, marcar uma a uma é inviável no dia a dia.
-export function TabCheckboxes({ selected = [], prefix = "" }: { selected?: TabKey[]; prefix?: string }) {
+export function TabCheckboxes({ selected = [], prefix = "", excluded = [] }: { selected?: TabKey[]; prefix?: string; excluded?: TabKey[] }) {
   const [checked, setChecked] = useState<Set<string>>(() => new Set(selected));
   const groupId = useId();
 
@@ -22,7 +22,8 @@ export function TabCheckboxes({ selected = [], prefix = "" }: { selected?: TabKe
   // Mesma organização do menu lateral: setores, depois as abas soltas, depois
   // Admin. Abas restritas ficam em um grupo próprio e não entram no atalho
   // "Marcar todas": precisam sempre de uma concessão deliberada.
-  const grantable = TABS.filter((tab) => !("adminOnly" in tab && tab.adminOnly));
+  const excludedKeys = new Set(excluded);
+  const grantable = TABS.filter((tab) => !("adminOnly" in tab && tab.adminOnly) && !excludedKeys.has(tab.key));
   const restricted = TABS.filter((tab) => "adminOnly" in tab && tab.adminOnly);
   const groups = [
     ...SECTORS.map((sector) => ({

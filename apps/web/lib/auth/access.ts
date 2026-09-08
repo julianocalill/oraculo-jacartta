@@ -24,6 +24,7 @@ type MaybeUser = {
   email?: string | null;
   app_metadata?: Record<string, unknown> | null;
   oraculo_operation_allowed?: boolean;
+  oraculo_operation?: string;
 } | null;
 
 function masterEmails() {
@@ -46,6 +47,12 @@ export function isMaster(user: MaybeUser) {
   const email = user.email?.trim().toLowerCase();
   if (!email) return false;
   return masterEmails().includes(email);
+}
+
+/** Gestor operacional do módulo Full na operação projetada no request. */
+export function isFullManager(user: MaybeUser) {
+  if (user?.oraculo_operation && user.oraculo_operation !== "uberlandia") return false;
+  return isMaster(user) || user?.app_metadata?.full_manager === true;
 }
 
 function devTabsOverride() {
@@ -88,6 +95,7 @@ export function allowedTabs(user: MaybeUser): TabKey[] {
 }
 
 export function canAccess(user: MaybeUser, tab: TabKey) {
+  if (tab === "full" && user?.oraculo_operation && user.oraculo_operation !== "uberlandia") return false;
   return allowedTabs(user).includes(tab);
 }
 

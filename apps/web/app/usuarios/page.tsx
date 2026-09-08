@@ -48,8 +48,11 @@ function OperationPermissions({ user }: { user?: AuthUser }) {
       <label className="tab-check"><input type="checkbox" name={`${operation.id}.enabled`}
         defaultChecked={user ? Boolean(operationGrant(user, operation.id)) : operation.id === "uberlandia"} />
         Liberar acesso à operação</label>
+      {operation.id === "uberlandia" ? <label className="tab-check"><input type="checkbox" name={`${operation.id}.full_manager`}
+        defaultChecked={user ? operationGrant(user, operation.id)?.full_manager === true : false} />
+        Gestor Full — pode acompanhar todos os envios</label> : null}
       {user && isMaster(user) ? <p>Administrador: todas as abas da operação liberada.</p>
-        : <TabCheckboxes prefix={`${operation.id}.`} selected={user ? tabsOf(user, operation.id) : []} />}
+        : <TabCheckboxes prefix={`${operation.id}.`} selected={user ? tabsOf(user, operation.id) : []} excluded={operation.id === "uberlandia" ? [] : ["full"]} />}
     </fieldset>
   )}</div>;
 }
@@ -57,8 +60,9 @@ function OperationPermissions({ user }: { user?: AuthUser }) {
 function readOperations(formData: FormData, master = false) {
   return Object.fromEntries(OPERATIONS.map((operation) => [operation.id, {
     enabled: formData.get(`${operation.id}.enabled`) === "on",
-    tabs: master ? ALL_TAB_KEYS.filter((key) => !isAdminOnlyTab(key)) : readTabs(formData, `${operation.id}.`),
-    restricted_tabs: master ? ALL_TAB_KEYS.filter(isAdminOnlyTab) : readRestrictedTabs(formData, `${operation.id}.`)
+    tabs: (master ? ALL_TAB_KEYS.filter((key) => !isAdminOnlyTab(key)) : readTabs(formData, `${operation.id}.`)).filter((key) => operation.id === "uberlandia" || key !== "full"),
+    restricted_tabs: master ? ALL_TAB_KEYS.filter(isAdminOnlyTab) : readRestrictedTabs(formData, `${operation.id}.`),
+    full_manager: operation.id === "uberlandia" && (master || formData.get(`${operation.id}.full_manager`) === "on")
   }]));
 }
 

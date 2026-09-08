@@ -41,6 +41,7 @@ nova atualização for publicada.
 | **Curva de Estoque** | Classificação A/B/C por cobertura (meses de estoque) |
 | **Calculadora** | Simulador de precificação por marketplace |
 | **Agenda** | Tarefas da equipe com prazo, participantes e sub-tarefas |
+| **Full** | Reposição real para Shopee FBS, Mercado Livre Full e Amazon Onsite |
 | **Alertas** | Produtos que exigem ação: ruptura, risco de ruptura, parados |
 | **Parâmetros** | Cadastro manual de custos e taxas por canal/SKU/UF |
 | **Usuários / Status** | Administração de acessos e saúde da sincronização |
@@ -169,27 +170,35 @@ entra automaticamente.
   gera aviso.
 - Só participantes enxergam cada tarefa — não existe agenda pública.
 
-### Coletas Full automáticas
+### Marcos do fluxo Full
 
-No topo da Agenda, o quadro **Coletas Full · cobertura de 20 dias** reúne cada
-loja Shopee, a conta Mercado Livre e a Amazon Onsite. Para ativar uma loja:
+A Agenda não cria mais sugestões semanais de reposição. Ela recebe prazos de
+Fulls reais criados em `/full`: análise da logística, aceite do criador,
+agendamento e coleta prevista. Esses marcos não têm botão manual de conclusão;
+é preciso abrir o Full e realizar a decisão correta, que atualiza a Agenda
+automaticamente.
 
-1. escolha o dia semanal real da coleta;
-2. escolha o responsável;
-3. marque **Gerar toda semana**;
-4. clique em **Salvar e gerar**.
+## 10. Full — reposição real nos marketplaces
 
-A próxima coleta aparece no calendário e na lista de tarefas. Dentro dela,
-cada SKU é uma caixa da checklist com a quantidade a separar. O sistema
-recalcula a lista todos os dias até a tarefa ser concluída, sempre preservando
-o que já foi marcado. **Recalcular agora** antecipa essa atualização.
+Em **Novo Full**, o criador escolhe marketplace, loja, responsável logístico,
+anúncio/variação, produto físico Olist e quantidade. Se houver kit, confirma a
+expansão nos componentes. Ao enviar, a composição congela e a logística já pode
+registrar quanto está pronto ou faltante.
 
-A meta é ter 20 dias de cobertura depois da coleta. Por isso o cálculo soma
-também os dias que ainda faltam para a data marcada. Na Amazon, enquanto a
-integração direta não está ativa, a tarefa identifica que usa vendas fiscais e
-o depósito Amazon Onsite do Olist.
+A logística propõe a coleta; o criador aceita e agenda a remessa no painel do
+marketplace. Código externo, modalidade e data ficam registrados no Oráculo.
+Se o marketplace oferecer outro dia, a decisão volta à logística.
 
-## 10. Fórmulas — resumo de bolso
+Depois do vínculo não existe botão para marcar coleta ou recebimento: somente a
+API do marketplace confirma esses estados. A página mantém documentos privados,
+divergências e uma linha do tempo que não pode ser reescrita. Qualquer mudança
+de item, quantidade ou produto físico cria uma nova revisão e preserva a
+anterior.
+
+Cada canal começa bloqueado para envio até uma remessa piloto comprovar coleta e
+recebimento automáticos. Rascunhos continuam disponíveis para conferência.
+
+## 11. Fórmulas — resumo de bolso
 
 | Indicador | Cálculo |
 |---|---|

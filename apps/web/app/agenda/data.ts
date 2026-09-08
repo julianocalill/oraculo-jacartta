@@ -28,7 +28,7 @@ export type AgendaTask = {
   created_by: string;
   completed_at: string | null;
   completed_by: string | null;
-  task_kind: "manual" | "full_replenishment";
+  task_kind: "manual" | "full_replenishment" | "full_workflow";
   source_key: string | null;
   metadata: Record<string, unknown>;
   generated_at: string | null;
@@ -83,7 +83,10 @@ function toTask(row: TaskRow): AgendaTask {
     created_by: row.created_by,
     completed_at: row.completed_at,
     completed_by: row.completed_by,
-    task_kind: row.task_kind === "full_replenishment" ? "full_replenishment" : "manual",
+    task_kind:
+      row.task_kind === "full_replenishment" || row.task_kind === "full_workflow"
+        ? row.task_kind
+        : "manual",
     source_key: row.source_key,
     metadata: row.metadata ?? {},
     generated_at: row.generated_at,
