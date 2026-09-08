@@ -19,10 +19,19 @@ Histórico de entregas e mudanças significativas.
 - A configuração real confirmou um Aplicativo API OAuth/V3 para a Giracasa,
   com callback e secrets exclusivos. A premissa anterior de Token API V2 foi
   corrigida antes de autorizar a conta ou carregar dados.
-- O consentimento OAuth armazenou o token no schema Giracasa, mas as consultas
-  de conta, produtos e pedidos retornaram `401`. A carga continua bloqueada até
-  conferir as permissões do usuário OAuth e validar `/info` com `200`; as chaves
-  só serão regeneradas se alguma permissão precisar ser alterada.
+- A autorização administrativa validou Conta, Produtos e Pedidos e identificou
+  a empresa Giracasa/SP. O callback repetido mostrou `invalid_grant` porque o
+  código já havia sido consumido; o primeiro callback havia salvo o token.
+- O canário de 07/09 trouxe 771 pedidos, 687 NFs válidas, 660 itens comerciais,
+  685 itens fiscais e R$ 44.042,64 de receita. Foram vinculadas 659 NFs a pedido
+  e a fila terminou sem erro.
+- Três páginas de detalhes atingiram o wall clock de 150 s; o padrão foi
+  reduzido para uma página por invocação e a retomada conserva o cursor salvo.
+- Corrigido `olist-backfill-order-items`, que gravava itens sem marcar a fila
+  como concluída. A função Giracasa foi republicada e validada em 659 pedidos.
+- A varredura completa trouxe 1.068 produtos e 484 SKUs com custo. A tarifa
+  Shopee padrão do Financeiro liberou o cálculo de 470 NFs; TikTok e Mercado
+  Livre continuam com lucro pendente até receberem suas tarifas próprias.
 - Login, seletor e rotas multioperação ficam para depois da validação de dados e
   cálculos, conforme `docs/adr/ADR-007-giracasa-progressive-rollout.md`.
 

@@ -73,8 +73,10 @@ export function parseBackfillArgs(argv) {
       days: explicitDays ?? DEFAULT_DAYS,
       sliceDays: option(argv, "slice-days") ?? DEFAULT_SLICE_DAYS
     }),
-    orderPages: positiveInteger(option(argv, "order-pages") ?? 3, "--order-pages", 10),
-    invoicePages: positiveInteger(option(argv, "invoice-pages") ?? 2, "--invoice-pages", 10),
+    // Detalhes exigem uma chamada por pedido/NF. Uma página por invocação
+    // manteve 100 pedidos dentro do wall clock; três páginas atingiram 150 s.
+    orderPages: positiveInteger(option(argv, "order-pages") ?? 1, "--order-pages", 10),
+    invoicePages: positiveInteger(option(argv, "invoice-pages") ?? 1, "--invoice-pages", 10),
     maxInvocations: positiveInteger(option(argv, "max-invocations") ?? 500, "--max-invocations", 2000)
   };
 }

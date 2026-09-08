@@ -13,9 +13,11 @@ test("carga Giracasa usa 40 dias inclusivos e blocos de até 14 dias", () => {
 });
 
 test("janela explícita pode retomar de uma data sem ampliar a carga", () => {
-  const { plan } = parseBackfillArgs(["--start=2026-08-20", "--end=2026-09-08", "--plan"]);
+  const { plan, orderPages, invoicePages } = parseBackfillArgs(["--start=2026-08-20", "--end=2026-09-08", "--plan"]);
   assert.equal(plan.days, 20);
   assert.equal(plan.slices.at(-1).endDate, "2026-09-08");
+  assert.equal(orderPages, 1);
+  assert.equal(invoicePages, 1);
 });
 
 test("start e days juntos são rejeitados", () => {

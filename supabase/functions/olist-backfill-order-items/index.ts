@@ -285,6 +285,12 @@ Deno.serve(async (req) => {
             .from('olist_order_items')
             .upsert(items, { onConflict: 'id' });
           if (upsertError) throw upsertError;
+          const { error: markError } = await supabase.rpc('mark_olist_order_item_backfill_queue', {
+            p_queue_id: candidate.queue_id,
+            p_status: 'completed',
+            p_last_error: null
+          });
+          if (markError) throw markError;
           ordersWithItems += 1;
           itemsUpserted += items.length;
         }

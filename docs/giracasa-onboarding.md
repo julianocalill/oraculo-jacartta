@@ -62,7 +62,7 @@ SUPABASE_URL=... GIRACASA_OLIST_SYNC_JOB_SECRET=... node scripts/giracasa-backfi
 
 O padrão é uma janela inclusiva de 40 dias terminando hoje. O script divide a
 carga em blocos de no máximo 14 dias e limita cada chamada às Edge Functions a
-poucas páginas. Enquanto um bloco estiver incompleto, ele faz outra chamada com
+uma página de detalhes. Enquanto um bloco estiver incompleto, ele faz outra chamada com
 `resume=true`, reutilizando o cursor gravado no banco. Isso evita uma execução
 longa disputar recursos com Uberlândia ou exceder o tempo de vida da função.
 
@@ -75,6 +75,11 @@ node scripts/giracasa-backfill.mjs --start=2026-08-20 --end=2026-09-08 --plan
 Revise o plano e repita o comando com as variáveis de ambiente, removendo
 `--plan`. Importe outras fontes também em janelas limitadas pelos respectivos
 contratos; Shopee continua sendo executada por loja.
+
+Canário de referência em produção (07/09/2026): 771 pedidos, 687 NFs válidas,
+R$ 44.042,64 de receita, 659 vínculos NF→pedido e 660 itens comerciais. O
+catálogo fechou em 1.068 produtos. A tarifa Shopee segue as faixas do Financeiro;
+TikTok e Mercado Livre permanecem pendentes até cadastrar os contratos próprios.
 
 ## Validação e ativação
 
