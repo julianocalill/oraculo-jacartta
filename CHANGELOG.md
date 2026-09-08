@@ -10,6 +10,8 @@ Histórico de entregas e mudanças significativas.
   de kits, produção anterior, aprovações e linha do tempo append-only.
 - Agenda virou camada idempotente de prazos do Full; o planejador semanal foi
   desativado e as sugestões pendentes legadas são encerradas com histórico.
+- Um guard no banco mantém as configurações legadas desligadas e torna inerte a
+  antiga chamada manual enquanto o frontend estável ainda exibe esse cartão.
 - RLS por participante e `full_manager` por operação; documentos em bucket
   privado com download temporário autorizado.
 - Contrato único de monitoramento externo e saúde em `/status`; todos os canais

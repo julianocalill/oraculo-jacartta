@@ -63,6 +63,9 @@ combina Full, etapa e revisão para garantir idempotência.
 O cron `oraculo-agenda-full-planner-daily` está desativado. Tarefas pendentes do
 tipo `full_replenishment`, inclusive as duas sugestões Donacor de 03/09 e 10/09,
 são concluídas como fluxo legado desativado, sem exclusão de conteúdo.
+`20260908215909_retire_legacy_full_planner_guard.sql` também força `enabled=false`
+e torna `oraculo_queue_full_planner()` inerte, protegendo a transição enquanto
+alguma versão antiga da interface ainda estiver em cache ou publicada.
 
 ## Documentos e segurança
 
