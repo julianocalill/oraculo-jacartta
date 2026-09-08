@@ -14,6 +14,20 @@ node scripts/build-operation-functions.mjs --operation=giracasa --out=/tmp/girac
 
 Revise `MANIFEST.json`, faça o deploy de cada pasta com seu nome `giracasa-*` e cadastre os callbacks OAuth com esses nomes. Cada cliente escreve no schema `giracasa`. Tokens, lojas, cursores e runs começam vazios.
 
+Para o primeiro gate, configure somente a Olist/Tiny. As variáveis próprias são:
+
+| Grupo | Variáveis |
+| --- | --- |
+| OAuth obrigatório | `GIRACASA_OLIST_API_CLIENT_ID`, `GIRACASA_OLIST_API_CLIENT_SECRET`, `GIRACASA_OLIST_OAUTH_REDIRECT_URI`, `GIRACASA_OLIST_OAUTH_STATE_SECRET` |
+| Endpoints | `GIRACASA_OLIST_API_BASE_URL`, `GIRACASA_OLIST_API_TOKEN_URL`, `GIRACASA_OLIST_OAUTH_AUTHORIZE_URL` |
+| Execução | `GIRACASA_OLIST_SYNC_JOB_SECRET` |
+| Conforme o contrato da conta | `GIRACASA_OLIST_OAUTH_SCOPE`, `GIRACASA_OLIST_API_AUTH_HEADER`, `GIRACASA_OLIST_API_AUTH_PREFIX`, `GIRACASA_OLIST_API_BEARER_TOKEN`, `GIRACASA_OLIST_API_REFRESH_TOKEN` |
+
+`SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` pertencem ao projeto compartilhado
+e são as únicas variáveis sem prefixo permitidas nos artefatos gerados. Os
+testes falham se uma função Giracasa tentar ler outro secret sem
+`GIRACASA_`. Marketplace, AIS, Bip e demais fontes entram em gates posteriores.
+
 ## Carga inicial de 40 dias
 
 Primeiro conecte Olist/Tiny e faça um teste de uma janela fechada de um dia. Confira o plano sem acessar nenhuma conta:

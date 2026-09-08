@@ -12,6 +12,8 @@ Histórico de entregas e mudanças significativas.
   por invocação e retoma os cursores até as Edge Functions confirmarem o fim.
 - A regra testável de custo passou a respeitar a precedência do Financeiro:
   custo líquido explícito, créditos medidos, transferência importada e bruto.
+- Um teste dos 26 artefatos gerados impede a leitura de secrets de Uberlândia;
+  fora das chaves do próprio Supabase, toda variável deve usar `GIRACASA_`.
 - Login, seletor e rotas multioperação ficam para depois da validação de dados e
   cálculos, conforme `docs/adr/ADR-007-giracasa-progressive-rollout.md`.
 

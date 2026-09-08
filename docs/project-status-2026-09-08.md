@@ -19,6 +19,10 @@ Financeiro: custo líquido explícito, créditos recuperáveis medidos,
 transferência importada comprovada e, por fim, custo bruto. Um crédito medido
 agora prevalece mesmo quando a transferência também estiver marcada.
 
+O gerador das 26 Edge Functions ganhou cobertura automatizada para o limite de
+credenciais: somente as duas chaves compartilhadas do projeto Supabase podem
+ficar sem prefixo; qualquer outra variável precisa começar com `GIRACASA_`.
+
 ## Estado operacional
 
 - Uberlândia permanece ativa nas rotas originais.
