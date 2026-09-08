@@ -19,6 +19,9 @@ Histórico de entregas e mudanças significativas.
 - A configuração real confirmou um Aplicativo API OAuth/V3 para a Giracasa,
   com callback e secrets exclusivos. A premissa anterior de Token API V2 foi
   corrigida antes de autorizar a conta ou carregar dados.
+- O consentimento OAuth armazenou o token no schema Giracasa, mas as consultas
+  de conta, produtos e pedidos retornaram `401`. A carga continua bloqueada até
+  regenerar as chaves após conferir as permissões e validar `/info` com `200`.
 - Login, seletor e rotas multioperação ficam para depois da validação de dados e
   cálculos, conforme `docs/adr/ADR-007-giracasa-progressive-rollout.md`.
 

@@ -32,15 +32,19 @@ Detalhes: `docs/giracasa-financial-contract.md`.
 A tela real da Olist confirmou um **Aplicativo API OAuth/V3**, com URL de
 redirecionamento, Client ID e Client Secret. A premissa anterior de Token API V2
 foi corrigida antes de autorizar ou carregar a conta. O callback exclusivo
-`giracasa-olist-oauth-callback` está publicado; endpoints, state e segredo do job
-foram configurados, enquanto as credenciais do aplicativo permanecem como etapa
-manual no Supabase. Decisão: `docs/adr/ADR-008-giracasa-olist-oauth-v3.md`.
+`giracasa-olist-oauth-callback` está publicado. Endpoints, state, segredo do job,
+Client ID e Client Secret foram configurados; o consentimento gerou refresh
+token no schema `giracasa`. A leitura de `/info`, `/produtos` e `/pedidos` ainda
+responde `401`, embora o mesmo usuário e formato de token respondam `200` em
+Uberlândia. A carga permanece bloqueada até regenerar as chaves após confirmar
+as permissões do aplicativo e repetir o consentimento. Decisão:
+`docs/adr/ADR-008-giracasa-olist-oauth-v3.md`.
 
 ## Estado operacional
 
 - Uberlândia permanece ativa nas rotas originais.
-- Giracasa permanece `enabled=false`, sem usuários, jobs ou carga. A configuração
-  OAuth está parcial e ainda não possui Client ID/Client Secret.
+- Giracasa permanece `enabled=false`, sem usuários, jobs ou carga. O OAuth está
+  configurado, mas a API ainda recusa leituras com `401`.
 - O schema isolado, o motor `gira-casa-v1` e as 26 Edge Functions já publicadas
   continuam preservados.
 - Nenhuma credencial de Uberlândia pode ser usada como fallback pela Giracasa.
@@ -49,8 +53,9 @@ manual no Supabase. Decisão: `docs/adr/ADR-008-giracasa-olist-oauth-v3.md`.
 
 ## Próximos gates
 
-1. Cadastrar Client ID e Client Secret diretamente nos secrets do Supabase.
-2. Concluir o OAuth e validar que a autorização pertence à Giracasa/SP.
+1. Confirmar permissões do aplicativo, regenerar as chaves e atualizar os dois
+   secrets do Supabase.
+2. Repetir o OAuth e validar `/info` como Giracasa/SP.
 3. Carregar e reconciliar uma janela fechada de um dia.
 4. Executar os 40 dias e medir volume, duração e cobertura.
 5. Conferir nacional, importado, kit, créditos, SP interno e destinos

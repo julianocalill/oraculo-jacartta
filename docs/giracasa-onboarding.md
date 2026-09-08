@@ -99,7 +99,13 @@ controle para evitar crédito duplicado de PIS/COFINS, está em
 
 ## Registro da implantação
 
-Em 05/09/2026 as migrations de cadastro, isolamento, motor financeiro e exposição controlada do schema foram executadas em produção. Pós-check: 101 tabelas, 94 funções e 34 views no schema Giracasa; zero pedidos, zero notas, zero concessões e `enabled=false`. As 26 Edge Functions `giracasa-*` foram publicadas. Não existem secrets `GIRACASA_*`, portanto a carga e os crons continuam bloqueados por configuração, sem risco de usar as contas de Uberlândia.
+Em 05/09/2026 as migrations de cadastro, isolamento, motor financeiro e exposição controlada do schema foram executadas em produção. Pós-check: 101 tabelas, 94 funções e 34 views no schema Giracasa; zero pedidos, zero notas, zero concessões e `enabled=false`. As 26 Edge Functions `giracasa-*` foram publicadas.
+
+Em 08/09/2026 o OAuth exclusivo foi configurado e o callback armazenou o token
+no schema `giracasa`. As leituras iniciais de `/info`, `/produtos` e `/pedidos`
+responderam `401`; por isso nenhuma carga foi iniciada. O gate exige confirmar
+as permissões do aplicativo, regenerar as chaves conforme a orientação da Olist,
+atualizar os secrets e obter `200` em `/info` antes do canário de um dia.
 
 Em 08/09/2026 a janela inicial foi reduzida de 90 para 40 dias. A preparação
 passou a ocorrer em branch isolada, sem reintroduzir rotas ou seletor no login
