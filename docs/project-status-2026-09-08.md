@@ -36,8 +36,10 @@ foi corrigida antes de autorizar ou carregar a conta. O callback exclusivo
 Client ID e Client Secret foram configurados; o consentimento gerou refresh
 token no schema `giracasa`. A leitura de `/info`, `/produtos` e `/pedidos` ainda
 responde `401`, embora o mesmo usuário e formato de token respondam `200` em
-Uberlândia. A carga permanece bloqueada até regenerar as chaves após confirmar
-as permissões do aplicativo e repetir o consentimento. Decisão:
+Uberlândia. A tela confirma o aplicativo na empresa CNPJ 42.033.601/0001-40 e
+os módulos selecionados. A carga permanece bloqueada até confirmar as permissões
+do usuário OAuth nessa empresa; as chaves só devem ser regeneradas se houver
+alteração de permissão. Decisão:
 `docs/adr/ADR-008-giracasa-olist-oauth-v3.md`.
 
 ## Estado operacional
@@ -53,8 +55,8 @@ as permissões do aplicativo e repetir o consentimento. Decisão:
 
 ## Próximos gates
 
-1. Confirmar permissões do aplicativo, regenerar as chaves e atualizar os dois
-   secrets do Supabase.
+1. Confirmar as permissões do usuário OAuth na empresa Giracasa; regenerar as
+   chaves e repetir o consentimento somente se alguma permissão for alterada.
 2. Repetir o OAuth e validar `/info` como Giracasa/SP.
 3. Carregar e reconciliar uma janela fechada de um dia.
 4. Executar os 40 dias e medir volume, duração e cobertura.

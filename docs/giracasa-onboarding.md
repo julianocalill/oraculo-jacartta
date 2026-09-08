@@ -103,9 +103,12 @@ Em 05/09/2026 as migrations de cadastro, isolamento, motor financeiro e exposiç
 
 Em 08/09/2026 o OAuth exclusivo foi configurado e o callback armazenou o token
 no schema `giracasa`. As leituras iniciais de `/info`, `/produtos` e `/pedidos`
-responderam `401`; por isso nenhuma carga foi iniciada. O gate exige confirmar
-as permissões do aplicativo, regenerar as chaves conforme a orientação da Olist,
-atualizar os secrets e obter `200` em `/info` antes do canário de um dia.
+responderam `401`; por isso nenhuma carga foi iniciada. A tela confirmou o
+aplicativo na empresa CNPJ 42.033.601/0001-40 e os módulos selecionados. O gate
+exige confirmar as permissões do usuário OAuth nessa empresa. As chaves devem
+ser regeneradas e o consentimento repetido somente se alguma permissão for
+alterada; `/info` deve
+responder `200` antes do canário de um dia.
 
 Em 08/09/2026 a janela inicial foi reduzida de 90 para 40 dias. A preparação
 passou a ocorrer em branch isolada, sem reintroduzir rotas ou seletor no login
