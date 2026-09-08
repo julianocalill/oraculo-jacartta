@@ -133,6 +133,7 @@ test("Custo líquido: importado por transferência = valor NF × 0,8425 (exemplo
 test("Custo líquido: precedência (net explícito, gross-créditos, gross puro, missing)", () => {
   assert.deepEqual(calcNetCost({ netTotal: 100, grossTotal: 200 }), { total: 100, rule: "explicit_net_cost" });
   assert.deepEqual(calcNetCost({ grossTotal: 200, recoverableTaxes: 30 }), { total: 170, rule: "gross_minus_recoverable_taxes" });
+  assert.deepEqual(calcNetCost({ grossTotal: 200, recoverableTaxes: 30, isImportedTransfer: true }), { total: 170, rule: "gross_minus_recoverable_taxes" });
   assert.deepEqual(calcNetCost({ grossTotal: 200 }), { total: 200, rule: "gross_cost" });
   assert.equal(calcNetCost({}).total, null);
 });

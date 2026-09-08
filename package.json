@@ -8,6 +8,6 @@
     "build": "pnpm --filter web build",
     "lint": "pnpm --filter web lint",
     "typecheck": "pnpm --filter web typecheck",
-    "test": "node --test \"packages/domain/*.test.js\""
+    "test": "node --test \"packages/domain/*.test.js\" \"scripts/*.test.mjs\""
   }
 }

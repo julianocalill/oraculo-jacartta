@@ -2,6 +2,19 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-08] — Retomada progressiva da Giracasa
+
+- Desenvolvimento retomado em `codex/giracasa-phase1`, sem alterar o frontend
+  estável de Uberlândia ou o alias de produção.
+- Carga inicial reduzida de 90 para 40 dias, precedida por uma amostra fechada
+  de um dia para reconciliação com Olist/Tiny e Financeiro.
+- O novo orquestrador divide o período em blocos de até 14 dias, limita páginas
+  por invocação e retoma os cursores até as Edge Functions confirmarem o fim.
+- A regra testável de custo passou a respeitar a precedência do Financeiro:
+  custo líquido explícito, créditos medidos, transferência importada e bruto.
+- Login, seletor e rotas multioperação ficam para depois da validação de dados e
+  cálculos, conforme `docs/adr/ADR-007-giracasa-progressive-rollout.md`.
+
 ## [2026-09-04] — Análise Comercial diária e por intervalo
 
 - Nova aba no setor Comercial com datas inclusivas, atalhos de período, loja,

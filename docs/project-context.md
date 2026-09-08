@@ -27,6 +27,16 @@ The current product direction is practical executive intelligence for the operat
 - `Obsidian` can store durable project memory, but repository docs are the source of truth.
 - `AI agents` assist architecture, coding, review and documentation, but repository files remain the source of truth.
 
+## Current state on 2026-09-08
+
+Uberlândia permanece no frontend estável após o rollback da primeira interface
+multioperação. A retomada da Giracasa ocorre na branch
+`codex/giracasa-phase1`, começando pela carga isolada e pelo motor financeiro.
+A janela inicial agora é de 40 dias, precedida por uma amostra fechada de um
+dia; login, seletor e rotas só voltam depois da validação. Estado:
+`docs/project-status-2026-09-08.md`; decisão:
+`docs/adr/ADR-007-giracasa-progressive-rollout.md`.
+
 ## Current state on 2026-09-04
 
 Análise Comercial diária/por intervalo em produção em `/analise-comercial`.

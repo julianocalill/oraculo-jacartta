@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-07.md](docs/project-status-2026-09-07.md) **← start here** (Oráculo restaurado; Giracasa pausada na interface)
+1. [docs/project-status-2026-09-08.md](docs/project-status-2026-09-08.md) **← start here** (Giracasa retomada em branch isolada; produção preservada)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
    — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every card/column/config field across the whole system — analytics, alerts, calculator, imports, params, sync status — exact formula, PT-BR, for team walkthroughs)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
@@ -58,9 +58,10 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-01.md](
 
 ## Current production state
 
-**Last update**: `2026-09-07` (see `docs/project-status-2026-09-07.md`) —
-Oráculo restaurado no deploy estável anterior à interface multioperação. A
-Giracasa permanece preservada no banco e no repositório, mas desativada e sem
+**Last update**: `2026-09-08` (see `docs/project-status-2026-09-08.md`) —
+Oráculo de Uberlândia preservado no deploy estável anterior à interface
+multioperação. A Giracasa foi retomada em branch isolada, com carga inicial de
+40 dias preparada em blocos curtos e retomáveis; segue desativada e sem
 credenciais, jobs, usuários ou carga. Estado funcional anterior:
 Análise Comercial por dia/período em produção, com backend agregado, cron
 horário, ranking por quantidade e margem no período. Contrato: `docs/analise-comercial.md`.

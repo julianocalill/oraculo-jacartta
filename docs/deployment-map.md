@@ -519,3 +519,4 @@ Contrato, limites e recuperação: `docs/analise-comercial.md`.
 - Giracasa/SP: schema `giracasa`, perfil `gira-casa`, rotas `/o/giracasa/*`; desativada até o checklist de `docs/giracasa-onboarding.md`.
 - Funções SP são geradas do mesmo fonte com nomes `giracasa-*`, schema fixo e secrets obrigatoriamente prefixados `GIRACASA_`; não existe fallback para credenciais MG.
 - Banco e motor `gira-casa-v1` aplicados em produção; 26 funções `giracasa-*` publicadas. Sem secrets, dados, usuários ou crons até concluir a carga e a conferência.
+- A carga inicial Giracasa cobre 40 dias, começa por uma janela fechada de um dia e usa `scripts/giracasa-backfill.mjs` em blocos retomáveis de até 14 dias. Rotas e seletor permanecem fora de produção até a validação em preview.

@@ -382,12 +382,12 @@ export function calcNetCost({
     return { total: null, rule: "missing_cost" };
   }
   const base = toNumber(grossTotal);
+  if (recoverableTaxes != null && toNumber(recoverableTaxes) > 0) {
+    return { total: Math.max(0, base - toNumber(recoverableTaxes)), rule: "gross_minus_recoverable_taxes" };
+  }
   if (isImportedTransfer) {
     const recoverable = base * IMPORTED_TRANSFER_CREDIT_RATE;
     return { total: Math.max(0, base - recoverable), rule: "imported_transfer_4_icms_1175_pis_cofins" };
-  }
-  if (recoverableTaxes != null && toNumber(recoverableTaxes) > 0) {
-    return { total: Math.max(0, base - toNumber(recoverableTaxes)), rule: "gross_minus_recoverable_taxes" };
   }
   return { total: base, rule: "gross_cost" };
 }

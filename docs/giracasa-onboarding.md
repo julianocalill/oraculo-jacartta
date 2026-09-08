@@ -14,20 +14,40 @@ node scripts/build-operation-functions.mjs --operation=giracasa --out=/tmp/girac
 
 Revise `MANIFEST.json`, faça o deploy de cada pasta com seu nome `giracasa-*` e cadastre os callbacks OAuth com esses nomes. Cada cliente escreve no schema `giracasa`. Tokens, lojas, cursores e runs começam vazios.
 
-## Carga de 90 dias
+## Carga inicial de 40 dias
 
-Primeiro conecte Olist/Tiny e faça um teste de uma janela fechada de um dia. Depois execute:
+Primeiro conecte Olist/Tiny e faça um teste de uma janela fechada de um dia. Confira o plano sem acessar nenhuma conta:
 
 ```bash
-SUPABASE_URL=... GIRACASA_OLIST_SYNC_JOB_SECRET=... node scripts/giracasa-backfill-90d.mjs
+node scripts/giracasa-backfill.mjs --plan
 ```
 
-O script trabalha em blocos de 14 dias, sequencialmente, e para no primeiro erro. Retome o bloco informado depois de corrigir a causa. Importe outras fontes também em janelas limitadas pelos respectivos contratos; Shopee continua sendo executada por loja.
+Depois execute a carga:
+
+```bash
+SUPABASE_URL=... GIRACASA_OLIST_SYNC_JOB_SECRET=... node scripts/giracasa-backfill.mjs
+```
+
+O padrão é uma janela inclusiva de 40 dias terminando hoje. O script divide a
+carga em blocos de no máximo 14 dias e limita cada chamada às Edge Functions a
+poucas páginas. Enquanto um bloco estiver incompleto, ele faz outra chamada com
+`resume=true`, reutilizando o cursor gravado no banco. Isso evita uma execução
+longa disputar recursos com Uberlândia ou exceder o tempo de vida da função.
+
+Em caso de erro, retome da primeira data ainda não concluída:
+
+```bash
+node scripts/giracasa-backfill.mjs --start=2026-08-20 --end=2026-09-08 --plan
+```
+
+Revise o plano e repita o comando com as variáveis de ambiente, removendo
+`--plan`. Importe outras fontes também em janelas limitadas pelos respectivos
+contratos; Shopee continua sendo executada por loja.
 
 ## Validação e ativação
 
 1. Execute `supabase/tests/operation-isolation.sql` num banco descartável.
-2. Compare uma janela fechada com Olist/Tiny: NFs válidas, receita, pedidos, itens e estoque.
+2. Compare primeiro uma janela fechada de um dia com Olist/Tiny; depois confira os 40 dias: NFs válidas, receita, pedidos, itens e estoque.
 3. Compare exemplos do Financeiro: nacional/importado, SP interno, venda interestadual, crédito explícito e transferência importada. Lucro deve ficar pendente sem custo, tarifa, UF ou regra necessária.
 4. Valide Agenda, RPA, etiquetas, importações, devoluções, reconciliação, exports, status e usuários autorizados.
 5. Cadastre crons com nomes `giracasa-*`, mesmos limites da fonte e horários defasados dos jobs de Uberlândia. Não programe um cache sem expor seu `refreshed_at` no status.
@@ -44,3 +64,7 @@ Custos seguem o Financeiro: líquido explícito, créditos recuperáveis explíc
 ## Registro da implantação
 
 Em 05/09/2026 as migrations de cadastro, isolamento, motor financeiro e exposição controlada do schema foram executadas em produção. Pós-check: 101 tabelas, 94 funções e 34 views no schema Giracasa; zero pedidos, zero notas, zero concessões e `enabled=false`. As 26 Edge Functions `giracasa-*` foram publicadas. Não existem secrets `GIRACASA_*`, portanto a carga e os crons continuam bloqueados por configuração, sem risco de usar as contas de Uberlândia.
+
+Em 08/09/2026 a janela inicial foi reduzida de 90 para 40 dias. A preparação
+passou a ocorrer em branch isolada, sem reintroduzir rotas ou seletor no login
+antes da validação dos dados e do motor financeiro.
