@@ -46,6 +46,14 @@ export const HINTS = {
     "Velocidade de venda (selling_speed) calculada pela própria Shopee para este SKU no armazém.",
   coberturaFbs:
     "Cobertura em dias calculada pela própria Shopee (coverage_days), considerando estoque vendável + entrada pendente.",
+  vendavelFbs:
+    "Unidades livres para receber novas vendas neste armazém da Shopee.",
+  reservadoFbs:
+    "Unidades já comprometidas com pedidos e, portanto, fora do saldo vendável.",
+  naoVendavelFbs:
+    "Unidades no armazém bloqueadas para venda, por exemplo por avaria ou inspeção.",
+  vendavelTotalShopee:
+    "Total disponível para novas vendas em todas as localizações do anúncio, já descontadas as reservas.",
   ultimaVenda: "Dias desde a última venda registrada. 'nunca' = sem venda no histórico sincronizado.",
   acaoSugerida:
     "Heurística: mais de 120 dias sem venda → avaliar retirada; item Curva A parado → investigar antes de dar desconto; demais → ativar promoção.",

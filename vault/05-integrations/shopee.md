@@ -47,9 +47,14 @@ assinatura com a chave errada, não token vencido).
 ## Produto — três abas em `/shopee`
 
 - **Take Rate** (2026-07-13): comissão e ROI líquido por loja/SKU via escrow.
-- **Estoque & FBS**: ruptura FBS por armazém (perda R$/dia com a velocidade
-  da própria Shopee), cobertura FBS, ruptura/parado do estoque local, Curva
-  ABC 80/15/5 por loja, tendência 120→0, filtro por loja.
+- **Estoque & FBS**: posição completa por SKU × armazém (vendável FBS,
+  reservado, não vendável, trânsito e vendável total do anúncio), ruptura FBS
+  por armazém (perda R$/dia com a velocidade da própria Shopee), cobertura,
+  ruptura/parado do vendável total, Curva ABC 80/15/5 por loja, tendência
+  120→0 e filtro por loja. `shopee_products.model_stock` materializa
+  `stock_info_v2.summary_info.total_available_stock`: é o vendável total do
+  anúncio em todas as localizações, já descontadas as reservas — não deve ser
+  chamado de "estoque local".
 - **Sugestão de reposição**: `repor = média/dia × (alvo + prazo) − estoque −
   trânsito`; FBS usa selling_speed da Shopee e limita ao estoque local
   disponível para envio; justificativa por item; **máx. 15 itens por loja**

@@ -1,6 +1,6 @@
 // Export .xlsx da aba Estoque & FBS da Shopee. Usa o MESMO builder da tela,
 // com o mesmo filtro de loja. Cada relatório da página vira uma aba:
-// Ruptura FBS · Cobertura FBS · Parado FBS · Ruptura local · Parado local.
+// Posição FBS · Ruptura FBS · Cobertura FBS · Parado FBS · diagnósticos do anúncio.
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "../../../../lib/auth/session";
 import { canAccess } from "../../../../lib/auth/access";
@@ -16,12 +16,28 @@ const FBS_RUPTURA: XlsxColumn[] = [
   { header: "Variação", key: "variacao", width: 22 },
   { header: "Item ID", key: "itemId", width: 14 },
   { header: "Armazém", key: "whs", width: 10 },
+  { header: "Vendável FBS", key: "vendavel", width: 13, type: "number" },
   { header: "Vendas 30d", key: "v30", width: 11, type: "number" },
   { header: "Vendas 60d", key: "v60", width: 11, type: "number" },
   { header: "Média/dia", key: "media", width: 10, type: "decimal" },
   { header: "Trânsito", key: "transito", width: 10, type: "number" },
   { header: "Preço", key: "preco", width: 12, type: "money" },
   { header: "Perda/dia", key: "perda", width: 12, type: "money" }
+];
+
+const FBS_POSITION: XlsxColumn[] = [
+  { header: "Loja", key: "loja", width: 18 },
+  { header: "Produto", key: "produto", width: 52 },
+  { header: "Variação", key: "variacao", width: 22 },
+  { header: "SKU", key: "sku", width: 18 },
+  { header: "Item ID", key: "itemId", width: 14 },
+  { header: "Modelo ID", key: "modelId", width: 16 },
+  { header: "Armazém", key: "whs", width: 10 },
+  { header: "Vendável FBS", key: "vendavel", width: 13, type: "number" },
+  { header: "Reservado", key: "reservado", width: 10, type: "number" },
+  { header: "Não vendável", key: "naoVendavel", width: 13, type: "number" },
+  { header: "Trânsito", key: "transito", width: 10, type: "number" },
+  { header: "Vendável total anúncio", key: "vendavelTotal", width: 21, type: "number" }
 ];
 
 const FBS_COBERTURA: XlsxColumn[] = [
@@ -70,7 +86,7 @@ const LOCAL_PARADO: XlsxColumn[] = [
   { header: "SKU", key: "sku", width: 16 },
   { header: "Curva", key: "curva", width: 7 },
   { header: "Preço", key: "preco", width: 12, type: "money" },
-  { header: "Estoque", key: "estoque", width: 10, type: "number" },
+  { header: "Vendável total", key: "estoque", width: 14, type: "number" },
   { header: "Capital parado", key: "capital", width: 15, type: "money" },
   { header: "Última venda (dias)", key: "idle", width: 17, type: "number" },
   { header: "Custo unit.", key: "custo", width: 12, type: "money" }
@@ -95,6 +111,28 @@ export async function GET(req: NextRequest) {
 
   const buffer = await buildXlsxWorkbook([
     {
+      sheetName: "Posição FBS",
+      columns: FBS_POSITION,
+      meta: head(
+        "Posição completa do estoque FBS",
+        "Vendável FBS = livre para novas vendas no CD; vendável total do anúncio = todas as localizações, com reservas já descontadas"
+      ),
+      rows: r.fbsPosition.map(({ row, sku, totalAvailable }) => ({
+        loja: r.shopName.get(row.shop_id) ?? String(row.shop_id),
+        produto: row.item_name ?? row.item_id,
+        variacao: row.model_name ?? "",
+        sku: sku ?? "",
+        itemId: String(row.shop_item_id ?? row.item_id),
+        modelId: String(row.shop_model_id ?? row.model_id ?? ""),
+        whs: row.whs_id,
+        vendavel: row.sellable_qty,
+        reservado: row.reserved_qty,
+        naoVendavel: row.unsellable_qty,
+        transito: row.in_transit_qty,
+        vendavelTotal: totalAvailable
+      }))
+    },
+    {
       sheetName: "Ruptura FBS",
       columns: FBS_RUPTURA,
       meta: head(
@@ -107,6 +145,7 @@ export async function GET(req: NextRequest) {
         variacao: row.model_name ?? "",
         itemId: String(row.shop_item_id ?? row.item_id),
         whs: row.whs_id,
+        vendavel: row.sellable_qty,
         v30: row.last_30_sold,
         v60: row.last_60_sold,
         media: Number(row.selling_speed.toFixed(1)),
@@ -152,10 +191,10 @@ export async function GET(req: NextRequest) {
       }))
     },
     {
-      sheetName: "Ruptura local",
+      sheetName: "Ruptura vendável total",
       columns: LOCAL_RUPTURA,
       meta: head(
-        "Ruptura no estoque local",
+        "Ruptura no vendável total do anúncio",
         `Anúncio zerado com venda nos últimos 60 dias · perda/dia total R$ ${r.localLoss.toFixed(2)}`
       ),
       rows: r.localRuptura.map(({ p, velocity, lossPerDay }) => ({
@@ -174,10 +213,10 @@ export async function GET(req: NextRequest) {
       }))
     },
     {
-      sheetName: "Parado local",
+      sheetName: "Parado vendável total",
       columns: LOCAL_PARADO,
       meta: head(
-        "Estoque parado local",
+        "Vendável total parado",
         `Sem venda em 60 dias · capital parado total R$ ${r.capitalParado.toFixed(2)}`
       ),
       rows: r.localParado.map(({ p, capital }) => ({

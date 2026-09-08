@@ -60,6 +60,10 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-01.md](
 ## Current production state
 
 **Last update**: `2026-09-08` (see `docs/project-status-2026-09-08.md`) —
+Shopee → Estoque & FBS agora abre a posição completa por SKU × armazém e
+distingue vendável FBS, reservado, não vendável, trânsito e vendável total do
+anúncio; a nomenclatura antiga de "estoque local" foi corrigida porque o campo
+da API reúne todas as localizações e já desconta reservas. Além disso,
 os status de pedidos e backfill Olist agora representam ciclos reais: lotes de
 pedidos encerram como sucesso, runs interrompidos deixam de parecer ativos e o
 backfill voltou a avançar com heartbeat, timeout e isolamento por pedido.

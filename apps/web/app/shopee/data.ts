@@ -37,6 +37,7 @@ export type SbsRow = {
   shop_model_id: string | null;
   sellable_qty: number;
   reserved_qty: number;
+  unsellable_qty: number;
   in_transit_qty: number;
   excess_stock: number;
   coverage_days: number | null;
@@ -211,7 +212,7 @@ async function loadShopeeDataUncached(): Promise<ShopeeData | null> {
       supabase
         .from("shopee_sbs_inventory")
         .select(
-          "shop_id, whs_id, item_id, model_id, item_name, model_name, shop_item_id, shop_model_id, sellable_qty, reserved_qty, in_transit_qty, excess_stock, coverage_days, in_whs_coverage_days, selling_speed, last_7_sold, last_30_sold, last_60_sold, last_90_sold, stock_level, not_moving_tag"
+          "shop_id, whs_id, item_id, model_id, item_name, model_name, shop_item_id, shop_model_id, sellable_qty, reserved_qty, unsellable_qty, in_transit_qty, excess_stock, coverage_days, in_whs_coverage_days, selling_speed, last_7_sold, last_30_sold, last_60_sold, last_90_sold, stock_level, not_moving_tag"
         )
         .order("id")
         .range(from, to)
