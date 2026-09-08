@@ -12,21 +12,36 @@ Gere as funções em diretório temporário:
 node scripts/build-operation-functions.mjs --operation=giracasa --out=/tmp/giracasa-functions
 ```
 
-Revise `MANIFEST.json`, faça o deploy de cada pasta com seu nome `giracasa-*` e cadastre os callbacks OAuth com esses nomes. Cada cliente escreve no schema `giracasa`. Tokens, lojas, cursores e runs começam vazios.
+Revise `MANIFEST.json` e faça o deploy de cada pasta com seu nome
+`giracasa-*`. Cada cliente escreve no schema `giracasa`. Tokens, lojas,
+cursores e runs começam vazios.
 
-Para o primeiro gate, configure somente a Olist/Tiny. As variáveis próprias são:
+### Olist/Tiny pelo aplicativo Token API
+
+A Giracasa usará o token emitido pelo aplicativo **Token API**, correspondente
+à API V2. Não existe callback OAuth, Client ID, Client Secret ou renovação de
+refresh token nesse modo. O token é enviado como parâmetro de uma requisição
+`POST`, nunca como Bearer.
+
+Para o primeiro gate, configure somente:
 
 | Grupo | Variáveis |
 | --- | --- |
-| OAuth obrigatório | `GIRACASA_OLIST_API_CLIENT_ID`, `GIRACASA_OLIST_API_CLIENT_SECRET`, `GIRACASA_OLIST_OAUTH_REDIRECT_URI`, `GIRACASA_OLIST_OAUTH_STATE_SECRET` |
-| Endpoints | `GIRACASA_OLIST_API_BASE_URL`, `GIRACASA_OLIST_API_TOKEN_URL`, `GIRACASA_OLIST_OAUTH_AUTHORIZE_URL` |
+| Token da conta | `GIRACASA_OLIST_API_V2_TOKEN` |
+| Endpoint | `GIRACASA_OLIST_API_V2_BASE_URL=https://api.tiny.com.br/api2/` |
 | Execução | `GIRACASA_OLIST_SYNC_JOB_SECRET` |
-| Conforme o contrato da conta | `GIRACASA_OLIST_OAUTH_SCOPE`, `GIRACASA_OLIST_API_AUTH_HEADER`, `GIRACASA_OLIST_API_AUTH_PREFIX`, `GIRACASA_OLIST_API_BEARER_TOKEN`, `GIRACASA_OLIST_API_REFRESH_TOKEN` |
 
 `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` pertencem ao projeto compartilhado
 e são as únicas variáveis sem prefixo permitidas nos artefatos gerados. Os
 testes falham se uma função Giracasa tentar ler outro secret sem
-`GIRACASA_`. Marketplace, AIS, Bip e demais fontes entram em gates posteriores.
+`GIRACASA_`. O token V2 não deve ser cadastrado como
+`GIRACASA_OLIST_API_BEARER_TOKEN`. Marketplace, AIS, Bip e demais fontes entram
+em gates posteriores.
+
+Antes da carga, o adaptador V2 consulta `info.php` e confere a identidade da
+conta. Só depois usa `pedidos.pesquisa.php`, `notas.fiscais.pesquisa.php`,
+`produtos.pesquisa.php` e as rotas de detalhe. As funções V3 já publicadas não
+devem ser invocadas com o token V2.
 
 ## Carga inicial de 40 dias
 

@@ -29,6 +29,12 @@ adaptação central do Oráculo: receita somente pela NF válida, sem fallback p
 venda bruta, e controle por SKU para impedir crédito duplicado de PIS/COFINS.
 Detalhes: `docs/giracasa-financial-contract.md`.
 
+A integração Olist/Tiny da Giracasa foi definida pelo aplicativo **Token API**
+(API V2), conforme a credencial disponível para a empresa. O token terá secret
+próprio e não será tratado como Bearer. O adaptador V2 será validado primeiro em
+`info.php`; as funções V3 já publicadas permanecem sem execução. Decisão:
+`docs/adr/ADR-008-giracasa-olist-token-api.md`.
+
 ## Estado operacional
 
 - Uberlândia permanece ativa nas rotas originais.
@@ -41,13 +47,14 @@ Detalhes: `docs/giracasa-financial-contract.md`.
 
 ## Próximos gates
 
-1. Cadastrar as credenciais próprias da Olist/Tiny com prefixo `GIRACASA_`.
-2. Carregar e reconciliar uma janela fechada de um dia.
-3. Executar os 40 dias e medir volume, duração e cobertura.
-4. Conferir nacional, importado, kit, créditos, SP interno e destinos
+1. Implementar e testar o adaptador Olist/Tiny V2 para o Token API.
+2. Cadastrar `GIRACASA_OLIST_API_V2_TOKEN` e validar a identidade por `info.php`.
+3. Carregar e reconciliar uma janela fechada de um dia.
+4. Executar os 40 dias e medir volume, duração e cobertura.
+5. Conferir nacional, importado, kit, créditos, SP interno e destinos
    interestaduais contra `docs/giracasa-financial-contract.md` e o Financeiro.
-5. Construir as rotas reais da Giracasa em preview e validar com uma conta real.
-6. Conceder o piloto e ativar jobs somente depois dos gates anteriores.
+6. Construir as rotas reais da Giracasa em preview e validar com uma conta real.
+7. Conceder o piloto e ativar jobs somente depois dos gates anteriores.
 
 Decisão arquitetural: `docs/adr/ADR-007-giracasa-progressive-rollout.md`.
 Runbook: `docs/giracasa-onboarding.md`.

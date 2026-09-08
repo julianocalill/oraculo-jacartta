@@ -16,6 +16,9 @@ Histórico de entregas e mudanças significativas.
   fora das chaves do próprio Supabase, toda variável deve usar `GIRACASA_`.
 - O contrato `gira-casa-v1` documenta NF válida como receita, matriz SP,
   custos, DIFAL, PIS/COFINS e o controle contra crédito duplicado por SKU.
+- A origem Olist/Tiny da Giracasa foi definida como Token API V2. O token terá
+  secret próprio, autenticação por formulário e prova de identidade por
+  `info.php`; Uberlândia continua na API V3.
 - Login, seletor e rotas multioperação ficam para depois da validação de dados e
   cálculos, conforme `docs/adr/ADR-007-giracasa-progressive-rollout.md`.
 
