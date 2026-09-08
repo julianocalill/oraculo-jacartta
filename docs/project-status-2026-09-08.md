@@ -13,6 +13,9 @@ um dia útil. A ação é concluída no módulo Full; a Agenda não pode simular
 decisão. O planejador semanal legado foi retirado da interface e seu cron é
 desativado pela migration. Sugestões ainda pendentes são encerradas como legado,
 preservando conteúdo e tabelas de auditoria.
+Uma migration complementar mantém a configuração antiga desligada e neutraliza
+a fila manual, portanto a versão anterior da Agenda não consegue reativar o
+planejador durante a transição de frontend.
 
 A leitura usa RLS por participante ou `full_manager` de Uberlândia. Escritas
 continuam no servidor. `oraculo_write_full_revision` grava revisão, itens,
