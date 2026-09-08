@@ -2,6 +2,16 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-08] — Posição vendável completa da Shopee
+
+- `Shopee → Estoque & FBS` passa a listar todos os SKUs × armazém do SBS com
+  vendável FBS, reservado, não vendável, trânsito e vendável total do anúncio.
+- A tela e a exportação deixam de omitir a quantidade vendável nas rupturas;
+  o `.xlsx` ganha a aba `Posição FBS` com o retrato completo.
+- Corrigida a nomenclatura do saldo do anúncio: `total_available_stock` é o
+  vendável total em todas as localizações, já líquido de reservas, e não um
+  estoque exclusivamente local.
+
 ## [2026-09-08] — Status fiel dos syncs e retomada do backfill Olist
 
 - `/status` passa a mostrar detalhe operacional e fila pendente, respeita o

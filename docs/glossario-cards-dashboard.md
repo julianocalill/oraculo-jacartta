@@ -364,17 +364,31 @@ enviar W`). É o "mostre seu trabalho" da sugestão.
 
 ## 2.3. Shopee → Estoque & FBS (`/shopee/estoque`)
 
-Estrutura simétrica ao Mercado Livre, mas dividida em **FBS** (produtos nos
-armazéns da Shopee) e **Local** (estoque próprio, fora dos armazéns), porque
-são fontes de dado diferentes.
+Estrutura simétrica ao Mercado Livre, mas distingue o **FBS por armazém** do
+**vendável total do anúncio**, porque são medidas e fontes diferentes.
+
+> Correção de nomenclatura em 08/09/2026: o campo dos anúncios antes chamado
+> de "estoque local" é `stock_info_v2.summary_info.total_available_stock`.
+> Portanto, ele representa o **vendável total do anúncio em todas as
+> localizações**, com reservas já descontadas. O saldo estritamente FBS vem do
+> SBS e continua separado por armazém em `sellable_qty`.
+
+### Tabela 0 — Estoque por armazém FBS
+
+Mostra todos os registros correntes devolvidos pelo SBS, sem filtro de giro:
+vendável FBS, reservado, não vendável, trânsito e vendável total do anúncio.
+**Vendável FBS** é o saldo livre para receber novas vendas naquele CD;
+reservado e não vendável podem estar fisicamente no armazém, mas não podem ser
+oferecidos ao comprador naquele momento.
 
 ### Cards do topo
 
 - **Perda/dia — FBS** = soma da perda/dia dos SKUs zerados nos armazéns
-- **Perda/dia — local** = soma da perda/dia dos anúncios zerados no estoque local
+- **Perda/dia — vendável total** = soma da perda/dia dos anúncios sem saldo
+  vendável em nenhuma localização
 - **FBS crítico** = quantos SKUs no FBS têm cobertura menor que 7 dias
   (cobertura calculada **pela própria Shopee**, não pelo Oráculo)
-- **Capital parado local** = soma de (estoque × preço) dos produtos locais
+- **Capital parado — vendável total** = soma de (vendável total × preço) dos produtos
   sem venda em 60 dias. *(O card mostra também, no subtítulo, quantos itens
   estão parados no FBS — mas esse valor não entra na soma do card.)*
 
@@ -395,13 +409,13 @@ visibilidade completa do armazém.
 **Cobertura em dias** também vem pronta da Shopee (`coverage_days`) — não é
 recalculada. Mesmos limiares de status (Crítico <7d / Atenção <15d / OK).
 
-### Tabela 3 — Ruptura de estoque local
+### Tabela 3 — Ruptura do vendável total
 
 Mesma lógica da Tabela 1 do Mercado Livre (anúncio zerado, vendeu em 60
-dias), mas aplicada ao estoque próprio da Shopee — aqui sim a velocidade é
+dias), mas aplicada ao vendável total do anúncio — aqui sim a velocidade é
 calculada pelo Oráculo (aproximação por dias-desde-a-última-venda).
 
-### Tabela 4 — Estoque parado local
+### Tabela 4 — Vendável total parado
 
 Produtos com estoque > 0 e sem venda nos últimos 60 dias. Não filtra por
 curva nem por status do anúncio — mostra tudo que está parado.

@@ -88,6 +88,7 @@ export default async function ShopeeEstoquePage({
     shopName,
     curveOf,
     trendOf,
+    fbsPosition,
     fbsRuptura,
     fbsCobertura,
     fbsParado,
@@ -96,14 +97,37 @@ export default async function ShopeeEstoquePage({
     fbsLoss,
     localLoss,
     capitalParado,
+    fbsSellableTotal,
+    fbsReservedTotal,
     fbsCriticos
   } = buildEstoqueReports(data, { loja: lojaFiltro });
 
   const exportQs = lojaFiltro ? `?loja=${lojaFiltro}` : "";
 
+  const fbsPositionRows: SortableCell[][] = fbsPosition.map(({ row, sku, totalAvailable }) => [
+    productCell({
+      item_name: row.item_name,
+      model_name: row.model_name,
+      item_id: row.shop_item_id ?? row.item_id,
+      sku,
+      loja: shopName.get(row.shop_id)
+    }),
+    { text: row.whs_id, sort: row.whs_id, badge: "status-pill signal-muted" },
+    { text: count(row.sellable_qty), sort: row.sellable_qty },
+    { text: count(row.reserved_qty), sort: row.reserved_qty },
+    { text: count(row.unsellable_qty), sort: row.unsellable_qty },
+    row.in_transit_qty > 0
+      ? { text: `${count(row.in_transit_qty)} 🚚`, sort: row.in_transit_qty, badge: "status-pill signal-warning" }
+      : { text: "—", sort: 0 },
+    totalAvailable != null
+      ? { text: count(totalAvailable), sort: totalAvailable }
+      : { text: "—", sort: null }
+  ]);
+
   const fbsRupturaRows: SortableCell[][] = fbsRuptura.map(({ row, lossPerDay }) => [
     productCell({ item_name: row.item_name, model_name: row.model_name, item_id: row.item_id, loja: shopName.get(row.shop_id) }),
     { text: row.whs_id, sort: row.whs_id, badge: "status-pill signal-muted" },
+    { text: count(row.sellable_qty), sort: row.sellable_qty },
     { text: `${count(row.last_30_sold)} / ${count(row.last_60_sold)}`, sort: row.last_60_sold },
     { text: row.selling_speed.toFixed(1), sort: row.selling_speed },
     row.in_transit_qty > 0
@@ -161,7 +185,7 @@ export default async function ShopeeEstoquePage({
       <header className="topbar">
         <div>
           <h1>Estoque Shopee</h1>
-          <p>Estoque local dos anúncios + inventário FBS por armazém (dados da própria Shopee)</p>
+          <p>Quantidade vendável total dos anúncios + inventário FBS por armazém (dados da própria Shopee)</p>
         </div>
         <div className="filter-row">
           <Link className="button-link" href={`/shopee/estoque/export${exportQs}`}>
@@ -180,9 +204,9 @@ export default async function ShopeeEstoquePage({
           <small>{count(fbsRuptura.length)} SKUs zerados em armazém</small>
         </article>
         <article className="metric accent-red">
-          <span className="label">Perda / dia — local</span>
+          <span className="label">Perda / dia — vendável total</span>
           <strong>{brl(localLoss)}</strong>
-          <small>{count(localRuptura.length)} anúncios zerados com giro</small>
+          <small>{count(localRuptura.length)} anúncios sem saldo vendável e com giro</small>
         </article>
         <article className="metric accent-yellow">
           <span className="label">FBS crítico</span>
@@ -190,10 +214,44 @@ export default async function ShopeeEstoquePage({
           <small>Cobertura &lt; 7 dias (cálculo da Shopee)</small>
         </article>
         <article className="metric accent-blue">
-          <span className="label">Capital parado local</span>
+          <span className="label">Vendável no FBS</span>
+          <strong>{count(fbsSellableTotal)}</strong>
+          <small>{count(fbsReservedTotal)} unidades reservadas, fora do vendável</small>
+        </article>
+        <article className="metric accent-blue">
+          <span className="label">Capital parado — vendável total</span>
           <strong>{brl(capitalParado)}</strong>
           <small>{count(localParado.length)} produtos sem venda 60d · {count(fbsParado.length)} parados no FBS</small>
         </article>
+      </section>
+
+      <section className="panel">
+        <div className="section-head section-row">
+          <div>
+            <p className="eyebrow">Posição completa devolvida pela Shopee · sem filtro de giro</p>
+            <h2>Estoque por armazém FBS</h2>
+          </div>
+          <span className="pill">{count(fbsPosition.length)} SKUs × armazém</span>
+        </div>
+        <p className="table-note">
+          <strong>Vendável FBS</strong> é o que pode receber novas vendas agora naquele CD. Reservado e não vendável
+          continuam fisicamente no armazém, mas não estão livres para venda. O vendável total do anúncio reúne todas
+          as localizações informadas pela Shopee e já desconta as reservas.
+        </p>
+        <SortableTable
+          columns={[
+            { label: "Produto" },
+            { label: "Armazém", hint: HINTS.armazem },
+            { label: "Vendável FBS", numeric: true, hint: HINTS.vendavelFbs },
+            { label: "Reservado", numeric: true, hint: HINTS.reservadoFbs },
+            { label: "Não vendável", numeric: true, hint: HINTS.naoVendavelFbs },
+            { label: "Trânsito", numeric: true, hint: HINTS.transito },
+            { label: "Vendável total anúncio", numeric: true, hint: HINTS.vendavelTotalShopee }
+          ]}
+          rows={fbsPositionRows}
+          initialSort={2}
+          initialDir="desc"
+        />
       </section>
 
       <section className="panel">
@@ -208,13 +266,14 @@ export default async function ShopeeEstoquePage({
           columns={[
             { label: "Produto" },
             { label: "Armazém", hint: HINTS.armazem },
+            { label: "Vendável", numeric: true, hint: HINTS.vendavelFbs },
             { label: "Vendas 30/60d", numeric: true, hint: HINTS.vendasFbs },
             { label: "Média/dia", numeric: true, hint: HINTS.mediaDiaFbs },
             { label: "Trânsito", numeric: true, hint: HINTS.transito },
             { label: "Perda/dia", numeric: true, hint: HINTS.perdaDia }
           ]}
           rows={fbsRupturaRows}
-          initialSort={5}
+          initialSort={6}
           initialDir="desc"
         />
       </section>
@@ -246,8 +305,8 @@ export default async function ShopeeEstoquePage({
       <section className="panel">
         <div className="section-head section-row">
           <div>
-            <p className="eyebrow">Anúncios com estoque local zerado e histórico de venda em 60d</p>
-            <h2>Ruptura — estoque local</h2>
+            <p className="eyebrow">Anúncios com quantidade vendável total zerada e histórico de venda em 60d</p>
+            <h2>Ruptura — vendável total</h2>
           </div>
           <span className="pill">{count(localRuptura.length)} produtos</span>
         </div>
@@ -273,8 +332,8 @@ export default async function ShopeeEstoquePage({
       <section className="panel">
         <div className="section-head section-row">
           <div>
-            <p className="eyebrow">Estoque local sem venda em 60 dias</p>
-            <h2>Estoque parado — local</h2>
+            <p className="eyebrow">Quantidade vendável total sem venda em 60 dias</p>
+            <h2>Estoque parado — vendável total</h2>
           </div>
           <span className="pill">{brl(capitalParado)}</span>
         </div>
@@ -283,7 +342,7 @@ export default async function ShopeeEstoquePage({
             { label: "Produto" },
             { label: "Curva", hint: HINTS.curva },
             { label: "Preço", numeric: true },
-            { label: "Estoque", numeric: true, hint: "Unidades no estoque local do anúncio (fora dos armazéns da Shopee)." },
+            { label: "Vendável total", numeric: true, hint: HINTS.vendavelTotalShopee },
             { label: "Capital parado", numeric: true, hint: HINTS.capitalParado },
             { label: "Última venda", numeric: true, hint: HINTS.ultimaVenda }
           ]}

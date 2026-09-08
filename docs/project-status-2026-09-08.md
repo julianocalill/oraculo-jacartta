@@ -1,5 +1,20 @@
 # Status do projeto — 08/09/2026
 
+## Posição vendável da Shopee ficou completa e sem ambiguidade
+
+A aba `/shopee/estoque` agora abre a posição completa de todos os SKUs ×
+armazém recebidos pelo SBS, com vendável FBS, reservado, não vendável,
+trânsito e vendável total do anúncio. A exportação ganhou a mesma posição em
+uma aba própria, e a tabela de ruptura passou a mostrar explicitamente o saldo
+vendável mesmo quando ele é zero.
+
+A conferência do payload de produção corrigiu uma nomenclatura importante:
+`shopee_products.model_stock` vem de
+`stock_info_v2.summary_info.total_available_stock`. Esse número já reúne todas
+as localizações do anúncio e desconta as reservas; não é exclusivamente
+"estoque local". O saldo FBS confiável continua sendo `sellable_qty`, separado
+por armazém na API SBS.
+
 ## Status das integrações agora representa execução real
 
 A tela `/status` deixou de interpretar como atividade saudável linhas antigas
