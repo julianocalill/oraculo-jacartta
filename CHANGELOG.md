@@ -32,6 +32,13 @@ Histórico de entregas e mudanças significativas.
 - A varredura completa trouxe 1.068 produtos e 484 SKUs com custo. A tarifa
   Shopee padrão do Financeiro liberou o cálculo de 470 NFs; TikTok e Mercado
   Livre continuam com lucro pendente até receberem suas tarifas próprias.
+- A carga histórica de 40 dias saiu da máquina local: um estado service-role no
+  schema Giracasa e o job temporário `giracasa-olist-initial-backfill-40d`
+  avançam pedidos, NFs e itens em páginas retomáveis pelas Edge Functions. A
+  janela fechada é 30/07–07/09, em três blocos de até 14 dias; o cron se remove
+  ao concluir ou após cinco falhas consecutivas de pedidos/notas.
+- O primeiro disparo remoto respondeu HTTP 200 e gravou 100/9.022 pedidos do
+  bloco 30/07–12/08. Giracasa continua desativada e sem usuários.
 - Login, seletor e rotas multioperação ficam para depois da validação de dados e
   cálculos, conforme `docs/adr/ADR-007-giracasa-progressive-rollout.md`.
 

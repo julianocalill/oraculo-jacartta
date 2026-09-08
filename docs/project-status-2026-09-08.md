@@ -55,6 +55,15 @@ tarifa Shopee padrão do Financeiro foi cadastrada somente para Giracasa, com
 somam 218 linhas ainda sem tarifa própria e permanecem pendentes. O motor
 confirmou zero DIFAL nas vendas SP→SP.
 
+A carga histórica foi iniciada dentro do próprio Supabase, sem processo local.
+O controle `giracasa.olist_initial_backfill_control` percorre 30/07–07/09 em
+três blocos de até 14 dias. O pg_cron
+`giracasa-olist-initial-backfill-40d` chama uma página por vez das Edge Functions
+de pedidos, notas e itens, com intervalo mínimo de quatro minutos e cursores no
+banco. Ele se desagenda ao concluir ou após cinco falhas consecutivas observadas
+em pedidos/notas. O primeiro request respondeu HTTP 200 e avançou para
+100/9.022 pedidos no bloco 30/07–12/08.
+
 Durante o canário, `olist-backfill-order-items` revelou que o sucesso gravava os
 itens sem concluir a linha da fila. A função agora marca `completed` depois do
 upsert; a versão isolada Giracasa foi republicada e validada nos 659 pedidos.
@@ -62,8 +71,9 @@ upsert; a versão isolada Giracasa foi republicada e validada nos 659 pedidos.
 ## Estado operacional
 
 - Uberlândia permanece ativa nas rotas originais.
-- Giracasa permanece `enabled=false`, sem usuários ou jobs. OAuth, canário de um
-  dia e catálogo Olist estão carregados no schema isolado.
+- Giracasa permanece `enabled=false` e sem usuários. OAuth, canário de um dia e
+  catálogo Olist estão carregados; existe somente o job temporário da carga de
+  40 dias, que se remove ao terminar.
 - O schema isolado, o motor `gira-casa-v1` e as 26 Edge Functions já publicadas
   continuam preservados.
 - Nenhuma credencial de Uberlândia pode ser usada como fallback pela Giracasa.
@@ -72,7 +82,8 @@ upsert; a versão isolada Giracasa foi republicada e validada nos 659 pedidos.
 
 ## Próximos gates
 
-1. Executar os 40 dias e medir volume, duração e cobertura.
+1. Acompanhar a carga remota de 40 dias e medir volume, duração e cobertura ao
+   término.
 2. Obter e cadastrar as tarifas próprias de TikTok e Mercado Livre; até lá o
    lucro desses canais continua pendente.
 3. Conferir nacional, importado, kit, créditos, SP interno e destinos

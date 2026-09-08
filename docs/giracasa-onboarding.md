@@ -60,6 +60,27 @@ Depois execute a carga:
 SUPABASE_URL=... GIRACASA_OLIST_SYNC_JOB_SECRET=... node scripts/giracasa-backfill.mjs
 ```
 
+Em produção, prefira o coordenador residente no Supabase criado pela migration
+`20260908200109_giracasa_olist_40d_supabase_worker.sql`. Ele guarda o estado em
+`giracasa.olist_initial_backfill_control` e usa o job temporário
+`giracasa-olist-initial-backfill-40d`; o computador do operador pode ser
+desligado. A janela aprovada é 30/07/2026–07/09/2026, fechada e inclusiva.
+
+Para acompanhar no SQL Editor ou Table Editor do Supabase:
+
+```sql
+select status, phase, slice_number, current_start, current_end,
+       last_dispatched_at, consecutive_failures, last_error, metadata
+from giracasa.olist_initial_backfill_control
+where id = 1;
+```
+
+Os detalhes de cada página ficam em `giracasa.olist_order_sync_runs`,
+`giracasa.olist_invoice_sync_runs` e
+`giracasa.olist_order_items_backfill_runs`. O cron remove a si próprio quando a
+fila termina. Para uma pausa operacional, marque o controle como `paused` e
+remova o job; os cursores já gravados são preservados.
+
 O padrão é uma janela inclusiva de 40 dias terminando hoje. O script divide a
 carga em blocos de no máximo 14 dias e limita cada chamada às Edge Functions a
 uma página de detalhes. Enquanto um bloco estiver incompleto, ele faz outra chamada com

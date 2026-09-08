@@ -64,7 +64,8 @@ Oráculo de Uberlândia preservado no deploy estável anterior à interface
 multioperação. A Giracasa segue desativada, sem usuários ou jobs, mas o OAuth
 Olist foi validado e o canário de 07/09 fechou em 771 pedidos, 687 NFs válidas e
 R$ 44.042,64. O catálogo isolado possui 1.068 produtos; a carga de 40 dias e as
-tarifas próprias de TikTok/ML são os próximos gates. Estado funcional anterior:
+tarifas próprias de TikTok/ML são os próximos gates. A carga de 40 dias roda no
+Supabase por Edge Functions e pg_cron, sem depender de máquina local. Estado funcional anterior:
 Análise Comercial por dia/período em produção, com backend agregado, cron
 horário, ranking por quantidade e margem no período. Contrato: `docs/analise-comercial.md`.
 Estado anterior em produção:
