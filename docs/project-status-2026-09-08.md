@@ -29,16 +29,18 @@ adaptação central do Oráculo: receita somente pela NF válida, sem fallback p
 venda bruta, e controle por SKU para impedir crédito duplicado de PIS/COFINS.
 Detalhes: `docs/giracasa-financial-contract.md`.
 
-A integração Olist/Tiny da Giracasa foi definida pelo aplicativo **Token API**
-(API V2), conforme a credencial disponível para a empresa. O token terá secret
-próprio e não será tratado como Bearer. O adaptador V2 será validado primeiro em
-`info.php`; as funções V3 já publicadas permanecem sem execução. Decisão:
-`docs/adr/ADR-008-giracasa-olist-token-api.md`.
+A tela real da Olist confirmou um **Aplicativo API OAuth/V3**, com URL de
+redirecionamento, Client ID e Client Secret. A premissa anterior de Token API V2
+foi corrigida antes de autorizar ou carregar a conta. O callback exclusivo
+`giracasa-olist-oauth-callback` está publicado; endpoints, state e segredo do job
+foram configurados, enquanto as credenciais do aplicativo permanecem como etapa
+manual no Supabase. Decisão: `docs/adr/ADR-008-giracasa-olist-oauth-v3.md`.
 
 ## Estado operacional
 
 - Uberlândia permanece ativa nas rotas originais.
-- Giracasa permanece `enabled=false`, sem usuários, credenciais, jobs ou carga.
+- Giracasa permanece `enabled=false`, sem usuários, jobs ou carga. A configuração
+  OAuth está parcial e ainda não possui Client ID/Client Secret.
 - O schema isolado, o motor `gira-casa-v1` e as 26 Edge Functions já publicadas
   continuam preservados.
 - Nenhuma credencial de Uberlândia pode ser usada como fallback pela Giracasa.
@@ -47,8 +49,8 @@ próprio e não será tratado como Bearer. O adaptador V2 será validado primeir
 
 ## Próximos gates
 
-1. Implementar e testar o adaptador Olist/Tiny V2 para o Token API.
-2. Cadastrar `GIRACASA_OLIST_API_V2_TOKEN` e validar a identidade por `info.php`.
+1. Cadastrar Client ID e Client Secret diretamente nos secrets do Supabase.
+2. Concluir o OAuth e validar que a autorização pertence à Giracasa/SP.
 3. Carregar e reconciliar uma janela fechada de um dia.
 4. Executar os 40 dias e medir volume, duração e cobertura.
 5. Conferir nacional, importado, kit, créditos, SP interno e destinos

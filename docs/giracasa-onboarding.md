@@ -16,32 +16,35 @@ Revise `MANIFEST.json` e faça o deploy de cada pasta com seu nome
 `giracasa-*`. Cada cliente escreve no schema `giracasa`. Tokens, lojas,
 cursores e runs começam vazios.
 
-### Olist/Tiny pelo aplicativo Token API
+### Olist/Tiny pelo Aplicativo API OAuth
 
-A Giracasa usará o token emitido pelo aplicativo **Token API**, correspondente
-à API V2. Não existe callback OAuth, Client ID, Client Secret ou renovação de
-refresh token nesse modo. O token é enviado como parâmetro de uma requisição
-`POST`, nunca como Bearer.
+A Giracasa usa um **Aplicativo API** próprio na Olist, com OAuth e API V3. A URL
+de redirecionamento cadastrada no aplicativo deve ser exatamente:
 
-Para o primeiro gate, configure somente:
+```text
+https://bbtiipnmdxfxnxbemgjr.supabase.co/functions/v1/giracasa-olist-oauth-callback
+```
+
+Configure os secrets exclusivos abaixo:
 
 | Grupo | Variáveis |
 | --- | --- |
-| Token da conta | `GIRACASA_OLIST_API_V2_TOKEN` |
-| Endpoint | `GIRACASA_OLIST_API_V2_BASE_URL=https://api.tiny.com.br/api2/` |
+| Aplicativo | `GIRACASA_OLIST_API_CLIENT_ID`, `GIRACASA_OLIST_API_CLIENT_SECRET` |
+| OAuth | `GIRACASA_OLIST_API_TOKEN_URL`, `GIRACASA_OLIST_OAUTH_AUTHORIZE_URL`, `GIRACASA_OLIST_OAUTH_REDIRECT_URI`, `GIRACASA_OLIST_OAUTH_SCOPE`, `GIRACASA_OLIST_OAUTH_STATE_SECRET` |
+| API | `GIRACASA_OLIST_API_BASE_URL=https://api.tiny.com.br/public-api/v3/` |
 | Execução | `GIRACASA_OLIST_SYNC_JOB_SECRET` |
 
 `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` pertencem ao projeto compartilhado
 e são as únicas variáveis sem prefixo permitidas nos artefatos gerados. Os
-testes falham se uma função Giracasa tentar ler outro secret sem
-`GIRACASA_`. O token V2 não deve ser cadastrado como
-`GIRACASA_OLIST_API_BEARER_TOKEN`. Marketplace, AIS, Bip e demais fontes entram
-em gates posteriores.
+testes falham se uma função Giracasa tentar ler outro secret sem `GIRACASA_`.
+O Client ID e o Client Secret devem ser cadastrados diretamente no Supabase e
+nunca enviados por chat, gravados no Git ou expostos ao navegador. Marketplace,
+AIS, Bip e demais fontes entram em gates posteriores.
 
-Antes da carga, o adaptador V2 consulta `info.php` e confere a identidade da
-conta. Só depois usa `pedidos.pesquisa.php`, `notas.fiscais.pesquisa.php`,
-`produtos.pesquisa.php` e as rotas de detalhe. As funções V3 já publicadas não
-devem ser invocadas com o token V2.
+Depois dos secrets, gere a URL de autorização com
+`giracasa-olist-sync-health`, conclua o consentimento na conta Giracasa e
+confirme que o refresh token foi salvo no schema `giracasa`. Valide a identidade
+da empresa antes de iniciar qualquer escrita de dados de negócio.
 
 ## Carga inicial de 40 dias
 
