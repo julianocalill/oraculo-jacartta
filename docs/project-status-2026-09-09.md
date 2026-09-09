@@ -1,5 +1,50 @@
 # Status do projeto — 09/09/2026
 
+## Separação operacional ativada em produção
+
+O Oráculo ganhou a implementação de `Logística → Separação`: alerta do
+fechamento esperado, atualização manual assíncrona, períodos personalizados de
+até sete dias, histórico, solicitante, auditoria de impressão, A4 e CSV.
+
+As listas passam a ser documentos persistidos. O mesmo resultado congelado
+alimenta Oráculo, impressão, CSV e o caminho agendado do WhatsApp. O cursor
+oficial só avança depois que cabeçalho e itens estão prontos na mesma transação;
+listas personalizadas nunca o alteram. A recuperação pelo botão não reenvia
+WhatsApp.
+
+A migration cria `logistica_picking_cursor`, `logistica_picking_listas`,
+`logistica_picking_itens` e `logistica_picking_impressoes`, com grants
+explícitos, RLS por operação + aba Logística e RPCs service-role para reserva,
+finalização e falha. A hidratação Olist agora considera
+`payload.itens = []` incompleto.
+
+O workflow n8n foi ampliado com webhook POST protegido, reserva atômica,
+sync/hidratação, persistência antes do WhatsApp e importação segura do cursor
+legado em `staticData.global.last_cursor_end`.
+
+Contrato e ativação: [logistica-separacao.md](logistica-separacao.md).
+
+### Evidências de validação da Separação
+
+- 76 testes do domínio aprovados;
+- 9 testes do consolidado n8n aprovados após incluir o modo Oráculo;
+- TypeScript e build de produção do Next.js aprovados;
+- migration validada no projeto Supabase vinculado, incluindo filtro de duas
+  caixas, cursor, bloqueio por itens vazios, claim concorrente e RLS;
+- consulta real de sete dias medida com `EXPLAIN ANALYZE`: aproximadamente 18 s,
+  fora do caminho de renderização;
+- lint não executado porque o repositório ainda não possui configuração ESLint
+  e `next lint` abre um assistente interativo.
+
+### Implantação da Separação
+
+A migration foi aplicada no projeto `bbtiipnmdxfxnxbemgjr`, a Edge Function
+`olist-sync-orders` foi republicada com `verify_jwt=false`, e o cursor legado
+foi importado para `logistica_picking_cursor` em
+`2026-09-09T10:00:00.077Z`. O workflow `UGLCLNS6oVCK87o3` está ativo com 34
+nós, Header Auth no webhook do Oráculo e releitura da lista persistida para
+WhatsApp. Os segredos server-only foram configurados na Vercel e no n8n.
+
 ## Aprovador escolhido e fluxo manual liberado
 
 O aprovador da data deixou de ser implicitamente o criador. Em cada criação ou

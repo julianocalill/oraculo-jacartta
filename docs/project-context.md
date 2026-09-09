@@ -27,6 +27,15 @@ The current product direction is practical executive intelligence for the operat
 - `Obsidian` can store durable project memory, but repository docs are the source of truth.
 - `AI agents` assist architecture, coding, review and documentation, but repository files remain the source of truth.
 
+## Current state on 2026-09-09
+
+`Logística → Separação` está ativa em produção. A lista multicanal passa a ser
+persistida antes do WhatsApp, com
+cursor durável, alerta de atraso, atualização manual sem reenvio, períodos de
+até sete dias, histórico, impressão A4 e CSV. Contrato e rollout em
+`docs/logistica-separacao.md`; evidências em
+`docs/project-status-2026-09-09.md`.
+
 ## Current state on 2026-09-04
 
 Análise Comercial diária/por intervalo em produção em `/analise-comercial`.

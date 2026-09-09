@@ -136,6 +136,10 @@ export default async function LogisticaPage() {
               estoque ainda sem custo resolvido.
             </p>
             <p>
+              <Link href="/logistica/separacao">Lista de separação</Link> — fechamentos multicanal
+              prontos para imprimir, histórico e geração de períodos personalizados.
+            </p>
+            <p>
               <Link href="/logistica/etiqueta">Etiqueta de palete</Link> — gera a etiqueta A4 horizontal
               com QR Code para rastrear paletes no galpão.
             </p>

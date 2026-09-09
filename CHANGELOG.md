@@ -2,6 +2,22 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-09] — Separação no Oráculo
+
+- Nova tela `Logística → Separação` com alerta vermelho/amarelo/verde,
+  recuperação manual, histórico, solicitante, auditoria de impressão, A4 e CSV.
+- Períodos personalizados de até sete dias usam o mesmo worker assíncrono sem
+  alterar o cursor oficial nem enviar WhatsApp.
+- Listas e itens passam a ser persistidos antes do envio; o cursor oficial
+  avança somente quando o documento está pronto e pedidos sem itens bloqueiam a
+  publicação.
+- RLS exige operação Uberlândia + aba Logística; RPCs service-role fazem claim,
+  finalização transacional e registro de falha.
+- A hidratação Olist trata `payload.itens = []` como incompleto e o workflow n8n
+  ganha webhook protegido para o botão do Oráculo.
+- Migration aplicada, Edge Function Olist republicada, cursor legado importado,
+  workflow n8n atualizado/ativo e frontend publicado nos dois remotes.
+
 ## [2026-09-09] — Aprovador selecionável e fluxo manual do Full
 
 - O criador agora escolhe o aprovador em cada Full e pode alterá-lo por nova

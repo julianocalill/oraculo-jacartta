@@ -337,7 +337,7 @@ async function hydrateOrderDetails(
       const payload = existing.payload && typeof existing.payload === 'object'
         ? existing.payload as Record<string, unknown>
         : {};
-      if (Array.isArray(payload.itens)) {
+      if (Array.isArray(payload.itens) && payload.itens.length > 0) {
         existingById.set(String(existing.id), {
           payload,
           data_atualizacao: existing.data_atualizacao == null ? null : String(existing.data_atualizacao)
@@ -350,7 +350,7 @@ async function hydrateOrderDetails(
 
   for (const row of rows) {
     const payload = row.payload && typeof row.payload === 'object' ? row.payload as Record<string, unknown> : {};
-    if (Array.isArray(payload.itens)) {
+    if (Array.isArray(payload.itens) && payload.itens.length > 0) {
       detailedRows.push(row);
       continue;
     }

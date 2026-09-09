@@ -4276,6 +4276,44 @@ h2 {
   }
 }
 
+/* Logistica / Separacao: documento persistido, saude do fechamento e impressao. */
+.separation-health {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+}
+.separation-health h2, .separation-health p { margin: 0; }
+.separation-health small { display: block; margin-top: 6px; color: var(--muted); }
+.separation-health-ready { border-color: var(--good-line); border-left-color: var(--green); background: var(--good-soft); }
+.separation-health-processing { border-color: var(--warn-line); border-left-color: var(--gold); background: var(--warn-soft); }
+.separation-health-stale { border-color: var(--crit-line); border-left-color: var(--red); background: var(--crit-soft); }
+.separation-flash { margin-bottom: 14px; padding: 11px 14px; border: 1px solid var(--line); border-radius: 10px; }
+.separation-flash-error { color: var(--red); border-color: var(--crit-line); background: var(--crit-soft); }
+.separation-flash-success { color: var(--green); border-color: var(--good-line); background: var(--good-soft); }
+.separation-latest .section-head p { margin: 4px 0 0; color: var(--muted); }
+.separation-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.separation-actions form { margin: 0; }
+.separation-custom-form { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)) auto; gap: 12px; align-items: end; }
+.separation-custom-form label { display: grid; gap: 6px; }
+.separation-custom-form label span { color: var(--faint); font-size: 10px; font-weight: 750; text-transform: uppercase; }
+.separation-custom-form input { width: 100%; min-height: 40px; border: 1px solid var(--line); border-radius: 8px; background: var(--field); color: var(--text); font: inherit; padding: 8px 10px; }
+.separation-history td { vertical-align: top; }
+.separation-history td small { display: block; margin-top: 4px; color: var(--faint); }
+.separation-history .separation-actions { min-width: 190px; }
+@media (max-width: 720px) {
+  .separation-health { align-items: stretch; flex-direction: column; }
+  .separation-health button { width: 100%; }
+  .separation-custom-form { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* RPA — Afiliados Shopee ---------------------------------------------------
    Primeiro switch do projeto. Até aqui só existiam checkbox cru (/usuarios) e
    <select> (Ativo/Bloqueado); as retenções pedem leitura de relance de três

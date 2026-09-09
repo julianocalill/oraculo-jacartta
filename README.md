@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-09.md](docs/project-status-2026-09-09.md) **← start here** (Full publicado em produção e rollout por canal)
+1. [docs/project-status-2026-09-09.md](docs/project-status-2026-09-09.md) **← start here** (Separação operacional em produção)
    — [docs/project-status-2026-09-08.md](docs/project-status-2026-09-08.md) (implementação do Full e status dos syncs)
    — [docs/project-status-2026-09-05.md](docs/project-status-2026-09-05.md) (Giracasa isolada em produção; aguardando credenciais e carga)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
@@ -61,7 +61,12 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 ## Current production state
 
 **Last update**: `2026-09-09` (see `docs/project-status-2026-09-09.md`) —
-novo módulo **Full/FBS/Onsite** publicado em `/full`, com remessa manual rastreável,
+`Logística → Separação` com alerta do fechamento esperado, atualização manual,
+histórico, auditoria, impressão A4, CSV e períodos personalizados. A lista
+congelada agora é a fonte do Oráculo e do envio agendado por WhatsApp; o cursor
+durável avança somente depois da persistência. Ver
+`docs/logistica-separacao.md`. Estado anterior de `2026-09-08`:
+novo módulo **Full/FBS/Onsite** em `/full`, com remessa manual rastreável,
 revisões congeladas, produção física, aprovações pela Agenda, anexos privados e
 aprovador escolhido pelo criador. O fluxo humano até o agendamento está
 liberado e o monitoramento externo segue bloqueado por canal até validação real; o planejador

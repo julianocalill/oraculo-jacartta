@@ -1,12 +1,13 @@
 import { OperationLink as Link } from "../components/operation-provider";
 
 // Navegação entre as abas de Logística
-export type LogisticaTab = "visao-geral" | "estoque" | "recebimento" | "etiqueta";
+export type LogisticaTab = "visao-geral" | "estoque" | "recebimento" | "separacao" | "etiqueta";
 
 const TABS: Array<{ key: LogisticaTab; href: string; label: string }> = [
   { key: "visao-geral", href: "/logistica", label: "Visão geral" },
   { key: "estoque", href: "/logistica/estoque", label: "Estoque" },
   { key: "recebimento", href: "/logistica/recebimento", label: "Recebimento" },
+  { key: "separacao", href: "/logistica/separacao", label: "Separação" },
   { key: "etiqueta", href: "/logistica/etiqueta", label: "Etiqueta" }
 ];
 
