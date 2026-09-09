@@ -21,7 +21,6 @@ Após a publicação do isolamento, as policies `operation_membership` chamavam 
 Em produção, uma leitura autenticada dos 323.068 pedidos concluiu em 2,45 s e mostrou `InitPlan 1` com um único loop. O mesmo padrão foi aplicado às guardas das views pela migration `20260905212901_optimize_operation_view_guards.sql`.
 
 A captura real das 18:26 mostrou uma segunda espera antes de qualquer consulta chegar ao banco: `getCurrentUser()` dependia de uma chamada ao endpoint do GoTrue sem timeout. A migration `20260905220802_current_user_database_session.sql` criou uma RPC restrita que deixa o PostgREST validar o JWT e lê identidade, bloqueio e permissões atuais em `auth.users`. O render agora usa essa RPC com timeout de 8 s; o teste autenticado respondeu em 35 ms. O prefetch do menu também foi desativado, pois as abas dinâmicas estavam sendo renderizadas em paralelo logo após o login.
-
 ## Validação executada
 
 - clone local limpo com as cinco migrations na ordem de produção;

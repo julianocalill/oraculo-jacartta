@@ -1,6 +1,6 @@
 import { createSupabaseUserClient } from "../../lib/supabase/user";
 import { getCurrentUser } from "../../lib/auth/session";
-import { canAccess } from "../../lib/auth/access";
+import { canAccessRequest } from "../../lib/auth/access";
 
 // Export CSV da receita fiscal diária (janela do dashboard) — botão "Exportar".
 type FiscalDailyRow = {
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   if (!user) {
     return new Response("Unauthorized", { status: 401 });
   }
-  if (!canAccess(user, "analytics")) {
+  if (!(await canAccessRequest(user, "analytics"))) {
     return new Response("Sem acesso a esta aba", { status: 403 });
   }
 

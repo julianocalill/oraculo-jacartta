@@ -2091,3 +2091,10 @@ Validação: teste de paridade extraiu o `calculate()` do app.js original e comp
 - Dados e funções da Giracasa ganharam namespace, RLS e guards próprios, sem fallback para a base de MG; permissões antigas migram só para Uberlândia.
 - Motor fiscal `gira-casa-v1`, regras financeiras por SKU/vigência, teste de isolamento, geração segura dos conectores e carga inicial de 90 dias adicionados.
 - Giracasa permanece desativada até credenciais, carga e números serem validados.
+
+## 2026-09-05 — Giracasa isolada em produção
+
+- Aplicadas as migrations de isolamento e do motor financeiro `gira-casa-v1`; o schema paulista nasceu vazio e a base de Uberlândia permaneceu disponível.
+- Publicadas 26 Edge Functions `giracasa-*`, todas usando o schema próprio e secrets prefixados, sem fallback para contas de MG.
+- Corrigido o contrato JavaScript para nunca cobrar DIFAL em SP→SP e adicionada validação explícita da operação em ações e exportações.
+- Giracasa permanece desativada, sem usuários e sem crons até cadastrar credenciais próprias, importar 90 dias e validar a cobertura.
