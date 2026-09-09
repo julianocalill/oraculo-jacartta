@@ -11,7 +11,7 @@ import { CHANNEL_LABEL, EXTERNAL_LABEL, PRODUCTION_LABEL, WORKFLOW_LABEL, fullCo
 
 export const dynamic = "force-dynamic";
 
-type Params = { marketplace?: string; loja?: string; etapa?: string; criador?: string; logistica?: string };
+type Params = { marketplace?: string; loja?: string; etapa?: string; criador?: string; logistica?: string; aprovador?: string };
 
 export default async function FullPage({ searchParams }: { searchParams: Promise<Params> }) {
   const [{ allowed }, alertCount, params] = await Promise.all([
@@ -26,7 +26,8 @@ export default async function FullPage({ searchParams }: { searchParams: Promise
     (!params.loja || full.store_name === params.loja) &&
     (!params.etapa || full.workflow_status === params.etapa) &&
     (!params.criador || full.creator_user_id === params.criador) &&
-    (!params.logistica || full.logistics_user_id === params.logistica)
+    (!params.logistica || full.logistics_user_id === params.logistica) &&
+    (!params.aprovador || full.approver_user_id === params.aprovador)
   );
   const open = fulls.filter((full) => !["concluido", "cancelado"].includes(full.workflow_status));
   const overdue = open.filter((full) => {
@@ -56,6 +57,7 @@ export default async function FullPage({ searchParams }: { searchParams: Promise
           <label><span>Etapa</span><select name="etapa" defaultValue={params.etapa ?? ""}><option value="">Todas</option>{Object.entries(WORKFLOW_LABEL).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
           <label><span>Criador</span><select name="criador" defaultValue={params.criador ?? ""}><option value="">Todos</option>{[...users.values()].map((person) => <option value={person.id} key={person.id}>{person.name}</option>)}</select></label>
           <label><span>Logística</span><select name="logistica" defaultValue={params.logistica ?? ""}><option value="">Todos</option>{[...users.values()].map((person) => <option value={person.id} key={person.id}>{person.name}</option>)}</select></label>
+          <label><span>Aprovador</span><select name="aprovador" defaultValue={params.aprovador ?? ""}><option value="">Todos</option>{[...users.values()].map((person) => <option value={person.id} key={person.id}>{person.name}</option>)}</select></label>
           <button type="submit">Filtrar</button>
         </form>
       </section>
@@ -74,7 +76,7 @@ export default async function FullPage({ searchParams }: { searchParams: Promise
                   <td>{PRODUCTION_LABEL[full.production_status]}</td>
                   <td>{EXTERNAL_LABEL[full.external_status]}{full.last_external_error ? <small className="table-subtitle full-error">{full.last_external_error}</small> : null}</td>
                   <td>{formatBrDate(full.scheduled_pickup_day ?? full.approved_pickup_day ?? full.proposed_pickup_day)}</td>
-                  <td>{users.get(full.creator_user_id)?.name ?? "Criador"}<small className="table-subtitle">Logística: {users.get(full.logistics_user_id)?.name ?? "—"}</small></td>
+                  <td>{users.get(full.creator_user_id)?.name ?? "Criador"}<small className="table-subtitle">Logística: {users.get(full.logistics_user_id)?.name ?? "—"}</small><small className="table-subtitle">Aprovador: {users.get(full.approver_user_id)?.name ?? "—"}</small></td>
                   <td>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(full.updated_at))}</td>
                 </tr>
               ))}

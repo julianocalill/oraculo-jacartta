@@ -1,5 +1,17 @@
 # Status do projeto — 09/09/2026
 
+## Aprovador escolhido e fluxo manual liberado
+
+O aprovador da data deixou de ser implicitamente o criador. Em cada criação ou
+nova revisão, o criador escolhe separadamente o responsável logístico e o
+responsável pela aprovação. A tarefa de aceite da data é enviada somente ao
+aprovador escolhido, com acesso preservado por RLS e registro na timeline.
+
+Também foi corrigido o gate operacional: catálogo habilitado libera envio à
+logística, produção, proposta, aprovação e agendamento manual. Os indicadores
+de validação de cada canal continuam desligados e agora restringem apenas a
+confirmação automática de coleta e recebimento.
+
 ## Hotfix de carregamento da interface
 
 O primeiro deploy restaurou também o reforço global de explicações dos
@@ -35,10 +47,11 @@ da Donacor foram encerradas com histórico preservado.
 
 ## Estado de liberação dos canais
 
-Mercado Livre, Shopee e Amazon continuam com `submission_enabled=false`. É
-possível consultar o módulo e criar rascunhos, mas o envio à logística fica
-bloqueado até cada canal comprovar uma remessa real do agendamento ao
-recebimento, na ordem ML → Shopee → Amazon.
+Mercado Livre, Shopee e Amazon continuam com `submission_enabled=false` para o
+monitoramento automático. O fluxo humano até o agendamento está liberado nas
+lojas com catálogo habilitado. A confirmação automática de coleta e recebimento
+continua condicionada à prova de uma remessa real, na ordem ML → Shopee →
+Amazon.
 
 A Edge Function `full-inbound-sync` permanece propositalmente sem publicação e
 sem cron. Ela só será ativada quando o primeiro adapter estiver validado em modo

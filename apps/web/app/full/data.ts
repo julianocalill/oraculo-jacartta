@@ -43,6 +43,7 @@ export type FullListRow = {
   store_name: string;
   creator_user_id: string;
   logistics_user_id: string;
+  approver_user_id: string;
   workflow_status: FullWorkflowStatus;
   production_status: FullProductionStatus;
   external_status: FullExternalStatus;
@@ -154,7 +155,7 @@ export type PhysicalProductOption = {
 };
 
 const FULL_LIST_COLUMNS =
-  "id,number,channel,store_name,creator_user_id,logistics_user_id,workflow_status," +
+  "id,number,channel,store_name,creator_user_id,logistics_user_id,approver_user_id,workflow_status," +
   "production_status,external_status,current_revision,proposed_pickup_day,approved_pickup_day," +
   "scheduled_pickup_day,external_shipment_id,last_external_sync_at,last_external_error,created_at,updated_at";
 

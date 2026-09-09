@@ -10,15 +10,17 @@ insert into auth.users(id,email,raw_app_meta_data) values
  ('20000000-0000-0000-0000-000000000002','logistics-full@test.invalid','{"operations":{"uberlandia":{"enabled":true,"tabs":["full"]}}}'),
  ('20000000-0000-0000-0000-000000000003','outsider-full@test.invalid','{"operations":{"uberlandia":{"enabled":true,"tabs":["full"]}}}'),
  ('20000000-0000-0000-0000-000000000004','manager-full@test.invalid','{"operations":{"uberlandia":{"enabled":true,"tabs":["full"],"full_manager":true}}}'),
- ('20000000-0000-0000-0000-000000000005','other-operation-full@test.invalid','{"operations":{"giracasa":{"enabled":true,"tabs":["full"],"full_manager":true}}}');
+ ('20000000-0000-0000-0000-000000000005','other-operation-full@test.invalid','{"operations":{"giracasa":{"enabled":true,"tabs":["full"],"full_manager":true}}}'),
+ ('20000000-0000-0000-0000-000000000006','approver-full@test.invalid','{"operations":{"uberlandia":{"enabled":true,"tabs":["full"]}}}');
 
-insert into public.oraculo_fulls(id,channel,store_key,store_name,creator_user_id,logistics_user_id)
+insert into public.oraculo_fulls(id,channel,store_key,store_name,creator_user_id,logistics_user_id,approver_user_id)
 values ('20000000-0000-0000-0000-0000000000ff','mercadolivre','fixture-store','Fixture',
-  '20000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000002');
+  '20000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000006');
 
 insert into public.oraculo_full_participants(full_id,user_id,participant_role) values
  ('20000000-0000-0000-0000-0000000000ff','20000000-0000-0000-0000-000000000001','criador'),
- ('20000000-0000-0000-0000-0000000000ff','20000000-0000-0000-0000-000000000002','logistica');
+ ('20000000-0000-0000-0000-0000000000ff','20000000-0000-0000-0000-000000000002','logistica'),
+ ('20000000-0000-0000-0000-0000000000ff','20000000-0000-0000-0000-000000000006','aprovador');
 
 select public.oraculo_write_full_revision(
   '20000000-0000-0000-0000-0000000000ff', 1, '20000000-0000-0000-0000-000000000001', 'fixture',
@@ -45,6 +47,9 @@ select pg_temp.assert((select count(*)=1 from public.oraculo_full_revision_items
 select set_config('request.jwt.claims','{"role":"authenticated","sub":"20000000-0000-0000-0000-000000000002"}',true);
 select pg_temp.assert((select count(*)=1 from public.oraculo_fulls where id='20000000-0000-0000-0000-0000000000ff'),'logistics reads Full');
 
+select set_config('request.jwt.claims','{"role":"authenticated","sub":"20000000-0000-0000-0000-000000000006"}',true);
+select pg_temp.assert((select count(*)=1 from public.oraculo_fulls where id='20000000-0000-0000-0000-0000000000ff'),'selected approver reads Full');
+
 select set_config('request.jwt.claims','{"role":"authenticated","sub":"20000000-0000-0000-0000-000000000003"}',true);
 select pg_temp.assert((select count(*)=0 from public.oraculo_fulls where id='20000000-0000-0000-0000-0000000000ff'),'outsider cannot read Full');
 
@@ -56,8 +61,8 @@ select pg_temp.assert((select count(*)=0 from public.oraculo_fulls where id='200
 
 do $$ begin
   begin
-    insert into public.oraculo_fulls(channel,store_key,store_name,creator_user_id,logistics_user_id)
-    values ('amazon','forbidden','Forbidden','20000000-0000-0000-0000-000000000005','20000000-0000-0000-0000-000000000005');
+    insert into public.oraculo_fulls(channel,store_key,store_name,creator_user_id,logistics_user_id,approver_user_id)
+    values ('amazon','forbidden','Forbidden','20000000-0000-0000-0000-000000000005','20000000-0000-0000-0000-000000000005','20000000-0000-0000-0000-000000000005');
     raise exception 'authenticated write allowed';
   exception when insufficient_privilege then null;
   end;

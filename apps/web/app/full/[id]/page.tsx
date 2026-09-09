@@ -44,6 +44,7 @@ export default async function FullDetailPage({ params }: { params: Promise<{ id:
   const manager = isFullManager(user);
   const creator = full.creator_user_id === me || manager;
   const logistics = full.logistics_user_id === me || manager;
+  const approver = full.approver_user_id === me || manager;
   const config = configs.find((entry) => entry.channel === full.channel && entry.store_key === full.store_key);
   const mayCancel = !["concluido", "cancelado"].includes(full.workflow_status) && (manager || (!full.external_shipment_id && full.creator_user_id === me));
 
@@ -53,7 +54,7 @@ export default async function FullDetailPage({ params }: { params: Promise<{ id:
         <div>
           <p className="eyebrow">{CHANNEL_LABEL[full.channel]} · {full.store_name}</p>
           <h1>{fullCode(full.number)}</h1>
-          <p>Revisão {full.current_revision} · criado por {users.get(full.creator_user_id)?.name ?? "usuário"} · logística {users.get(full.logistics_user_id)?.name ?? "usuário"}</p>
+          <p>Revisão {full.current_revision} · criado por {users.get(full.creator_user_id)?.name ?? "usuário"} · logística {users.get(full.logistics_user_id)?.name ?? "usuário"} · aprovador {users.get(full.approver_user_id)?.name ?? "usuário"}</p>
         </div>
         <div className="form-actions">
           {creator && !["concluido", "cancelado"].includes(full.workflow_status) ? <Link href={`/full/${full.id}/revisar`} className="button-secondary">Nova revisão</Link> : null}
@@ -64,12 +65,12 @@ export default async function FullDetailPage({ params }: { params: Promise<{ id:
       <section className="full-state-grid">
         <article className="panel"><span>Fluxo</span><strong>{WORKFLOW_LABEL[full.workflow_status]}</strong><small>Responsabilidade e aprovação</small></article>
         <article className="panel"><span>Produção</span><strong>{PRODUCTION_LABEL[full.production_status]}</strong><small>Necessidade física consolidada</small></article>
-        <article className="panel"><span>Marketplace</span><strong>{EXTERNAL_LABEL[full.external_status]}</strong><small>{full.external_shipment_id ?? "Remessa ainda não vinculada"}</small></article>
+        <article className="panel"><span>Remessa no marketplace</span><strong>{EXTERNAL_LABEL[full.external_status]}</strong><small>{full.external_shipment_id ?? "Remessa ainda não vinculada"}</small></article>
         <article className="panel"><span>Coleta</span><strong>{formatBrDate(full.scheduled_pickup_day ?? full.approved_pickup_day ?? full.proposed_pickup_day)}</strong><small>{full.shipping_mode ?? "Modalidade ainda não definida"}</small></article>
       </section>
 
       {full.last_external_error ? <section className="status-alerts"><div className="status-alert status-alert-critical">Integração: {full.last_external_error}</div></section> : null}
-      {config && !config.submission_enabled ? <section className="status-alerts"><div className="status-alert status-alert-warning">Canal em observação: novos rascunhos não podem ser enviados à logística. {config.validation_note}</div></section> : null}
+      {config && !config.submission_enabled ? <section className="status-alerts"><div className="status-alert status-alert-warning">Fluxo operacional manual liberado. A coleta e o recebimento automáticos ainda estão em observação. {config.validation_note}</div></section> : null}
 
       <section className="panel">
         <div className="section-head"><div><p className="eyebrow">Revisão {full.current_revision}</p><h2>Itens comerciais e produtos físicos</h2></div><span>{full.revision.frozen_at ? `Congelada em ${dateTime(full.revision.frozen_at)}` : "Rascunho editável por nova revisão"}</span></div>
@@ -118,13 +119,13 @@ export default async function FullDetailPage({ params }: { params: Promise<{ id:
         <article className="panel">
           <div className="section-head"><div><p className="eyebrow">Próxima ação</p><h2>Decisão operacional</h2></div></div>
           {full.workflow_status === "rascunho" && creator ? (
-            <form action={submitFull} className="stack-form"><input type="hidden" name="full_id" value={full.id} /><p>O envio congela a revisão e libera a produção.</p><button type="submit" disabled={!config?.submission_enabled}>Enviar para a logística</button></form>
+            <form action={submitFull} className="stack-form"><input type="hidden" name="full_id" value={full.id} /><p>O envio congela a revisão, avisa a logística e libera a produção.</p><button type="submit" disabled={!config?.catalog_enabled}>Enviar para a logística</button></form>
           ) : null}
           {full.workflow_status === "aguardando_logistica" && logistics && !full.external_shipment_id ? (
             <form action={proposePickupDate} className="stack-form"><input type="hidden" name="full_id" value={full.id} /><label><span>Melhor dia de coleta</span><input type="date" name="proposed_pickup_day" required /></label><label><span>Justificativa opcional</span><textarea name="note" rows={3} /></label><button type="submit">Propor data</button></form>
           ) : null}
-          {full.workflow_status === "aguardando_criador" && creator ? (
-            <form action={decidePickupDate} className="stack-form"><input type="hidden" name="full_id" value={full.id} /><p>Logística propôs <strong>{formatBrDate(full.proposed_pickup_day)}</strong>.</p>{full.proposed_pickup_note ? <p>{full.proposed_pickup_note}</p> : null}<label><span>Observação</span><textarea name="note" rows={2} /></label><div className="form-actions"><button name="decision" value="accept">Aceitar data</button><button className="button-secondary" name="decision" value="reject">Solicitar outra</button></div></form>
+          {full.workflow_status === "aguardando_criador" && approver ? (
+            <form action={decidePickupDate} className="stack-form"><input type="hidden" name="full_id" value={full.id} /><p>A logística propôs <strong>{formatBrDate(full.proposed_pickup_day)}</strong>. Você foi escolhido para aprovar esta data.</p>{full.proposed_pickup_note ? <p>{full.proposed_pickup_note}</p> : null}<label><span>Observação</span><textarea name="note" rows={2} /></label><div className="form-actions"><button name="decision" value="accept">Aceitar data</button><button className="button-secondary" name="decision" value="reject">Solicitar outra</button></div></form>
           ) : null}
           {full.workflow_status === "aguardando_agendamento" && creator ? (
             <form action={registerMarketplaceShipment} className="stack-form"><input type="hidden" name="full_id" value={full.id} /><label><span>Código da remessa</span><input name="external_shipment_id" required /></label><label><span>Modalidade</span><input name="shipping_mode" placeholder="Coleta, entrega no CD..." required /></label><label><span>Data agendada</span><input type="date" name="scheduled_pickup_day" defaultValue={full.approved_pickup_day ?? ""} required /></label><button type="submit">Registrar agendamento</button></form>

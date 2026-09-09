@@ -9,7 +9,7 @@ export const CHANNEL_LABEL: Record<FullChannel, string> = {
 export const WORKFLOW_LABEL: Record<FullWorkflowStatus, string> = {
   rascunho: "Rascunho",
   aguardando_logistica: "Aguardando logística",
-  aguardando_criador: "Aguardando criador",
+  aguardando_criador: "Aguardando aprovação",
   aguardando_agendamento: "Aguardando agendamento",
   monitorando: "Monitorando",
   concluido: "Concluído",
@@ -25,7 +25,7 @@ export const PRODUCTION_LABEL: Record<FullProductionStatus, string> = {
 };
 
 export const EXTERNAL_LABEL: Record<FullExternalStatus, string> = {
-  nao_vinculado: "Não vinculado",
+  nao_vinculado: "Remessa não vinculada",
   agendado: "Agendado",
   coletado: "Coletado",
   em_transito: "Em trânsito",

@@ -20,6 +20,9 @@ real ou suas aprovações.
 - Fluxo, produção e estado externo são dimensões independentes.
 - Cada alteração material cria uma revisão. A versão enviada à logística fica
   congelada, e anúncio, produto físico e expansão de kit são fotografados.
+- O criador escolhe explicitamente o aprovador de cada Full. A logística propõe
+  a data; o aprovador aceita ou solicita outra; o criador mantém a responsabilidade
+  de criar e registrar a remessa no marketplace.
 - A necessidade de produção é consolidada por SKU físico. Revisões preservam o
   progresso já registrado e mostram a necessidade atual.
 - Coleta e recebimento avançam somente por evento de API associado ao código da
@@ -37,7 +40,8 @@ real ou suas aprovações.
 - Não existe botão manual para simular coleta ou recebimento.
 - Os adapters dos marketplaces podem evoluir por trás de um contrato único sem
   alterar a máquina operacional.
-- Um canal só aceita envio à logística quando catálogo, detecção de coleta e
-  recebimento por item estiverem validados em uma remessa real.
+- O catálogo habilitado libera o fluxo humano até o agendamento. A validação de
+  detecção de coleta e recebimento por item controla apenas o monitoramento
+  automático, depois de uma remessa real comprovada.
 - O planejador semanal legado deixa de gerar tarefas, mas suas tabelas e runs
   continuam preservadas para auditoria.

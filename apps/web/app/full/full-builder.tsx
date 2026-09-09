@@ -23,6 +23,7 @@ export function FullBuilder({
     channel: FullChannel;
     storeKey: string;
     logisticsUserId: string;
+    approverUserId: string;
     rows: Array<{ commercialKey: string; physicalProductId: string; quantity: number }>;
   };
 }) {
@@ -34,6 +35,7 @@ export function FullBuilder({
   const [storeKey, setStoreKey] = useState(initial?.storeKey ?? firstStore?.store_key ?? "");
   const selectedStore = stores.find((store) => store.channel === channel && store.store_key === storeKey) ?? storesForChannel[0];
   const [logisticsUserId, setLogisticsUserId] = useState(initial?.logisticsUserId ?? selectedStore?.default_logistics_user_id ?? "");
+  const [approverUserId, setApproverUserId] = useState(initial?.approverUserId ?? "");
   const [rows, setRows] = useState<BuilderRow[]>(
     (initial?.rows.length ? initial.rows : [{ commercialKey: "", physicalProductId: "", quantity: 1 }])
       .map((row, index) => ({ ...row, id: `${index}-${row.commercialKey}` }))
@@ -103,6 +105,14 @@ export function FullBuilder({
             {users.map((person) => <option key={person.id} value={person.id}>{person.name} · {person.email}</option>)}
           </select>
         </label>
+        <label>
+          <span>Responsável pela aprovação</span>
+          <select name="approver_user_id" value={approverUserId} onChange={(event) => setApproverUserId(event.target.value)} required>
+            <option value="">Selecione</option>
+            {users.map((person) => <option key={person.id} value={person.id}>{person.name} · {person.email}</option>)}
+          </select>
+          <small>Essa pessoa aceitará ou solicitará outra data após a proposta da logística.</small>
+        </label>
       </div>
 
       {initial ? (
@@ -114,7 +124,7 @@ export function FullBuilder({
 
       {selectedStore && !selectedStore.submission_enabled ? (
         <div className="status-alert status-alert-warning">
-          Rascunhos estão disponíveis, mas o envio à logística permanece bloqueado até validar coleta e recebimento automáticos. {selectedStore.validation_note}
+          O fluxo operacional manual está liberado. A coleta e o recebimento automáticos deste canal ainda estão em observação. {selectedStore.validation_note}
         </div>
       ) : null}
 

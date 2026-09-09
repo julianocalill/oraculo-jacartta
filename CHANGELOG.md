@@ -2,6 +2,16 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-09] — Aprovador selecionável e fluxo manual do Full
+
+- O criador agora escolhe o aprovador em cada Full e pode alterá-lo por nova
+  revisão, sem confundi-lo com o responsável logístico.
+- A proposta de coleta cria a tarefa da Agenda para o aprovador escolhido, que
+  aceita a data ou solicita outra; criador e logística mantêm suas funções.
+- O gate dos conectores deixou de bloquear o envio à logística: catálogo ativo
+  libera o processo humano, enquanto coleta e recebimento automáticos seguem em
+  observação até a validação real de cada canal.
+
 ## [2026-09-09] — Hotfix do travamento após o deploy do Full
 
 - Corrigido o ciclo do `MutationObserver` global de ajuda de colunas: ele
@@ -19,8 +29,8 @@ Histórico de entregas e mudanças significativas.
   `dpl_HNmNea5R9Z5rKNLNbcRc86e8tRBP`.
 - A arquitetura multioperação voltou à interface com os hotfixes de autorização
   preservados; Giracasa continua desativada, vazia e sem credenciais ou crons.
-- Os três canais seguem bloqueados para envio até validação de remessa real; o
-  conector externo permanece sem publicação e sem agendamento automático.
+- Os três canais seguem com monitoramento automático bloqueado até validação de
+  remessa real; o conector externo permanece sem publicação e sem cron.
 
 ## [2026-09-08] — Fluxo operacional de Full/FBS/Onsite
 

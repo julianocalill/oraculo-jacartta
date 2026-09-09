@@ -63,7 +63,8 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 **Last update**: `2026-09-09` (see `docs/project-status-2026-09-09.md`) —
 novo módulo **Full/FBS/Onsite** publicado em `/full`, com remessa manual rastreável,
 revisões congeladas, produção física, aprovações pela Agenda, anexos privados e
-monitoramento externo bloqueado por canal até validação real; o planejador
+aprovador escolhido pelo criador. O fluxo humano até o agendamento está
+liberado e o monitoramento externo segue bloqueado por canal até validação real; o planejador
 semanal legado foi desativado. A interface multioperação voltou ao `main` com os
 hotfixes de autorização preservados; um ciclo de `MutationObserver` introduzido
 na restauração foi corrigido para não travar páginas com tabelas. A Giracasa permanece desativada,

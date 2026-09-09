@@ -1,6 +1,6 @@
 import { requireTabAccess } from "../../../lib/auth/access";
 import { loadActionableAlertCount } from "../../../lib/alert-count";
-import { listOraculoUsers } from "../../../lib/users";
+import { listOraculoUsersForTab } from "../../../lib/users";
 import { AppShell } from "../../components/app-shell";
 import { NoAccess } from "../../components/no-access";
 import { OperationLink as Link } from "../../components/operation-provider";
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function NewFullPage() {
   const [{ allowed }, alertCount] = await Promise.all([requireTabAccess("full"), loadActionableAlertCount()]);
   if (!allowed) return <NoAccess tab="full" />;
-  const [catalog, users] = await Promise.all([loadFullCreationCatalog(), listOraculoUsers()]);
+  const [catalog, users] = await Promise.all([loadFullCreationCatalog(), listOraculoUsersForTab("full")]);
 
   return (
     <AppShell alertCount={alertCount}>

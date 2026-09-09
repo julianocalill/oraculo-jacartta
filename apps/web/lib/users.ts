@@ -1,6 +1,8 @@
 import { cache } from "react";
-import { operationGrant } from "@oraculo/domain/operations.js";
+import { operationGrant, projectOperationUser } from "@oraculo/domain/operations.js";
 import { getRequestOperation } from "./operation-context";
+import { canAccess } from "./auth/access";
+import type { TabKey } from "./auth/tabs";
 import { createSupabaseAdminClient } from "./supabase/admin";
 
 // Diretório de usuários do Oráculo para features colaborativas (Agenda).
@@ -29,13 +31,16 @@ export function effectiveUserId(user: { id: string }): string {
 // cache compartilhado de 5 min, mesmo racional do alert-count: o fetch interno
 // usa o admin client porque unstable_cache não pode ler cookies().
 const listOraculoUsersCached = cache(
-  async (operation: string): Promise<OraculoUser[]> => {
+  async (operation: string, requiredTab: TabKey | null): Promise<OraculoUser[]> => {
     const supabase = createSupabaseAdminClient();
     const { data, error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
     if (error) throw error;
 
     return data.users
-      .filter((user) => operationGrant(user, operation) && !(user.banned_until && new Date(user.banned_until).getTime() > Date.now()))
+      .filter((user) => {
+        if (!operationGrant(user, operation) || (user.banned_until && new Date(user.banned_until).getTime() > Date.now())) return false;
+        return !requiredTab || canAccess(projectOperationUser(user, operation), requiredTab);
+      })
       .map((user) => ({
         id: user.id,
         name: String(user.user_metadata?.full_name || user.email || "Sem nome"),
@@ -46,7 +51,12 @@ const listOraculoUsersCached = cache(
 );
 
 export async function listOraculoUsers(): Promise<OraculoUser[]> {
-  return listOraculoUsersCached(await getRequestOperation());
+  return listOraculoUsersCached(await getRequestOperation(), null);
+}
+
+/** Diretório reduzido a usuários que realmente conseguem abrir a aba indicada. */
+export async function listOraculoUsersForTab(tab: TabKey): Promise<OraculoUser[]> {
+  return listOraculoUsersCached(await getRequestOperation(), tab);
 }
 
 export async function mapOraculoUsersById(): Promise<Map<string, OraculoUser>> {

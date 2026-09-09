@@ -9,7 +9,7 @@ import { revalidatePath, redirect } from "../../lib/operation-navigation";
 import { assertTabAccess, isFullManager } from "../../lib/auth/access";
 import { getSaoPauloToday } from "../../lib/date";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
-import { effectiveUserId, listOraculoUsers } from "../../lib/users";
+import { effectiveUserId, listOraculoUsersForTab } from "../../lib/users";
 import { loadFullCreationCatalog, type FullChannel, type FullWorkflowStatus } from "./data";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -39,6 +39,7 @@ type FullAdminRow = {
   store_name: string;
   creator_user_id: string;
   logistics_user_id: string;
+  approver_user_id: string;
   workflow_status: FullWorkflowStatus;
   production_status: string;
   external_status: string;
@@ -79,7 +80,7 @@ async function loadFullAdmin(id: string): Promise<FullAdminRow> {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from("oraculo_fulls")
-    .select("id,number,channel,store_key,store_name,creator_user_id,logistics_user_id,workflow_status,production_status,external_status,current_revision,proposed_pickup_day,approved_pickup_day,scheduled_pickup_day,external_shipment_id")
+    .select("id,number,channel,store_key,store_name,creator_user_id,logistics_user_id,approver_user_id,workflow_status,production_status,external_status,current_revision,proposed_pickup_day,approved_pickup_day,scheduled_pickup_day,external_shipment_id")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -127,6 +128,18 @@ async function addEvent(args: {
 
 function actionTaskKey(fullId: string, stage: string, revision: number) {
   return `full-workflow:${fullId}:${stage}:r${revision}`;
+}
+
+function participantRows(fullId: string, creatorId: string, logisticsId: string, approverId: string) {
+  const roles = new Map<string, "criador" | "logistica" | "aprovador">();
+  roles.set(creatorId, "criador");
+  if (!roles.has(logisticsId)) roles.set(logisticsId, "logistica");
+  if (!roles.has(approverId)) roles.set(approverId, "aprovador");
+  return [...roles].map(([userId, participantRole]) => ({
+    full_id: fullId,
+    user_id: userId,
+    participant_role: participantRole
+  }));
 }
 
 async function createAgendaTask(args: {
@@ -316,10 +329,12 @@ export async function createFull(formData: FormData) {
   const channel = String(formData.get("channel") ?? "") as FullChannel;
   const storeKey = String(formData.get("store_key") ?? "");
   const logisticsUserId = String(formData.get("logistics_user_id") ?? "");
+  const approverUserId = String(formData.get("approver_user_id") ?? "");
   if (!(["shopee", "mercadolivre", "amazon"] as string[]).includes(channel)) throw new Error("Marketplace inválido.");
-  if (!storeKey || !UUID.test(logisticsUserId)) throw new Error("Loja ou responsável logístico inválido.");
-  const knownUsers = new Set((await listOraculoUsers()).map((entry) => entry.id));
+  if (!storeKey || !UUID.test(logisticsUserId) || !UUID.test(approverUserId)) throw new Error("Loja ou responsáveis inválidos.");
+  const knownUsers = new Set((await listOraculoUsersForTab("full")).map((entry) => entry.id));
   if (!knownUsers.has(logisticsUserId)) throw new Error("Responsável logístico não encontrado.");
+  if (!knownUsers.has(approverUserId)) throw new Error("Responsável pela aprovação não encontrado.");
   const inputs = parseItems(formData.get("items_json"));
   const rows = await buildValidatedItems(channel, storeKey, inputs);
   if (rows.some((row) => row.selectedProduct.isKit) && formData.get("confirm_kits") !== "yes") {
@@ -339,18 +354,17 @@ export async function createFull(formData: FormData) {
 
   const { data: full, error } = await admin
     .from("oraculo_fulls")
-    .insert({ channel, store_key: storeKey, store_name: config.store_name, creator_user_id: me, logistics_user_id: logisticsUserId })
+    .insert({ channel, store_key: storeKey, store_name: config.store_name, creator_user_id: me, logistics_user_id: logisticsUserId, approver_user_id: approverUserId })
     .select("id,number")
     .single();
   if (error) throw error;
   try {
-    const { error: participantError } = await admin.from("oraculo_full_participants").insert([
-      { full_id: full.id, user_id: me, participant_role: "criador" },
-      ...(logisticsUserId === me ? [] : [{ full_id: full.id, user_id: logisticsUserId, participant_role: "logistica" }])
-    ]);
+    const { error: participantError } = await admin.from("oraculo_full_participants").insert(
+      participantRows(full.id, me, logisticsUserId, approverUserId)
+    );
     if (participantError) throw participantError;
     await writeRevision({ fullId: full.id, revisionNo: 1, creatorId: me, reason: "Criação inicial", rows });
-    await addEvent({ fullId: full.id, revisionNo: 1, eventType: "full_criado", actorUserId: me, toStatus: "rascunho", payload: { items: rows.length } });
+    await addEvent({ fullId: full.id, revisionNo: 1, eventType: "full_criado", actorUserId: me, toStatus: "rascunho", payload: { items: rows.length, logistics_user_id: logisticsUserId, approver_user_id: approverUserId } });
   } catch (cause) {
     await admin.from("oraculo_fulls").delete().eq("id", full.id);
     throw cause;
@@ -369,8 +383,10 @@ export async function reviseFull(formData: FormData) {
   const reason = String(formData.get("reason") ?? "").trim();
   if (!reason) throw new Error("Informe o motivo da revisão.");
   const logisticsUserId = String(formData.get("logistics_user_id") ?? full.logistics_user_id);
-  const knownUsers = new Set((await listOraculoUsers()).map((entry) => entry.id));
+  const approverUserId = String(formData.get("approver_user_id") ?? full.approver_user_id);
+  const knownUsers = new Set((await listOraculoUsersForTab("full")).map((entry) => entry.id));
   if (!UUID.test(logisticsUserId) || !knownUsers.has(logisticsUserId)) throw new Error("Responsável logístico não encontrado.");
+  if (!UUID.test(approverUserId) || !knownUsers.has(approverUserId)) throw new Error("Responsável pela aprovação não encontrado.");
   const inputs = parseItems(formData.get("items_json"));
   const rows = await buildValidatedItems(full.channel, full.store_key, inputs);
   if (rows.some((row) => row.selectedProduct.isKit) && formData.get("confirm_kits") !== "yes") {
@@ -393,6 +409,7 @@ export async function reviseFull(formData: FormData) {
   const { error } = await admin.from("oraculo_fulls").update({
     current_revision: revisionNo,
     logistics_user_id: logisticsUserId,
+    approver_user_id: approverUserId,
     workflow_status: "rascunho",
     production_status: nextProductionStatus,
     external_status: "nao_vinculado",
@@ -411,10 +428,7 @@ export async function reviseFull(formData: FormData) {
   }).eq("id", fullId);
   if (error) throw error;
   const { error: participantError } = await admin.from("oraculo_full_participants").upsert(
-    [
-      { full_id: fullId, user_id: full.creator_user_id, participant_role: "criador" },
-      ...(logisticsUserId === full.creator_user_id ? [] : [{ full_id: fullId, user_id: logisticsUserId, participant_role: "logistica" }])
-    ],
+    participantRows(fullId, full.creator_user_id, logisticsUserId, approverUserId),
     { onConflict: "full_id,user_id" }
   );
   if (participantError) throw participantError;
@@ -426,7 +440,7 @@ export async function reviseFull(formData: FormData) {
     metadata: { full_id: fullId, full_number: full.number, resolution_note: "Marco substituído por nova revisão", substituted_by_revision: revisionNo }
   }).contains("metadata", { full_id: fullId }).eq("status", "pendente");
   if (oldTaskError) throw oldTaskError;
-  await addEvent({ fullId, revisionNo, eventType: "nova_revisao", actorUserId: me, fromStatus: full.workflow_status, toStatus: "rascunho", note: reason, payload: { previous_revision: full.current_revision, previous_external_shipment_id: full.external_shipment_id } });
+  await addEvent({ fullId, revisionNo, eventType: "nova_revisao", actorUserId: me, fromStatus: full.workflow_status, toStatus: "rascunho", note: reason, payload: { previous_revision: full.current_revision, previous_external_shipment_id: full.external_shipment_id, previous_logistics_user_id: full.logistics_user_id, logistics_user_id: logisticsUserId, previous_approver_user_id: full.approver_user_id, approver_user_id: approverUserId } });
   await revalidatePath("/full");
   await redirect(`/full/${fullId}`);
 }
@@ -440,14 +454,12 @@ export async function submitFull(formData: FormData) {
   const admin = createSupabaseAdminClient();
   const { data: config, error: configError } = await admin
     .from("oraculo_full_store_configs")
-    .select("submission_enabled,validation_note")
+    .select("catalog_enabled")
     .eq("channel", full.channel)
     .eq("store_key", full.store_key)
     .maybeSingle();
   if (configError) throw configError;
-  if (!config?.submission_enabled) {
-    throw new Error(config?.validation_note || "Canal ainda não liberado: coleta e recebimento automáticos precisam ser validados.");
-  }
+  if (!config?.catalog_enabled) throw new Error("O catálogo desta loja não está liberado.");
   const { data: revision, error: revisionError } = await admin
     .from("oraculo_full_revisions")
     .select("id,frozen_at")
@@ -491,7 +503,7 @@ export async function proposePickupDate(formData: FormData) {
   await closeAgendaStage(full, "analise_logistica", me);
   await addEvent({ fullId: full.id, revisionNo: full.current_revision, eventType: "data_proposta", actorUserId: me, fromStatus: "aguardando_logistica", toStatus: "aguardando_criador", note, payload: { proposed_pickup_day: day } });
   const updated = { ...full, workflow_status: "aguardando_criador" as const };
-  await createAgendaTask({ full: updated, stage: "aprovar_data", title: `Full · ${full.store_name} · aprovar ${day.split("-").reverse().join("/")}`, description: "Aceite a data proposta pela logística ou solicite uma alternativa.", dueDay: nextBusinessDay(getSaoPauloToday()), participantIds: [full.creator_user_id], actorUserId: me });
+  await createAgendaTask({ full: updated, stage: "aprovar_data", title: `Full · ${full.store_name} · aprovar ${day.split("-").reverse().join("/")}`, description: "Você foi escolhido para aceitar a data proposta pela logística ou solicitar uma alternativa.", dueDay: nextBusinessDay(getSaoPauloToday()), participantIds: [full.approver_user_id], actorUserId: me });
   await revalidatePath("/full");
   await revalidatePath("/agenda");
 }
@@ -500,7 +512,7 @@ export async function decidePickupDate(formData: FormData) {
   const user = await assertTabAccess("full");
   const me = effectiveUserId(user);
   const full = await loadFullAdmin(idFrom(formData));
-  if (full.creator_user_id !== me && !isFullManager(user)) throw new Error("Só o criador pode decidir a data.");
+  if (full.approver_user_id !== me && !isFullManager(user)) throw new Error("Só o aprovador escolhido pode decidir a data.");
   if (full.workflow_status !== "aguardando_criador" || !full.proposed_pickup_day) throw new Error("Não há uma data aguardando decisão.");
   const decision = String(formData.get("decision") ?? "");
   const note = String(formData.get("note") ?? "").trim() || null;

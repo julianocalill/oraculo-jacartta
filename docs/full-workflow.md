@@ -9,11 +9,13 @@ para consumidores.
 
 ## Papéis
 
-- **Criador:** escolhe marketplace, loja, anúncio/variação, quantidade e produto
-  físico Olist; aceita a data; cria a remessa no painel externo e registra o
-  vínculo no Oráculo.
+- **Criador:** escolhe marketplace, loja, anúncio/variação, quantidade, produto
+  físico Olist, logística e aprovador; cria a remessa no painel externo e
+  registra o vínculo no Oráculo.
 - **Logística:** recebe a composição física, atualiza produção e propõe a melhor
   data. Se a agenda externa divergir, aprova ou rejeita a nova data.
+- **Aprovador:** é escolhido pelo criador em cada Full e aceita a data proposta
+  pela logística ou solicita outra. Pode mudar numa nova revisão.
 - **Gestor Full:** enxerga todos os Fulls da operação, pode corrigir situações de
   exceção, solicitar nova sincronização e cancelar internamente uma remessa já
   vinculada. Isso nunca cancela no marketplace.
@@ -43,8 +45,8 @@ em trânsito.
    cadastro; a fotografia fica na revisão.
 2. Enviar à logística. A revisão congela e uma tarefa idempotente vence no
    próximo dia útil, considerando segunda a sexta no fuso de São Paulo.
-3. A logística inicia a produção e propõe a coleta. O criador recebe nova tarefa
-   e aceita ou pede outra data.
+3. A logística inicia a produção e propõe a coleta. O aprovador escolhido recebe
+   nova tarefa e aceita ou pede outra data.
 4. O criador agenda manualmente no marketplace e informa código, modalidade e
    dia. Divergência de data volta à logística.
 5. Após o vínculo, só a integração altera coleta, trânsito e recebimento.
@@ -93,9 +95,11 @@ Todos os gates começam desligados. Ordem de validação:
 2. Shopee: provar endpoint FBS por remessa e permissões de cada partner app.
 3. Amazon: ativar SP-API e validar leitura legada de remessa e itens.
 
-Até as duas provas (`collection_sync_validated` e `receipt_sync_validated`), a
-loja aceita rascunho, mas bloqueia envio à logística com a causa visível. Não há
-cron para o novo monitor até o primeiro canal ser validado.
+O fluxo humano — rascunho, logística, aprovação e agendamento manual — funciona
+desde que o catálogo da loja esteja habilitado. Enquanto as duas provas
+(`collection_sync_validated` e `receipt_sync_validated`) não estiverem válidas,
+a interface sinaliza que coleta e recebimento automáticos estão em observação.
+Não há cron para o novo monitor até o primeiro canal ser validado.
 
 ## Validação
 

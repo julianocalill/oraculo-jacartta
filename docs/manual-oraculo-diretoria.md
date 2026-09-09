@@ -181,13 +181,14 @@ automaticamente.
 ## 10. Full — reposição real nos marketplaces
 
 Em **Novo Full**, o criador escolhe marketplace, loja, responsável logístico,
-anúncio/variação, produto físico Olist e quantidade. Se houver kit, confirma a
-expansão nos componentes. Ao enviar, a composição congela e a logística já pode
-registrar quanto está pronto ou faltante.
+responsável pela aprovação, anúncio/variação, produto físico Olist e quantidade.
+Se houver kit, confirma a expansão nos componentes. Ao enviar, a composição
+congela e a logística já pode registrar quanto está pronto ou faltante.
 
-A logística propõe a coleta; o criador aceita e agenda a remessa no painel do
-marketplace. Código externo, modalidade e data ficam registrados no Oráculo.
-Se o marketplace oferecer outro dia, a decisão volta à logística.
+A logística propõe a coleta; o aprovador escolhido pelo criador aceita ou pede
+outra data. Depois do aceite, o criador agenda a remessa no painel do
+marketplace. Código externo, modalidade e data ficam registrados no Oráculo. Se
+o marketplace oferecer outro dia, a decisão volta à logística.
 
 Depois do vínculo não existe botão para marcar coleta ou recebimento: somente a
 API do marketplace confirma esses estados. A página mantém documentos privados,
@@ -195,8 +196,9 @@ divergências e uma linha do tempo que não pode ser reescrita. Qualquer mudanç
 de item, quantidade ou produto físico cria uma nova revisão e preserva a
 anterior.
 
-Cada canal começa bloqueado para envio até uma remessa piloto comprovar coleta e
-recebimento automáticos. Rascunhos continuam disponíveis para conferência.
+O catálogo ativo libera o fluxo humano até o agendamento. A coleta e o
+recebimento automáticos permanecem em observação até uma remessa piloto validar
+o conector do canal.
 
 ## 11. Fórmulas — resumo de bolso
 
