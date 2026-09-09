@@ -2,6 +2,16 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-09] — Hotfix do travamento após o deploy do Full
+
+- Corrigido o ciclo do `MutationObserver` global de ajuda de colunas: ele
+  regravava o mesmo `textContent`, observava a própria alteração e mantinha a
+  thread principal do navegador ocupada indefinidamente em páginas com tabela.
+- A atualização do texto acessível agora só altera o DOM quando o conteúdo
+  realmente mudou; o comportamento dos tooltips e a acessibilidade permanecem.
+- Página inicial multioperação validada no navegador com dados e tabela
+  renderizados, além de 70 testes, TypeScript e build de produção aprovados.
+
 ## [2026-09-09] — Full publicado e multioperação restaurada
 
 - O fluxo operacional de Full/FBS/Onsite foi publicado nos dois `main` pelo

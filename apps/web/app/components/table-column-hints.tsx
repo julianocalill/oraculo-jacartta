@@ -51,7 +51,12 @@ export function TableColumnHints() {
 
           const existingAccessibleHint = header.querySelector<HTMLElement>(".column-hint-accessible");
           if (existingAccessibleHint) {
-            existingAccessibleHint.textContent = hint;
+            // MutationObserver observa childList. Reatribuir o mesmo
+            // textContent substitui o nó de texto e dispara o observer de
+            // novo, criando um loop que trava páginas com tabelas.
+            if (existingAccessibleHint.textContent !== hint) {
+              existingAccessibleHint.textContent = hint;
+            }
           } else if (!header.querySelector(".sr-only")) {
             const accessibleHint = document.createElement("span");
             accessibleHint.className = "sr-only column-hint-accessible";

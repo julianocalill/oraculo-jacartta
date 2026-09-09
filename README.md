@@ -65,7 +65,8 @@ novo módulo **Full/FBS/Onsite** publicado em `/full`, com remessa manual rastre
 revisões congeladas, produção física, aprovações pela Agenda, anexos privados e
 monitoramento externo bloqueado por canal até validação real; o planejador
 semanal legado foi desativado. A interface multioperação voltou ao `main` com os
-hotfixes de autorização preservados, enquanto a Giracasa permanece desativada,
+hotfixes de autorização preservados; um ciclo de `MutationObserver` introduzido
+na restauração foi corrigido para não travar páginas com tabelas. A Giracasa permanece desativada,
 sem credenciais, usuários, crons ou carga. Também,
 Shopee → Estoque & FBS agora abre a posição completa por SKU × armazém e
 distingue vendável FBS, reservado, não vendável, trânsito e vendável total do

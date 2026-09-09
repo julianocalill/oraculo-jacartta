@@ -1,5 +1,18 @@
 # Status do projeto — 09/09/2026
 
+## Hotfix de carregamento da interface
+
+O primeiro deploy restaurou também o reforço global de explicações dos
+cabeçalhos de tabela. O `MutationObserver` desse componente reatribuía o mesmo
+`textContent` ao texto acessível; essa escrita substituía o nó de texto,
+disparava o próprio observer outra vez e mantinha a thread principal ocupada.
+No Chrome, o sintoma era a tela escura seguida de “Página sem resposta”.
+
+O hotfix torna a escrita idempotente: o DOM só é alterado quando a explicação
+realmente mudou. A página `/o/uberlandia` foi carregada em navegador com os
+dados e a tabela completos, sem novo ciclo. Os 70 testes de domínio, o
+TypeScript e o build Next.js de produção também foram aprovados.
+
 ## Full/FBS/Onsite publicado em produção
 
 O módulo operacional de Full foi publicado no `main` dos dois repositórios e
