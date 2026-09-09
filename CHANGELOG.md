@@ -2,6 +2,16 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-09] — Full publicado e multioperação restaurada
+
+- O fluxo operacional de Full/FBS/Onsite foi publicado nos dois `main` pelo
+  commit `e809d58` e entrou em produção no deployment Vercel
+  `dpl_HNmNea5R9Z5rKNLNbcRc86e8tRBP`.
+- A arquitetura multioperação voltou à interface com os hotfixes de autorização
+  preservados; Giracasa continua desativada, vazia e sem credenciais ou crons.
+- Os três canais seguem bloqueados para envio até validação de remessa real; o
+  conector externo permanece sem publicação e sem agendamento automático.
+
 ## [2026-09-08] — Fluxo operacional de Full/FBS/Onsite
 
 - Nova aba `/full`, em Operações, com criação manual por marketplace, loja,

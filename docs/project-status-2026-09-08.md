@@ -39,7 +39,8 @@ Arquitetura e operação: [full-workflow.md](full-workflow.md) e
 - teste SQL descartável de RLS, revisão congelada, expansão e escrita bloqueada
   adicionado em `supabase/tests/full-workflow.sql`;
 - migration aplicada no projeto vinculado; teste SQL transacional aprovado;
-- interface ainda precisa do push/deploy Vercel; a Edge Function permanece
+- interface publicada em 09/09/2026 no deployment
+  `dpl_HNmNea5R9Z5rKNLNbcRc86e8tRBP`; a Edge Function permanece
   propositalmente não publicada e sem cron até a remessa piloto do primeiro canal.
 
 ## Posição vendável da Shopee ficou completa e sem ambiguidade

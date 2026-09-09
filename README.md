@@ -33,7 +33,8 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-08.md](docs/project-status-2026-09-08.md) **← start here** (fluxo operacional Full e status dos syncs)
+1. [docs/project-status-2026-09-09.md](docs/project-status-2026-09-09.md) **← start here** (Full publicado em produção e rollout por canal)
+   — [docs/project-status-2026-09-08.md](docs/project-status-2026-09-08.md) (implementação do Full e status dos syncs)
    — [docs/project-status-2026-09-05.md](docs/project-status-2026-09-05.md) (Giracasa isolada em produção; aguardando credenciais e carga)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
    — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every card/column/config field across the whole system — analytics, alerts, calculator, imports, params, sync status — exact formula, PT-BR, for team walkthroughs)
@@ -59,11 +60,13 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 ## Current production state
 
-**Last update**: `2026-09-08` (see `docs/project-status-2026-09-08.md`) —
-novo módulo **Full/FBS/Onsite** em `/full`, com remessa manual rastreável,
+**Last update**: `2026-09-09` (see `docs/project-status-2026-09-09.md`) —
+novo módulo **Full/FBS/Onsite** publicado em `/full`, com remessa manual rastreável,
 revisões congeladas, produção física, aprovações pela Agenda, anexos privados e
 monitoramento externo bloqueado por canal até validação real; o planejador
-semanal legado foi desativado. Também,
+semanal legado foi desativado. A interface multioperação voltou ao `main` com os
+hotfixes de autorização preservados, enquanto a Giracasa permanece desativada,
+sem credenciais, usuários, crons ou carga. Também,
 Shopee → Estoque & FBS agora abre a posição completa por SKU × armazém e
 distingue vendável FBS, reservado, não vendável, trânsito e vendável total do
 anúncio; a nomenclatura antiga de "estoque local" foi corrigida porque o campo
@@ -71,10 +74,7 @@ da API reúne todas as localizações e já desconta reservas. Além disso,
 os status de pedidos e backfill Olist agora representam ciclos reais: lotes de
 pedidos encerram como sucesso, runs interrompidos deixam de parecer ativos e o
 backfill voltou a avançar com heartbeat, timeout e isolamento por pedido.
-Estado funcional anterior (`2026-09-07`):
-Oráculo restaurado no deploy estável anterior à interface multioperação. A
-Giracasa permanece preservada no banco e no repositório, mas desativada e sem
-credenciais, jobs, usuários ou carga. Estado funcional anterior:
+Estado funcional anterior:
 Análise Comercial por dia/período em produção, com backend agregado, cron
 horário, ranking por quantidade e margem no período. Contrato: `docs/analise-comercial.md`.
 Estado anterior em produção:
@@ -120,8 +120,8 @@ terceiros em escala e primeira geração de PDF por biblioteca).
 ### Deployment & auth
 - **Multioperação**: URLs `/o/uberlandia/*` e `/o/giracasa/*`; permissões são por operação + aba. Giracasa permanece desativada até concluir `docs/giracasa-onboarding.md`.
 - Production URL: `https://oraculo.oliverhome.com.br`
-- Latest documented feature deploy: `dpl_EaNG4CybVy9KZbY2kUsNKNMgnAbC`
-  (2026-09-04, Análise Comercial diária e por intervalo, `Ready` em produção)
+- Latest documented feature deploy: `dpl_HNmNea5R9Z5rKNLNbcRc86e8tRBP`
+  (2026-09-09, fluxo operacional Full/FBS/Onsite, `Ready` em produção)
 - **Dois remotes**: `origin` = `Grupo-Jacartta/oraculo`, `personal` = `julianocalill/oraculo-jacartta`.
   A Vercel escuta o **`personal`** — push só no `origin` não publica.
 - Business-data reads run under RLS via an authenticated client (anon key + user
