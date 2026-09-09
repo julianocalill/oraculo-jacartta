@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { OperationLink as Link } from "../components/operation-provider";
 import { requireTabAccess } from "../../lib/auth/access";
 import { NoAccess } from "../components/no-access";
 import { AppShell } from "../components/app-shell";

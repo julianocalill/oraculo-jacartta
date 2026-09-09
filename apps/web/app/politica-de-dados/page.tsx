@@ -1,3 +1,4 @@
+import { OperationAnchor } from "../components/operation-provider";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -282,16 +283,16 @@ export default function PoliticaDeDadosPage() {
         <h2 style={{ fontSize: 19, margin: "0 0 12px" }}>11. Contato</h2>
         <p style={{ margin: 0 }}>
           Dúvidas sobre esta política, solicitações relativas a dados ou comunicação de incidentes:{" "}
-          <a href={`mailto:${CONTATO}`} style={{ color: "var(--gold)" }}>
+          <OperationAnchor href={`mailto:${CONTATO}`} style={{ color: "var(--gold)" }}>
             {CONTATO}
-          </a>
+          </OperationAnchor>
           .
         </p>
         <p style={{ margin: "12px 0 0" }}>
           Consulte também os{" "}
-          <a href="/termos-de-servico" style={{ color: "var(--gold)" }}>
+          <OperationAnchor href="/termos-de-servico" style={{ color: "var(--gold)" }}>
             Termos de Serviço
-          </a>
+          </OperationAnchor>
           .
         </p>
       </section>

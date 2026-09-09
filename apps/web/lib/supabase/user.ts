@@ -1,3 +1,4 @@
+import { operationFetch } from "./operation-fetch";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { getSupabaseUrl, getSupabaseAnonKey, ACCESS_COOKIE } from "../auth/session";
@@ -36,7 +37,7 @@ export async function createSupabaseUserClient() {
   }
 
   return createClient(getSupabaseUrl(), getSupabaseAnonKey(), {
-    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    global: { fetch: operationFetch(), headers: { Authorization: `Bearer ${accessToken}` } },
     auth: { persistSession: false, autoRefreshToken: false }
   });
 }

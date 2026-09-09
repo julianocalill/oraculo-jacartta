@@ -1,3 +1,4 @@
+import { OperationAnchor } from "../components/operation-provider";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -240,9 +241,9 @@ export default function TermosDeServicoPage() {
 
       <p style={{ marginTop: 0 }}>
         Estes Termos estabelecem as condições de acesso e uso do Oráculo. Consulte também a{" "}
-        <a href="/politica-de-dados" style={{ color: "var(--gold)" }}>
+        <OperationAnchor href="/politica-de-dados" style={{ color: "var(--gold)" }}>
           Política de Privacidade e Tratamento de Dados
-        </a>
+        </OperationAnchor>
         .
       </p>
 
@@ -271,9 +272,9 @@ export default function TermosDeServicoPage() {
         <h2 style={{ fontSize: 19, margin: "0 0 12px" }}>13. Contato</h2>
         <p style={{ margin: 0 }}>
           Dúvidas, solicitações ou comunicações relacionadas a estes Termos: {" "}
-          <a href={`mailto:${CONTATO}`} style={{ color: "var(--gold)" }}>
+          <OperationAnchor href={`mailto:${CONTATO}`} style={{ color: "var(--gold)" }}>
             {CONTATO}
-          </a>
+          </OperationAnchor>
           .
         </p>
       </section>

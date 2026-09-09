@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { getColumnHint } from "../../lib/column-hints";
+import { OperationLink as Link } from "../components/operation-provider";
 
 export type SkuTableRow = {
   source: string | null;
@@ -118,6 +120,7 @@ function compare(a: number | string | null, b: number | string | null, dir: "asc
 }
 
 export function SkuTable({ rows }: { rows: SkuTableRow[] }) {
+  const pathname = usePathname();
   const [sortKey, setSortKey] = useState<SortKey>("revenue_30d");
   const [dir, setDir] = useState<"asc" | "desc">("desc");
 
@@ -142,16 +145,28 @@ export function SkuTable({ rows }: { rows: SkuTableRow[] }) {
     }
   }
 
+  const rankHint = getColumnHint("#", pathname);
+
   return (
     <div className="table-wrap dense-table-wrap">
       <table className="data-table dense-table">
         <thead>
           <tr>
-            <th>#</th>
+            <th className="th-has-hint" data-hint={rankHint} title={rankHint} tabIndex={0}>
+              #
+              <span className="th-hint-mark" aria-hidden="true">?</span>
+              <span className="sr-only">{rankHint}</span>
+            </th>
             {COLUMNS.map((col) => {
               const active = col.key === sortKey;
+              const hint = getColumnHint(col.label, pathname);
               return (
-                <th key={col.key} className={col.numeric ? "numeric" : undefined}>
+                <th
+                  key={col.key}
+                  className={`${col.numeric ? "numeric " : ""}th-has-hint`}
+                  data-hint={hint}
+                  title={hint}
+                >
                   <button
                     type="button"
                     className={`th-sort${active ? " is-active" : ""}`}
@@ -159,6 +174,8 @@ export function SkuTable({ rows }: { rows: SkuTableRow[] }) {
                     aria-label={`Ordenar por ${col.label}`}
                   >
                     <span>{col.label}</span>
+                    <span className="sr-only">{hint}</span>
+                    <span className="th-hint-mark" aria-hidden="true">?</span>
                     <span className="th-caret" aria-hidden="true">
                       {active ? (dir === "desc" ? "▼" : "▲") : "↕"}
                     </span>

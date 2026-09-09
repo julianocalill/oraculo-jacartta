@@ -1,3 +1,4 @@
+import { getRequestOperation, type OperationId } from "../../lib/operation-context";
 // Camada de dados da Previsão de Vendas.
 //
 // Tudo vem das RPCs oraculo_sales_forecast_* (migration 20260819210000): as
@@ -100,8 +101,10 @@ export type ForecastView = {
 
 type CacheRow = { order_date: string; channel_name: string; units: number };
 
-async function loadForecastViewUncached(target: string | null): Promise<ForecastView> {
-  const supabase = createSupabaseAdminClient();
+export async function loadForecastView(target: string | null) { return loadForecastViewCached(await getRequestOperation(), target); }
+
+async function loadForecastViewUncached(operation: OperationId, target: string | null): Promise<ForecastView> {
+  const supabase = createSupabaseAdminClient({ operation });
   const args = { p_target_week_start: target };
 
   const [weekRes, dailyRes, channelsRes, skusRes, backtestRes] = await Promise.all([
@@ -172,7 +175,7 @@ function weekStartOf(isoDate: string) {
 
 // unstable_cache inclui os argumentos na chave: cada semana-alvo tem sua
 // própria entrada de 5 minutos.
-export const loadForecastView = unstable_cache(loadForecastViewUncached, ["sales-forecast"], {
+const loadForecastViewCached = unstable_cache(loadForecastViewUncached, ["sales-forecast"], {
   revalidate: 300
 });
 

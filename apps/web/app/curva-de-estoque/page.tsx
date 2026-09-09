@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { getRequestOperation, type OperationId } from "../../lib/operation-context";
+import { OperationLink as Link } from "../components/operation-provider";
 import { unstable_cache } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { requireTabAccess } from "../../lib/auth/access";
@@ -78,12 +79,14 @@ function coverageLabel(value: number | null) {
 
 // Cache de 5min compartilhado entre usuários — mesmo racional da curva de
 // venda: RPC global, resultado igual para todos, muda no ritmo dos syncs.
-const loadStockCurve = unstable_cache(loadStockCurveUncached, ["stock-curve"], {
+const loadStockCurveCached = unstable_cache(loadStockCurveUncached, ["stock-curve"], {
   revalidate: 300
 });
 
-async function loadStockCurveUncached() {
-  const supabase = createSupabaseAdminClient();
+async function loadStockCurve() { return loadStockCurveCached(await getRequestOperation()); }
+
+async function loadStockCurveUncached(operation: OperationId) {
+  const supabase = createSupabaseAdminClient({ operation });
   const { data, error } = await supabase.rpc("oraculo_stock_coverage_curve");
   if (error) throw error;
   const items = (data ?? []) as StockCurveItem[];

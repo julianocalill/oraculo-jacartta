@@ -1,3 +1,4 @@
+import { getRequestOperation, type OperationId } from "../../lib/operation-context";
 // Camada de dados das abas de estoque/reposição do canal Shopee.
 import { unstable_cache } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
@@ -187,12 +188,14 @@ export type ShopeeData = {
 // tabelas inteiras refeita a cada troca de aba, dado global, sync periódico.
 // Client admin porque unstable_cache não pode ler cookies(). Payload >~2MB
 // não é armazenado pelo Next (fail-open).
-export const loadShopeeData = unstable_cache(loadShopeeDataUncached, ["shopee-data"], {
+const loadShopeeDataCached = unstable_cache(loadShopeeDataUncached, ["shopee-data"], {
   revalidate: 300
 });
 
-async function loadShopeeDataUncached(): Promise<ShopeeData | null> {
-  const supabase = createSupabaseAdminClient();
+export async function loadShopeeData() { return loadShopeeDataCached(await getRequestOperation()); }
+
+async function loadShopeeDataUncached(operation: OperationId): Promise<ShopeeData | null> {
+  const supabase = createSupabaseAdminClient({ operation });
 
   const products = await fetchAllPages<ShopeeProduct>((from, to) =>
     supabase

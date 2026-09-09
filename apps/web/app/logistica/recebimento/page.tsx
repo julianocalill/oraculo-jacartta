@@ -1,6 +1,6 @@
-import Link from "next/link";
-import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { OperationLink as Link } from "../../components/operation-provider";
+import { redirect } from "../../../lib/operation-navigation";
+import { revalidatePath } from "../../../lib/operation-navigation";
 import { assertTabAccess, requireTabAccess } from "../../../lib/auth/access";
 import { getCurrentUser } from "../../../lib/auth/session";
 import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
@@ -102,8 +102,8 @@ async function iniciarRecebimento(formData: FormData) {
     if (itensError) throw itensError;
   }
 
-  revalidatePath("/logistica/recebimento");
-  redirect(`/logistica/recebimento/${recebimento.id}`);
+  await revalidatePath("/logistica/recebimento");
+  await redirect(`/logistica/recebimento/${recebimento.id}`);
 }
 
 export default async function RecebimentoPage() {

@@ -1,5 +1,5 @@
-import Link from "next/link";
-import { revalidatePath } from "next/cache";
+import { OperationLink as Link } from "../../../components/operation-provider";
+import { revalidatePath } from "../../../../lib/operation-navigation";
 import { assertTabAccess, requireTabAccess } from "../../../../lib/auth/access";
 import { getCurrentUser } from "../../../../lib/auth/session";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
@@ -79,8 +79,8 @@ async function conferirItem(formData: FormData) {
     .eq("recebimento_id", recebimentoId);
   if (error) throw error;
 
-  revalidatePath(`/logistica/recebimento/${recebimentoId}`);
-  revalidatePath("/logistica/recebimento");
+  await revalidatePath(`/logistica/recebimento/${recebimentoId}`);
+  await revalidatePath("/logistica/recebimento");
 }
 
 /**
@@ -126,8 +126,8 @@ async function concluirRecebimento(formData: FormData) {
     .eq("id", recebimentoId);
   if (error) throw error;
 
-  revalidatePath(`/logistica/recebimento/${recebimentoId}`);
-  revalidatePath("/logistica/recebimento");
+  await revalidatePath(`/logistica/recebimento/${recebimentoId}`);
+  await revalidatePath("/logistica/recebimento");
 }
 
 /** Reabre uma conferência concluída (erro de digitação, chegada parcial). */
@@ -144,8 +144,8 @@ async function reabrirRecebimento(formData: FormData) {
     .eq("id", recebimentoId);
   if (error) throw error;
 
-  revalidatePath(`/logistica/recebimento/${recebimentoId}`);
-  revalidatePath("/logistica/recebimento");
+  await revalidatePath(`/logistica/recebimento/${recebimentoId}`);
+  await revalidatePath("/logistica/recebimento");
 }
 
 export default async function RecebimentoDetalhePage({ params }: { params: Promise<{ id: string }> }) {

@@ -1,6 +1,6 @@
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import Link from "next/link";
+import { revalidatePath } from "../../lib/operation-navigation";
+import { redirect } from "../../lib/operation-navigation";
+import { OperationLink as Link } from "../components/operation-provider";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { assertTabAccess, isMaster, requireTabAccess } from "../../lib/auth/access";
 import { AppShell } from "../components/app-shell";
@@ -94,7 +94,7 @@ async function createTask(formData: FormData) {
     .insert(rows);
   if (participantsError) throw participantsError;
 
-  revalidatePath("/agenda");
+  await revalidatePath("/agenda");
 }
 
 async function saveFullPlanningConfig(formData: FormData) {
@@ -134,7 +134,7 @@ async function saveFullPlanningConfig(formData: FormData) {
   const { error: queueError } = await supabase.rpc("oraculo_queue_full_planner");
   if (queueError) throw queueError;
 
-  revalidatePath("/agenda");
+  await revalidatePath("/agenda");
   void user;
 }
 
@@ -144,7 +144,7 @@ async function queueFullPlanner() {
   const supabase = createSupabaseAdminClient();
   const { error } = await supabase.rpc("oraculo_queue_full_planner");
   if (error) throw error;
-  revalidatePath("/agenda");
+  await revalidatePath("/agenda");
 }
 
 async function updateTask(formData: FormData) {
@@ -196,8 +196,8 @@ async function updateTask(formData: FormData) {
     if (insertError) throw insertError;
   }
 
-  revalidatePath("/agenda");
-  redirect(backHref(formData));
+  await revalidatePath("/agenda");
+  await redirect(backHref(formData));
 }
 
 async function setTaskStatus(formData: FormData) {
@@ -233,7 +233,7 @@ async function setTaskStatus(formData: FormData) {
     .eq("id", taskId);
   if (error) throw error;
 
-  revalidatePath("/agenda");
+  await revalidatePath("/agenda");
 }
 
 async function deleteTask(formData: FormData) {
@@ -262,8 +262,8 @@ async function deleteTask(formData: FormData) {
   const { error } = await supabase.from("oraculo_agenda_tasks").delete().eq("id", taskId);
   if (error) throw error;
 
-  revalidatePath("/agenda");
-  redirect(backHref(formData));
+  await revalidatePath("/agenda");
+  await redirect(backHref(formData));
 }
 
 // Sub-tarefas: checklist colaborativa — qualquer participante da tarefa-mãe
@@ -328,7 +328,7 @@ async function addSubtask(formData: FormData) {
     .insert({ task_id: taskId, title, position: (last?.position ?? 0) + 1 });
   if (error) throw error;
 
-  revalidatePath("/agenda");
+  await revalidatePath("/agenda");
 }
 
 async function toggleSubtask(formData: FormData) {
@@ -361,7 +361,7 @@ async function toggleSubtask(formData: FormData) {
     .eq("id", subtaskId);
   if (error) throw error;
 
-  revalidatePath("/agenda");
+  await revalidatePath("/agenda");
 }
 
 async function deleteSubtask(formData: FormData) {
@@ -387,7 +387,7 @@ async function deleteSubtask(formData: FormData) {
   const { error } = await supabase.from("oraculo_agenda_subtasks").delete().eq("id", subtaskId);
   if (error) throw error;
 
-  revalidatePath("/agenda");
+  await revalidatePath("/agenda");
 }
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath } from "../../../lib/operation-navigation";
 import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
 import { assertTabAccess, requireTabAccess } from "../../../lib/auth/access";
 import { NoAccess } from "../../components/no-access";
@@ -65,8 +65,8 @@ async function saveFatura(formData: FormData) {
     .upsert(row, { onConflict: "invoice_number" });
   if (error) throw error;
 
-  revalidatePath("/importacoes");
-  revalidatePath("/importacoes/cadastro");
+  await revalidatePath("/importacoes");
+  await revalidatePath("/importacoes/cadastro");
 }
 
 async function saveItem(formData: FormData) {
@@ -93,8 +93,8 @@ async function saveItem(formData: FormData) {
   const { error } = await supabase.from("importacao_itens").insert(row);
   if (error) throw error;
 
-  revalidatePath("/importacoes");
-  revalidatePath("/importacoes/cadastro");
+  await revalidatePath("/importacoes");
+  await revalidatePath("/importacoes/cadastro");
 }
 
 async function deleteItem(formData: FormData) {
@@ -108,8 +108,8 @@ async function deleteItem(formData: FormData) {
   const { error } = await supabase.from("importacao_itens").delete().eq("id", id);
   if (error) throw error;
 
-  revalidatePath("/importacoes");
-  revalidatePath("/importacoes/cadastro");
+  await revalidatePath("/importacoes");
+  await revalidatePath("/importacoes/cadastro");
 }
 
 async function saveNavio(formData: FormData) {
@@ -136,8 +136,8 @@ async function saveNavio(formData: FormData) {
   const { error } = await supabase.from("importacao_navios").upsert(row, { onConflict: "name" });
   if (error) throw error;
 
-  revalidatePath("/importacoes");
-  revalidatePath("/importacoes/cadastro");
+  await revalidatePath("/importacoes");
+  await revalidatePath("/importacoes/cadastro");
 }
 
 function count(value: number) {

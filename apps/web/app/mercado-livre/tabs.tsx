@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { OperationLink as Link } from "../components/operation-provider";
 
 // Navegação entre as abas do canal Mercado Livre
 export function MlTabs({ active }: { active: "visao" | "envio" }) {

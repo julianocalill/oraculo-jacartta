@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { OperationLink as Link } from "../components/operation-provider";
 
 // Filtro por loja em "abas" (pills), preservando os demais parâmetros da URL
 export function LojaPills({
