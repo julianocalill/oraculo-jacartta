@@ -15,15 +15,15 @@
 
 Build an operational intelligence system where Supabase is the canonical backend, Vercel is the product surface, and documentation preserves continuity across people and AI agents.
 
-## Update 2026-09-08 — retomada progressiva da Giracasa
+## Update 2026-09-10 — carga Giracasa acelerada no Supabase
 
 - Uberlândia permanece no frontend estável enquanto a Giracasa é preparada em
   branch isolada.
-- A carga inicial da Giracasa cobre 40 dias, começa por uma amostra de um dia e
-  roda em blocos curtos e retomáveis.
+- A carga inicial da Giracasa cobre 40 dias e roda em blocos curtos e
+  retomáveis por dois jobs temporários intercalados no Supabase.
 - Rotas e seletor só retornam depois da validação dos dados e do motor SP em
   preview com uma conta real.
-- Estado: `docs/project-status-2026-09-08.md`; decisão:
+- Estado: `docs/project-status-2026-09-10.md`; decisão:
   `docs/adr/ADR-007-giracasa-progressive-rollout.md`.
 
 ## Update 2026-07-16 — Mercado Livre: canal analítico completo

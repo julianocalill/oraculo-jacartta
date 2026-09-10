@@ -2,6 +2,20 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-10] — Carga Giracasa acelerada no Supabase
+
+- A carga de 40 dias continua remota e retomável, sem processo rodando na
+  máquina do operador.
+- Um acelerador temporário intercala chamadas com o coordenador original e usa
+  a mesma trava e o mesmo controle de cursores.
+- Notas fiscais passaram de uma página de 50 a cada seis minutos para até duas
+  páginas por chamada, aproximadamente a cada dois minutos. Pedidos continuam
+  em uma página por segurança, pois a hidratação medida chegou perto do limite
+  da Edge Function.
+- A primeira chamada acelerada respondeu HTTP 200 e avançou o cursor do segundo
+  bloco de 800 para 1.000 notas, sem falhas.
+- Giracasa permanece desativada e sem usuários durante a carga e validação.
+
 ## [2026-09-08] — Retomada progressiva da Giracasa
 
 - Desenvolvimento retomado em `codex/giracasa-phase1`, sem alterar o frontend

@@ -82,10 +82,13 @@ fila termina. Para uma pausa operacional, marque o controle como `paused` e
 remova o job; os cursores já gravados são preservados.
 
 O padrão é uma janela inclusiva de 40 dias terminando hoje. O script divide a
-carga em blocos de no máximo 14 dias e limita cada chamada às Edge Functions a
-uma página de detalhes. Enquanto um bloco estiver incompleto, ele faz outra chamada com
-`resume=true`, reutilizando o cursor gravado no banco. Isso evita uma execução
-longa disputar recursos com Uberlândia ou exceder o tempo de vida da função.
+carga em blocos de no máximo 14 dias. O coordenador limita pedidos a uma página
+por chamada. Durante a carga inicial, a migration
+`20260910120640_accelerate_giracasa_olist_40d_worker.sql` instala um acelerador
+temporário que intercala os minutos livres e processa até duas páginas de notas
+por chamada. Os dois jobs usam a mesma trava e `resume=true`, reutilizando o
+cursor gravado no banco. Isso evita sobreposição e mantém cada execução dentro
+do tempo de vida da função.
 
 Em caso de erro, retome da primeira data ainda não concluída:
 
