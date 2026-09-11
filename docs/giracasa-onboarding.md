@@ -46,6 +46,30 @@ Depois dos secrets, gere a URL de autorização com
 confirme que o refresh token foi salvo no schema `giracasa`. Valide a identidade
 da empresa antes de iniciar qualquer escrita de dados de negócio.
 
+### Shopee Open Platform
+
+O aplicativo aprovado mostra Partner ID e Partner Key antes da autorização da
+loja. Cadastre-os diretamente em Edge Function Secrets, sem colar em chat ou
+SQL:
+
+```text
+GIRACASA_SHOPEE_PARTNER_ID
+GIRACASA_SHOPEE_PARTNER_KEY
+```
+
+A URL de retorno é:
+
+```text
+https://bbtiipnmdxfxnxbemgjr.supabase.co/functions/v1/giracasa-shopee-oauth-callback
+```
+
+Depois das duas chaves, execute
+`oraculo_private.invoke_giracasa_shopee_oauth_start()`, leia a resposta do
+pg_net e abra o `authorization_url` dentro de 15 minutos. O callback valida o
+state, troca o code e grava app, loja e tokens exclusivamente no schema
+`giracasa`. Antes de criar crons, confira o `shop_id` e defina um único
+proprietário para a rotação do refresh token.
+
 ## Carga inicial de 40 dias
 
 Primeiro conecte Olist/Tiny e faça um teste de uma janela fechada de um dia. Confira o plano sem acessar nenhuma conta:

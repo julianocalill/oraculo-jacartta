@@ -15,6 +15,13 @@
 
 Build an operational intelligence system where Supabase is the canonical backend, Vercel is the product surface, and documentation preserves continuity across people and AI agents.
 
+## Update 2026-09-11 — OAuth Shopee Giracasa
+
+- Callback isolado publicado com state assinado e início protegido pelo Vault.
+- Partner ID e Partner Key entram direto em Edge Secrets; tokens ficam no
+  schema `giracasa`.
+- Estado: `docs/project-status-2026-09-11.md`.
+
 ## Update 2026-09-10 — carga Giracasa acelerada no Supabase
 
 - Uberlândia permanece no frontend estável enquanto a Giracasa é preparada em

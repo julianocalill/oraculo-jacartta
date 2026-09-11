@@ -10,7 +10,9 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 
 const functionNames = (await import("node:fs/promises")).readdir(source, { withFileTypes: true })
-  .then((items) => items.filter((item) => item.isDirectory()).map((item) => item.name));
+  .then((items) => items
+    .filter((item) => item.isDirectory() && !item.name.startsWith("giracasa-"))
+    .map((item) => item.name));
 const names = await functionNames;
 const sharedEnv = new Set(["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]);
 

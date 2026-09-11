@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-10.md](docs/project-status-2026-09-10.md) **← start here** (carga Giracasa acelerada no Supabase; produção preservada)
+1. [docs/project-status-2026-09-11.md](docs/project-status-2026-09-11.md) **← start here** (OAuth Shopee Giracasa preparado; produção preservada)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
    — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every card/column/config field across the whole system — analytics, alerts, calculator, imports, params, sync status — exact formula, PT-BR, for team walkthroughs)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
@@ -59,14 +59,16 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-01.md](
 
 ## Current production state
 
-**Last update**: `2026-09-10` (see `docs/project-status-2026-09-10.md`) —
+**Last update**: `2026-09-11` (see `docs/project-status-2026-09-11.md`) —
 Oráculo de Uberlândia preservado no deploy estável anterior à interface
 multioperação. A Giracasa segue desativada e sem usuários; somente os jobs
 temporários da carga inicial estão ativos. O OAuth
 Olist foi validado e o canário de 07/09 fechou em 771 pedidos, 687 NFs válidas e
 R$ 44.042,64. O catálogo isolado possui 1.068 produtos; a carga de 40 dias roda
 com coordenador e acelerador temporários no Supabase, sem depender de máquina
-local. As tarifas próprias de TikTok/ML são os próximos gates. Estado funcional anterior:
+local. O callback Shopee isolado está publicado e aguarda Partner ID/Key da
+Giracasa para gerar o link de autorização da loja. As tarifas próprias de
+TikTok/ML são os próximos gates. Estado funcional anterior:
 Análise Comercial por dia/período em produção, com backend agregado, cron
 horário, ranking por quantidade e margem no período. Contrato: `docs/analise-comercial.md`.
 Estado anterior em produção:

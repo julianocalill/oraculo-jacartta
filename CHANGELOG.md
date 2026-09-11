@@ -2,6 +2,17 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-11] — OAuth Shopee preparado para a Giracasa
+
+- Publicado o callback isolado `giracasa-shopee-oauth-callback` para gerar o
+  link assinado e receber `code`/`shop_id` da autorização.
+- Partner Key e tokens não são devolvidos pelo endpoint. O callback grava
+  configuração, loja e tokens somente no schema `giracasa`.
+- O state expira em 15 minutos e é validado por assinatura. O início do fluxo
+  exige segredo exclusivo armazenado no Vault.
+- O teste remoto confirmou que não existe fallback para Uberlândia e que o
+  único bloqueio restante são Partner ID e Partner Key da Giracasa.
+
 ## [2026-09-10] — Carga Giracasa acelerada no Supabase
 
 - A carga de 40 dias continua remota e retomável, sem processo rodando na
