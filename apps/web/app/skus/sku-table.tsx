@@ -152,7 +152,7 @@ export function SkuTable({ rows }: { rows: SkuTableRow[] }) {
       <table className="data-table dense-table">
         <thead>
           <tr>
-            <th className="th-has-hint" data-hint={rankHint} title={rankHint} tabIndex={0}>
+            <th className="th-has-hint" data-hint={rankHint} tabIndex={0}>
               #
               <span className="th-hint-mark" aria-hidden="true">?</span>
               <span className="sr-only">{rankHint}</span>
@@ -165,7 +165,6 @@ export function SkuTable({ rows }: { rows: SkuTableRow[] }) {
                   key={col.key}
                   className={`${col.numeric ? "numeric " : ""}th-has-hint`}
                   data-hint={hint}
-                  title={hint}
                 >
                   <button
                     type="button"

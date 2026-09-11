@@ -86,7 +86,7 @@ export function SortableTable({
         <thead>
           <tr>
             {showRank && (
-              <th className="th-has-hint" data-hint={rankHint} title={rankHint} tabIndex={0}>
+              <th className="th-has-hint" data-hint={rankHint} tabIndex={0}>
                 #
                 <span className="th-hint-mark" aria-hidden="true">?</span>
                 <span className="sr-only">{rankHint}</span>
@@ -102,7 +102,6 @@ export function SortableTable({
                     .filter(Boolean)
                     .join(" ") || undefined}
                   data-hint={hint}
-                  title={hint}
                 >
                   <button
                     type="button"

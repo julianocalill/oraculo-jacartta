@@ -39,7 +39,6 @@ export function TableColumnHints() {
           header.dataset.hint = hint;
           if (!hasAuthoredHint) header.dataset.columnHintGenerated = "true";
           header.classList.add("th-has-hint");
-          header.title = hint;
 
           if (!header.querySelector(".th-hint-mark")) {
             const mark = document.createElement("span");
