@@ -69,7 +69,8 @@ com coordenador e acelerador temporários no Supabase, sem depender de máquina
 local. O callback Shopee isolado e o relay 302 no domínio n8n aprovado foram
 validados; a loja `984950642` foi autorizada e um canário direto gravou 87
 pedidos e 87 pacotes no schema Giracasa. O renovador exclusivo do token foi
-validado e roda no Supabase a cada duas horas. As tarifas próprias de
+validado; o Supabase verifica a cada hora e mantém uma tentativa de recuperação
+antes do vencimento. As tarifas próprias de
 TikTok/ML são os próximos gates. Estado funcional anterior:
 Análise Comercial por dia/período em produção, com backend agregado, cron
 horário, ranking por quantidade e margem no período. Contrato: `docs/analise-comercial.md`.

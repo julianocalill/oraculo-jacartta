@@ -22,9 +22,10 @@ Histórico de entregas e mudanças significativas.
   janela incremental padrão de 45 minutos, mantendo a operação desativada e
   sem usuários.
 - Criado o renovador exclusivo do token Giracasa dentro do callback OAuth. O
-  job `giracasa-shopee-token-refresh` roda a cada duas horas, renova quando
-  restam até três horas, persiste o refresh token rotacionado e registra cada
-  resultado em `giracasa.shopee_sync_runs`.
+  job `giracasa-shopee-token-refresh` verifica a cada hora, renova quando
+  restam até 2h30, persiste o refresh token rotacionado e registra cada
+  resultado em `giracasa.shopee_sync_runs`. A janela deixa uma nova tentativa
+  antes do vencimento se uma chamada falhar.
 - A renovação forçada respondeu HTTP 200 e estendeu o access token por quatro
   horas. O relay n8n continua sem acesso a Partner Key ou tokens.
 

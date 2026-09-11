@@ -40,8 +40,10 @@ sem limite atingido. Giracasa permaneceu `enabled=false`, com zero usuários.
 ## Renovação automática do token
 
 O callback OAuth é o único proprietário do refresh token da Giracasa. O job
-`giracasa-shopee-token-refresh` roda no Supabase a cada duas horas, no minuto
-`:15`, e só renova quando o access token vence em até três horas. Cada
+`giracasa-shopee-token-refresh` roda no Supabase a cada hora, no minuto `:15`,
+e só renova quando o access token vence em até 2h30. Isso mantém a rotação
+efetiva próxima de duas horas e deixa uma nova tentativa antes do vencimento se
+uma chamada falhar. Cada
 renovação grava o novo access token e o novo refresh token na mesma operação;
 sucessos e falhas ficam em `giracasa.shopee_sync_runs` com a origem
 `shopee-token-refresh:984950642`.

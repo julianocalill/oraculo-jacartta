@@ -537,12 +537,13 @@ Contrato, limites e recuperação: `docs/analise-comercial.md`.
   e app, loja e tokens são gravados no schema `giracasa`.
   Autorização concluída em 11/09/2026 para a loja `984950642`; canário direto
   respondeu HTTP 200 com 87 pedidos e 87 pacotes.
-- Renovação Shopee Giracasa: job `giracasa-shopee-token-refresh`, a cada duas
-  horas no minuto `:15`, chama
+- Renovação Shopee Giracasa: job `giracasa-shopee-token-refresh`, a cada hora
+  no minuto `:15`, chama
   `oraculo_private.invoke_giracasa_shopee_token_refresh(false)`. O callback
   OAuth é o proprietário único e grava conjuntamente os dois tokens
-  rotacionados; pula quando o access token tem mais de três horas de validade e
-  registra sucesso/falha em `giracasa.shopee_sync_runs`. Validação forçada em
+  rotacionados; pula quando o access token tem mais de 2h30 de validade, oferece
+  nova tentativa antes do vencimento e registra sucesso/falha em
+  `giracasa.shopee_sync_runs`. Validação forçada em
   11/09 respondeu HTTP 200. O n8n não lê nem renova tokens da Giracasa.
 - Banco e motor `gira-casa-v1` aplicados em produção; 26 funções `giracasa-*` publicadas. Sem secrets, dados, usuários ou crons até concluir a carga e a conferência.
 - A carga inicial Giracasa cobre 40 dias, começa por uma janela fechada de um dia e usa `scripts/giracasa-backfill.mjs` em blocos retomáveis de até 14 dias. Rotas e seletor permanecem fora de produção até a validação em preview.

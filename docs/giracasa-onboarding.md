@@ -85,11 +85,12 @@ desativada e sem usuários.
 
 O proprietário único da renovação é a própria Edge Function de OAuth. O cron
 `giracasa-shopee-token-refresh` chama o helper protegido
-`oraculo_private.invoke_giracasa_shopee_token_refresh(false)` a cada duas horas.
-Ele pula tokens com mais de três horas de validade e, quando renova, salva de
+`oraculo_private.invoke_giracasa_shopee_token_refresh(false)` a cada hora.
+Ele pula tokens com mais de 2h30 de validade e, quando renova, salva de
 forma conjunta o novo access token e o refresh token rotacionado. A prova
 forçada respondeu HTTP 200 e registrou sucesso em
-`giracasa.shopee_sync_runs`; o n8n não participa da renovação.
+`giracasa.shopee_sync_runs`; a verificação horária permite nova tentativa antes
+do vencimento e o n8n não participa da renovação.
 
 ## Carga inicial de 40 dias
 

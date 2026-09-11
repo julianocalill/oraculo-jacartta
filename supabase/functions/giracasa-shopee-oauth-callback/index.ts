@@ -12,7 +12,7 @@ const AUTH_PATH = "/api/v2/shop/auth_partner";
 const TOKEN_PATH = "/api/v2/auth/token/get";
 const TOKEN_REFRESH_PATH = "/api/v2/auth/access_token/get";
 const STATE_MAX_AGE_SECONDS = 15 * 60;
-const REFRESH_IF_EXPIRES_WITHIN_SECONDS = 3 * 60 * 60;
+const REFRESH_IF_EXPIRES_WITHIN_SECONDS = 150 * 60;
 
 const env = {
   supabaseUrl: Deno.env.get("SUPABASE_URL") ?? "",
