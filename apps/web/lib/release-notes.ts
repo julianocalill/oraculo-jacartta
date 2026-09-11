@@ -24,6 +24,18 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-09-11-shopee-ads",
+    title: "Shopee Ads agora no Comercial",
+    summary: "Acompanhe o investimento, o ROAS e as prioridades de cada dia dentro do Oráculo.",
+    publishedAt: "2026-09-11T17:10:00-03:00",
+    changes: [{
+      title: "Gasto e retorno por loja e campanha",
+      description: "O novo dashboard reúne evolução diária, filtros de período e loja, ranking de campanhas e análise dos pontos de atenção. Inclui campanhas pausadas e informa quando o histórico está incompleto.",
+      href: "/ads",
+      linkLabel: "Abrir Shopee Ads"
+    }]
+  },
+  {
     id: "2026-09-11-home-pedidos-olist",
     title: "Home e Pedidos sem produtos e lojas duplicados",
     summary: "O ranking de SKUs da home e a aba Pedidos passam a usar só a Olist, como já acontecia em SKUs.",

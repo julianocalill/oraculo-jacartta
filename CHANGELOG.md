@@ -2,6 +2,16 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-11] — Shopee Ads no Comercial
+
+- Nova aba `/ads`: investimento × ROAS, receita/pedidos diretos, filtros de loja
+  e período, análise diária e ranking ordenável de campanhas.
+- Coleta diária de todas as campanhas das quatro lojas, incluindo pausadas;
+  revisão de 30 dias e cobertura explícita. Relatório n8n permanece independente.
+- RPC autenticada com isolamento por operação, monitoramento por loja em
+  `/status`, explicações das métricas e testes de cálculo/classificação.
+- Contrato: `docs/shopee-ads-dashboard.md`.
+
 ## [2026-09-11] — Home e Pedidos alinhados à fonte Olist
 
 - A decisão de 13/07 (Olist = verdade da receita; Shopee direta = auxiliar) e

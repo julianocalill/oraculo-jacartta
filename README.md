@@ -33,7 +33,8 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-10.md](docs/project-status-2026-09-10.md) **← start here** (Correção das taxas TikTok na calculadora)
+1. [docs/project-status-2026-09-11.md](docs/project-status-2026-09-11.md) **← start here** (Shopee Ads no Comercial)
+   — [docs/project-status-2026-09-10.md](docs/project-status-2026-09-10.md) (Correção das taxas TikTok na calculadora)
    — [docs/project-status-2026-09-09.md](docs/project-status-2026-09-09.md) (Separação operacional em produção)
    — [docs/project-status-2026-09-08.md](docs/project-status-2026-09-08.md) (implementação do Full e status dos syncs)
    — [docs/project-status-2026-09-05.md](docs/project-status-2026-09-05.md) (Giracasa isolada em produção; aguardando credenciais e carga)
@@ -60,6 +61,8 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 - `Obsidian` vault inside the repository for portable project memory
 
 ## Current production state
+
+Shopee Ads no Comercial: [status de 11/09](docs/project-status-2026-09-11.md), com gasto × ROAS e análise diária.
 
 Correção de taxas TikTok publicada em 11/09/2026: [status](docs/project-status-2026-09-10.md).
 
@@ -117,8 +120,8 @@ três marketplaces com analítica de estoque (ML Full, Shopee FBS multi-armazém
 Olist), sugestão de reposição com export .xlsx, livro de custos por SKU,
 rastreamento de importações com mapa AIS, **aba Devoluções com funil de três
 canais cruzado com a NF fiscal**, margem fiscal com comissão de marketplace,
-relatório periódico de Shopee Ads por IA local (implementado; aguardando o
-preview final do Ollama antes da ativação) e **aba Agenda de tarefas
+relatório periódico de Shopee Ads por IA local (ativo no n8n) e dashboard
+Shopee Ads em Comercial (gasto × ROAS e diagnóstico diário) e **aba Agenda de tarefas
 compartilhadas entre usuários** (calendário mensal, pop-up de tarefa com
 sub-tarefas colaborativas e badge por usuário; primeira feature com RLS por
 linha), além do relatório operacional de vendas Shopee direto da Open Platform

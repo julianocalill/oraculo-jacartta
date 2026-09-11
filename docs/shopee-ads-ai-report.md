@@ -1,5 +1,11 @@
 # Relatório periódico de Shopee Ads por IA
 
+## Dashboard no Oráculo — 11/09/2026
+
+O Comercial agora tem `/ads`, com coleta diária independente, todas as campanhas,
+gasto × ROAS e análise diária por regras. O relatório n8n continua a cada três
+dias. Contrato: [dashboard Ads](shopee-ads-dashboard.md).
+
 ## Objetivo
 
 A cada três dias, analisar as campanhas ativas das quatro lojas Shopee e preparar

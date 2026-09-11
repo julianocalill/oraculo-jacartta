@@ -1,6 +1,16 @@
 // Explicações dos cabeçalhos de tabela. Ficam num só lugar para que telas
 // diferentes usem a mesma linguagem e toda coluna tenha ajuda visível.
 export const HINTS = {
+  adsThrough: "Último dia encerrado incluído em uma coleta bem-sucedida de todas as campanhas desta loja.",
+  adsCollected: "Horário da última coleta completa da loja, no fuso de São Paulo. A atualização é diária e revisa os 30 dias anteriores.",
+  adsStatus: "Loja e situação mais recente da campanha. O status atual não representa necessariamente o status em cada dia do período.",
+  adsExpense: "Investimento em anúncios reportado pela Shopee no período. Inclui campanhas atualmente pausadas quando coletadas.",
+  adsRoas: "Soma da receita diretamente atribuída aos anúncios dividida pela soma do gasto. Não é média dos ROAS nem mede lucro. Sem gasto, fica indefinido.",
+  adsDirectGmv: "GMV atribuído diretamente ao produto anunciado. Não soma receita ampla (halo) nem corresponde necessariamente ao faturamento fiscal.",
+  adsOrders: "Pedidos diretamente atribuídos ao produto anunciado pela Shopee.",
+  adsTarget: "Meta de ROAS na configuração mais recente da campanha. Não é a meta histórica do período; ausência ou zero aparece como sem meta.",
+  adsCtr: "Taxa de cliques: cliques ÷ impressões × 100. Sem impressões, não há taxa calculável.",
+  adsCpc: "Custo por clique: gasto ÷ cliques. Sem cliques, não há CPC calculável.",
   commercialUnits: "Quantidade dos itens vinculados às NFs válidas do período. Item comercial preferencial; item fiscal como fallback. Kits e peças seguem a unidade da fonte.",
   commercialRevenue: "Receita da NF válida distribuída entre seus produtos, pela data de emissão. Não soma a venda Shopee direta novamente.",
   commercialPrice: "Receita faturada do SKU dividida pelas unidades apuradas no período.",

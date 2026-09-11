@@ -168,7 +168,8 @@
     as `shopee-sync-products`.
   - Query params: `?shop_id=` (one shop), `?days=N` (default 3, jobs atuais usam `days=3`), `?from=&to=`
     (backfill). Runs logged in `shopee_sync_runs` as `shopee-returns-sync:<id>`.
-- `shopee-ads-report-data` (deployed 2026-08-07) — **sem cron ativo; acionada pelo n8n**
+- `shopee-ads-report-data` (deployed 2026-08-07) — **n8n + coleta diária do dashboard Ads**
+  - Dashboard `/ads`: `scope=all`, crons `oraculo-ads-daily-<shop_id>` às 07:15–07:30 e 10:15–10:30 BRT, uma invocação por loja. Saúde por loja em `/status`; contrato em `docs/shopee-ads-dashboard.md`.
   - Coleta settings e 30 dias de performance diária de Ads, uma loja por
     invocação, e grava `shopee_ads_campaigns` / `shopee_ads_daily`.
   - Read-only no token; o workflow n8n primário é o único renovador. Adia a loja

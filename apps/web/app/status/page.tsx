@@ -426,13 +426,36 @@ async function loadDataWatermarks(supabase: ReturnType<typeof createSupabaseAdmi
 
 async function loadStatus() { return loadStatusCached(await getRequestOperation()); }
 
+// Saúde de Ads considera a coleta completa de cada loja, nunca um sucesso isolado do n8n.
+async function latestAdsRun(supabase: ReturnType<typeof createSupabaseAdminClient>): Promise<SyncRun | null> {
+  const { data: shops, error: shopError } = await supabase.from("shopee_shops").select("shop_id,shop_name").eq("is_active", true);
+  if (shopError) return { status: "failed", error_message: "Falha ao consultar lojas Ads", started_at: null, finished_at: null };
+  if (!shops?.length) return null;
+  const runs = await Promise.all(shops.map(async shop => {
+    const { data, error } = await supabase.from("shopee_ads_collection_runs")
+      .select("started_at,finished_at,status,error_message,daily_rows_upserted")
+      .eq("shop_id", shop.shop_id).eq("meta->>scope", "all")
+      .order("started_at", { ascending: false }).limit(1).maybeSingle();
+    return { shop, data, error };
+  }));
+  const stale = runs.filter(r => r.error || !r.data || r.data.status !== "success" || !r.data.finished_at || Date.now()-Date.parse(r.data.finished_at)>30*3600000);
+  const dates = runs.map(r=>r.data?.finished_at).filter((d): d is string=>Boolean(d)).sort();
+  return {
+    started_at: runs.map(r=>r.data?.started_at).filter((d): d is string=>Boolean(d)).sort()[0] ?? null,
+    finished_at: dates[0] ?? null,
+    status: stale.length ? "failed" : "success",
+    records_upserted: runs.reduce((sum,r)=>sum+Number(r.data?.daily_rows_upserted ?? 0),0),
+    error_message: stale.length ? `Ads pendente ou com falha: ${stale.map(r=>r.shop.shop_name).join(", ")}` : null
+  };
+}
+
 async function loadStatusUncached(operation: OperationId) {
   const supabase = createSupabaseAdminClient({ operation });
 
   const [
     tokenResult, ordersRun, stockRun, invoicesRun, backfillRun, mercadolivreRun,
     importacoesAisRun, shopeeReturnsRun, shopeeReconciliationRun, mercadolivreReturnsRun, returnsCacheRun,
-    bipFulfillmentRun, qtyCacheRun, fullInboundRun, fullInboundQueue, watermarks, commercialRun
+    bipFulfillmentRun, qtyCacheRun, fullInboundRun, fullInboundQueue, watermarks, commercialRun, adsRun
   ] = await Promise.all([
     supabase
       .from("olist_oauth_tokens")
@@ -457,7 +480,8 @@ async function loadStatusUncached(operation: OperationId) {
     latestRun(supabase, "oraculo_full_sync_runs", "started_at, finished_at, status, records_checked:records_checked, records_upserted:events_written, error_message, metadata"),
     supabase.from("oraculo_fulls").select("id", { count: "exact", head: true }).eq("workflow_status", "monitorando"),
     loadDataWatermarks(supabase),
-    latestCommercialRun(supabase)
+    latestCommercialRun(supabase),
+    operation === "uberlandia" ? latestAdsRun(supabase) : Promise.resolve(null)
   ]);
 
   const token = (tokenResult.data as TokenRow | null) ?? null;
@@ -496,6 +520,7 @@ async function loadStatusUncached(operation: OperationId) {
     brtDate(mercadolivreRun?.started_at) !== today
       ? "Sync do Mercado Livre ainda não rodou hoje."
       : "",
+    runFailed(adsRun) ? adsRun?.error_message ?? "Coleta Ads pendente" : "",
     runFailed(shopeeReturnsRun) ? `Devoluções Shopee falharam: ${shopeeReturnsRun?.error_message ?? "sem mensagem"}` : "",
     runFailed(shopeeReconciliationRun)
       ? `Reconciliação Shopee falhou: ${shopeeReconciliationRun?.error_message ?? "sem mensagem"}`
@@ -571,6 +596,12 @@ async function loadStatusUncached(operation: OperationId) {
         label: "Importações (AIS)",
         run: importacoesAisRun,
         coverage: "Posição dos navios a cada 6 h; só há sinal perto da costa — navio em alto-mar sem posição é normal"
+      },
+      {
+        key: "shopee-ads",
+        label: "Shopee Ads diário",
+        run: adsRun,
+        coverage: "Todas as campanhas das 4 lojas, 07:15–07:30 e 10:15–10:30 BRT; revisa 30 dias encerrados"
       },
       {
         key: "shopee-returns",
