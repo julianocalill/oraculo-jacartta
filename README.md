@@ -33,7 +33,8 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-09.md](docs/project-status-2026-09-09.md) **← start here** (Separação operacional em produção)
+1. [docs/project-status-2026-09-10.md](docs/project-status-2026-09-10.md) **← start here** (Correção das taxas TikTok na calculadora)
+   — [docs/project-status-2026-09-09.md](docs/project-status-2026-09-09.md) (Separação operacional em produção)
    — [docs/project-status-2026-09-08.md](docs/project-status-2026-09-08.md) (implementação do Full e status dos syncs)
    — [docs/project-status-2026-09-05.md](docs/project-status-2026-09-05.md) (Giracasa isolada em produção; aguardando credenciais e carga)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
@@ -59,6 +60,8 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 - `Obsidian` vault inside the repository for portable project memory
 
 ## Current production state
+
+Correção de taxas TikTok publicada em 11/09/2026: [status](docs/project-status-2026-09-10.md).
 
 **Last update**: `2026-09-09` (see `docs/project-status-2026-09-09.md`) —
 `Logística → Separação` com alerta do fechamento esperado, atualização manual,

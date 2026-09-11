@@ -24,6 +24,18 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-09-10-calculadora-tiktok",
+    title: "Taxas do TikTok corrigidas na calculadora",
+    summary: "A simulação passa a incluir a tarifa fixa correta em todas as faixas de preço.",
+    publishedAt: "2026-09-11T08:11:27-03:00",
+    changes: [{
+      title: "Comissão e tarifa fixa por faixa",
+      description: "Abaixo de R$ 50: 10% + R$ 4. A partir de R$ 50: 6% + R$ 6. Refaça suas simulações do TikTok para conferir o lucro e a margem atualizados.",
+      href: "/calculadora",
+      linkLabel: "Abrir calculadora"
+    }]
+  },
+  {
     id: "2026-09-04-explicacoes-colunas",
     title: "Todas as colunas agora se explicam",
     summary: "Passe o mouse ou toque no “?” de qualquer coluna para entender o dado exibido.",

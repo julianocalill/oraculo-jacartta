@@ -2,6 +2,12 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-10] — Taxas TikTok na calculadora
+
+- Corrigido o preset que zerava a tarifa fixa acima de R$ 78,99: agora usa 10% + R$ 4 abaixo de R$ 50 e 6% + R$ 6 a partir de R$ 50, conforme tabela oficial vigente desde 15/07/2026.
+- Nota da calculadora inclui a base após desconto do vendedor e link da fonte oficial.
+- Correção restrita à simulação de precificação; motor fiscal e dados de vendas não alterados.
+
 ## [2026-09-09] — Separação no Oráculo
 
 - Nova tela `Logística → Separação` com alerta vermelho/amarelo/verde,
