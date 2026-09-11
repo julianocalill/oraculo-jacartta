@@ -24,6 +24,18 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-09-11-home-pedidos-olist",
+    title: "Home e Pedidos sem produtos e lojas duplicados",
+    summary: "O ranking de SKUs da home e a aba Pedidos passam a usar só a Olist, como já acontecia em SKUs.",
+    publishedAt: "2026-09-11T12:00:00-03:00",
+    changes: [{
+      title: "Uma linha por produto e por loja",
+      description: "A API direta da Shopee repetia o mesmo produto com outro SKU e mostrava cada loja duas vezes em Pedidos por loja. Agora a Olist, que já consolida Shopee, TikTok Shop e Mercado Livre, é a única fonte dessas telas. O seletor de fonte da aba Pedidos foi removido.",
+      href: "/pedidos",
+      linkLabel: "Abrir pedidos"
+    }]
+  },
+  {
     id: "2026-09-10-calculadora-tiktok",
     title: "Taxas do TikTok corrigidas na calculadora",
     summary: "A simulação passa a incluir a tarifa fixa correta em todas as faixas de preço.",

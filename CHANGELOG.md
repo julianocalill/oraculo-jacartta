@@ -2,6 +2,20 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-11] — Home e Pedidos alinhados à fonte Olist
+
+- A decisão de 13/07 (Olist = verdade da receita; Shopee direta = auxiliar) e
+  a restrição de 23/08 em `/skus` não tinham chegado a dois pontos: a tabela
+  **SKUs por receita coberta** da home (view `oraculo_sku_current_unified` sem
+  filtro) e a página `/pedidos` (seletor de fonte com padrão "Todas"). O mesmo
+  produto aparecia duas vezes com SKU/nome diferentes e cada loja Shopee
+  aparecia duplicada em **Pedidos por loja**.
+- Home: ranking de SKUs e watchlist de estoque passam a consultar só
+  `source = 'olist'`.
+- `/pedidos`: seletor de fonte removido; consulta fixa em `source = 'olist'`,
+  "na base" conta apenas `olist_orders` e os cards por fonte (Olist/Shopee)
+  saem por serem redundantes. URLs antigas com `source=` são ignoradas.
+
 ## [2026-09-10] — Taxas TikTok na calculadora
 
 - Corrigido o preset que zerava a tarifa fixa acima de R$ 78,99: agora usa 10% + R$ 4 abaixo de R$ 50 e 6% + R$ 6 a partir de R$ 50, conforme tabela oficial vigente desde 15/07/2026.

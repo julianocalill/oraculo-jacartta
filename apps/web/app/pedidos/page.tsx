@@ -33,26 +33,14 @@ type ChannelSale = {
   net_revenue: number;
 };
 
-type SourceSummary = {
-  source: string;
-  label: string;
-  orders: number;
-  canceled: number;
-  revenue: number;
-};
-
 type PedidosSearchParams = {
   start?: string;
   end?: string;
-  source?: string;
 };
-
-type SourceFilter = "all" | "olist" | "shopee";
 
 type PedidosFilters = {
   start: string;
   end: string;
-  source: SourceFilter;
 };
 
 type BillingWindowMetrics = {
@@ -63,11 +51,6 @@ type BillingWindowMetrics = {
 
 function isIsoDate(value: string | undefined) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
-}
-
-function asSource(value: string | undefined): SourceFilter {
-  if (value === "olist" || value === "shopee") return value;
-  return "all";
 }
 
 function getCurrentMonthRange(): Pick<PedidosFilters, "start" | "end"> {
@@ -93,16 +76,12 @@ function isLegacyDefaultRange(params: PedidosSearchParams | undefined) {
 function getFilters(params: PedidosSearchParams | undefined): PedidosFilters {
   const currentMonth = getCurrentMonthRange();
   if (isLegacyDefaultRange(params)) {
-    return {
-      ...currentMonth,
-      source: asSource(params?.source)
-    };
+    return currentMonth;
   }
 
   return {
     start: isIsoDate(params?.start) ? params!.start! : currentMonth.start,
-    end: isIsoDate(params?.end) ? params!.end! : currentMonth.end,
-    source: asSource(params?.source)
+    end: isIsoDate(params?.end) ? params!.end! : currentMonth.end
   };
 }
 
@@ -153,18 +132,6 @@ function addDays(value: string, days: number) {
   return date.toISOString().slice(0, 10);
 }
 
-function sourceLabel(value: string | null | undefined) {
-  if (value === "shopee") return "Shopee";
-  if (value === "olist") return "Olist";
-  return "Todos";
-}
-
-function sourceCaption(value: SourceFilter) {
-  if (value === "shopee") return "Shopee Donacor";
-  if (value === "olist") return "Olist";
-  return "Todas as fontes";
-}
-
 async function loadBillingWindowMetrics(
   supabase: ReturnType<typeof createSupabaseAdminClient>,
   filters: PedidosFilters
@@ -198,31 +165,28 @@ async function loadBillingWindowMetrics(
 
 async function loadPedidos(filters: PedidosFilters) {
   const supabase = await createSupabaseUserClient();
-  let unifiedQuery = supabase
+  // Olist é a verdade dos pedidos de todos os marketplaces: ele já importa as
+  // vendas Shopee (canais "Shopee *"). O sync Shopee direto (source='shopee')
+  // é auxiliar e, somado aqui, duplicava cada loja em "Pedidos por loja".
+  // Mesma regra de loadUnifiedChannelRows (home) e de /skus.
+  const unifiedQuery = supabase
     .from("oraculo_channel_sales_unified_cache")
     .select("*")
+    .eq("source", "olist")
     .gte("order_date", filters.start)
     .lte("order_date", filters.end)
     .order("order_date", { ascending: false })
     .limit(500);
 
-  if (filters.source !== "all") {
-    unifiedQuery = unifiedQuery.eq("source", filters.source);
-  }
-
-  const [unifiedResponse, olistCount, shopeeCount, billingMetrics] = await Promise.all([
+  const [unifiedResponse, olistCount, billingMetrics] = await Promise.all([
     unifiedQuery,
     supabase.from("olist_orders").select("id", { count: "exact", head: true }),
-    supabase.from("shopee_orders").select("id", { count: "exact", head: true }),
-    filters.source === "shopee"
-      ? Promise.resolve<BillingWindowMetrics | null>(null)
-      : loadBillingWindowMetrics(supabase, filters)
+    loadBillingWindowMetrics(supabase, filters)
   ]);
 
   const rows = (unifiedResponse.data ?? []) as UnifiedChannelSale[];
   const dailyMap = new Map<string, DailySale>();
   const channelMap = new Map<string, ChannelSale>();
-  const sourceMap = new Map<string, SourceSummary>();
 
   for (const row of rows) {
     const orderDate = row.order_date;
@@ -252,37 +216,19 @@ async function loadPedidos(filters: PedidosFilters) {
     channel.canceled_orders += n(row.canceled_orders);
     channel.net_revenue += n(row.net_revenue);
     channelMap.set(channelKey, channel);
-
-    const sourceEntry = sourceMap.get(source) ?? {
-      source,
-      label: sourceLabel(source),
-      orders: 0,
-      canceled: 0,
-      revenue: 0
-    };
-    sourceEntry.orders += n(row.orders_count);
-    sourceEntry.canceled += n(row.canceled_orders);
-    sourceEntry.revenue += n(row.net_revenue);
-    sourceMap.set(source, sourceEntry);
   }
 
   const daily = Array.from(dailyMap.values()).sort((left, right) => left.order_date.localeCompare(right.order_date));
   const channels = Array.from(channelMap.values()).sort((left, right) => right.net_revenue - left.net_revenue);
-  const sourceSummaries = Array.from(sourceMap.values()).sort((left, right) => right.revenue - left.revenue);
   const windowOrders = daily.reduce((sum, row) => sum + row.orders_count, 0);
   const windowRevenue = daily.reduce((sum, row) => sum + row.net_revenue, 0);
   const canceledOrders = daily.reduce((sum, row) => sum + row.canceled_orders, 0);
   const availableThrough = daily.length > 0 ? daily[daily.length - 1]?.order_date ?? null : null;
-  const totalOrders = filters.source === "all"
-    ? (olistCount.count ?? 0) + (shopeeCount.count ?? 0)
-    : filters.source === "olist"
-      ? (olistCount.count ?? 0)
-      : (shopeeCount.count ?? 0);
+  const totalOrders = olistCount.count ?? 0;
 
   return {
     daily,
     channels,
-    sourceSummaries,
     totalOrders,
     windowOrders,
     windowRevenue,
@@ -322,14 +268,6 @@ export default async function PedidosPage({
         </div>
         <form className="filter-row filter-form" method="get">
           <label>
-            <span>Fonte</span>
-            <select name="source" defaultValue={filters.source}>
-              <option value="all">Todas</option>
-              <option value="olist">Olist</option>
-              <option value="shopee">Shopee</option>
-            </select>
-          </label>
-          <label>
             <span>Início</span>
             <input type="date" name="start" defaultValue={filters.start} />
           </label>
@@ -345,7 +283,7 @@ export default async function PedidosPage({
         <article className="metric accent-blue">
           <span className="label">Pedidos janela</span>
           <strong>{count(data.windowOrders)}</strong>
-          <small>{sourceCaption(filters.source)}</small>
+          <small>Olist · todos os marketplaces</small>
         </article>
         <article className="metric accent-yellow">
           <span className="label">Receita líquida</span>
@@ -362,27 +300,20 @@ export default async function PedidosPage({
           <strong>{money(data.ticket)}</strong>
           <small>Receita líquida / pedidos válidos</small>
         </article>
-        {filters.source !== "shopee" ? (
-          <article className="metric accent-yellow">
-            <span className="label">Olist sem faturamento</span>
-            <strong>{count(data.billingMetrics?.uninvoicedOrders)}</strong>
-            <small>
-              {count(data.billingMetrics?.billedOrders)} de {count(data.billingMetrics?.detailedOrders)} detalhados faturados
-            </small>
-          </article>
-        ) : null}
-        {filters.source === "all" ? data.sourceSummaries.map((summary) => (
-          <article className="metric accent-blue" key={summary.source}>
-            <span className="label">{summary.label}</span>
-            <strong>{count(summary.orders)}</strong>
-            <small>{money(summary.revenue)}</small>
-          </article>
-        )) : null}
+        <article className="metric accent-yellow">
+          <span className="label">Olist sem faturamento</span>
+          <strong>{count(data.billingMetrics?.uninvoicedOrders)}</strong>
+          <small>
+            {count(data.billingMetrics?.billedOrders)} de {count(data.billingMetrics?.detailedOrders)} detalhados faturados
+          </small>
+        </article>
       </section>
 
       <p className="fiscal-note">
         Visão operacional auxiliar baseada em <strong>pedidos</strong> (data do pedido) — não é a receita
-        oficial. A receita fiscal por NF emitida está no Analytics.
+        oficial. A receita fiscal por NF emitida está no Analytics. Fonte: Olist, que já consolida
+        Shopee, TikTok Shop e Mercado Livre; a API direta da Shopee segue disponível nas análises próprias
+        da aba Shopee.
       </p>
 
       <section className="control-grid">
@@ -408,7 +339,7 @@ export default async function PedidosPage({
           <div className="funnel-list">
             {data.channels.slice(0, 12).map((channel) => (
               <div className="funnel-row" key={`${channel.source}-${channel.channel_name}`}>
-                <span>{sourceLabel(channel.source)} · {channel.channel_name}</span>
+                <span>{channel.channel_name}</span>
                 <div><i style={{ width: `${Math.max((n(channel.net_revenue) / Math.max(...data.channels.map((item) => n(item.net_revenue)), 1)) * 100, 2)}%` }} /></div>
                 <strong>{count(channel.orders_count)}</strong>
                 <em>{money(channel.net_revenue)}</em>

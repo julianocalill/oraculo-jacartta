@@ -764,9 +764,12 @@ async function loadDashboard(filters: DashboardFilters) {
   ] = await Promise.all([
     dailyQuery,
     loadUnifiedChannelRows(supabase, filters),
+    // Mesma regra de /skus: só Olist. A Shopee direta repetia o mesmo produto
+    // com outro SKU/nome (ex.: 213992 vs BALANÇA-BIOIMPEDANCIA).
     supabase
       .from("oraculo_sku_current_unified")
       .select("source, sku, product_name, revenue_30d, units_30d, revenue_change_pct, available_stock, stock_balance, days_until_stockout, last_sale_at")
+      .eq("source", "olist")
       .not("sku", "is", null)
       .neq("sku", "")
       .gt("revenue_30d", 0)
@@ -775,6 +778,7 @@ async function loadDashboard(filters: DashboardFilters) {
     supabase
       .from("oraculo_stock_watchlist_unified")
       .select("source, sku, product_name, stock_signal, available_stock, days_until_stockout, last_sale_at")
+      .eq("source", "olist")
       .not("sku", "is", null)
       .neq("sku", "")
       .order("days_until_stockout", { ascending: true, nullsFirst: false })
