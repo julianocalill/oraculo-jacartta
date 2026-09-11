@@ -13,6 +13,8 @@ Histórico de entregas e mudanças significativas.
 - O domínio aprovado do aplicativo era o n8n. Foi criado e validado o workflow
   relay `Giracasa - OAuth Shopee para Supabase` (`QnWQtiRcTguhXnGh`), que
   encaminha apenas parâmetros OAuth por HTTP 302 ao callback do Supabase.
+- O state assinado passou a viajar no caminho do webhook porque a Shopee
+  substitui a query da URL de retorno pelos campos `code` e `shop_id`.
 - O Live Partner ID `2044231` foi configurado; o único bloqueio restante é a
   Live Partner Key, que deve ser cadastrada diretamente em Edge Secrets.
 

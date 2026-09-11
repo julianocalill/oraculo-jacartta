@@ -10,13 +10,15 @@ A Shopee aprovou o aplicativo com o domínio de retorno do n8n. Para preservar
 essa configuração, a URL registrada no fluxo é:
 
 ```text
-https://n8n.oliverhome.com.br/webhook/giracasa-shopee-oauth
+https://n8n.oliverhome.com.br/webhook/d544ac83-a9a2-4d11-acbb-1e85b52c154d/giracasa-shopee-oauth/<state>
 ```
 
 O workflow `Giracasa - OAuth Shopee para Supabase` (`QnWQtiRcTguhXnGh`)
 responde com HTTP 302 e encaminha somente `code`, `shop_id`, `state`, `error` e
-`message` para a Edge Function. O n8n não recebe Partner Key nem armazena os
-tokens. O relay foi validado em produção contra o callback do Supabase.
+`message` para a Edge Function. Como a Shopee acrescenta apenas `code` e
+`shop_id` à URL de retorno, o state assinado viaja em um segmento do caminho do
+webhook. O n8n não recebe Partner Key nem armazena os tokens. O relay foi
+validado em produção contra o callback do Supabase.
 
 O início do fluxo acontece por
 `oraculo_private.invoke_giracasa_shopee_oauth_start()`. Essa função lê do Vault

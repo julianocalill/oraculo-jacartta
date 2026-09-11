@@ -91,7 +91,7 @@ async function authorizationUrl() {
   const timestamp = Math.floor(Date.now() / 1000);
   const state = await createState();
   const redirect = new URL(env.redirectUri);
-  redirect.searchParams.set("state", state);
+  redirect.pathname = `${redirect.pathname.replace(/\/$/, "")}/${state}`;
   const url = new URL(`${SHOPEE_HOST}${AUTH_PATH}`);
   url.searchParams.set("partner_id", env.partnerId);
   url.searchParams.set("timestamp", String(timestamp));

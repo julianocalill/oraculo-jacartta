@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 const WORKFLOW_NAME = "Giracasa - OAuth Shopee para Supabase";
-const WEBHOOK_PATH = "giracasa-shopee-oauth";
+const WEBHOOK_ID = "d544ac83-a9a2-4d11-acbb-1e85b52c154d";
+const WEBHOOK_PATH = "giracasa-shopee-oauth/:state";
 const CALLBACK_URL = "https://bbtiipnmdxfxnxbemgjr.supabase.co/functions/v1/giracasa-shopee-oauth-callback";
 
 const baseUrl = String(process.env.N8N_BASE_URL ?? "").replace(/\/+$/, "");
@@ -35,12 +36,13 @@ async function findWorkflow() {
   return null;
 }
 
-const redirectExpression = `={{ '${CALLBACK_URL}?code=' + encodeURIComponent($json.query.code || '') + '&shop_id=' + encodeURIComponent($json.query.shop_id || '') + '&state=' + encodeURIComponent($json.query.state || '') + '&error=' + encodeURIComponent($json.query.error || '') + '&message=' + encodeURIComponent($json.query.message || '') }}`;
+const redirectExpression = `={{ '${CALLBACK_URL}?code=' + encodeURIComponent($json.query.code || '') + '&shop_id=' + encodeURIComponent($json.query.shop_id || '') + '&state=' + encodeURIComponent($json.params.state || '') + '&error=' + encodeURIComponent($json.query.error || '') + '&message=' + encodeURIComponent($json.query.message || '') }}`;
 const workflow = {
   name: WORKFLOW_NAME,
   nodes: [
     {
       id: "giracasa-shopee-oauth-webhook",
+      webhookId: WEBHOOK_ID,
       name: "Receber retorno Shopee Giracasa",
       type: "n8n-nodes-base.webhook",
       typeVersion: 2,
@@ -96,6 +98,6 @@ if (existing) {
 console.log(JSON.stringify({
   workflowId,
   workflowName: WORKFLOW_NAME,
-  webhookUrl: `${baseUrl}/webhook/${WEBHOOK_PATH}`,
+  webhookUrl: `${baseUrl}/webhook/${WEBHOOK_ID}/${WEBHOOK_PATH.replace(":state", "<state>")}`,
   callbackUrl: CALLBACK_URL
 }, null, 2));
