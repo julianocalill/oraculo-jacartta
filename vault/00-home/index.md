@@ -22,8 +22,9 @@ Build an operational intelligence system where Supabase is the canonical backend
   callback do Supabase, sem receber a Partner Key ou armazenar tokens.
 - Loja `984950642` autorizada; Partner ID/Key ficam em Edge Secrets e os tokens
   no schema `giracasa`. Canário direto: HTTP 200, 87 pedidos e 87 pacotes.
-- Próximo gate: proprietário único da renovação do refresh token antes dos
-  crons de ingestão Shopee.
+- Renovador único validado no Supabase: cron a cada duas horas, grava o refresh
+  token rotacionado e registra sucesso/falha no schema Giracasa. O n8n não lê
+  tokens.
 - Estado: `docs/project-status-2026-09-11.md`.
 
 ## Update 2026-09-10 — carga Giracasa acelerada no Supabase

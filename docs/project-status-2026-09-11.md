@@ -37,11 +37,21 @@ O canário direto da API usou a janela incremental padrão de 45 minutos e
 concluiu com HTTP 200: 87 pedidos lidos, 87 gravados e 87 pacotes atualizados,
 sem limite atingido. Giracasa permaneceu `enabled=false`, com zero usuários.
 
-## Próximo passo
+## Renovação automática do token
 
-Definir e testar um único proprietário para a rotação do refresh token da
-Giracasa antes de criar qualquer cron de ingestão Shopee. Depois, executar a
-carga inicial por loja em janelas compatíveis com os limites da API. Giracasa
-permanece `enabled=false` e sem usuários.
+O callback OAuth é o único proprietário do refresh token da Giracasa. O job
+`giracasa-shopee-token-refresh` roda no Supabase a cada duas horas, no minuto
+`:15`, e só renova quando o access token vence em até três horas. Cada
+renovação grava o novo access token e o novo refresh token na mesma operação;
+sucessos e falhas ficam em `giracasa.shopee_sync_runs` com a origem
+`shopee-token-refresh:984950642`.
+
+A validação forçada respondeu HTTP 200, rotacionou o refresh token e estendeu o
+access token por quatro horas. Uma única função controla a rotação; o relay n8n
+não lê nem renova tokens.
+
+O próximo passo é executar a carga inicial Shopee por loja em janelas
+compatíveis com os limites da API. Giracasa permanece `enabled=false` e sem
+usuários.
 
 Runbook: `docs/giracasa-onboarding.md`.

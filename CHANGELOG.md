@@ -21,6 +21,12 @@ Histórico de entregas e mudanças significativas.
 - O canário direto respondeu HTTP 200 e gravou 87 pedidos e 87 pacotes da
   janela incremental padrão de 45 minutos, mantendo a operação desativada e
   sem usuários.
+- Criado o renovador exclusivo do token Giracasa dentro do callback OAuth. O
+  job `giracasa-shopee-token-refresh` roda a cada duas horas, renova quando
+  restam até três horas, persiste o refresh token rotacionado e registra cada
+  resultado em `giracasa.shopee_sync_runs`.
+- A renovação forçada respondeu HTTP 200 e estendeu o access token por quatro
+  horas. O relay n8n continua sem acesso a Partner Key ou tokens.
 
 ## [2026-09-10] — Carga Giracasa acelerada no Supabase
 

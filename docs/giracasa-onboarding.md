@@ -81,8 +81,15 @@ proprietário para a rotação do refresh token.
 Autorização concluída em 11/09/2026 para a loja `984950642`. Access token e
 refresh token foram gravados no schema `giracasa`; um canário de 45 minutos
 respondeu HTTP 200 e gravou 87 pedidos e 87 pacotes. A operação continuou
-desativada e sem usuários. O próximo gate é implantar e validar o proprietário
-único da renovação antes dos crons de ingestão.
+desativada e sem usuários.
+
+O proprietário único da renovação é a própria Edge Function de OAuth. O cron
+`giracasa-shopee-token-refresh` chama o helper protegido
+`oraculo_private.invoke_giracasa_shopee_token_refresh(false)` a cada duas horas.
+Ele pula tokens com mais de três horas de validade e, quando renova, salva de
+forma conjunta o novo access token e o refresh token rotacionado. A prova
+forçada respondeu HTTP 200 e registrou sucesso em
+`giracasa.shopee_sync_runs`; o n8n não participa da renovação.
 
 ## Carga inicial de 40 dias
 

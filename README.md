@@ -68,8 +68,8 @@ R$ 44.042,64. O catálogo isolado possui 1.068 produtos; a carga de 40 dias roda
 com coordenador e acelerador temporários no Supabase, sem depender de máquina
 local. O callback Shopee isolado e o relay 302 no domínio n8n aprovado foram
 validados; a loja `984950642` foi autorizada e um canário direto gravou 87
-pedidos e 87 pacotes no schema Giracasa. A renovação exclusiva do token é o
-próximo gate antes dos crons de ingestão. As tarifas próprias de
+pedidos e 87 pacotes no schema Giracasa. O renovador exclusivo do token foi
+validado e roda no Supabase a cada duas horas. As tarifas próprias de
 TikTok/ML são os próximos gates. Estado funcional anterior:
 Análise Comercial por dia/período em produção, com backend agregado, cron
 horário, ranking por quantidade e margem no período. Contrato: `docs/analise-comercial.md`.
