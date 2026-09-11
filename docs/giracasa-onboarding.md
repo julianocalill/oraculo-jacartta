@@ -78,6 +78,12 @@ state, troca o code e grava app, loja e tokens exclusivamente no schema
 `giracasa`. Antes de criar crons, confira o `shop_id` e defina um único
 proprietário para a rotação do refresh token.
 
+Autorização concluída em 11/09/2026 para a loja `984950642`. Access token e
+refresh token foram gravados no schema `giracasa`; um canário de 45 minutos
+respondeu HTTP 200 e gravou 87 pedidos e 87 pacotes. A operação continuou
+desativada e sem usuários. O próximo gate é implantar e validar o proprietário
+único da renovação antes dos crons de ingestão.
+
 ## Carga inicial de 40 dias
 
 Primeiro conecte Olist/Tiny e faça um teste de uma janela fechada de um dia. Confira o plano sem acessar nenhuma conta:

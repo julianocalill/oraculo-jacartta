@@ -1,6 +1,6 @@
 # Status do projeto — 11/09/2026
 
-## Autorização Shopee preparada para a Giracasa
+## Autorização Shopee concluída para a Giracasa
 
 O aplicativo Shopee da Giracasa foi aprovado. A Edge Function
 `giracasa-shopee-oauth-callback` foi criada e publicada para concluir a
@@ -27,17 +27,21 @@ com validade de 15 minutos. O retorno valida um state assinado, troca `code` e
 `shop_id` por tokens e grava `shopee_app_config`, `shopee_shops` e
 `shopee_tokens` somente no schema `giracasa`.
 
-Os segredos internos de chamada e state, o redirect do n8n e o Live Partner ID
-`2044231` já foram configurados. Nenhuma credencial de Uberlândia é usada como
+Os segredos internos de chamada e state, o redirect do n8n, o Live Partner ID
+`2044231` e a Live Partner Key foram configurados. Em 11/09/2026 a loja
+`984950642` autorizou o aplicativo e o callback gravou access token e refresh
+token no schema `giracasa`. Nenhuma credencial de Uberlândia é usada como
 fallback.
+
+O canário direto da API usou a janela incremental padrão de 45 minutos e
+concluiu com HTTP 200: 87 pedidos lidos, 87 gravados e 87 pacotes atualizados,
+sem limite atingido. Giracasa permaneceu `enabled=false`, com zero usuários.
 
 ## Próximo passo
 
-No painel de Secrets do projeto Supabase, cadastrar diretamente a Live API
-Partner Key do aplicativo aprovado em `GIRACASA_SHOPEE_PARTNER_KEY`.
-
-Depois disso, gerar o link curto pelo helper, autorizar somente a loja
-Giracasa e conferir a identidade retornada antes de criar qualquer cron de
-sincronização. Giracasa permanece `enabled=false` e sem usuários.
+Definir e testar um único proprietário para a rotação do refresh token da
+Giracasa antes de criar qualquer cron de ingestão Shopee. Depois, executar a
+carga inicial por loja em janelas compatíveis com os limites da API. Giracasa
+permanece `enabled=false` e sem usuários.
 
 Runbook: `docs/giracasa-onboarding.md`.

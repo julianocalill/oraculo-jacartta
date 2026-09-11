@@ -15,8 +15,12 @@ Histórico de entregas e mudanças significativas.
   encaminha apenas parâmetros OAuth por HTTP 302 ao callback do Supabase.
 - O state assinado passou a viajar no caminho do webhook porque a Shopee
   substitui a query da URL de retorno pelos campos `code` e `shop_id`.
-- O Live Partner ID `2044231` foi configurado; o único bloqueio restante é a
-  Live Partner Key, que deve ser cadastrada diretamente em Edge Secrets.
+- Live Partner ID e Live Partner Key foram configurados. A loja `984950642`
+  autorizou o aplicativo e os dois tokens foram salvos somente no schema
+  `giracasa`.
+- O canário direto respondeu HTTP 200 e gravou 87 pedidos e 87 pacotes da
+  janela incremental padrão de 45 minutos, mantendo a operação desativada e
+  sem usuários.
 
 ## [2026-09-10] — Carga Giracasa acelerada no Supabase
 

@@ -535,6 +535,9 @@ Contrato, limites e recuperação: `docs/analise-comercial.md`.
   `oraculo_private.invoke_giracasa_shopee_oauth_start()` e o segredo
   `giracasa_shopee_sync_job_secret` no Vault. Credenciais vivem em Edge Secrets
   e app, loja e tokens são gravados no schema `giracasa`.
+  Autorização concluída em 11/09/2026 para a loja `984950642`; canário direto
+  respondeu HTTP 200 com 87 pedidos e 87 pacotes. Ainda não há cron recorrente:
+  a renovação exclusiva do refresh token é o próximo gate.
 - Banco e motor `gira-casa-v1` aplicados em produção; 26 funções `giracasa-*` publicadas. Sem secrets, dados, usuários ou crons até concluir a carga e a conferência.
 - A carga inicial Giracasa cobre 40 dias, começa por uma janela fechada de um dia e usa `scripts/giracasa-backfill.mjs` em blocos retomáveis de até 14 dias. Rotas e seletor permanecem fora de produção até a validação em preview.
 - A conta Giracasa usa um Aplicativo API OAuth/V3 próprio. Callback `giracasa-olist-oauth-callback`, credenciais e tokens usam exclusivamente secrets `GIRACASA_*`; o conector e a autorização de Uberlândia permanecem isolados.
