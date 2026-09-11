@@ -39,8 +39,15 @@ Contrato, limites e recuperação: [Shopee Ads](shopee-ads-dashboard.md).
 
 ## Publicação
 
-Backend e coleta aplicados. Frontend em validação final para publicação nos
-dois remotes e Vercel; atualizar esta seção após confirmar o deploy.
+Frontend publicado em produção no commit `2397f98`, enviado para `origin` e
+`personal`. Vercel confirmou **READY** no deploy
+`dpl_9EQHbARE2XHEVBh3bBpJ5vfwoSPi`.
+
+Endereço: `https://oraculo.oliverhome.com.br/o/uberlandia/ads`.
+A navegação anônima redirecionou corretamente para o login com `next` apontando
+para a nova aba. A validação visual e de filtros foi feita na prévia local com
+os dados reais; a leitura autenticada do banco foi validada separadamente por
+SQL, sem criar sessão de usuário em produção.
 
 ## Continuidade
 

@@ -62,7 +62,7 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 ## Current production state
 
-Shopee Ads no Comercial: [status de 11/09](docs/project-status-2026-09-11.md), com gasto × ROAS e análise diária.
+Shopee Ads publicado em produção em 11/09/2026: [status de 11/09](docs/project-status-2026-09-11.md), com gasto × ROAS e análise diária.
 
 Correção de taxas TikTok publicada em 11/09/2026: [status](docs/project-status-2026-09-10.md).
 
