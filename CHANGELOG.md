@@ -10,8 +10,11 @@ Histórico de entregas e mudanças significativas.
   configuração, loja e tokens somente no schema `giracasa`.
 - O state expira em 15 minutos e é validado por assinatura. O início do fluxo
   exige segredo exclusivo armazenado no Vault.
-- O teste remoto confirmou que não existe fallback para Uberlândia e que o
-  único bloqueio restante são Partner ID e Partner Key da Giracasa.
+- O domínio aprovado do aplicativo era o n8n. Foi criado e validado o workflow
+  relay `Giracasa - OAuth Shopee para Supabase` (`QnWQtiRcTguhXnGh`), que
+  encaminha apenas parâmetros OAuth por HTTP 302 ao callback do Supabase.
+- O Live Partner ID `2044231` foi configurado; o único bloqueio restante é a
+  Live Partner Key, que deve ser cadastrada diretamente em Edge Secrets.
 
 ## [2026-09-10] — Carga Giracasa acelerada no Supabase
 

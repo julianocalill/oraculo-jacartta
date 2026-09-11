@@ -16,6 +16,7 @@ const env = {
   supabaseServiceRoleKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   partnerId: Deno.env.get("GIRACASA_SHOPEE_PARTNER_ID") ?? "",
   partnerKey: Deno.env.get("GIRACASA_SHOPEE_PARTNER_KEY") ?? "",
+  redirectUri: Deno.env.get("GIRACASA_SHOPEE_REDIRECT_URI") ?? "",
   syncSecret: Deno.env.get("GIRACASA_SHOPEE_SYNC_SECRET") ?? "",
   stateSecret: Deno.env.get("GIRACASA_SHOPEE_OAUTH_STATE_SECRET") ?? ""
 };
@@ -89,7 +90,7 @@ async function validState(state: string) {
 async function authorizationUrl() {
   const timestamp = Math.floor(Date.now() / 1000);
   const state = await createState();
-  const redirect = new URL(callbackUrl());
+  const redirect = new URL(env.redirectUri);
   redirect.searchParams.set("state", state);
   const url = new URL(`${SHOPEE_HOST}${AUTH_PATH}`);
   url.searchParams.set("partner_id", env.partnerId);
@@ -138,6 +139,7 @@ Deno.serve(async (req) => {
     requireValue("SUPABASE_SERVICE_ROLE_KEY", env.supabaseServiceRoleKey);
     requireValue("GIRACASA_SHOPEE_PARTNER_ID", env.partnerId);
     requireValue("GIRACASA_SHOPEE_PARTNER_KEY", env.partnerKey);
+    requireValue("GIRACASA_SHOPEE_REDIRECT_URI", env.redirectUri);
     requireValue("GIRACASA_SHOPEE_SYNC_SECRET", env.syncSecret);
     requireValue("GIRACASA_SHOPEE_OAUTH_STATE_SECRET", env.stateSecret);
 

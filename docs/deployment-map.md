@@ -527,11 +527,14 @@ Contrato, limites e recuperação: `docs/analise-comercial.md`.
   chamadas usando a mesma trava. Processa uma página de pedidos ou duas de NFs
   por chamada e também se desagenda quando o controle deixa de estar rodando.
 - Funções SP são geradas do mesmo fonte com nomes `giracasa-*`, schema fixo e secrets obrigatoriamente prefixados `GIRACASA_`; não existe fallback para credenciais MG.
-- OAuth Shopee Giracasa: callback público
-  `giracasa-shopee-oauth-callback` recebe somente o retorno da Shopee; o início
-  protegido usa `oraculo_private.invoke_giracasa_shopee_oauth_start()` e o
-  segredo `giracasa_shopee_sync_job_secret` no Vault. Partner ID/Key vivem em
-  Edge Secrets e app, loja e tokens são gravados no schema `giracasa`.
+- OAuth Shopee Giracasa: o domínio aprovado é `n8n.oliverhome.com.br`. O
+  workflow `Giracasa - OAuth Shopee para Supabase` (`QnWQtiRcTguhXnGh`) recebe
+  o retorno da Shopee e encaminha somente os parâmetros OAuth por HTTP 302 ao
+  callback público `giracasa-shopee-oauth-callback`; Partner Key e tokens não
+  passam pelo n8n. O início protegido usa
+  `oraculo_private.invoke_giracasa_shopee_oauth_start()` e o segredo
+  `giracasa_shopee_sync_job_secret` no Vault. Credenciais vivem em Edge Secrets
+  e app, loja e tokens são gravados no schema `giracasa`.
 - Banco e motor `gira-casa-v1` aplicados em produção; 26 funções `giracasa-*` publicadas. Sem secrets, dados, usuários ou crons até concluir a carga e a conferência.
 - A carga inicial Giracasa cobre 40 dias, começa por uma janela fechada de um dia e usa `scripts/giracasa-backfill.mjs` em blocos retomáveis de até 14 dias. Rotas e seletor permanecem fora de produção até a validação em preview.
 - A conta Giracasa usa um Aplicativo API OAuth/V3 próprio. Callback `giracasa-olist-oauth-callback`, credenciais e tokens usam exclusivamente secrets `GIRACASA_*`; o conector e a autorização de Uberlândia permanecem isolados.

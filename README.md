@@ -66,8 +66,9 @@ temporários da carga inicial estão ativos. O OAuth
 Olist foi validado e o canário de 07/09 fechou em 771 pedidos, 687 NFs válidas e
 R$ 44.042,64. O catálogo isolado possui 1.068 produtos; a carga de 40 dias roda
 com coordenador e acelerador temporários no Supabase, sem depender de máquina
-local. O callback Shopee isolado está publicado e aguarda Partner ID/Key da
-Giracasa para gerar o link de autorização da loja. As tarifas próprias de
+local. O callback Shopee isolado e o relay 302 no domínio n8n aprovado foram
+validados; o Live Partner ID já está configurado e resta cadastrar somente a
+Live Partner Key para gerar o link de autorização da loja. As tarifas próprias de
 TikTok/ML são os próximos gates. Estado funcional anterior:
 Análise Comercial por dia/período em produção, com backend agregado, cron
 horário, ranking por quantidade e margem no período. Contrato: `docs/analise-comercial.md`.

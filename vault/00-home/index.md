@@ -18,8 +18,10 @@ Build an operational intelligence system where Supabase is the canonical backend
 ## Update 2026-09-11 — OAuth Shopee Giracasa
 
 - Callback isolado publicado com state assinado e início protegido pelo Vault.
-- Partner ID e Partner Key entram direto em Edge Secrets; tokens ficam no
-  schema `giracasa`.
+- O domínio aprovado do n8n encaminha os parâmetros OAuth por HTTP 302 ao
+  callback do Supabase, sem receber a Partner Key ou armazenar tokens.
+- Live Partner ID configurado; a Live Partner Key entra direto em Edge Secrets
+  e os tokens ficam no schema `giracasa`.
 - Estado: `docs/project-status-2026-09-11.md`.
 
 ## Update 2026-09-10 — carga Giracasa acelerada no Supabase

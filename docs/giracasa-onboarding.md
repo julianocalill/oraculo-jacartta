@@ -57,13 +57,19 @@ GIRACASA_SHOPEE_PARTNER_ID
 GIRACASA_SHOPEE_PARTNER_KEY
 ```
 
-A URL de retorno é:
+A Shopee aprovou o aplicativo com o domínio do n8n. Use esta URL de retorno:
 
 ```text
-https://bbtiipnmdxfxnxbemgjr.supabase.co/functions/v1/giracasa-shopee-oauth-callback
+https://n8n.oliverhome.com.br/webhook/giracasa-shopee-oauth
 ```
 
-Depois das duas chaves, execute
+O workflow `Giracasa - OAuth Shopee para Supabase` (`QnWQtiRcTguhXnGh`) faz
+um redirecionamento HTTP 302 para
+`giracasa-shopee-oauth-callback`, preservando `code`, `shop_id` e `state`. Ele
+não recebe Partner Key e não armazena tokens.
+
+O Live Partner ID `2044231` já está em Edge Function Secrets. Cadastre apenas
+a Live API Partner Key como `GIRACASA_SHOPEE_PARTNER_KEY`. Depois execute
 `oraculo_private.invoke_giracasa_shopee_oauth_start()`, leia a resposta do
 pg_net e abra o `authorization_url` dentro de 15 minutos. O callback valida o
 state, troca o code e grava app, loja e tokens exclusivamente no schema

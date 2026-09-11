@@ -6,11 +6,17 @@ O aplicativo Shopee da Giracasa foi aprovado. A Edge Function
 `giracasa-shopee-oauth-callback` foi criada e publicada para concluir a
 autorização sem expor Partner Key ou tokens no navegador, SQL Editor ou Git.
 
-A URL de retorno é:
+A Shopee aprovou o aplicativo com o domínio de retorno do n8n. Para preservar
+essa configuração, a URL registrada no fluxo é:
 
 ```text
-https://bbtiipnmdxfxnxbemgjr.supabase.co/functions/v1/giracasa-shopee-oauth-callback
+https://n8n.oliverhome.com.br/webhook/giracasa-shopee-oauth
 ```
+
+O workflow `Giracasa - OAuth Shopee para Supabase` (`QnWQtiRcTguhXnGh`)
+responde com HTTP 302 e encaminha somente `code`, `shop_id`, `state`, `error` e
+`message` para a Edge Function. O n8n não recebe Partner Key nem armazena os
+tokens. O relay foi validado em produção contra o callback do Supabase.
 
 O início do fluxo acontece por
 `oraculo_private.invoke_giracasa_shopee_oauth_start()`. Essa função lê do Vault
@@ -19,18 +25,14 @@ com validade de 15 minutos. O retorno valida um state assinado, troca `code` e
 `shop_id` por tokens e grava `shopee_app_config`, `shopee_shops` e
 `shopee_tokens` somente no schema `giracasa`.
 
-Os segredos internos de chamada e state já foram configurados. O teste remoto
-chegou ao callback e parou exatamente na ausência de
-`GIRACASA_SHOPEE_PARTNER_ID`, comprovando que nenhuma credencial de Uberlândia
-é usada como fallback.
+Os segredos internos de chamada e state, o redirect do n8n e o Live Partner ID
+`2044231` já foram configurados. Nenhuma credencial de Uberlândia é usada como
+fallback.
 
 ## Próximo passo
 
-No painel de Secrets do projeto Supabase, cadastrar diretamente os valores
-obtidos na tela do aplicativo aprovado:
-
-- `GIRACASA_SHOPEE_PARTNER_ID`
-- `GIRACASA_SHOPEE_PARTNER_KEY`
+No painel de Secrets do projeto Supabase, cadastrar diretamente a Live API
+Partner Key do aplicativo aprovado em `GIRACASA_SHOPEE_PARTNER_KEY`.
 
 Depois disso, gerar o link curto pelo helper, autorizar somente a loja
 Giracasa e conferir a identidade retornada antes de criar qualquer cron de
