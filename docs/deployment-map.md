@@ -169,7 +169,7 @@
   - Query params: `?shop_id=` (one shop), `?days=N` (default 3, jobs atuais usam `days=3`), `?from=&to=`
     (backfill). Runs logged in `shopee_sync_runs` as `shopee-returns-sync:<id>`.
 - `shopee-ads-report-data` (deployed 2026-08-07) — **n8n + coleta diária do dashboard Ads**
-  - Dashboard `/ads`: `scope=all`, crons `oraculo-ads-daily-<shop_id>` às 07:15–07:30 e 10:15–10:30 BRT, uma invocação por loja. Saúde por loja em `/status`; contrato em `docs/shopee-ads-dashboard.md`.
+  - Dashboard `/ads`: `scope=all`, crons `oraculo-ads-daily-<shop_id>` às 07:11–07:33 e 10:11–10:33 BRT (minutos :11/:17/:27/:33, desalinhados dos múltiplos de 5 em 12/09), uma invocação por loja. Saúde por loja em `/status`; contrato em `docs/shopee-ads-dashboard.md`.
   - Coleta settings e 30 dias de performance diária de Ads, uma loja por
     invocação, e grava `shopee_ads_campaigns` / `shopee_ads_daily`.
   - Read-only no token; o workflow n8n primário é o único renovador. Adia a loja
@@ -238,6 +238,36 @@
 
 > Levantado ao vivo em 2026-08-25 (`select * from cron.job`). `pg_cron` roda em UTC — coluna "BRT" já convertida (UTC-3). 44 jobs ativos.
 
+
+### Regra de agendamento: janela de execução, não minuto de disparo
+
+Revisado em 12/09/2026 medindo `cron.job_run_details`. Só **6 dos 48 jobs**
+seguram worker por mais de 5s; os outros 42 disparam por pg_net e devolvem o
+worker em 0,04–0,3s. Ao agendar cron novo, o que importa é a janela que o job
+ocupa, não o minuto em que dispara:
+
+| job | dispara | ocupa até | média / máx |
+|---|---|---|---|
+| `oraculo-unified-sku-cache` | :51 | :55 | 211s / 239s |
+| `oraculo-shopee-take-rate-cache` | :12 e :42 | +100s | 52s / 99s |
+| `oraculo-commercial-hourly` | :47 | :48 | 44s / 67s |
+| `oraculo-fiscal-margin-snapshots-hourly` | :14 | :15 | 29s / 57s |
+| `oraculo-olist-qty-cache` | :23 | :23 | 15s / 21s |
+| `oraculo-nf-cache-hourly` | :34 | :34 | 7s / 10s |
+
+Foi assim que a correção de 05/08 falhou pela metade: moveu o
+`unified-sku-cache` de :30 para :28 olhando o disparo, mas os 239s de execução
+o mantinham rodando em :30 de qualquer forma.
+
+**Ao criar cron novo (inclusive `giracasa-*`):** escolher minuto fora das
+janelas acima e evitar múltiplos de 10 e 15, onde `bip-fulfillment-2m`,
+`mercadolivre-notifications-10m` e `olist-invoices-15m` alinham. Depois de
+12/09 o pico da semana é de 4 jobs simultâneos (era 6, contra
+`max_worker_processes = 6`).
+
+**Pendência conhecida:** `cron.max_running_jobs = 32` contra 6 workers reais —
+o pg_cron acredita que pode disparar 32 em paralelo e não avisa do descompasso.
+
 ### Tabela direta: horário BRT, vezes/dia, o que chama
 
 | job | horário (BRT) | vezes/dia | chama | status |
@@ -261,7 +291,7 @@
 | `oraculo-fiscal-margin-snapshots-hourly` | :14 de cada hora | 24 | SQL captura snapshot fiscal + purga >14 dias | permanente |
 | `oraculo-olist-items-backfill-julho-finish` | :14 de cada hora | 24 | SQL checa fila / finaliza backfill julho | **temporário — ainda ativo em 23/08** |
 | `oraculo-olist-derived-hourly` | :25 de cada hora | 24 | `olist-derived-refresh` (incremental) | permanente |
-| `oraculo-unified-sku-cache` | :28 de cada hora | 24 | SQL `refresh_oraculo_unified_sku_cache()` (~5min) | permanente |
+| `oraculo-unified-sku-cache` | :51 de cada hora | 24 | SQL `refresh_oraculo_unified_sku_cache()` (211s média, 239s máx — ocupa worker até :55) | permanente |
 | `oraculo-olist-qty-cache` | :23 de cada hora | 24 | SQL `refresh_oraculo_olist_qty_cache(10)` | permanente |
 | `oraculo-nf-cache-hourly` | :34 de cada hora | 24 | SQL `refresh_oraculo_nf_daily_cache` | permanente |
 | `mercadolivre-returns-hourly` | :38 de cada hora | 24 | `mercadolivre-returns-sync?days=45` | permanente |

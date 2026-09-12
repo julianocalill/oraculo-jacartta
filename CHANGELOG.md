@@ -2,6 +2,24 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-12] — Crons espalhados pela janela de execução
+
+- A correção de 05/08 moveu o `oraculo-unified-sku-cache` de :30 para :28
+  olhando o minuto de disparo. Como o job leva 211s em média e 239s no pior
+  caso, ele continuava ocupando worker em :29, :30, :31 e :32 — de volta ao
+  minuto que abriu o incidente.
+- Medição sobre 3 dias de `cron.job_run_details`: só 6 dos 48 jobs seguram
+  worker por mais de 5s; `commercial-hourly` e `take-rate-cache` rodavam juntos
+  toda hora no :42; e o pico da semana chegava a 6 jobs simultâneos, igual ao
+  `max_worker_processes`.
+- Remanejados sem mudar frequência nem comando: `unified-sku-cache` :28→:51,
+  `commercial-hourly` :42→:47, os quatro `ads-daily` para :11/:17/:27/:33 e
+  `giracasa-shopee-token-refresh` :15→:09.
+- Pico da semana cai de 6 para 4 jobs simultâneos, todos dispatchers de ~0,2s,
+  e nenhum par de jobs pesados volta a se sobrepor. Abre folga para os crons da
+  Giracasa sem afetar Uberlândia.
+- Pendência: `cron.max_running_jobs = 32` contra 6 workers reais.
+
 ## [2026-09-11] — Shopee Ads no Comercial
 
 - Nova aba `/ads`: investimento × ROAS, receita/pedidos diretos, filtros de loja
