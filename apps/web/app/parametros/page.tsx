@@ -1,5 +1,5 @@
-import Link from "next/link";
-import { revalidatePath } from "next/cache";
+import { OperationLink as Link } from "../components/operation-provider";
+import { revalidatePath } from "../../lib/operation-navigation";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
 import { assertTabAccess, requireTabAccess } from "../../lib/auth/access";
@@ -202,8 +202,8 @@ async function saveChannelParam(formData: FormData) {
     if (error) throw error;
   }
 
-  revalidatePath("/parametros");
-  revalidatePath("/skus");
+  await revalidatePath("/parametros");
+  await revalidatePath("/skus");
 }
 
 async function saveSkuParam(formData: FormData) {
@@ -246,10 +246,10 @@ async function saveSkuParam(formData: FormData) {
     }
   }
 
-  revalidatePath("/parametros");
-  revalidatePath("/skus");
-  revalidatePath("/");
-  revalidatePath("/inteligencia");
+  await revalidatePath("/parametros");
+  await revalidatePath("/skus");
+  await revalidatePath("/");
+  await revalidatePath("/inteligencia");
 }
 
 async function disableSkuCostOverride(formData: FormData) {
@@ -273,10 +273,10 @@ async function disableSkuCostOverride(formData: FormData) {
     if (triggerError) console.error("recompute fiscal falhou ao desativar custo", triggerError);
   }
 
-  revalidatePath("/parametros");
-  revalidatePath("/skus");
-  revalidatePath("/");
-  revalidatePath("/inteligencia");
+  await revalidatePath("/parametros");
+  await revalidatePath("/skus");
+  await revalidatePath("/");
+  await revalidatePath("/inteligencia");
 }
 
 async function saveStateTaxParam(formData: FormData) {
@@ -321,8 +321,8 @@ async function saveStateTaxParam(formData: FormData) {
     if (error) throw error;
   }
 
-  revalidatePath("/parametros");
-  revalidatePath("/skus");
+  await revalidatePath("/parametros");
+  await revalidatePath("/skus");
 }
 
 async function loadParametros() {

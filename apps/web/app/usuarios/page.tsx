@@ -1,4 +1,5 @@
-import { revalidatePath } from "next/cache";
+import { OPERATIONS, operationGrant } from "@oraculo/domain/operations.js";
+import { revalidatePath } from "../../lib/operation-navigation";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { assertMaster, isMaster, requireMaster } from "../../lib/auth/access";
 import { ALL_TAB_KEYS, isAdminOnlyTab, isTabKey, tabLabel, type TabKey } from "../../lib/auth/tabs";
@@ -33,16 +34,36 @@ function displayName(user: AuthUser) {
   return String(user.user_metadata?.full_name || user.email || "Sem nome");
 }
 
-function tabsOf(user: AuthUser): TabKey[] {
-  const raw = user.app_metadata?.tabs;
-  const restrictedRaw = user.app_metadata?.restricted_tabs;
-  const granted = new Set(Array.isArray(raw) ? raw.filter(isTabKey) : []);
-  const restrictedGranted = new Set(
-    Array.isArray(restrictedRaw) ? restrictedRaw.filter(isTabKey) : []
-  );
-  return ALL_TAB_KEYS.filter((key) =>
-    isAdminOnlyTab(key) ? restrictedGranted.has(key) : granted.has(key)
-  );
+function tabsOf(user: AuthUser, operation = "uberlandia"): TabKey[] {
+  const grant = operationGrant(user, operation);
+  const normal = new Set(Array.isArray(grant?.tabs) ? grant.tabs.filter(isTabKey) : []);
+  const restricted = new Set(Array.isArray(grant?.restricted_tabs) ? grant.restricted_tabs.filter(isTabKey) : []);
+  return ALL_TAB_KEYS.filter((key) => isAdminOnlyTab(key) ? restricted.has(key) : normal.has(key));
+}
+
+function OperationPermissions({ user }: { user?: AuthUser }) {
+  return <div className="operation-permissions">{OPERATIONS.map((operation) =>
+    <fieldset key={operation.id}>
+      <legend>{operation.label}</legend>
+      <label className="tab-check"><input type="checkbox" name={`${operation.id}.enabled`}
+        defaultChecked={user ? Boolean(operationGrant(user, operation.id)) : operation.id === "uberlandia"} />
+        Liberar acesso à operação</label>
+      {operation.id === "uberlandia" ? <label className="tab-check"><input type="checkbox" name={`${operation.id}.full_manager`}
+        defaultChecked={user ? operationGrant(user, operation.id)?.full_manager === true : false} />
+        Gestor Full — pode acompanhar todos os envios</label> : null}
+      {user && isMaster(user) ? <p>Administrador: todas as abas da operação liberada.</p>
+        : <TabCheckboxes prefix={`${operation.id}.`} selected={user ? tabsOf(user, operation.id) : []} excluded={operation.id === "uberlandia" ? [] : ["full"]} />}
+    </fieldset>
+  )}</div>;
+}
+
+function readOperations(formData: FormData, master = false) {
+  return Object.fromEntries(OPERATIONS.map((operation) => [operation.id, {
+    enabled: formData.get(`${operation.id}.enabled`) === "on",
+    tabs: (master ? ALL_TAB_KEYS.filter((key) => !isAdminOnlyTab(key)) : readTabs(formData, `${operation.id}.`)).filter((key) => operation.id === "uberlandia" || key !== "full"),
+    restricted_tabs: master ? ALL_TAB_KEYS.filter(isAdminOnlyTab) : readRestrictedTabs(formData, `${operation.id}.`),
+    full_manager: operation.id === "uberlandia" && (master || formData.get(`${operation.id}.full_manager`) === "on")
+  }]));
 }
 
 function isBlocked(user: AuthUser) {
@@ -50,13 +71,13 @@ function isBlocked(user: AuthUser) {
 }
 
 // Só as chaves conhecidas entram no metadata — o formulário não define o vocabulário.
-function readTabs(formData: FormData): TabKey[] {
-  const submitted = new Set(formData.getAll("tabs").map(String).filter(isTabKey));
+function readTabs(formData: FormData, prefix = ""): TabKey[] {
+  const submitted = new Set(formData.getAll(`${prefix}tabs`).map(String).filter(isTabKey));
   return ALL_TAB_KEYS.filter((key) => submitted.has(key) && !isAdminOnlyTab(key));
 }
 
-function readRestrictedTabs(formData: FormData): TabKey[] {
-  const submitted = new Set(formData.getAll("restricted_tabs").map(String).filter(isTabKey));
+function readRestrictedTabs(formData: FormData, prefix = ""): TabKey[] {
+  const submitted = new Set(formData.getAll(`${prefix}restricted_tabs`).map(String).filter(isTabKey));
   return ALL_TAB_KEYS.filter((key) => submitted.has(key) && isAdminOnlyTab(key));
 }
 
@@ -82,13 +103,14 @@ async function createUser(formData: FormData) {
     email_confirm: true,
     user_metadata: { full_name: fullName },
     app_metadata: {
-      tabs: readTabs(formData),
-      restricted_tabs: readRestrictedTabs(formData)
+      tabs: readTabs(formData, "uberlandia."),
+      restricted_tabs: readRestrictedTabs(formData, "uberlandia."),
+      operations: readOperations(formData)
     }
   });
 
   if (error) throw error;
-  revalidatePath("/usuarios");
+  await revalidatePath("/usuarios");
 }
 
 async function updateUser(formData: FormData) {
@@ -108,14 +130,14 @@ async function updateUser(formData: FormData) {
     ban_duration: blocked ? "876000h" : "none"
   };
 
-  // Administradores fixos não têm caixinhas no formulário: preservar o metadata
-  // deles evita zerar o acesso de quem edita a própria linha.
-  if (!isMaster({ id: userId, email })) {
-    attributes.app_metadata = {
-      tabs: readTabs(formData),
-      restricted_tabs: readRestrictedTabs(formData)
-    };
-  }
+  const { data: previous, error: previousError } = await supabase.auth.admin.getUserById(userId);
+  if (previousError) throw previousError;
+  attributes.app_metadata = {
+    ...previous.user.app_metadata,
+    tabs: readTabs(formData, "uberlandia."),
+    restricted_tabs: readRestrictedTabs(formData, "uberlandia."),
+    operations: readOperations(formData, isMaster(previous.user))
+  };
 
   if (password) {
     attributes.password = password;
@@ -123,7 +145,7 @@ async function updateUser(formData: FormData) {
 
   const { error } = await supabase.auth.admin.updateUserById(userId, attributes);
   if (error) throw error;
-  revalidatePath("/usuarios");
+  await revalidatePath("/usuarios");
 }
 
 export default async function UsuariosPage() {
@@ -141,7 +163,7 @@ export default async function UsuariosPage() {
       <header className="topbar">
         <div>
           <h1>Usuários</h1>
-          <p>Crie acessos e marque, aba por aba, o que cada pessoa pode abrir.</p>
+          <p>Libere operações e escolha as abas que cada pessoa pode abrir em cada uma.</p>
         </div>
       </header>
 
@@ -163,7 +185,7 @@ export default async function UsuariosPage() {
             <span>Senha</span>
             <input name="password" type="password" required />
           </label>
-          <TabCheckboxes />
+          <OperationPermissions />
           <button type="submit">Criar usuário</button>
         </form>
       </section>
@@ -209,14 +231,7 @@ export default async function UsuariosPage() {
                   </select>
                 </label>
 
-                {master ? (
-                  <div className="tab-access tab-access-master">
-                    <span>Abas liberadas</span>
-                    <p>Administrador — acesso total a todas as abas.</p>
-                  </div>
-                ) : (
-                  <TabCheckboxes selected={granted} />
-                )}
+                <OperationPermissions user={user} />
 
                 <div className="user-meta">
                   <span>Criado: {date(user.created_at)}</span>

@@ -1,3 +1,8 @@
+import { redirect } from "next/navigation";
+import { operationIsReady } from "../operation-status";
+import { getRequestOperation } from "../operation-context";
+import { tabForPath } from "./path-tabs";
+export { tabForPath } from "./path-tabs";
 // Controle de acesso por aba.
 //
 // Não existem perfis nomeados: cada usuário carrega em `app_metadata.tabs` a
@@ -6,7 +11,7 @@
 // que editam os acessos dos outros.
 //
 // A verificação roda sempre no servidor, em cima do usuário devolvido por
-// `getCurrentUser()` (que valida o token via supabase.auth.getUser). O
+// `getCurrentUser()` (JWT validado pelo PostgREST e identidade lida ao vivo). O
 // middleware continua cuidando apenas de "logado ou não".
 
 import { readEnvValue, requireCurrentUser } from "./session";
@@ -18,6 +23,8 @@ type MaybeUser = {
   id?: string;
   email?: string | null;
   app_metadata?: Record<string, unknown> | null;
+  oraculo_operation_allowed?: boolean;
+  oraculo_operation?: string;
 } | null;
 
 function masterEmails() {
@@ -42,6 +49,12 @@ export function isMaster(user: MaybeUser) {
   return masterEmails().includes(email);
 }
 
+/** Gestor operacional do módulo Full na operação projetada no request. */
+export function isFullManager(user: MaybeUser) {
+  if (user?.oraculo_operation && user.oraculo_operation !== "uberlandia") return false;
+  return isMaster(user) || user?.app_metadata?.full_manager === true;
+}
+
 function devTabsOverride() {
   if (process.env.NODE_ENV === "production") return null;
 
@@ -57,7 +70,7 @@ function devTabsOverride() {
 }
 
 export function allowedTabs(user: MaybeUser): TabKey[] {
-  if (!user) return [];
+  if (!user || user.oraculo_operation_allowed === false) return [];
 
   if (isMaster(user)) {
     const override = devTabsOverride();
@@ -82,29 +95,19 @@ export function allowedTabs(user: MaybeUser): TabKey[] {
 }
 
 export function canAccess(user: MaybeUser, tab: TabKey) {
+  if (tab === "full" && user?.oraculo_operation && user.oraculo_operation !== "uberlandia") return false;
   return allowedTabs(user).includes(tab);
+}
+
+/** Route handlers must reject a disabled operation before building an export. */
+export async function canAccessRequest(user: MaybeUser, tab: TabKey) {
+  if (!canAccess(user, tab)) return false;
+  return operationIsReady(await getRequestOperation());
 }
 
 export function firstAllowedHref(user: MaybeUser) {
   const [first] = allowedTabs(user);
   return first ? tabByKey(first)?.href ?? null : null;
-}
-
-// Resolve a aba dona de um caminho (sub-rotas e exports herdam a aba-mãe).
-export function tabForPath(pathname: string): TabKey | null {
-  let match: { key: TabKey; length: number } | null = null;
-
-  for (const tab of TABS) {
-    for (const path of tab.paths) {
-      const hit = path === "/" ? pathname === "/" : pathname === path || pathname.startsWith(`${path}/`);
-      if (!hit) continue;
-      if (!match || path.length > match.length) {
-        match = { key: tab.key, length: path.length };
-      }
-    }
-  }
-
-  return match?.key ?? null;
 }
 
 export function isAllowedPath(user: MaybeUser, pathname: string) {
@@ -120,12 +123,14 @@ export function isAllowedPath(user: MaybeUser, pathname: string) {
  */
 export async function requireTabAccess(tab: TabKey) {
   const user = await requireCurrentUser();
+  if (user.oraculo_operation_allowed && !(await operationIsReady(await getRequestOperation()))) redirect("/operacoes/giracasa");
   return { user, allowed: canAccess(user, tab) };
 }
 
 export async function requireMaster() {
   const user = await requireCurrentUser();
-  return { user, allowed: isMaster(user) };
+  if (user.oraculo_operation_allowed && !(await operationIsReady(await getRequestOperation()))) redirect("/operacoes/giracasa");
+  return { user, allowed: isMaster(user) && user.oraculo_operation_allowed };
 }
 
 /**
@@ -135,7 +140,7 @@ export async function requireMaster() {
  */
 export async function assertTabAccess(tab: TabKey) {
   const user = await requireCurrentUser();
-  if (!canAccess(user, tab)) {
+  if (!canAccess(user, tab) || !(await operationIsReady(await getRequestOperation()))) {
     throw new Error(`Sem permissão para a aba ${tabByKey(tab)?.label ?? tab}.`);
   }
   return user;
@@ -143,7 +148,7 @@ export async function assertTabAccess(tab: TabKey) {
 
 export async function assertMaster() {
   const user = await requireCurrentUser();
-  if (!isMaster(user)) {
+  if (!isMaster(user) || !user.oraculo_operation_allowed || !(await operationIsReady(await getRequestOperation()))) {
     throw new Error("Apenas administradores podem alterar acessos.");
   }
   return user;

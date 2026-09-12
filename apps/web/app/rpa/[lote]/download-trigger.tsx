@@ -1,4 +1,6 @@
 "use client";
+import { useOperation } from "../../components/operation-provider";
+import { operationHref } from "@oraculo/domain/operations.js";
 
 import { useEffect } from "react";
 
@@ -13,9 +15,10 @@ import { useEffect } from "react";
  * está, sem navegar para lugar nenhum.
  */
 export function DownloadTrigger({ href }: { href: string }) {
+  const operation = useOperation();
   useEffect(() => {
-    const timer = window.setTimeout(() => window.location.assign(href), 400);
+    const timer = window.setTimeout(() => window.location.assign(operationHref(href, operation)), 400);
     return () => window.clearTimeout(timer);
-  }, [href]);
+  }, [href, operation]);
   return null;
 }

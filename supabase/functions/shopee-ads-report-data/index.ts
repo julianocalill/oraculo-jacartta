@@ -1,7 +1,7 @@
 // Coleta read-only de Shopee Ads para o relatório periódico do n8n.
 //
 // Regra crítica: esta função NUNCA renova token. O único renovador é o
-// shopee-sync. Se o token tiver menos de 10 minutos, a coleta é adiada.
+// n8n Shopee - Renovar Tokens. Se o token tiver menos de 10 minutos, a coleta é adiada.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -146,6 +146,7 @@ Deno.serve(async (req) => {
   );
   const url = new URL(req.url);
   const shopId = Number(url.searchParams.get("shop_id"));
+  const scope = url.searchParams.get("scope") === "all" ? "all" : "active";
   const days = Math.max(6, Math.min(Number(url.searchParams.get("days") ?? 30), 180));
   const periodEnd = url.searchParams.get("end_date")
     ? parseIsoDate(String(url.searchParams.get("end_date")))
@@ -162,7 +163,8 @@ Deno.serve(async (req) => {
       period_start: isoDate(periodStart),
       period_end: isoDate(periodEnd),
       status: "running",
-      started_at: startedAt
+      started_at: startedAt,
+      meta: { scope }
     })
     .select("id")
     .single();
@@ -196,7 +198,7 @@ Deno.serve(async (req) => {
       await supabase.from("shopee_ads_collection_runs").update({
         status: "deferred",
         finished_at: new Date().toISOString(),
-        error_message: "token perto de expirar; shopee-sync fará a renovação"
+        error_message: "token perto de expirar; renovador n8n fará a renovação"
       }).eq("id", run.id);
       return jsonResponse({
         ok: false, deferred: true, shop_id: shopId,
@@ -211,7 +213,9 @@ Deno.serve(async (req) => {
         shop.partner_id, app.partner_key, shopId, accessToken,
         { ad_type: "all", offset: String(page * CAMPAIGN_PAGE_SIZE), limit: String(CAMPAIGN_PAGE_SIZE) }
       );
-      campaignList.push(...(Array.isArray(response?.campaign_list) ? response.campaign_list : []));
+      if (!Array.isArray(response?.campaign_list)) throw new Error("listagem de campanhas incompleta");
+      campaignList.push(...response.campaign_list);
+      if (response.has_next_page && page === MAX_CAMPAIGN_PAGES - 1) throw new Error("limite de paginação Ads atingido");
       if (!response?.has_next_page) break;
       await delay(100);
     }
@@ -224,7 +228,8 @@ Deno.serve(async (req) => {
         shop.partner_id, app.partner_key, shopId, accessToken,
         { campaign_id_list: ids.join(","), info_type_list: "1,2,3,4" }
       );
-      settings.push(...(Array.isArray(response?.campaign_list) ? response.campaign_list : []));
+      if (!Array.isArray(response?.campaign_list) || ids.some((id) => !response.campaign_list.some((row: { campaign_id: unknown }) => String(row.campaign_id) === id))) throw new Error("settings de campanhas incompletos");
+      settings.push(...response.campaign_list);
       await delay(100);
     }
 
@@ -265,7 +270,8 @@ Deno.serve(async (req) => {
 
     const activeIds = campaignRows.filter((row) => row.is_active).map((row) => String(row.campaign_id));
     const dailyRows: Record<string, unknown>[] = [];
-    for (const ids of chunks(activeIds, API_BATCH_SIZE)) {
+    const performanceIds = scope === "all" ? campaignIds : activeIds;
+    for (const ids of chunks(performanceIds, API_BATCH_SIZE)) {
       for (const window of windows(periodStart, periodEnd)) {
         const response = await shopGet(
           "/api/v2/ads/get_product_campaign_daily_performance",
@@ -276,6 +282,7 @@ Deno.serve(async (req) => {
             end_date: apiDate(window.end)
           }
         );
+        if (!Array.isArray(response?.campaign_list)) throw new Error("desempenho Ads sem campaign_list");
         // deno-lint-ignore no-explicit-any
         for (const campaign of (response?.campaign_list ?? []) as any[]) {
           // deno-lint-ignore no-explicit-any
@@ -300,6 +307,16 @@ Deno.serve(async (req) => {
         await delay(150);
       }
     }
+    // Cobertura só é completa se cada campanha devolveu cada dia solicitado.
+    // A API retorna explicitamente métricas zero; ausência nunca vira zero presumido.
+    if (scope === "all") {
+      const received = new Set(dailyRows.map((row) => `${row.campaign_id}:${row.metric_date}`));
+      for (const id of performanceIds) {
+        for (let day = periodStart; day <= periodEnd; day = addDays(day, 1)) {
+          if (!received.has(`${id}:${isoDate(day)}`)) throw new Error(`cobertura Ads incompleta: campanha ${id}, dia ${isoDate(day)}`);
+        }
+      }
+    }
     await upsertInChunks(supabase, "shopee_ads_daily", dailyRows, "shop_id,campaign_id,metric_date");
 
     await supabase.from("shopee_ads_collection_runs").update({
@@ -308,7 +325,7 @@ Deno.serve(async (req) => {
       active_campaigns: activeIds.length,
       daily_rows_upserted: dailyRows.length,
       finished_at: new Date().toISOString(),
-      meta: { shop_name: shop.shop_name, endpoint_count: 3 }
+      meta: { shop_name: shop.shop_name, endpoint_count: 3, scope, performance_campaigns: performanceIds.length }
     }).eq("id", run.id);
 
     return jsonResponse({

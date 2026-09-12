@@ -1,4 +1,5 @@
 "use client";
+import { OperationAnchor } from "../components/operation-provider";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { IntelligencePayload, IntelligenceProduct, MarketAction } from "./data";
@@ -188,7 +189,7 @@ export function IntelligenceDashboard({ payload }: { payload: IntelligencePayloa
         </div>
         <div className="market-source-legend" aria-label="Origem dos dados">
           <span className={payload.internalSource === "real" ? "is-real" : "is-demo"}>
-            <i /> Interno: {payload.internalSource === "real" ? "dados reais" : "demonstração"}
+            <i /> Interno: {payload.internalSource === "real" ? "dados reais" : payload.internalSource === "unavailable" ? "integração em preparação" : "demonstração"}
           </span>
           <span className="is-demo"><i /> Externo: demonstração</span>
         </div>
@@ -334,7 +335,7 @@ export function IntelligenceDashboard({ payload }: { payload: IntelligencePayloa
                 <span>Custo líquido por venda</span>
                 <strong>{brl(selected.totalCost)}</strong>
                 <small>
-                  livro canônico · <a href={`/parametros?secao=custos&q=${encodeURIComponent(selected.sku)}`}>conferir em Parâmetros</a>
+                  livro canônico · <OperationAnchor href={`/parametros?secao=custos&q=${encodeURIComponent(selected.sku)}`}>conferir em Parâmetros</OperationAnchor>
                 </small>
               </div>
               <div><span>Tendência</span><strong>{selected.trendText}</strong></div>

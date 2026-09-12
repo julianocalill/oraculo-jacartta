@@ -10,7 +10,10 @@
     ".": "./index.ts",
     "./fiscal.js": "./fiscal.js",
     "./rpa.js": "./rpa.js",
+    "./ads-analysis.js": "./ads-analysis.js",
     "./commercial-analysis.js": "./commercial-analysis.js",
+    "./full-workflow.js": "./full-workflow.js",
+    "./separation.js": "./separation.js",
     "./operations.js": "./operations.js",
     "./operation-fiscal.js": "./operation-fiscal.js"
   }

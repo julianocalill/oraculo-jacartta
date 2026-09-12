@@ -1,6 +1,8 @@
 "use client";
+import { parseOperationPath } from "@oraculo/domain/operations.js";
 
-import Link from "next/link";
+
+import { OperationLink as Link } from "./operation-provider";
 import { usePathname } from "next/navigation";
 import { SECTORS, TABS, type TabKey } from "../../lib/auth/tabs";
 import { NavIcon } from "./nav-icons";
@@ -22,7 +24,7 @@ function isActive(pathname: string, href: string) {
 // nasce aberto. Abas sem setor (Agenda, Parâmetros) ficam soltas, sempre
 // visíveis; Admin continua como grupo próprio no rodapé.
 export function SidebarNav({ badges, tabs }: { badges?: Record<string, number | undefined>; tabs: TabKey[] }) {
-  const pathname = usePathname() ?? "/";
+  const pathname = parseOperationPath(usePathname() ?? "/").path;
   const granted = new Set<string>(tabs);
 
   const mainLinks = TABS.filter((tab) => tab.group === "main" && granted.has(tab.key));
@@ -42,6 +44,10 @@ export function SidebarNav({ badges, tabs }: { badges?: Record<string, number | 
       <Link
         key={tab.href}
         href={tab.href}
+        // Todas as páginas são dinâmicas e consultam o banco. O prefetch
+        // automático disparava todas as abas do menu juntas após o login e
+        // saturava o caminho crítico do painel.
+        prefetch={false}
         className={active ? "nav-active" : undefined}
         aria-current={active ? "page" : undefined}
       >

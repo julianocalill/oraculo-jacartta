@@ -27,14 +27,27 @@ The current product direction is practical executive intelligence for the operat
 - `Obsidian` can store durable project memory, but repository docs are the source of truth.
 - `AI agents` assist architecture, coding, review and documentation, but repository files remain the source of truth.
 
-## Current state on 2026-09-08
+## Current state on 2026-09-11
 
-Uberlândia permanece no frontend estável após o rollback da primeira interface
-multioperação. A retomada da Giracasa ocorre na branch
-`codex/giracasa-phase1`, começando pela carga isolada e pelo motor financeiro.
-A janela inicial agora é de 40 dias, precedida por uma amostra fechada de um
-dia; login, seletor e rotas só voltam depois da validação. Estado:
-`docs/project-status-2026-09-08.md`; decisão:
+Shopee Ads em Comercial (`/ads`): dashboard gasto × ROAS, análise diária por
+regras, ranking por campanha e coleta diária das quatro lojas incluindo
+pausadas. RPC autenticada e cobertura explícita; `docs/shopee-ads-dashboard.md`.
+
+## Current state on 2026-09-09
+
+`Logística → Separação` está ativa em produção. A lista multicanal passa a ser
+persistida antes do WhatsApp, com
+cursor durável, alerta de atraso, atualização manual sem reenvio, períodos de
+até sete dias, histórico, impressão A4 e CSV. Contrato e rollout em
+`docs/logistica-separacao.md`; evidências em
+`docs/project-status-2026-09-09.md`.
+
+## Giracasa on 2026-09-12
+
+Operação isolada em preparação na branch `codex/giracasa-phase1`, sem efeito
+sobre Uberlândia. Carga Olist de 40 dias concluída, Shopee autorizada e token
+renovando sozinho; segue `enabled=false`, sem usuários e fora do frontend.
+Estado: `docs/project-status-2026-09-12-giracasa.md`; decisão:
 `docs/adr/ADR-007-giracasa-progressive-rollout.md`.
 
 ## Current state on 2026-09-04

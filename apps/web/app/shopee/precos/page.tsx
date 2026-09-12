@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { OperationForm } from "../../components/operation-provider";
+import { OperationLink as Link } from "../../components/operation-provider";
 import { requireTabAccess } from "../../../lib/auth/access";
 import { NoAccess } from "../../components/no-access";
 import { AppShell } from "../../components/app-shell";
@@ -229,7 +230,7 @@ export default async function ShopeePrecosPage({
             recalculado às {refreshedAt}
           </p>
         </div>
-        <form className="filter-row filter-form" method="get" action="/shopee/precos">
+        <OperationForm className="filter-row filter-form" method="get" action="/shopee/precos">
           {lojaFiltro ? <input type="hidden" name="loja" value={lojaFiltro} /> : null}
           {filtro !== "todos" ? <input type="hidden" name="f" value={filtro} /> : null}
           {porSku ? <input type="hidden" name="v" value="sku" /> : null}
@@ -255,7 +256,7 @@ export default async function ShopeePrecosPage({
           <Link className="button-link" href={`/shopee/precos/export${exportQs.toString() ? `?${exportQs}` : ""}`}>
             Exportar (.xlsx)
           </Link>
-        </form>
+        </OperationForm>
       </header>
       <ShopeeTabs active="precos" />
       <LojaPills

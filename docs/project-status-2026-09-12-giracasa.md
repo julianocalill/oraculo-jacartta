@@ -1,4 +1,4 @@
-# Status do projeto — 12/09/2026
+# Status da Giracasa — 12/09/2026
 
 ## Estado executivo
 

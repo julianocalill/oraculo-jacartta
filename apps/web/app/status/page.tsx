@@ -1,3 +1,4 @@
+import { getRequestOperation, type OperationId } from "../../lib/operation-context";
 import { unstable_cache } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { requireTabAccess } from "../../lib/auth/access";
@@ -22,6 +23,9 @@ type SyncRun = {
   vessels_targeted?: number | null;
   positions_updated?: number | null;
   error_message: string | null;
+  window_start?: string | null;
+  window_end?: string | null;
+  candidates_total?: number | null;
   metadata?: Record<string, unknown> | null;
   meta?: Record<string, unknown> | null;
 };
@@ -84,6 +88,13 @@ function hasTokenFailure(run?: SyncRun | null) {
 
 const ACTIVE_RUN_MAX_AGE_MS = 90 * 60 * 1000;
 
+function activeRunMaxAge(run?: SyncRun | null) {
+  const configured = Number(run?.metadata?.stale_after_ms);
+  return Number.isFinite(configured) && configured >= 30_000
+    ? configured
+    : ACTIVE_RUN_MAX_AGE_MS;
+}
+
 function runActivityAt(run?: SyncRun | null) {
   const metadataActivity = run?.metadata?.updated_at;
   if (typeof metadataActivity === "string") return metadataActivity;
@@ -94,7 +105,7 @@ function hasFreshActivity(run?: SyncRun | null) {
   const activityAt = runActivityAt(run);
   if (!activityAt) return false;
   const timestamp = new Date(activityAt).getTime();
-  return Number.isFinite(timestamp) && Date.now() - timestamp <= ACTIVE_RUN_MAX_AGE_MS;
+  return Number.isFinite(timestamp) && Date.now() - timestamp <= activeRunMaxAge(run);
 }
 
 function isResumablePause(run?: SyncRun | null) {
@@ -122,8 +133,48 @@ async function latestRun(
     .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) return null;
+  if (error) {
+    return {
+      started_at: null,
+      finished_at: null,
+      status: "failed",
+      error_message: `Falha ao consultar ${table}: ${error.message}`
+    };
+  }
   return (data as SyncRun | null) ?? null;
+}
+
+async function latestBackfillActivity(supabase: ReturnType<typeof createSupabaseAdminClient>) {
+  const run = await latestRun(
+    supabase,
+    "olist_order_items_backfill_runs",
+    "started_at, finished_at, status, window_start, window_end, candidates_total, orders_processed, orders_with_error, items_upserted, error_message, metadata"
+  );
+  if (!run?.window_start || !run.window_end) return run;
+
+  const { count: pending, error } = await supabase
+    .from("olist_order_item_backfill_queue")
+    .select("id", { count: "exact", head: true })
+    .eq("window_start", run.window_start)
+    .eq("window_end", run.window_end)
+    .eq("status", "pending")
+    .is("processed_at", null);
+
+  if (error) {
+    return {
+      ...run,
+      status: "failed",
+      error_message: `Falha ao medir a fila do backfill: ${error.message}`
+    };
+  }
+
+  const queueDetail = pending === 0
+    ? "Fila concluída."
+    : `Fila pendente: ${count(pending)} pedido(s); retomada automática no próximo ciclo.`;
+  return {
+    ...run,
+    error_message: [run.error_message, queueDetail].filter(Boolean).join(" · ")
+  };
 }
 
 async function latestStockActivity(supabase: ReturnType<typeof createSupabaseAdminClient>) {
@@ -139,6 +190,15 @@ async function latestStockActivity(supabase: ReturnType<typeof createSupabaseAdm
       .eq("id", 1)
       .maybeSingle()
   ]);
+
+  if (stateResult.error) {
+    return {
+      started_at: null,
+      finished_at: null,
+      status: "failed",
+      error_message: `Falha ao consultar o cursor de estoque: ${stateResult.error.message}`
+    } satisfies SyncRun;
+  }
 
   const state = stateResult.data as {
     batch_id: string | null;
@@ -181,7 +241,14 @@ async function latestRunBySource(
     .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) return null;
+  if (error) {
+    return {
+      started_at: null,
+      finished_at: null,
+      status: "failed",
+      error_message: `Falha ao consultar ${table}: ${error.message}`
+    };
+  }
   return (data as SyncRun | null) ?? null;
 }
 
@@ -198,7 +265,15 @@ async function latestShopRunsBySource(
     .like("source", `${sourcePrefix}:%`)
     .order("started_at", { ascending: false })
     .limit(40);
-  if (error || !data?.length) return null;
+  if (error) {
+    return {
+      started_at: null,
+      finished_at: null,
+      status: "failed",
+      error_message: `Falha ao consultar shopee_sync_runs: ${error.message}`
+    };
+  }
+  if (!data?.length) return null;
   const latestBySource = new Map<string, SyncRun>();
   for (const row of data as SyncRun[]) {
     const source = String(row.source ?? "");
@@ -244,7 +319,14 @@ async function latestReturnsRunML(supabase: ReturnType<typeof createSupabaseAdmi
     .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) return null;
+  if (error) {
+    return {
+      started_at: null,
+      finished_at: null,
+      status: "failed",
+      error_message: `Falha ao consultar devoluções do Mercado Livre: ${error.message}`
+    };
+  }
   return (data as SyncRun | null) ?? null;
 }
 
@@ -257,7 +339,11 @@ async function latestCacheDay(supabase: ReturnType<typeof createSupabaseAdminCli
     .order("day", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error || !data) return null;
+  if (error) {
+    return { started_at: null, finished_at: null, status: "failed",
+      error_message: `Falha ao consultar o cache de devoluções: ${error.message}` } as SyncRun;
+  }
+  if (!data) return null;
   const row = data as { day: string; rows_upserted: number; refreshed_at: string };
   return {
     started_at: row.refreshed_at,
@@ -279,7 +365,11 @@ async function latestQtyCacheRun(supabase: ReturnType<typeof createSupabaseAdmin
     .order("order_date", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error || !data) return null;
+  if (error) {
+    return { started_at: null, finished_at: null, status: "failed",
+      error_message: `Falha ao consultar o cache de quantidade: ${error.message}` } as SyncRun;
+  }
+  if (!data) return null;
   const row = data as { order_date: string; refreshed_at: string };
   return {
     started_at: row.refreshed_at,
@@ -293,7 +383,11 @@ async function latestQtyCacheRun(supabase: ReturnType<typeof createSupabaseAdmin
 async function latestCommercialRun(supabase: ReturnType<typeof createSupabaseAdminClient>) {
   const { data, error } = await supabase.from("oraculo_commercial_days")
     .select("day, refreshed_at").order("day", { ascending: false }).limit(1).maybeSingle();
-  if (error || !data) return null;
+  if (error) {
+    return { started_at: null, finished_at: null, status: "failed",
+      error_message: `Falha ao consultar a Análise Comercial: ${error.message}` } as SyncRun;
+  }
+  if (!data) return null;
   const stale = data.day !== todayBrt() || Date.now() - Date.parse(data.refreshed_at) > 2 * 60 * 60 * 1000;
   return { started_at: data.refreshed_at, finished_at: data.refreshed_at,
     status: stale ? "partial" : "success", error_message: stale ? "Resumo diário atrasado" : null } as SyncRun;
@@ -302,7 +396,7 @@ async function latestCommercialRun(supabase: ReturnType<typeof createSupabaseAdm
 // Cache curto (60s): é página de monitoramento, mas as rotinas rodam em
 // escala de minutos/horas — 60s de defasagem não muda nenhum selo, e evita
 // refazer as queries a cada F5 do operador.
-const loadStatus = unstable_cache(loadStatusUncached, ["status-panel"], {
+const loadStatusCached = unstable_cache(loadStatusUncached, ["status-panel"], {
   revalidate: 60
 });
 
@@ -330,13 +424,38 @@ async function loadDataWatermarks(supabase: ReturnType<typeof createSupabaseAdmi
   };
 }
 
-async function loadStatusUncached() {
-  const supabase = createSupabaseAdminClient();
+async function loadStatus() { return loadStatusCached(await getRequestOperation()); }
+
+// Saúde de Ads considera a coleta completa de cada loja, nunca um sucesso isolado do n8n.
+async function latestAdsRun(supabase: ReturnType<typeof createSupabaseAdminClient>): Promise<SyncRun | null> {
+  const { data: shops, error: shopError } = await supabase.from("shopee_shops").select("shop_id,shop_name").eq("is_active", true);
+  if (shopError) return { status: "failed", error_message: "Falha ao consultar lojas Ads", started_at: null, finished_at: null };
+  if (!shops?.length) return null;
+  const runs = await Promise.all(shops.map(async shop => {
+    const { data, error } = await supabase.from("shopee_ads_collection_runs")
+      .select("started_at,finished_at,status,error_message,daily_rows_upserted")
+      .eq("shop_id", shop.shop_id).eq("meta->>scope", "all")
+      .order("started_at", { ascending: false }).limit(1).maybeSingle();
+    return { shop, data, error };
+  }));
+  const stale = runs.filter(r => r.error || !r.data || r.data.status !== "success" || !r.data.finished_at || Date.now()-Date.parse(r.data.finished_at)>30*3600000);
+  const dates = runs.map(r=>r.data?.finished_at).filter((d): d is string=>Boolean(d)).sort();
+  return {
+    started_at: runs.map(r=>r.data?.started_at).filter((d): d is string=>Boolean(d)).sort()[0] ?? null,
+    finished_at: dates[0] ?? null,
+    status: stale.length ? "failed" : "success",
+    records_upserted: runs.reduce((sum,r)=>sum+Number(r.data?.daily_rows_upserted ?? 0),0),
+    error_message: stale.length ? `Ads pendente ou com falha: ${stale.map(r=>r.shop.shop_name).join(", ")}` : null
+  };
+}
+
+async function loadStatusUncached(operation: OperationId) {
+  const supabase = createSupabaseAdminClient({ operation });
 
   const [
     tokenResult, ordersRun, stockRun, invoicesRun, backfillRun, mercadolivreRun,
     importacoesAisRun, shopeeReturnsRun, shopeeReconciliationRun, mercadolivreReturnsRun, returnsCacheRun,
-    bipFulfillmentRun, qtyCacheRun, fullPlannerRun, watermarks, commercialRun
+    bipFulfillmentRun, qtyCacheRun, fullInboundRun, fullInboundQueue, watermarks, commercialRun, adsRun
   ] = await Promise.all([
     supabase
       .from("olist_oauth_tokens")
@@ -349,7 +468,7 @@ async function loadStatusUncached() {
     latestRun(supabase, "olist_order_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message, metadata"),
     latestStockActivity(supabase),
     latestRun(supabase, "olist_invoice_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, items_upserted, error_message, metadata"),
-    latestRun(supabase, "olist_order_items_backfill_runs", "started_at, finished_at, status, orders_processed, orders_with_error, items_upserted, error_message"),
+    latestBackfillActivity(supabase),
     latestRun(supabase, "mercadolivre_sync_runs", "started_at, finished_at, status, items_count, orders_count, error_message"),
     latestRun(supabase, "importacao_ais_sync_runs", "started_at, finished_at, status, vessels_targeted, positions_updated, error_message"),
     latestRunBySource(supabase, "shopee_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message", "shopee-returns-sync"),
@@ -358,9 +477,11 @@ async function loadStatusUncached() {
     latestCacheDay(supabase),
     latestRun(supabase, "bip_fulfillment_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message"),
     latestQtyCacheRun(supabase),
-    latestRun(supabase, "oraculo_full_planning_runs", "started_at, finished_at, status, records_upserted:suggestions_written, error_message, metadata"),
+    latestRun(supabase, "oraculo_full_sync_runs", "started_at, finished_at, status, records_checked:records_checked, records_upserted:events_written, error_message, metadata"),
+    supabase.from("oraculo_fulls").select("id", { count: "exact", head: true }).eq("workflow_status", "monitorando"),
     loadDataWatermarks(supabase),
-    latestCommercialRun(supabase)
+    latestCommercialRun(supabase),
+    operation === "uberlandia" ? latestAdsRun(supabase) : Promise.resolve(null)
   ]);
 
   const token = (tokenResult.data as TokenRow | null) ?? null;
@@ -381,6 +502,10 @@ async function loadStatusUncached() {
     runFailed(ordersRun) ? `Sync de pedidos falhou: ${ordersRun?.error_message ?? "sem mensagem"}` : "",
     runFailed(stockRun) ? `Sync de estoque falhou: ${stockRun?.error_message ?? "sem mensagem"}` : "",
     runFailed(invoicesRun) ? `Sync de notas falhou: ${invoicesRun?.error_message ?? "sem mensagem"}` : "",
+    runFailed(backfillRun) ? `Backfill de itens falhou: ${backfillRun?.error_message ?? "sem mensagem"}` : "",
+    backfillRun?.status === "partial" && Number(backfillRun.orders_with_error ?? 0) > 0
+      ? `Backfill de itens parcial: ${count(backfillRun.orders_with_error)} pedido(s) com erro.`
+      : "",
     runFailed(mercadolivreRun)
       ? `Sync Mercado Livre falhou: ${mercadolivreRun?.error_message ?? "sem mensagem"}`
       : "",
@@ -395,6 +520,7 @@ async function loadStatusUncached() {
     brtDate(mercadolivreRun?.started_at) !== today
       ? "Sync do Mercado Livre ainda não rodou hoje."
       : "",
+    runFailed(adsRun) ? adsRun?.error_message ?? "Coleta Ads pendente" : "",
     runFailed(shopeeReturnsRun) ? `Devoluções Shopee falharam: ${shopeeReturnsRun?.error_message ?? "sem mensagem"}` : "",
     runFailed(shopeeReconciliationRun)
       ? `Reconciliação Shopee falhou: ${shopeeReconciliationRun?.error_message ?? "sem mensagem"}`
@@ -417,12 +543,11 @@ async function loadStatusUncached() {
     !commercialRun || commercialRun.status !== "success"
       ? "Análise Comercial: resumo diário ausente ou atrasado há mais de 2 horas."
       : "",
-    runFailed(fullPlannerRun)
-      ? `Planejamento Full da Agenda falhou: ${fullPlannerRun?.error_message ?? "sem mensagem"}`
+    fullInboundQueue.error ? `Fluxo Full: falha ao medir fila: ${fullInboundQueue.error.message}` : "",
+    Number(fullInboundQueue.count ?? 0) > 0 && !fullInboundRun
+      ? `Fluxo Full tem ${count(fullInboundQueue.count)} remessa(s) aguardando integração sem execução registrada.`
       : "",
-    olderThan(fullPlannerRun, 2 * 24 * 60 * 60 * 1000)
-      ? "Planejamento Full da Agenda não foi recalculado nos últimos 2 dias."
-      : ""
+    runFailed(fullInboundRun) ? `Monitoramento Full falhou: ${fullInboundRun?.error_message ?? "sem mensagem"}` : ""
   ].filter(Boolean);
 
   return {
@@ -440,7 +565,7 @@ async function loadStatusUncached() {
         key: "orders",
         label: "Pedidos",
         run: ordersRun,
-        coverage: "Pedidos Olist alterados numa janela móvel de ~3 dias; a varredura completa leva horas, então o dia corrente entra com atraso"
+        coverage: "500 pedidos mais recentes da janela móvel de ~3 dias, a cada 15 min; cada ciclo reinicia no topo para priorizar alterações novas"
       },
       {
         key: "stock",
@@ -458,7 +583,7 @@ async function loadStatusUncached() {
         key: "backfill",
         label: "Backfill de itens",
         run: backfillRun,
-        coverage: "Completa itens de pedidos antigos; roda só de madrugada"
+        coverage: "Completa itens de pedidos antigos em lotes retomáveis; o detalhe mostra a fila ainda pendente"
       },
       {
         key: "mercadolivre",
@@ -471,6 +596,12 @@ async function loadStatusUncached() {
         label: "Importações (AIS)",
         run: importacoesAisRun,
         coverage: "Posição dos navios a cada 6 h; só há sinal perto da costa — navio em alto-mar sem posição é normal"
+      },
+      {
+        key: "shopee-ads",
+        label: "Shopee Ads diário",
+        run: adsRun,
+        coverage: "Todas as campanhas das 4 lojas, 07:15–07:30 e 10:15–10:30 BRT; revisa 30 dias encerrados"
       },
       {
         key: "shopee-returns",
@@ -515,10 +646,10 @@ async function loadStatusUncached() {
         coverage: "Recalcula últimos 10 dias de hora em hora (:42) e revisa histórico em lotes de 7 dias"
       },
       {
-        key: "agenda-full-planner",
-        label: "Agenda · coletas Full",
-        run: fullPlannerRun,
-        coverage: "Próxima coleta semanal de cada loja ativa; cobertura de 20 dias, recalculada diariamente às 07:05 BRT"
+        key: "full-inbound",
+        label: "Full · coleta e recebimento",
+        run: fullInboundRun,
+        coverage: `${count(fullInboundQueue.count)} remessa(s) aguardando atualização; conectores entram em produção um canal por vez após validação real`
       }
     ]
   };
@@ -536,6 +667,9 @@ function runBadge(run: SyncRun | null) {
 
 function runMessage(run: SyncRun | null) {
   if (isResumablePause(run)) return "Pausa controlada; retomada automática no próximo ciclo.";
+  if (run?.status === "success" && run.metadata?.stop_reason === "bounded_top_scan") {
+    return "Lote configurado concluído; o próximo ciclo volta aos pedidos mais recentes.";
+  }
   return run?.error_message ?? "—";
 }
 
@@ -621,7 +755,7 @@ export default async function StatusPage() {
                 <th>Início</th>
                 <th>Fim / atividade</th>
                 <th className="numeric">Registros</th>
-                <th>Erro</th>
+                <th>Detalhe</th>
               </tr>
             </thead>
             <tbody>

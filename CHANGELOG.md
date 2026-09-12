@@ -2,7 +2,7 @@
 
 Histórico de entregas e mudanças significativas.
 
-## [2026-09-12] — Carga Olist concluída e token Shopee renovado
+## [2026-09-12] — Giracasa: Carga Olist concluída e token Shopee renovado
 
 - O coordenador Supabase concluiu os 40 dias Olist/Tiny, de 30/07 a 07/09, em
   três blocos, sem falhas ou problemas de itens. Os jobs temporários se
@@ -15,6 +15,30 @@ Histórico de entregas e mudanças significativas.
 - Giracasa permanece desativada, com zero usuários e apenas o cron de renovação
   ativo. A validação financeira dos 40 dias e a carga histórica Shopee são os
   próximos gates.
+
+## [2026-09-11] — Shopee Ads no Comercial
+
+- Nova aba `/ads`: investimento × ROAS, receita/pedidos diretos, filtros de loja
+  e período, análise diária e ranking ordenável de campanhas.
+- Coleta diária de todas as campanhas das quatro lojas, incluindo pausadas;
+  revisão de 30 dias e cobertura explícita. Relatório n8n permanece independente.
+- RPC autenticada com isolamento por operação, monitoramento por loja em
+  `/status`, explicações das métricas e testes de cálculo/classificação.
+- Contrato: `docs/shopee-ads-dashboard.md`.
+
+## [2026-09-11] — Home e Pedidos alinhados à fonte Olist
+
+- A decisão de 13/07 (Olist = verdade da receita; Shopee direta = auxiliar) e
+  a restrição de 23/08 em `/skus` não tinham chegado a dois pontos: a tabela
+  **SKUs por receita coberta** da home (view `oraculo_sku_current_unified` sem
+  filtro) e a página `/pedidos` (seletor de fonte com padrão "Todas"). O mesmo
+  produto aparecia duas vezes com SKU/nome diferentes e cada loja Shopee
+  aparecia duplicada em **Pedidos por loja**.
+- Home: ranking de SKUs e watchlist de estoque passam a consultar só
+  `source = 'olist'`.
+- `/pedidos`: seletor de fonte removido; consulta fixa em `source = 'olist'`,
+  "na base" conta apenas `olist_orders` e os cards por fonte (Olist/Shopee)
+  saem por serem redundantes. URLs antigas com `source=` são ignoradas.
 
 ## [2026-09-11] — OAuth Shopee preparado para a Giracasa
 
@@ -43,6 +67,12 @@ Histórico de entregas e mudanças significativas.
 - A renovação forçada respondeu HTTP 200 e estendeu o access token por quatro
   horas. O relay n8n continua sem acesso a Partner Key ou tokens.
 
+## [2026-09-10] — Taxas TikTok na calculadora
+
+- Corrigido o preset que zerava a tarifa fixa acima de R$ 78,99: agora usa 10% + R$ 4 abaixo de R$ 50 e 6% + R$ 6 a partir de R$ 50, conforme tabela oficial vigente desde 15/07/2026.
+- Nota da calculadora inclui a base após desconto do vendedor e link da fonte oficial.
+- Correção restrita à simulação de precificação; motor fiscal e dados de vendas não alterados.
+
 ## [2026-09-10] — Carga Giracasa acelerada no Supabase
 
 - A carga de 40 dias continua remota e retomável, sem processo rodando na
@@ -56,6 +86,91 @@ Histórico de entregas e mudanças significativas.
 - A primeira chamada acelerada respondeu HTTP 200 e avançou o cursor do segundo
   bloco de 800 para 1.000 notas, sem falhas.
 - Giracasa permanece desativada e sem usuários durante a carga e validação.
+
+## [2026-09-09] — Separação no Oráculo
+
+- Nova tela `Logística → Separação` com alerta vermelho/amarelo/verde,
+  recuperação manual, histórico, solicitante, auditoria de impressão, A4 e CSV.
+- Períodos personalizados de até sete dias usam o mesmo worker assíncrono sem
+  alterar o cursor oficial nem enviar WhatsApp.
+- Listas e itens passam a ser persistidos antes do envio; o cursor oficial
+  avança somente quando o documento está pronto e pedidos sem itens bloqueiam a
+  publicação.
+- RLS exige operação Uberlândia + aba Logística; RPCs service-role fazem claim,
+  finalização transacional e registro de falha.
+- A hidratação Olist trata `payload.itens = []` como incompleto e o workflow n8n
+  ganha webhook protegido para o botão do Oráculo.
+- Migration aplicada, Edge Function Olist republicada, cursor legado importado,
+  workflow n8n atualizado/ativo e frontend publicado nos dois remotes.
+
+## [2026-09-09] — Aprovador selecionável e fluxo manual do Full
+
+- O criador agora escolhe o aprovador em cada Full e pode alterá-lo por nova
+  revisão, sem confundi-lo com o responsável logístico.
+- A proposta de coleta cria a tarefa da Agenda para o aprovador escolhido, que
+  aceita a data ou solicita outra; criador e logística mantêm suas funções.
+- O gate dos conectores deixou de bloquear o envio à logística: catálogo ativo
+  libera o processo humano, enquanto coleta e recebimento automáticos seguem em
+  observação até a validação real de cada canal.
+
+## [2026-09-09] — Hotfix do travamento após o deploy do Full
+
+- Corrigido o ciclo do `MutationObserver` global de ajuda de colunas: ele
+  regravava o mesmo `textContent`, observava a própria alteração e mantinha a
+  thread principal do navegador ocupada indefinidamente em páginas com tabela.
+- A atualização do texto acessível agora só altera o DOM quando o conteúdo
+  realmente mudou; o comportamento dos tooltips e a acessibilidade permanecem.
+- Página inicial multioperação validada no navegador com dados e tabela
+  renderizados, além de 70 testes, TypeScript e build de produção aprovados.
+
+## [2026-09-09] — Full publicado e multioperação restaurada
+
+- O fluxo operacional de Full/FBS/Onsite foi publicado nos dois `main` pelo
+  commit `e809d58` e entrou em produção no deployment Vercel
+  `dpl_HNmNea5R9Z5rKNLNbcRc86e8tRBP`.
+- A arquitetura multioperação voltou à interface com os hotfixes de autorização
+  preservados; Giracasa continua desativada, vazia e sem credenciais ou crons.
+- Os três canais seguem com monitoramento automático bloqueado até validação de
+  remessa real; o conector externo permanece sem publicação e sem cron.
+
+## [2026-09-08] — Fluxo operacional de Full/FBS/Onsite
+
+- Nova aba `/full`, em Operações, com criação manual por marketplace, loja,
+  anúncio/variação, produto físico Olist e quantidade.
+- Revisões transacionais e congeladas preservam fotografia comercial, expansão
+  de kits, produção anterior, aprovações e linha do tempo append-only.
+- Agenda virou camada idempotente de prazos do Full; o planejador semanal foi
+  desativado e as sugestões pendentes legadas são encerradas com histórico.
+- Um guard no banco mantém as configurações legadas desligadas e torna inerte a
+  antiga chamada manual enquanto o frontend estável ainda exibe esse cartão.
+- RLS por participante e `full_manager` por operação; documentos em bucket
+  privado com download temporário autorizado.
+- Contrato único de monitoramento externo e saúde em `/status`; todos os canais
+  começam bloqueados até uma remessa real validar coleta e recebimento.
+- Arquitetura e rollout: `docs/full-workflow.md` e
+  `docs/adr/ADR-007-full-inbound-workflow.md`.
+
+## [2026-09-08] — Posição vendável completa da Shopee
+
+- `Shopee → Estoque & FBS` passa a listar todos os SKUs × armazém do SBS com
+  vendável FBS, reservado, não vendável, trânsito e vendável total do anúncio.
+- A tela e a exportação deixam de omitir a quantidade vendável nas rupturas;
+  o `.xlsx` ganha a aba `Posição FBS` com o retrato completo.
+- Corrigida a nomenclatura do saldo do anúncio: `total_available_stock` é o
+  vendável total em todas as localizações, já líquido de reservas, e não um
+  estoque exclusivamente local.
+
+## [2026-09-08] — Status fiel dos syncs e retomada do backfill Olist
+
+- `/status` passa a mostrar detalhe operacional e fila pendente, respeita o
+  heartbeat específico de cada rotina e expõe falhas de consulta do monitor.
+- O ciclo de pedidos mais recentes fecha como `success` após cumprir o lote de
+  500; 689 runs antigos deixaram de aparecer falsamente como ativos.
+- O backfill fecha execuções interrompidas, impede sobreposição, usa timeouts
+  HTTP e continua após erro individual; o primeiro lote corrigido avançou
+  100 pedidos (99 concluídos, 1 erro isolado).
+- Migration `20260908120216_fix_sync_run_statuses.sql` saneia o histórico de
+  pedidos e as 13.588 execuções fantasmas do backfill.
 
 ## [2026-09-08] — Retomada progressiva da Giracasa
 
@@ -97,6 +212,19 @@ Histórico de entregas e mudanças significativas.
 - Login, seletor e rotas multioperação ficam para depois da validação de dados e
   cálculos, conforme `docs/adr/ADR-007-giracasa-progressive-rollout.md`.
 
+## [2026-09-04] — Explicações em todas as colunas
+
+- Todos os cabeçalhos das tabelas exibem um marcador `?` com explicação em
+  hover, foco por teclado e toque.
+- O glossário central preserva descrições precisas de métricas como margem,
+  cobertura, custo, previsão e reconciliação, e acrescenta contexto específico
+  para as demais telas.
+- `SortableTable` e a tabela própria de SKUs já renderizam as ajudas; um
+  reforço global cobre tabelas legadas e futuros cabeçalhos `data-table`.
+- Inventário automatizado confirmou descrição específica para todos os
+  cabeçalhos literais existentes no frontend.
+
+
 ## [2026-09-04] — Análise Comercial diária e por intervalo
 
 - Nova aba no setor Comercial com datas inclusivas, atalhos de período, loja,
@@ -108,6 +236,18 @@ Histórico de entregas e mudanças significativas.
 - Documentação: `docs/analise-comercial.md` e `docs/project-status-2026-09-04.md`.
 - Publicada no commit `96ad31c`, Vercel `dpl_EaNG4CybVy9KZbY2kUsNKNMgnAbC`
   (`Ready`), nos dois remotes; histórico de 01/06 a 04/09 carregado.
+
+## [2026-09-02] — Recuperação da separação multicanal das 13h30
+
+- A execução agendada das 13:30 foi interrompida com segurança porque 1.126
+  pedidos Olist chegaram ao cursor operacional com `itens: []`; nenhuma
+  mensagem incompleta foi enviada e o cursor permaneceu na posição das 07:00.
+- A hidratação de detalhes passou a considerar arrays de itens vazios como
+  pendentes e ganhou atraso configurável, mais tentativas e respeito ao
+  `Retry-After` para reduzir falhas por limite da API Olist.
+- Após a hidratação, a recuperação processou 3.534 pedidos sem lacunas, enviou
+  a mensagem e o CSV pelo WhatsApp e avançou o cursor para
+  `2026-09-02T18:20:33.276Z` na execução n8n `41522`.
 
 ## [2026-09-02] — Custo cadastrado no Produto 360
 
@@ -175,8 +315,8 @@ Histórico de entregas e mudanças significativas.
 - Pedidos de todos os marketplaces integrados à Olist passam a alimentar o
   fechamento operacional das 07:00 e 13:30 no n8n.
 - A RPC `olist_multichannel_separation_report` consolida somente pedidos novos
-  pelo cursor `first_seen_at`, exclui cancelados e soma SKU + produto +
-  descritivo iguais entre canais sem expor dados pessoais.
+  pelo cursor `first_seen_at`, exclui cancelados e entrega os itens sem expor
+  dados pessoais; a saída operacional soma todas as ocorrências do mesmo SKU.
 - O sincronismo de pedidos passou a consultar os mais recentes primeiro a cada
   15 minutos, evitando que pedidos novos aguardem atrás do backfill retomável.
 - A automação multicanal foi ativada após prévia integral; a rotina legada que
@@ -184,6 +324,9 @@ Histórico de entregas e mudanças significativas.
 - A cubagem reaproveita os vínculos SKU Olist ↔ perfil existentes e reconhece
   com segurança os perfis cadastrados de potes marmita e bambu; variações sem
   capacidade conhecida permanecem explicitamente marcadas como sem cubagem.
+- A lista final mantém uma linha por SKU, exibe somente SKU, produto,
+  descritivo, itens vendidos, caixas e unidades avulsas, remove resultados
+  abaixo de duas caixas e ordena da maior para a menor quantidade de caixas.
 
 ## [2026-09-01] — Inteligência de Mercado e conferência de custos
 
@@ -2130,3 +2273,20 @@ Validação: teste de paridade extraiu o `calculate()` do app.js original e comp
 - O código web voltou ao estado do commit `69f73f2`; as rotas originais voltaram a ser a entrada oficial.
 - Migrations, scripts, testes e documentação da Giracasa foram preservados, enquanto a operação continua desativada, sem usuários, credenciais, jobs ou carga.
 - Smoke test autenticado confirmou `/` e `/skus` com HTTP 200 e conteúdo renderizado.
+
+## 2026-09-04 — Fundação multioperação e Giracasa
+
+- URLs e menu passaram a carregar a operação ativa; usuários podem receber abas independentes em Uberlândia e Giracasa.
+- Dados e funções da Giracasa ganharam namespace, RLS e guards próprios, sem fallback para a base de MG; permissões antigas migram só para Uberlândia.
+- Motor fiscal `gira-casa-v1`, regras financeiras por SKU/vigência, teste de isolamento, geração segura dos conectores e carga inicial de 90 dias adicionados.
+- Giracasa permanece desativada até credenciais, carga e números serem validados.
+
+## 2026-09-05 — Giracasa isolada em produção
+
+- Aplicadas as migrations de isolamento e do motor financeiro `gira-casa-v1`; o schema paulista nasceu vazio e a base de Uberlândia permaneceu disponível.
+- Publicadas 26 Edge Functions `giracasa-*`, todas usando o schema próprio e secrets prefixados, sem fallback para contas de MG.
+- Corrigido o contrato JavaScript para nunca cobrar DIFAL em SP→SP e adicionada validação explícita da operação em ações e exportações.
+- Corrigida a lentidão pós-login causada pela checagem de operação repetida por linha nas policies RLS; a autorização agora é avaliada uma vez por consulta.
+- Eliminada a espera indefinida na validação pós-login: a sessão passou a ser validada pelo PostgREST com leitura atual de `auth.users` e timeout de 8 s.
+- Desativado o prefetch das abas do menu, que disparava páginas dinâmicas e consultas pesadas em paralelo após o login.
+- Giracasa permanece desativada, sem usuários e sem crons até cadastrar credenciais próprias, importar 90 dias e validar a cobertura.

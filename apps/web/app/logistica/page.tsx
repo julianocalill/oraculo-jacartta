@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { OperationLink as Link } from "../components/operation-provider";
 import { requireTabAccess } from "../../lib/auth/access";
 import { NoAccess } from "../components/no-access";
 import { AppShell } from "../components/app-shell";
@@ -134,6 +134,10 @@ export default async function LogisticaPage() {
               <Link href="/logistica/estoque">Estoque por depósito</Link> — saldo do ERP quebrado por
               depósito, sinal de ruptura e capital a custo. {count(data.totals.semCusto)} produtos com
               estoque ainda sem custo resolvido.
+            </p>
+            <p>
+              <Link href="/logistica/separacao">Lista de separação</Link> — fechamentos multicanal
+              prontos para imprimir, histórico e geração de períodos personalizados.
             </p>
             <p>
               <Link href="/logistica/etiqueta">Etiqueta de palete</Link> — gera a etiqueta A4 horizontal

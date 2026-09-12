@@ -33,7 +33,12 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-12.md](docs/project-status-2026-09-12.md) **← start here** (carga Olist concluída; Shopee conectada e token renovando)
+1. [docs/project-status-2026-09-11.md](docs/project-status-2026-09-11.md) **← start here** (Shopee Ads no Comercial)
+   — [docs/project-status-2026-09-10.md](docs/project-status-2026-09-10.md) (Correção das taxas TikTok na calculadora)
+   — [docs/project-status-2026-09-09.md](docs/project-status-2026-09-09.md) (Separação operacional em produção)
+   — [docs/project-status-2026-09-08.md](docs/project-status-2026-09-08.md) (implementação do Full e status dos syncs)
+   — [docs/project-status-2026-09-05.md](docs/project-status-2026-09-05.md) (Giracasa isolada em produção; aguardando credenciais e carga)
+   — **Giracasa (operação isolada, em preparação):** [docs/project-status-2026-09-12-giracasa.md](docs/project-status-2026-09-12-giracasa.md) (carga Olist concluída; Shopee conectada e token renovando)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
    — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every card/column/config field across the whole system — analytics, alerts, calculator, imports, params, sync status — exact formula, PT-BR, for team walkthroughs)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
@@ -48,7 +53,7 @@ oraculo/
 12. [CHANGELOG.md](CHANGELOG.md) (full history)
 13. [vault/00-home/index.md](vault/00-home/index.md)
 
-Earlier snapshots (historical, superseded): [docs/project-status-2026-09-11.md](docs/project-status-2026-09-11.md), [docs/project-status-2026-09-01.md](docs/project-status-2026-09-01.md), [docs/project-status-2026-08-28.md](docs/project-status-2026-08-28.md), [docs/project-status-2026-08-24.md](docs/project-status-2026-08-24.md), [docs/project-status-2026-08-19.md](docs/project-status-2026-08-19.md), [docs/project-status-2026-08-17.md](docs/project-status-2026-08-17.md), [docs/project-status-2026-08-13.md](docs/project-status-2026-08-13.md), [docs/project-status-2026-08-12.md](docs/project-status-2026-08-12.md), [docs/project-status-2026-08-10.md](docs/project-status-2026-08-10.md), [docs/project-status-2026-07-17.md](docs/project-status-2026-07-17.md), [docs/project-status-2026-07-16.md](docs/project-status-2026-07-16.md), [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md), [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
+Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](docs/project-status-2026-09-04.md), [docs/project-status-2026-09-01.md](docs/project-status-2026-09-01.md), [docs/project-status-2026-08-28.md](docs/project-status-2026-08-28.md), [docs/project-status-2026-08-24.md](docs/project-status-2026-08-24.md), [docs/project-status-2026-08-19.md](docs/project-status-2026-08-19.md), [docs/project-status-2026-08-17.md](docs/project-status-2026-08-17.md), [docs/project-status-2026-08-13.md](docs/project-status-2026-08-13.md), [docs/project-status-2026-08-12.md](docs/project-status-2026-08-12.md), [docs/project-status-2026-08-10.md](docs/project-status-2026-08-10.md), [docs/project-status-2026-07-17.md](docs/project-status-2026-07-17.md), [docs/project-status-2026-07-16.md](docs/project-status-2026-07-16.md), [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md), [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
 
 ## Tooling choices
 
@@ -59,20 +64,38 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-11.md](
 
 ## Current production state
 
-**Last update**: `2026-09-12` (see `docs/project-status-2026-09-12.md`) —
-Oráculo de Uberlândia preservado no deploy estável anterior à interface
-multioperação. A Giracasa segue desativada e sem usuários. A carga Olist de 40
-dias terminou no Supabase sem falhas e os jobs temporários se removeram. O OAuth
-Olist foi validado e o canário de 07/09 fechou em 771 pedidos, 687 NFs válidas e
-R$ 44.042,64. O catálogo isolado possui 1.068 produtos; a carga de 40 dias
-fechou com 25.899 pedidos e 23.189 notas, sem depender de máquina local. O
-callback Shopee isolado e o relay 302 no domínio n8n aprovado foram
-validados; a loja `984950642` foi autorizada e um canário direto gravou 87
-pedidos e 87 pacotes no schema Giracasa. O renovador exclusivo do token foi
-validado; o Supabase verifica a cada hora e mantém uma tentativa de recuperação
-antes do vencimento. O único job Giracasa ativo é essa renovação; ingestões
-recorrentes continuam desligadas. As tarifas próprias de
-TikTok/ML são os próximos gates. Estado funcional anterior:
+> **Giracasa/SP não está em produção.** A operação é isolada (schema `giracasa`,
+> credenciais `GIRACASA_*` sem fallback) e segue `enabled=false`, sem usuários e fora
+> do frontend. Carga Olist de 40 dias concluída (25.899 pedidos, 23.189 notas) e token
+> Shopee renovando sozinho; o único job ativo é `giracasa-shopee-token-refresh`.
+> Gates pendentes em [docs/project-status-2026-09-12-giracasa.md](docs/project-status-2026-09-12-giracasa.md).
+
+Shopee Ads publicado em produção em 11/09/2026: [status de 11/09](docs/project-status-2026-09-11.md), com gasto × ROAS e análise diária.
+
+Correção de taxas TikTok publicada em 11/09/2026: [status](docs/project-status-2026-09-10.md).
+
+**Last update**: `2026-09-09` (see `docs/project-status-2026-09-09.md`) —
+`Logística → Separação` com alerta do fechamento esperado, atualização manual,
+histórico, auditoria, impressão A4, CSV e períodos personalizados. A lista
+congelada agora é a fonte do Oráculo e do envio agendado por WhatsApp; o cursor
+durável avança somente depois da persistência. Ver
+`docs/logistica-separacao.md`. Estado anterior de `2026-09-08`:
+novo módulo **Full/FBS/Onsite** em `/full`, com remessa manual rastreável,
+revisões congeladas, produção física, aprovações pela Agenda, anexos privados e
+aprovador escolhido pelo criador. O fluxo humano até o agendamento está
+liberado e o monitoramento externo segue bloqueado por canal até validação real; o planejador
+semanal legado foi desativado. A interface multioperação voltou ao `main` com os
+hotfixes de autorização preservados; um ciclo de `MutationObserver` introduzido
+na restauração foi corrigido para não travar páginas com tabelas. A Giracasa permanece desativada,
+sem credenciais, usuários, crons ou carga. Também,
+Shopee → Estoque & FBS agora abre a posição completa por SKU × armazém e
+distingue vendável FBS, reservado, não vendável, trânsito e vendável total do
+anúncio; a nomenclatura antiga de "estoque local" foi corrigida porque o campo
+da API reúne todas as localizações e já desconta reservas. Além disso,
+os status de pedidos e backfill Olist agora representam ciclos reais: lotes de
+pedidos encerram como sucesso, runs interrompidos deixam de parecer ativos e o
+backfill voltou a avançar com heartbeat, timeout e isolamento por pedido.
+Estado funcional anterior:
 Análise Comercial por dia/período em produção, com backend agregado, cron
 horário, ranking por quantidade e margem no período. Contrato: `docs/analise-comercial.md`.
 Estado anterior em produção:
@@ -83,8 +106,8 @@ the **post-login Novidades pop-up** communicates each release for 48 hours,
 with a per-update "do not show again" option; the **Inteligência de Mercado**
 four-block experience and its cost double-check inside **Parâmetros** are in
 production, alongside —
-**Agenda Full recorrente** (Shopee FBS por loja, Mercado Livre Full e Amazon
-Onsite; coleta semanal configurável, checklist por SKU e cobertura de 20 dias),
+**Agenda Full recorrente legada desativada** (histórico preservado; novos marcos
+nascem exclusivamente de remessas reais criadas no módulo `/full`),
 **Reconciliação financeira Shopee** (nova aba com pedido, NF, líquido previsto,
 crédito efetivo da carteira, pendências e previsão; carga inicial de agosto e
 cron semanal retomável por loja), **Expedição reconciliada com vendas pagas** (pedidos/unidades pela data do
@@ -105,8 +128,8 @@ três marketplaces com analítica de estoque (ML Full, Shopee FBS multi-armazém
 Olist), sugestão de reposição com export .xlsx, livro de custos por SKU,
 rastreamento de importações com mapa AIS, **aba Devoluções com funil de três
 canais cruzado com a NF fiscal**, margem fiscal com comissão de marketplace,
-relatório periódico de Shopee Ads por IA local (implementado; aguardando o
-preview final do Ollama antes da ativação) e **aba Agenda de tarefas
+relatório periódico de Shopee Ads por IA local (ativo no n8n) e dashboard
+Shopee Ads em Comercial (gasto × ROAS e diagnóstico diário) e **aba Agenda de tarefas
 compartilhadas entre usuários** (calendário mensal, pop-up de tarefa com
 sub-tarefas colaborativas e badge por usuário; primeira feature com RLS por
 linha), além do relatório operacional de vendas Shopee direto da Open Platform
@@ -116,9 +139,10 @@ Pagamento a Autônomo em PDF por CPF; primeira feature com dado pessoal de
 terceiros em escala e primeira geração de PDF por biblioteca).
 
 ### Deployment & auth
+- **Multioperação**: URLs `/o/uberlandia/*` e `/o/giracasa/*`; permissões são por operação + aba. Giracasa permanece desativada até concluir `docs/giracasa-onboarding.md`.
 - Production URL: `https://oraculo.oliverhome.com.br`
-- Latest documented feature deploy: `dpl_EaNG4CybVy9KZbY2kUsNKNMgnAbC`
-  (2026-09-04, Análise Comercial diária e por intervalo, `Ready` em produção)
+- Latest documented feature deploy: `dpl_HNmNea5R9Z5rKNLNbcRc86e8tRBP`
+  (2026-09-09, fluxo operacional Full/FBS/Onsite, `Ready` em produção)
 - **Dois remotes**: `origin` = `Grupo-Jacartta/oraculo`, `personal` = `julianocalill/oraculo-jacartta`.
   A Vercel escuta o **`personal`** — push só no `origin` não publica.
 - Business-data reads run under RLS via an authenticated client (anon key + user

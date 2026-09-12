@@ -22,7 +22,7 @@ Build an operational intelligence system where Supabase is the canonical backend
 - Shopee `984950642` conectada; canário com 87 pedidos/itens/pacotes e renovação
   automática do token confirmada em 12/09.
 - Giracasa segue desativada, sem usuários e sem crons recorrentes de ingestão.
-- Estado: `docs/project-status-2026-09-12.md`.
+- Estado: `docs/project-status-2026-09-12-giracasa.md`.
 
 ## Update 2026-09-11 — OAuth Shopee Giracasa
 

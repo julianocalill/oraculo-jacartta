@@ -1,3 +1,5 @@
+import { projectOperationUser, OPERATIONS } from "@oraculo/domain/operations.js";
+import { getRequestOperation } from "../operation-context";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -76,6 +78,36 @@ export function createSupabaseAuthClient() {
   });
 }
 
+type DatabaseCurrentUser = {
+  id: string;
+  email: string | null;
+  app_metadata: Record<string, unknown>;
+  user_metadata: Record<string, unknown>;
+};
+
+async function loadDatabaseCurrentUser(accessToken: string): Promise<DatabaseCurrentUser | null> {
+  try {
+    const response = await fetch(`${getSupabaseUrl().replace(/\/$/, "")}/rest/v1/rpc/oraculo_current_user`, {
+      method: "POST",
+      cache: "no-store",
+      signal: AbortSignal.timeout(8_000),
+      headers: {
+        apikey: getSupabaseAnonKey(),
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: "{}"
+    });
+
+    if (!response.ok) return null;
+    const value = await response.json() as DatabaseCurrentUser | null;
+    if (!value || typeof value.id !== "string") return null;
+    return value;
+  } catch {
+    return null;
+  }
+}
+
 export async function setAuthCookies(accessToken: string, refreshToken: string) {
   const store = await cookies();
   const secure = process.env.NODE_ENV === "production";
@@ -144,25 +176,23 @@ export const getCurrentUser = cache(async () => {
   // `isMaster` (lib/auth/access.ts). Para testar o bloqueio por aba localmente,
   // defina ORACULO_DEV_TABS no .env da raiz.
   if (process.env.NODE_ENV !== "production" && (!accessToken || !refreshToken)) {
-    return {
+    return projectOperationUser({
       id: "local-dev",
       email: "localhost@oraculo.local",
-      app_metadata: {},
+      app_metadata: { operations: Object.fromEntries(OPERATIONS.map((o) => [o.id, { enabled: true, tabs: [] }])) },
       user_metadata: { full_name: "Localhost" }
-    };
+    }, await getRequestOperation());
   }
 
   if (!accessToken || !refreshToken) return null;
 
-  // Valida o JWT direto (getUser(jwt)), sem setSession: setSession renovava o
-  // refresh token por fora do middleware e a rotação dupla derrubava a sessão
-  // em minutos (reuse detection do Supabase revoga a família inteira). Quem
-  // renova token agora é só o middleware.
-  const supabase = createSupabaseAuthClient();
-  const { data, error } = await supabase.auth.getUser(accessToken);
-  if (error) return null;
+  // PostgREST valida a assinatura e a função consulta auth.users ao vivo. Isso
+  // mantém revogações imediatas sem prender cada render no endpoint do GoTrue.
+  // O timeout impede uma indisponibilidade externa de deixar o skeleton eterno.
+  const user = await loadDatabaseCurrentUser(accessToken);
+  if (!user) return null;
 
-  return data.user;
+  return projectOperationUser(user, await getRequestOperation());
 });
 
 export async function requireCurrentUser() {

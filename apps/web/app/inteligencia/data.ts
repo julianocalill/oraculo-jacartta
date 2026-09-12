@@ -1,3 +1,4 @@
+import { getRequestOperation } from "../../lib/operation-context";
 import {
   fetchAllPages,
   productKey,
@@ -37,7 +38,7 @@ export type IntelligenceProduct = {
 
 export type IntelligencePayload = {
   products: IntelligenceProduct[];
-  internalSource: "real" | "demo";
+  internalSource: "real" | "demo" | "unavailable";
   generatedAt: string;
 };
 
@@ -224,6 +225,7 @@ function demoProducts(): IntelligenceProduct[] {
 }
 
 export async function loadIntelligencePayload(): Promise<IntelligencePayload> {
+  const operation = await getRequestOperation();
   try {
     const [priceRows, shopeeProducts, canonicalCosts, registeredCosts] = await Promise.all([
       loadPrecoProduto(),
@@ -301,6 +303,7 @@ export async function loadIntelligencePayload(): Promise<IntelligencePayload> {
 
     return { products: unique, internalSource: "real", generatedAt: new Date().toISOString() };
   } catch {
+    if (operation === "giracasa") return { products: [], internalSource: "unavailable", generatedAt: new Date().toISOString() };
     return { products: demoProducts(), internalSource: "demo", generatedAt: new Date().toISOString() };
   }
 }

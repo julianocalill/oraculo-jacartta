@@ -130,9 +130,20 @@ exige aplicar as tabelas e revalidar o app).
 
 ## Fase 5 — Picking (lista de separação)
 
-- `logistica_picking_listas` + `logistica_picking_itens`. Server Action gera a
-  lista do dia de `oraculo_shipments_unified` (a expedir) × ocupações de
-  endereço, ordenada por corredor/posição. Sem reserva nem baixa por posição —
+### 5A — Separação operacional por produto (ENTREGUE 2026-09-09)
+
+- `logistica_picking_listas`, `logistica_picking_itens`, cursor durável e
+  auditoria de impressão congelam o consolidado Olist multicanal já usado no
+  WhatsApp.
+- `/logistica/separacao` oferece alerta de atraso, recuperação manual, período
+  personalizado, histórico, A4 e CSV. Mantém o mínimo atual de duas caixas.
+- Ativada em produção com rollout controlado. Contrato e operação:
+  `docs/logistica-separacao.md`.
+
+### 5B — Picking por endereço (PENDENTE)
+
+- Cruzar a demanda a expedir de `oraculo_shipments_unified` com ocupações de
+  endereço e ordenar por corredor/posição. Sem reserva nem baixa por posição —
   continua não sendo WMS. Depende das fases 3 e 4.
 
 ## Backlog (fora do plano)

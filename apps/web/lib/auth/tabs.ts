@@ -38,6 +38,7 @@ export type TabDefinition = {
 export const TABS = [
   { key: "analytics", label: "Analytics", href: "/", group: "main", paths: ["/", "/export-fiscal"], sector: "analitico" },
   { key: "analise-comercial", label: "Análise Comercial", href: "/analise-comercial", group: "main", paths: ["/analise-comercial"], sector: "comercial" },
+  { key: "ads", label: "Shopee Ads", href: "/ads", group: "main", paths: ["/ads"], sector: "comercial" },
   { key: "pedidos", label: "Pedidos", href: "/pedidos", group: "main", paths: ["/pedidos"], sector: "comercial" },
   { key: "mais-vendidos", label: "Mais Vendidos", href: "/mais-vendidos", group: "main", paths: ["/mais-vendidos"], sector: "analitico" },
   { key: "skus", label: "SKUs", href: "/skus", group: "main", paths: ["/skus"], sector: "analitico" },
@@ -52,6 +53,7 @@ export const TABS = [
   { key: "devolucoes", label: "Devoluções", href: "/devolucoes", group: "main", paths: ["/devolucoes"], sector: "comercial" },
   { key: "importacoes", label: "Importações", href: "/importacoes", group: "main", paths: ["/importacoes"], sector: "operacoes" },
   { key: "logistica", label: "Logística", href: "/logistica", group: "main", paths: ["/logistica"], sector: "operacoes" },
+  { key: "full", label: "Full", href: "/full", group: "main", paths: ["/full"], sector: "operacoes" },
   { key: "calculadora", label: "Calculadora", href: "/calculadora", group: "main", paths: ["/calculadora"], sector: "comercial" },
   // Guarda CPF/endereço de centenas de afiliados: por ser opt-in por usuário,
   // a aba nasce invisível para todo mundo até ser liberada em /usuarios.

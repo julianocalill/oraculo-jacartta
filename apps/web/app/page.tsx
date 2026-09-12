@@ -1,3 +1,4 @@
+import { OperationAnchor } from "./components/operation-provider";
 import { createSupabaseAdminClient } from "../lib/supabase/admin";
 import {
   loadFiscalDashboardSnapshot,
@@ -8,8 +9,8 @@ import {
   type FiscalDashboardSnapshot,
   type FiscalSkuMarginRow
 } from "../lib/fiscal-snapshots";
-import Link from "next/link";
-import { redirect } from "next/navigation";
+import { OperationLink as Link } from "./components/operation-provider";
+import { redirect } from "../lib/operation-navigation";
 import { requireCurrentUser } from "../lib/auth/session";
 import { canAccess, firstAllowedHref } from "../lib/auth/access";
 import { NoAccess } from "./components/no-access";
@@ -763,9 +764,12 @@ async function loadDashboard(filters: DashboardFilters) {
   ] = await Promise.all([
     dailyQuery,
     loadUnifiedChannelRows(supabase, filters),
+    // Mesma regra de /skus: só Olist. A Shopee direta repetia o mesmo produto
+    // com outro SKU/nome (ex.: 213992 vs BALANÇA-BIOIMPEDANCIA).
     supabase
       .from("oraculo_sku_current_unified")
       .select("source, sku, product_name, revenue_30d, units_30d, revenue_change_pct, available_stock, stock_balance, days_until_stockout, last_sale_at")
+      .eq("source", "olist")
       .not("sku", "is", null)
       .neq("sku", "")
       .gt("revenue_30d", 0)
@@ -774,6 +778,7 @@ async function loadDashboard(filters: DashboardFilters) {
     supabase
       .from("oraculo_stock_watchlist_unified")
       .select("source, sku, product_name, stock_signal, available_stock, days_until_stockout, last_sale_at")
+      .eq("source", "olist")
       .not("sku", "is", null)
       .neq("sku", "")
       .order("days_until_stockout", { ascending: true, nullsFirst: false })
@@ -957,7 +962,7 @@ export default async function HomePage({
   const user = await requireCurrentUser();
   if (!canAccess(user, "analytics")) {
     const fallback = firstAllowedHref(user);
-    if (fallback) redirect(fallback);
+    if (fallback) await redirect(fallback);
     return <NoAccess hasAnyTab={false} />;
   }
 
@@ -1097,9 +1102,9 @@ export default async function HomePage({
                 {`Dados até ${formatDateShort(lastDataDate)}`}
               </span>
               <span className="pill">{formatMonthYearFromDate(filters.start)}</span>
-              <a className="pill pill-gold" href={`/export-fiscal?start=${filters.start}&end=${filters.end}`}>
+              <OperationAnchor className="pill pill-gold" href={`/export-fiscal?start=${filters.start}&end=${filters.end}`}>
                 Exportar
-              </a>
+              </OperationAnchor>
             </div>
           </div>
           <form className="filter-row filter-form" method="get">

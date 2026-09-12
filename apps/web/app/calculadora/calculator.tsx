@@ -27,7 +27,9 @@ const RATE_FIELDS: Array<{ key: RateKey; label: string; suffix: "%" | "R$" }> = 
 ];
 
 // Presets de comissão por marketplace. Shopee = faixas originais da calculadora.
-// ML e TikTok = taxas públicas vigentes (jul/2026); comissão varia por categoria,
+// ML = presets editáveis por categoria; TikTok conferido na fonte oficial em 10/09/2026.
+// TikTok: https://seller-br.tiktok.com/university/essay?knowledge_id=24428156307201
+// A comissão pode variar por condições comerciais,
 // então tudo continua editável na tela. Último degrau é sempre faixa aberta.
 type MarketplaceKey = "shopee" | "meliClassico" | "meliPremium" | "tiktok";
 
@@ -68,10 +70,10 @@ const MARKETPLACE_PRESETS: Record<
   },
   tiktok: {
     label: "TikTok Shop",
-    note: "Comissão 5–8% conforme categoria (padrão 6%) + R$ 4,00 fixo por item até R$ 78,99 (vigente fev/2026). Programa de frete SFP (~6%, teto R$ 50) não incluído — some em Ads/custo fixo se usar.",
+    note: "Regra desde 15/07/2026: abaixo de R$ 50, 10% + R$ 4; a partir de R$ 50, 6% + R$ 6 por item vendido. Use o preço após descontos do vendedor. Programa de frete e afiliados não incluídos. Confira eventuais condições específicas da sua loja.",
     tiers: [
-      { max: 78.99, rate: 6, fixed: 4 },
-      { max: Infinity, rate: 6, fixed: 0 }
+      { max: 49.99, rate: 10, fixed: 4 },
+      { max: Infinity, rate: 6, fixed: 6 }
     ]
   }
 };
@@ -449,7 +451,12 @@ export function PricingCalculator() {
           ))}
         </div>
 
-        <p className="table-note">{MARKETPLACE_PRESETS[marketplace].note}</p>
+        <p className="table-note">
+          {MARKETPLACE_PRESETS[marketplace].note}
+          {marketplace === "tiktok" && (
+            <> <a href="https://seller-br.tiktok.com/university/essay?knowledge_id=24428156307201" target="_blank" rel="noopener noreferrer">Fonte oficial</a></>
+          )}
+        </p>
 
         <div className="calc-tiers">
           <div className="calc-tier calc-tier-head" aria-hidden="true">

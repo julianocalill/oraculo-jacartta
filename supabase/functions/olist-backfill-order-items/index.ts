@@ -45,6 +45,28 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function fetchTextWithTimeout(url: string | URL, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  let timeoutId: number | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      controller.abort();
+      reject(new Error(`HTTP timeout após ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  try {
+    const response = await Promise.race([
+      fetch(url, { ...init, signal: controller.signal }),
+      timeout
+    ]);
+    const text = await Promise.race([response.text(), timeout]);
+    return { response, text };
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  }
+}
+
 function clampPositiveInt(value: unknown, fallback: number, max: number) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
@@ -121,24 +143,30 @@ function olistHeaders(accessToken: string) {
   return headers;
 }
 
-async function getStoredRefreshToken(supabase: ReturnType<typeof createClient>) {
+async function getStoredToken(supabase: ReturnType<typeof createClient>) {
   const { data, error } = await supabase
     .from('olist_oauth_tokens')
-    .select('refresh_token')
+    .select('access_token,refresh_token,expires_at')
     .eq('provider', 'olist')
     .limit(1)
     .maybeSingle();
   if (error) throw error;
-  return data?.refresh_token ?? '';
+  return data;
 }
 
 async function getAccessToken(supabase: ReturnType<typeof createClient>) {
   if (env.olistApiBearerToken) return env.olistApiBearerToken;
 
-  const refreshToken = env.olistApiRefreshToken || await getStoredRefreshToken(supabase);
+  const stored = await getStoredToken(supabase);
+  const expiresAt = stored?.expires_at ? Date.parse(String(stored.expires_at)) : 0;
+  if (stored?.access_token && Number.isFinite(expiresAt) && expiresAt > Date.now() + 2 * 60 * 1000) {
+    return String(stored.access_token);
+  }
+
+  const refreshToken = env.olistApiRefreshToken || stored?.refresh_token || '';
   requireValue('OLIST_API_REFRESH_TOKEN or stored token', refreshToken);
 
-  const response = await fetch(env.olistApiTokenUrl, {
+  const { response, text } = await fetchTextWithTimeout(env.olistApiTokenUrl, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -150,8 +178,7 @@ async function getAccessToken(supabase: ReturnType<typeof createClient>) {
       client_id: env.olistApiClientId,
       client_secret: env.olistApiClientSecret
     })
-  });
-  const text = await response.text();
+  }, 15_000);
   const payload = JSON.parse(text) as JsonObject;
   if (!response.ok || typeof payload.access_token !== 'string') {
     throw new Error(`Falha ao renovar token da Olist (${response.status}): ${text.slice(0, 300)}`);
@@ -176,11 +203,21 @@ async function fetchOrderDetail(accessToken: string, orderId: string) {
   const baseUrl = env.olistApiBaseUrl.replace(/\/?$/, '/');
   const url = new URL(`pedidos/${encodeURIComponent(orderId)}`, baseUrl);
 
-  for (let attempt = 1; attempt <= 5; attempt += 1) {
-    const response = await fetch(url, { headers: olistHeaders(accessToken) });
-    const text = await response.text();
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    let response: Response;
+    let text: string;
+    try {
+      ({ response, text } = await fetchTextWithTimeout(url, {
+        headers: olistHeaders(accessToken)
+      }, 15_000));
+    } catch (error) {
+      if (attempt < 3) continue;
+      throw new Error(
+        `Olist pedidos/${orderId} não respondeu em 15s após ${attempt} tentativas: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
     if (response.ok) return JSON.parse(text) as JsonObject;
-    if ((response.status === 429 || response.status >= 500) && attempt < 5) {
+    if ((response.status === 429 || response.status >= 500) && attempt < 3) {
       const retryAfter = Number(response.headers.get('retry-after') || '0');
       await sleep(retryAfter > 0 ? retryAfter * 1000 : Math.min(15000, 1500 * 2 ** (attempt - 1)));
       continue;
@@ -192,6 +229,10 @@ async function fetchOrderDetail(accessToken: string, orderId: string) {
 }
 
 Deno.serve(async (req) => {
+  let supabase: ReturnType<typeof createClient> | null = null;
+  let runId: string | null = null;
+  let runMetadata: JsonObject = {};
+
   try {
     requireValue('SUPABASE_URL', env.supabaseUrl);
     requireValue('SUPABASE_SERVICE_ROLE_KEY', env.supabaseServiceRoleKey);
@@ -213,9 +254,47 @@ Deno.serve(async (req) => {
     const maxRuntimeMs = clampPositiveInt(body.maxRuntimeMs, 180000, 240000);
     const startedAt = Date.now();
 
-    const supabase = createClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
+    supabase = createClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
       auth: { persistSession: false }
     });
+
+    // Uma Edge Function pode morrer no gateway/runtime sem executar o catch.
+    // Fechamos runs antigos antes de começar e recusamos sobreposição fresca.
+    const staleCutoff = new Date(Date.now() - (maxRuntimeMs + 15_000)).toISOString();
+    const interruptedAt = new Date().toISOString();
+    const { error: staleCleanupError } = await supabase
+      .from('olist_order_items_backfill_runs')
+      .update({
+        status: 'failed',
+        finished_at: interruptedAt,
+        error_message: 'Execução interrompida sem fechamento; retomada automática no próximo ciclo.'
+      })
+      .eq('window_start', startDate)
+      .eq('window_end', endDate)
+      .eq('status', 'running')
+      .lt('started_at', staleCutoff);
+    if (staleCleanupError) throw staleCleanupError;
+
+    const { data: activeRun, error: activeRunError } = await supabase
+      .from('olist_order_items_backfill_runs')
+      .select('id,started_at')
+      .eq('window_start', startDate)
+      .eq('window_end', endDate)
+      .eq('status', 'running')
+      .gte('started_at', staleCutoff)
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (activeRunError) throw activeRunError;
+    if (activeRun) {
+      return jsonResponse({
+        ok: true,
+        skipped: true,
+        reason: 'run_already_active',
+        active_run_id: activeRun.id,
+        active_since: activeRun.started_at
+      }, 202);
+    }
 
     const { data: countData, error: countError } = await supabase.rpc(
       'oraculo_fiscal_order_item_backfill_candidate_count',
@@ -223,20 +302,26 @@ Deno.serve(async (req) => {
     );
     if (countError) throw countError;
 
+    runMetadata = {
+      source: 'supabase/functions/olist-backfill-order-items',
+      options: { startDate, endDate, limit, delayMs, maxRuntimeMs },
+      stale_after_ms: maxRuntimeMs + 15_000,
+      phase: 'run_created',
+      updated_at: new Date().toISOString()
+    };
+
     const { data: runRows, error: runError } = await supabase
       .from('olist_order_items_backfill_runs')
       .insert({
         window_start: startDate,
         window_end: endDate,
         candidates_total: Number(countData ?? 0),
-        metadata: {
-          source: 'supabase/functions/olist-backfill-order-items',
-          options: { startDate, endDate, limit, delayMs, maxRuntimeMs }
-        }
+        metadata: runMetadata
       })
       .select()
       .single();
     if (runError) throw runError;
+    runId = runRows.id;
 
     const { data: candidates, error: candidatesError } = await supabase.rpc(
       'oraculo_fiscal_order_item_backfill_queue_candidates',
@@ -244,7 +329,20 @@ Deno.serve(async (req) => {
     );
     if (candidatesError) throw candidatesError;
 
+    runMetadata = { ...runMetadata, phase: 'candidates_loaded', updated_at: new Date().toISOString() };
+    const { error: candidatesPhaseError } = await supabase
+      .from('olist_order_items_backfill_runs')
+      .update({ metadata: runMetadata })
+      .eq('id', runRows.id);
+    if (candidatesPhaseError) throw candidatesPhaseError;
+
     const accessToken = await getAccessToken(supabase);
+    runMetadata = { ...runMetadata, phase: 'token_ready', updated_at: new Date().toISOString() };
+    const { error: tokenPhaseError } = await supabase
+      .from('olist_order_items_backfill_runs')
+      .update({ metadata: runMetadata })
+      .eq('id', runRows.id);
+    if (tokenPhaseError) throw tokenPhaseError;
     let ordersProcessed = 0;
     let ordersWithItems = 0;
     let ordersWithoutItems = 0;
@@ -302,7 +400,7 @@ Deno.serve(async (req) => {
           p_queue_id: candidate.queue_id,
           p_status: 'error',
           p_last_error: error instanceof Error ? error.message : String(error)
-        }).catch(() => null);
+        });
         await supabase.from('olist_order_items_backfill_errors').insert({
           run_id: runRows.id,
           order_id: candidate.order_id,
@@ -316,6 +414,24 @@ Deno.serve(async (req) => {
       }
 
       ordersProcessed += 1;
+
+      const progressAt = new Date().toISOString();
+      const { error: progressError } = await supabase
+        .from('olist_order_items_backfill_runs')
+        .update({
+          orders_processed: ordersProcessed,
+          orders_with_items: ordersWithItems,
+          orders_without_items: ordersWithoutItems,
+          orders_with_error: ordersWithError,
+          items_upserted: itemsUpserted,
+          metadata: {
+            ...runMetadata,
+            rate_limit_events: rateLimitEvents,
+            updated_at: progressAt
+          }
+        })
+        .eq('id', runRows.id);
+      if (progressError) throw progressError;
     }
 
     const status = ordersWithError > 0 || ordersProcessed < Number((candidates ?? []).length)
@@ -335,7 +451,8 @@ Deno.serve(async (req) => {
         orders_with_error: ordersWithError,
         items_upserted: itemsUpserted,
         metadata: {
-          ...(runRows.metadata ?? {}),
+          ...runMetadata,
+          phase: 'finished',
           rate_limit_events: rateLimitEvents,
           elapsed_ms: elapsedMs,
           processed_per_minute: elapsedMs > 0 ? Math.round((ordersProcessed / (elapsedMs / 60000)) * 100) / 100 : 0,
@@ -360,6 +477,18 @@ Deno.serve(async (req) => {
       elapsed_ms: elapsedMs
     });
   } catch (error) {
+    if (supabase && runId) {
+      const failedAt = new Date().toISOString();
+      await supabase
+        .from('olist_order_items_backfill_runs')
+        .update({
+          status: 'failed',
+          finished_at: failedAt,
+          error_message: error instanceof Error ? error.message : String(error),
+          metadata: { ...runMetadata, failed_at: failedAt, updated_at: failedAt }
+        })
+        .eq('id', runId);
+    }
     return jsonResponse({
       ok: false,
       error: error instanceof Error ? error.message : String(error)

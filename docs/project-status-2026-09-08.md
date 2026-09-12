@@ -1,96 +1,118 @@
 # Status do projeto — 08/09/2026
 
-## Giracasa retomada com implantação progressiva
+## Fluxo operacional de Full/FBS/Onsite implementado
 
-O trabalho da Giracasa foi retomado na branch isolada
-`codex/giracasa-phase1`. O Oráculo de Uberlândia continua no código web estável
-e no domínio `oraculo.oliverhome.com.br`; esta etapa não altera login, menu,
-rotas nem o alias de produção.
+O Oráculo ganhou o módulo `/full`, separado do funil de expedição, para
+acompanhar reposições reais do rascunho ao recebimento. A entrega inclui criação
+guiada, vínculo explícito entre anúncio e produto Olist, confirmação e expansão
+de kits, revisões imutáveis, produção por SKU físico, negociação da coleta,
+registro da remessa externa, anexos privados e timeline completa.
 
-A carga inicial foi reduzida de 90 para 40 dias. O novo
-`scripts/giracasa-backfill.mjs` permite conferir o plano com `--plan`, divide o
-período em blocos de até 14 dias e repete chamadas curtas com `resume=true` até
-cada fonte confirmar `completed=true`. O limite por invocação evita manter uma
-Edge Function processando milhares de detalhes em uma única execução e reduz a
-disputa de recursos com Uberlândia.
+Cada troca de responsabilidade gera um marco idempotente na Agenda com prazo de
+um dia útil. A ação é concluída no módulo Full; a Agenda não pode simular a
+decisão. O planejador semanal legado foi retirado da interface e seu cron é
+desativado pela migration. Sugestões ainda pendentes são encerradas como legado,
+preservando conteúdo e tabelas de auditoria.
+Uma migration complementar mantém a configuração antiga desligada e neutraliza
+a fila manual, portanto a versão anterior da Agenda não consegue reativar o
+planejador durante a transição de frontend.
 
-A especificação executável do custo foi alinhada à precedência declarada pelo
-Financeiro: custo líquido explícito, créditos recuperáveis medidos,
-transferência importada comprovada e, por fim, custo bruto. Um crédito medido
-agora prevalece mesmo quando a transferência também estiver marcada.
+A leitura usa RLS por participante ou `full_manager` de Uberlândia. Escritas
+continuam no servidor. `oraculo_write_full_revision` grava revisão, itens,
+componentes e necessidade consolidada na mesma transação. Documentos usam o
+bucket privado `full-documents` e URL assinada de 60 segundos após autorização.
 
-O gerador das 26 Edge Functions ganhou cobertura automatizada para o limite de
-credenciais: somente as duas chaves compartilhadas do projeto Supabase podem
-ficar sem prefixo; qualquer outra variável precisa começar com `GIRACASA_`.
+O contrato `full-inbound-sync` foi criado sem adapter ativo nem cron. Mercado
+Livre, Shopee e Amazon aceitam consulta de catálogo e criação de rascunho, mas o
+envio à logística fica bloqueado até coleta e recebimento serem comprovados em
+uma remessa real, na ordem ML → Shopee → Amazon. A saúde e a fila aparecem em
+`/status`.
 
-O `gira-casa-v1` foi comparado novamente com a implementação local do
-Financeiro. A matriz e a precedência do custo conferem. O contrato registra a
-adaptação central do Oráculo: receita somente pela NF válida, sem fallback para
-venda bruta, e controle por SKU para impedir crédito duplicado de PIS/COFINS.
-Detalhes: `docs/giracasa-financial-contract.md`.
+Arquitetura e operação: [full-workflow.md](full-workflow.md) e
+[ADR-007](adr/ADR-007-full-inbound-workflow.md).
 
-A tela real da Olist confirmou um **Aplicativo API OAuth/V3**, com URL de
-redirecionamento, Client ID e Client Secret. A premissa anterior de Token API V2
-foi corrigida antes de autorizar ou carregar a conta. O callback exclusivo
-`giracasa-olist-oauth-callback` está publicado. Endpoints, state, segredo do job,
-Client ID e Client Secret foram configurados; o consentimento administrativo
-gerou refresh token no schema `giracasa`. A identidade foi validada por `/info`
-como **GIRA CASA COMERCIO DE VARIEDADES LTDA**, SP, regime tributário 3, e as
-leituras de conta, produtos e pedidos responderam `200`. Uma segunda abertura
-do callback respondeu `invalid_grant` porque o código OAuth já havia sido usado;
-o token salvo na primeira chamada continuou válido. Decisão:
-`docs/adr/ADR-008-giracasa-olist-oauth-v3.md`.
+### Validação local desta entrega
 
-O canário fechado de 07/09/2026 foi concluído em produção no schema isolado:
-771 pedidos, 687 NFs válidas, R$ 44.042,64 de receita e 685 itens fiscais. Os
-687 valores brutos e válidos conferem exatamente. O linker encontrou 659
-pedidos (95,9% das NFs); os 28 restantes podem pertencer a pedidos de dias
-anteriores e serão reavaliados na janela de 40 dias. A fila dos 659 pedidos
-terminou sem pendência e gerou 660 linhas comerciais.
+- 70 testes do domínio aprovados;
+- TypeScript aprovado;
+- build de produção do Next.js aprovado;
+- teste SQL descartável de RLS, revisão congelada, expansão e escrita bloqueada
+  adicionado em `supabase/tests/full-workflow.sql`;
+- migration aplicada no projeto vinculado; teste SQL transacional aprovado;
+- interface publicada em 09/09/2026 no deployment
+  `dpl_HNmNea5R9Z5rKNLNbcRc86e8tRBP`; a Edge Function permanece
+  propositalmente não publicada e sem cron até a remessa piloto do primeiro canal.
 
-A varredura completa do catálogo trouxe 1.068 produtos; 484 SKUs têm custo
-utilizável. No canário, 614 de 688 linhas financeiras têm custo completo. A
-tarifa Shopee padrão do Financeiro foi cadastrada somente para Giracasa, com
-470 NFs e R$ 30.524,01 de receita prontas para lucro. TikTok e Mercado Livre
-somam 218 linhas ainda sem tarifa própria e permanecem pendentes. O motor
-confirmou zero DIFAL nas vendas SP→SP.
+## Posição vendável da Shopee ficou completa e sem ambiguidade
 
-A carga histórica foi iniciada dentro do próprio Supabase, sem processo local.
-O controle `giracasa.olist_initial_backfill_control` percorre 30/07–07/09 em
-três blocos de até 14 dias. O pg_cron
-`giracasa-olist-initial-backfill-40d` chama uma página por vez das Edge Functions
-de pedidos, notas e itens, com intervalo mínimo de quatro minutos e cursores no
-banco. Ele se desagenda ao concluir ou após cinco falhas consecutivas observadas
-em pedidos/notas. O primeiro request respondeu HTTP 200 e avançou para
-100/9.022 pedidos no bloco 30/07–12/08.
+A aba `/shopee/estoque` agora abre a posição completa de todos os SKUs ×
+armazém recebidos pelo SBS, com vendável FBS, reservado, não vendável,
+trânsito e vendável total do anúncio. A exportação ganhou a mesma posição em
+uma aba própria, e a tabela de ruptura passou a mostrar explicitamente o saldo
+vendável mesmo quando ele é zero.
 
-Durante o canário, `olist-backfill-order-items` revelou que o sucesso gravava os
-itens sem concluir a linha da fila. A função agora marca `completed` depois do
-upsert; a versão isolada Giracasa foi republicada e validada nos 659 pedidos.
+A conferência do payload de produção corrigiu uma nomenclatura importante:
+`shopee_products.model_stock` vem de
+`stock_info_v2.summary_info.total_available_stock`. Esse número já reúne todas
+as localizações do anúncio e desconta as reservas; não é exclusivamente
+"estoque local". O saldo FBS confiável continua sendo `sellable_qty`, separado
+por armazém na API SBS.
 
-## Estado operacional
+## Status das integrações agora representa execução real
 
-- Uberlândia permanece ativa nas rotas originais.
-- Giracasa permanece `enabled=false` e sem usuários. OAuth, canário de um dia e
-  catálogo Olist estão carregados; existe somente o job temporário da carga de
-  40 dias, que se remove ao terminar.
-- O schema isolado, o motor `gira-casa-v1` e as 26 Edge Functions já publicadas
-  continuam preservados.
-- Nenhuma credencial de Uberlândia pode ser usada como fallback pela Giracasa.
-- A janela fechada de um dia foi aprovada tecnicamente; a carga de 40 dias é o
-  próximo passo de dados.
+A tela `/status` deixou de interpretar como atividade saudável linhas antigas
+que permaneceram com `status = running`. A coluna final passou de **Erro** para
+**Detalhe**, porque também comunica progresso, fila restante e pausas retomáveis.
+Falhas de consulta ao próprio monitoramento agora aparecem como falha, em vez de
+degradarem silenciosamente para “Sem execução”.
 
-## Próximos gates
+### Pedidos Olist
 
-1. Acompanhar a carga remota de 40 dias e medir volume, duração e cobertura ao
-   término.
-2. Obter e cadastrar as tarifas próprias de TikTok e Mercado Livre; até lá o
-   lucro desses canais continua pendente.
-3. Conferir nacional, importado, kit, créditos, SP interno e destinos
-   interestaduais contra `docs/giracasa-financial-contract.md` e o Financeiro.
-4. Conectar as contas próprias de marketplace e validar reconciliação.
-5. Construir as rotas reais da Giracasa em preview e validar com uma conta real.
-6. Conceder o piloto e ativar jobs somente depois dos gates anteriores.
+O cron operacional relê, a cada 15 minutos, os 500 pedidos mais recentes da
+janela móvel de três dias (`resume=false`, `orderBy=desc`). Esse lote é o objetivo
+inteiro da chamada; não é uma varredura que deva permanecer aberta até alcançar
+todos os pedidos da janela. A Edge Function agora encerra cada lote como
+`success`, registra `cycle_completed=true` e usa
+`stop_reason=bounded_top_scan`.
 
-Decisão arquitetural: `docs/adr/ADR-007-giracasa-progressive-rollout.md`.
-Runbook: `docs/giracasa-onboarding.md`.
+O histórico incorreto foi saneado pela migration
+`20260908120216_fix_sync_run_statuses.sql`. Após a publicação, o ciclo das 09:20
+BRT concluiu 500/500 pedidos em cerca de 20 segundos e ficou corretamente como
+`success`.
+
+### Backfill de itens
+
+O backfill de 20/07–02/08 estava parado no primeiro pedido e criava uma nova
+linha `running` a cada dois minutos. A causa exata era o uso de `.catch()` num
+builder do Supabase, que não é uma Promise: ao receber um 404 da Olist, o próprio
+tratador de erro lançava outra exceção e a execução morria sem fechamento.
+
+A rotina agora:
+
+- impede duas execuções frescas da mesma janela;
+- fecha automaticamente runs interrompidos;
+- grava heartbeat e fase (`run_created`, `candidates_loaded`, `token_ready`,
+  `finished`);
+- reaproveita o access token ainda válido e limita refresh HTTP a 15 segundos;
+- aplica timeout garantido às consultas de detalhe da Olist;
+- registra o pedido com erro e continua o restante do lote.
+
+Validação em produção: primeiro lote corrigido processou 100 pedidos em 61 s,
+com 99 concluídos, 106 itens gravados e 1 pedido corretamente isolado como erro
+404 (“Pedido não encontrado”). A fila da janela caiu de 41.724 para 41.624.
+
+## Estado anterior preservado
+
+O Oráculo restaurado e a Giracasa preservada, mas pausada na interface,
+continuam descritos em
+[project-status-2026-09-07.md](project-status-2026-09-07.md). Esta correção não
+altera regras fiscais, dados de negócio nem permissões.
+
+## Validação executada
+
+- 64 testes do domínio: todos aprovados;
+- TypeScript da aplicação web: aprovado;
+- duas Edge Functions publicadas e compiladas pelo bundler do Supabase;
+- migration aplicada diretamente ao projeto vinculado;
+- ciclo real de pedidos confirmado como `success`;
+- ciclo real de backfill confirmado com avanço de fila e erro isolado.

@@ -337,7 +337,7 @@ async function hydrateOrderDetails(
       const payload = existing.payload && typeof existing.payload === 'object'
         ? existing.payload as Record<string, unknown>
         : {};
-      if (Array.isArray(payload.itens)) {
+      if (Array.isArray(payload.itens) && payload.itens.length > 0) {
         existingById.set(String(existing.id), {
           payload,
           data_atualizacao: existing.data_atualizacao == null ? null : String(existing.data_atualizacao)
@@ -350,7 +350,7 @@ async function hydrateOrderDetails(
 
   for (const row of rows) {
     const payload = row.payload && typeof row.payload === 'object' ? row.payload as Record<string, unknown> : {};
-    if (Array.isArray(payload.itens)) {
+    if (Array.isArray(payload.itens) && payload.itens.length > 0) {
       detailedRows.push(row);
       continue;
     }
@@ -548,9 +548,17 @@ Deno.serve(async (req) => {
       if (delayMs > 0) await sleep(delayMs);
     }
 
+    // O cron operacional usa resume=false de propósito: cada chamada relê as
+    // páginas mais novas (orderBy desc), em vez de tentar concluir toda a
+    // janela móvel. Nesse modo, processar o lote configurado é sucesso do
+    // ciclo; deixar o run como "running" criava uma execução fantasma a cada
+    // 15 minutos e fazia o /status confundir histórico com atividade real.
+    const cycleCompleted = completed || !resume;
+    const finishedAt = cycleCompleted ? new Date().toISOString() : null;
+
     await patchRun(supabase, run.id, {
-      status: completed ? 'success' : 'running',
-      finished_at: completed ? new Date().toISOString() : null,
+      status: cycleCompleted ? 'success' : 'running',
+      finished_at: finishedAt,
       records_fetched: totalFetched,
       records_upserted: totalUpserted,
       error_message: null,
@@ -562,7 +570,9 @@ Deno.serve(async (req) => {
         total_reported: totalReported,
         next_offset: offset,
         completed,
-        updated_at: new Date().toISOString()
+        cycle_completed: cycleCompleted,
+        stop_reason: completed ? null : (!resume ? 'bounded_top_scan' : 'page_budget'),
+        updated_at: finishedAt ?? new Date().toISOString()
       }
     });
 
@@ -577,7 +587,8 @@ Deno.serve(async (req) => {
       fetched: totalFetched,
       upserted: totalUpserted,
       hydrate_details: shouldHydrateDetails,
-      completed
+      completed,
+      cycle_completed: cycleCompleted
     });
   } catch (error) {
     console.error(error);

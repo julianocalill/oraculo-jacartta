@@ -5,8 +5,8 @@
 // comissão do afiliado em valor bruto e sem reter nada, e a emissão do recibo
 // virou obrigação do vendedor.
 
-import { redirect } from "next/navigation";
-import Link from "next/link";
+import { redirect } from "../../lib/operation-navigation";
+import { OperationLink as Link } from "../components/operation-provider";
 import { assertTabAccess, requireTabAccess } from "../../lib/auth/access";
 import { effectiveUserId } from "../../lib/users";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
@@ -38,8 +38,8 @@ function parseNumber(value: unknown) {
 }
 
 // Sem toast no projeto: o erro volta na querystring e a página o exibe.
-function fail(message: string): never {
-  redirect(`/rpa?erro=${encodeURIComponent(message)}`);
+async function fail(message: string): Promise<never> {
+  return await redirect(`/rpa?erro=${encodeURIComponent(message)}`);
 }
 
 async function salvarEmitente(formData: FormData) {
@@ -47,10 +47,10 @@ async function salvarEmitente(formData: FormData) {
   await assertTabAccess("rpa");
 
   const razaoSocial = text(formData.get("razao_social"));
-  if (!razaoSocial) fail("Informe a razão social.");
+  if (!razaoSocial) return await fail("Informe a razão social.");
 
   const cnpj = onlyDigits(formData.get("cnpj"));
-  if (cnpj.length !== 14) fail("O CNPJ precisa ter 14 dígitos.");
+  if (cnpj.length !== 14) return await fail("O CNPJ precisa ter 14 dígitos.");
 
   const descricao =
     text(formData.get("descricao_servico")) ??
@@ -71,9 +71,9 @@ async function salvarEmitente(formData: FormData) {
     },
     { onConflict: "cnpj" }
   );
-  if (error) fail(`Não foi possível salvar o emitente: ${error.message}`);
+  if (error) return await fail(`Não foi possível salvar o emitente: ${error.message}`);
 
-  redirect("/rpa?ok=emitente");
+  return await redirect("/rpa?ok=emitente");
 }
 
 async function uploadRelatorio(formData: FormData) {
@@ -81,22 +81,22 @@ async function uploadRelatorio(formData: FormData) {
   const user = await assertTabAccess("rpa");
 
   const issuerId = text(formData.get("issuer_id"));
-  if (!issuerId) fail("Cadastre e selecione a empresa tomadora antes de subir o relatório.");
+  if (!issuerId) return await fail("Cadastre e selecione a empresa tomadora antes de subir o relatório.");
 
   const loja = text(formData.get("loja"));
-  if (!loja) fail("Informe de qual loja é este relatório.");
+  if (!loja) return await fail("Informe de qual loja é este relatório.");
 
   const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) fail("Selecione o arquivo .csv do relatório.");
+  if (!(file instanceof File) || file.size === 0) return await fail("Selecione o arquivo .csv do relatório.");
 
   const aplicaIss = formData.get("aplica_iss") === "on";
   const issRate = parseNumber(formData.get("iss_rate")) ?? 0;
   if (aplicaIss && (issRate <= 0 || issRate > 100)) {
-    fail("Com o ISS ligado, informe uma alíquota entre 0 e 100.");
+    return await fail("Com o ISS ligado, informe uma alíquota entre 0 e 100.");
   }
 
   const piso = parseNumber(formData.get("piso"));
-  if (piso != null && piso < 0) fail("O piso de emissão não pode ser negativo.");
+  if (piso != null && piso < 0) return await fail("O piso de emissão não pode ser negativo.");
 
   const report = await importShopeeAffiliateReport({
     file,
@@ -113,9 +113,9 @@ async function uploadRelatorio(formData: FormData) {
   });
 
   if (report.failure || !report.batchId) {
-    fail(report.failure ?? "Não foi possível importar o relatório.");
+    return await fail(report.failure ?? "Não foi possível importar o relatório.");
   }
-  redirect(`/rpa/${report.batchId}`);
+  return await redirect(`/rpa/${report.batchId}`);
 }
 
 export default async function RpaPage({

@@ -24,6 +24,64 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-09-11-shopee-ads",
+    title: "Shopee Ads agora no Comercial",
+    summary: "Acompanhe o investimento, o ROAS e as prioridades de cada dia dentro do Oráculo.",
+    publishedAt: "2026-09-11T17:10:00-03:00",
+    changes: [{
+      title: "Gasto e retorno por loja e campanha",
+      description: "O novo dashboard reúne evolução diária, filtros de período e loja, ranking de campanhas e análise dos pontos de atenção. Inclui campanhas pausadas e informa quando o histórico está incompleto.",
+      href: "/ads",
+      linkLabel: "Abrir Shopee Ads"
+    }]
+  },
+  {
+    id: "2026-09-11-home-pedidos-olist",
+    title: "Home e Pedidos sem produtos e lojas duplicados",
+    summary: "O ranking de SKUs da home e a aba Pedidos passam a usar só a Olist, como já acontecia em SKUs.",
+    publishedAt: "2026-09-11T12:00:00-03:00",
+    changes: [{
+      title: "Uma linha por produto e por loja",
+      description: "A API direta da Shopee repetia o mesmo produto com outro SKU e mostrava cada loja duas vezes em Pedidos por loja. Agora a Olist, que já consolida Shopee, TikTok Shop e Mercado Livre, é a única fonte dessas telas. O seletor de fonte da aba Pedidos foi removido.",
+      href: "/pedidos",
+      linkLabel: "Abrir pedidos"
+    }]
+  },
+  {
+    id: "2026-09-10-calculadora-tiktok",
+    title: "Taxas do TikTok corrigidas na calculadora",
+    summary: "A simulação passa a incluir a tarifa fixa correta em todas as faixas de preço.",
+    publishedAt: "2026-09-11T08:11:27-03:00",
+    changes: [{
+      title: "Comissão e tarifa fixa por faixa",
+      description: "Abaixo de R$ 50: 10% + R$ 4. A partir de R$ 50: 6% + R$ 6. Refaça suas simulações do TikTok para conferir o lucro e a margem atualizados.",
+      href: "/calculadora",
+      linkLabel: "Abrir calculadora"
+    }]
+  },
+  {
+    id: "2026-09-04-explicacoes-colunas",
+    title: "Todas as colunas agora se explicam",
+    summary: "Passe o mouse ou toque no “?” de qualquer coluna para entender o dado exibido.",
+    publishedAt: "2026-09-04T17:20:00-03:00",
+    changes: [{
+      title: "Glossário em todas as tabelas",
+      description: "Cabeçalhos de todas as telas ganharam explicações rápidas, incluindo fórmulas, origem do dado e ressalvas importantes quando se aplicam. O recurso também funciona por teclado."
+    }]
+  },
+  {
+    id: "2026-09-04-operacoes",
+    title: "Oráculo preparado para mais de uma operação",
+    summary: "Acesso e dados agora reconhecem Uberlândia e Giracasa separadamente.",
+    publishedAt: "2026-09-04T18:00:00-03:00",
+    changes: [{
+      title: "Escolha segura da operação",
+      description: "Quem receber acesso à Giracasa poderá escolher a operação ao entrar. A base de São Paulo será exibida somente depois da validação das integrações e do financeiro.",
+      href: "/operacoes?trocar=1",
+      linkLabel: "Ver operações"
+    }]
+  },
+  {
     id: "2026-09-04-analise-comercial",
     title: "Análise comercial por dia e período",
     summary: "Veja quais produtos mais venderam e qual margem cada um deixou.",

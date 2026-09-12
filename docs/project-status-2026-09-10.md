@@ -1,52 +1,26 @@
 # Status do projeto — 10/09/2026
 
-## Carga Olist Giracasa acelerada no Supabase
+## Correção TikTok na calculadora
 
-A carga inicial fechada de 40 dias continua integralmente no Supabase, sem
-processo residente na máquina do operador. O período é 30/07/2026–07/09/2026,
-dividido em três blocos de até 14 dias e retomado pelos cursores das próprias
-Edge Functions.
+O preset de `/calculadora` herdava 6% + R$ 4 até R$ 78,99 e zerava a tarifa fixa acima desse valor. Corrigido para a tabela oficial vigente desde 15/07/2026:
 
-O primeiro bloco terminou com 9.022 pedidos e 8.224 notas. No segundo bloco,
-os 8.295 pedidos também terminaram. Em 10/09, a etapa corrente era a importação
-das 7.424 notas desse bloco, sem falhas consecutivas.
+- Preço após desconto do vendedor abaixo de R$ 50: 10% + R$ 4 por item vendido.
+- A partir de R$ 50: 6% + R$ 6 por item vendido.
 
-A medição em produção mostrou cerca de 38 segundos para buscar e hidratar uma
-página de 50 notas. A migration
-`20260910120640_accelerate_giracasa_olist_40d_worker.sql` adicionou um job
-temporário intercalado com o coordenador original. Cada chamada de notas agora
-processa até duas páginas, enquanto pedidos continuam limitados a uma página,
-pois uma página hidratada chegou a aproximadamente 125 segundos.
+Fonte consultada em 10/09/2026: https://seller-br.tiktok.com/university/essay?knowledge_id=24428156307201
 
-O acelerador usa a mesma trava de linha do coordenador, observa o intervalo
-mínimo entre disparos e deixa as mudanças de fase e a contagem de falhas sob
-responsabilidade do job principal. Ele também se remove quando o controle sai
-de `running`. A primeira chamada reforçada respondeu HTTP 200 e avançou o
-cursor de notas de 800 para 1.000, com 1.000 registros gravados e nenhum erro.
+O simulador considera uma venda do anúncio; a quantidade preenchida representa as unidades dentro do anúncio/kit. Programa de frete e afiliados continuam excluídos, com indicação na tela. Condições específicas continuam editáveis. A nota da tela inclui link oficial e a mudança está no manifesto de novidades pós-login.
 
-## Estado operacional
+Caso relatado: custo R$ 65, venda R$ 129,90 e demais taxas padrão → tarifa fixa R$ 6, lucro líquido R$ 26,83 e margem 20,65%.
 
-- `giracasa-olist-initial-backfill-40d` continua como coordenador e máquina de
-  estados.
-- `giracasa-olist-initial-backfill-accelerator` intercala chamadas temporárias:
-  aproximadamente uma página de pedidos a cada quatro minutos ou duas páginas
-  de notas a cada dois minutos.
-- Os dois jobs e seus cursores vivem no Supabase; fechar o computador não
-  interrompe a carga.
-- Giracasa permanece `enabled=false` e sem usuários. A aceleração altera apenas
-  o backend isolado da carga inicial.
-- Uberlândia permanece ativa e não compartilha dados, credenciais ou jobs com
-  a Giracasa.
+O restante do estado de produção está descrito em [09/09/2026](project-status-2026-09-09.md). Sem alteração de banco, integrações ou motor fiscal.
 
-## Próximos gates
+## Validação e publicação
 
-1. Acompanhar a conclusão das três faixas de pedidos e notas e da fila final de
-   itens comerciais.
-2. Conferir totais, cobertura de vínculos NF→pedido e pendências de custo.
-3. Cadastrar tarifas próprias de TikTok e Mercado Livre e conectar as contas
-   de marketplace.
-4. Validar o motor SP contra os casos do Financeiro.
-5. Liberar as rotas e um usuário piloto somente depois dessas conferências.
+Publicado em 11/09/2026 pela Vercel CLI, deployment `dpl_6Fa86rP5b58T4RDiBCHjZ2LTD7gt`, status `READY`, domínio `https://oraculo.oliverhome.com.br`.
 
-Runbook: `docs/giracasa-onboarding.md`.
-Decisão de implantação: `docs/adr/ADR-007-giracasa-progressive-rollout.md`.
+Validação: 3 testes específicos da calculadora, 76 testes de domínio, TypeScript e build de produção aprovados. A rota `/calculadora` consta no build publicado; `/login` respondeu HTTP 200. O teste específico inclui R$ 49,99/R$ 50, a antiga fronteira R$ 78,99/R$ 79, o exemplo do diretor, kit e busca de preço mínimo por margem. Lint isolado não foi executado porque o projeto não tem configuração ESLint; build validou os tipos.
+
+A base exata de produção era `11915c90784b7d7d79591424a2d746d057856174`, posterior e divergente da `main` local (`6acc6ed`). Cópia de publicação: `/private/tmp/oraculo-calculadora-tiktok-prod-20260911`. Comparação integral de `apps/web` e `packages` confirmou somente duas mudanças: `calculator.tsx` e `release-notes.ts`. Alterações locais preexistentes de tabelas foram preservadas. Nenhum commit/push realizado.
+
+Próximo deploy: reconciliar a base local com a revisão publicada antes de enviar o projeto completo; publicar a main local antiga diretamente reverteria funcionalidades. As alterações da calculadora e a documentação também estão no projeto real, pendentes de versionamento autorizado.

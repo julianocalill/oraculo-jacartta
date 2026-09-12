@@ -168,7 +168,8 @@
     as `shopee-sync-products`.
   - Query params: `?shop_id=` (one shop), `?days=N` (default 3, jobs atuais usam `days=3`), `?from=&to=`
     (backfill). Runs logged in `shopee_sync_runs` as `shopee-returns-sync:<id>`.
-- `shopee-ads-report-data` (deployed 2026-08-07) — **sem cron ativo; acionada pelo n8n**
+- `shopee-ads-report-data` (deployed 2026-08-07) — **n8n + coleta diária do dashboard Ads**
+  - Dashboard `/ads`: `scope=all`, crons `oraculo-ads-daily-<shop_id>` às 07:15–07:30 e 10:15–10:30 BRT, uma invocação por loja. Saúde por loja em `/status`; contrato em `docs/shopee-ads-dashboard.md`.
   - Coleta settings e 30 dias de performance diária de Ads, uma loja por
     invocação, e grava `shopee_ads_campaigns` / `shopee_ads_daily`.
   - Read-only no token; o workflow n8n primário é o único renovador. Adia a loja
@@ -443,11 +444,23 @@ there are no write policies for `authenticated`. App loaders additionally filter
 by user id explicitly, because in dev the user client falls back to the admin
 client (no RLS) and the mock user maps to the sentinel uuid in
 `apps/web/lib/users.ts`. O badge continua calculado por request, mas desde
-2026-08-28 a Agenda também recebe coletas Full pela Edge Function
-`agenda-full-planner`, agendada no job `oraculo-agenda-full-planner-daily`
-(07:05 BRT). A rotina só lê caches internos, não chama marketplaces nem renova
-tokens; a configuração de loja/dia/responsável fica em
-`oraculo_full_planning_configs`.
+De 2026-08-28 a 2026-09-08 a Agenda também recebeu sugestões semanais pela Edge
+Function `agenda-full-planner`. O módulo operacional `/full` substituiu esse
+modelo: a migration `20260908204720_full_workflow.sql` desagenda
+`oraculo-agenda-full-planner-daily`, desativa as configurações antigas e encerra
+pendências legadas sem apagar histórico. Novas tarefas `full_workflow` nascem
+somente de uma remessa real e são concluídas pela ação correspondente em `/full`.
+
+## Full inbound — adapters desligados até prova real
+
+`full-inbound-sync` implementa o invólucro comum de observações por remessa,
+idempotência, monotonicidade e fechamento automático. Ele começa **não
+publicado e sem cron**. Cada linha em `oraculo_full_store_configs` tem gates
+separados de coleta e recebimento; sem os dois, até o envio do rascunho para a
+logística é bloqueado. A ordem de ativação é Mercado Livre, Shopee e Amazon.
+Depois da primeira validação real, publicar com `--no-verify-jwt`, cadastrar
+`FULL_INBOUND_SYNC_JOB_SECRET` e só então criar um cron por loja. A função apenas
+lê tokens; os sincronizadores atuais continuam sendo os únicos renovadores.
 
 ## Logística — pallet labels (no cron, no Edge Function)
 
