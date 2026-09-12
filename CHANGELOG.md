@@ -2,6 +2,20 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-12] — Carga Olist concluída e token Shopee renovado
+
+- O coordenador Supabase concluiu os 40 dias Olist/Tiny, de 30/07 a 07/09, em
+  três blocos, sem falhas ou problemas de itens. Os jobs temporários se
+  removeram ao final.
+- O schema Giracasa contém 25.899 pedidos, 23.003 itens de pedido, 23.189 notas,
+  23.501 itens de nota e 1.068 produtos Olist.
+- O renovador Shopee executou automaticamente em 12/09, rotacionou os dois
+  tokens e estendeu o access token por quatro horas. A verificação seguinte
+  pulou corretamente o token ainda válido.
+- Giracasa permanece desativada, com zero usuários e apenas o cron de renovação
+  ativo. A validação financeira dos 40 dias e a carga histórica Shopee são os
+  próximos gates.
+
 ## [2026-09-11] — OAuth Shopee preparado para a Giracasa
 
 - Publicado o callback isolado `giracasa-shopee-oauth-callback` para gerar o

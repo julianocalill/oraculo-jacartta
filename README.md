@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-11.md](docs/project-status-2026-09-11.md) **← start here** (OAuth Shopee Giracasa preparado; produção preservada)
+1. [docs/project-status-2026-09-12.md](docs/project-status-2026-09-12.md) **← start here** (carga Olist concluída; Shopee conectada e token renovando)
 2. [docs/manual-oraculo-diretoria.md](docs/manual-oraculo-diretoria.md) (non-technical platform manual, PT-BR)
    — [docs/glossario-cards-dashboard.md](docs/glossario-cards-dashboard.md) (every card/column/config field across the whole system — analytics, alerts, calculator, imports, params, sync status — exact formula, PT-BR, for team walkthroughs)
 3. [docs/brand-oraculo.md](docs/brand-oraculo.md) (visual identity)
@@ -48,7 +48,7 @@ oraculo/
 12. [CHANGELOG.md](CHANGELOG.md) (full history)
 13. [vault/00-home/index.md](vault/00-home/index.md)
 
-Earlier snapshots (historical, superseded): [docs/project-status-2026-09-01.md](docs/project-status-2026-09-01.md), [docs/project-status-2026-08-28.md](docs/project-status-2026-08-28.md), [docs/project-status-2026-08-24.md](docs/project-status-2026-08-24.md), [docs/project-status-2026-08-19.md](docs/project-status-2026-08-19.md), [docs/project-status-2026-08-17.md](docs/project-status-2026-08-17.md), [docs/project-status-2026-08-13.md](docs/project-status-2026-08-13.md), [docs/project-status-2026-08-12.md](docs/project-status-2026-08-12.md), [docs/project-status-2026-08-10.md](docs/project-status-2026-08-10.md), [docs/project-status-2026-07-17.md](docs/project-status-2026-07-17.md), [docs/project-status-2026-07-16.md](docs/project-status-2026-07-16.md), [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md), [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
+Earlier snapshots (historical, superseded): [docs/project-status-2026-09-11.md](docs/project-status-2026-09-11.md), [docs/project-status-2026-09-01.md](docs/project-status-2026-09-01.md), [docs/project-status-2026-08-28.md](docs/project-status-2026-08-28.md), [docs/project-status-2026-08-24.md](docs/project-status-2026-08-24.md), [docs/project-status-2026-08-19.md](docs/project-status-2026-08-19.md), [docs/project-status-2026-08-17.md](docs/project-status-2026-08-17.md), [docs/project-status-2026-08-13.md](docs/project-status-2026-08-13.md), [docs/project-status-2026-08-12.md](docs/project-status-2026-08-12.md), [docs/project-status-2026-08-10.md](docs/project-status-2026-08-10.md), [docs/project-status-2026-07-17.md](docs/project-status-2026-07-17.md), [docs/project-status-2026-07-16.md](docs/project-status-2026-07-16.md), [docs/project-status-2026-07-14.md](docs/project-status-2026-07-14.md), [docs/project-status-2026-07-12.md](docs/project-status-2026-07-12.md), [docs/project-status-2026-07-10-final.md](docs/project-status-2026-07-10-final.md), [docs/project-status-2026-07-10.md](docs/project-status-2026-07-10.md).
 
 ## Tooling choices
 
@@ -59,18 +59,19 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-01.md](
 
 ## Current production state
 
-**Last update**: `2026-09-11` (see `docs/project-status-2026-09-11.md`) —
+**Last update**: `2026-09-12` (see `docs/project-status-2026-09-12.md`) —
 Oráculo de Uberlândia preservado no deploy estável anterior à interface
-multioperação. A Giracasa segue desativada e sem usuários; somente os jobs
-temporários da carga inicial estão ativos. O OAuth
+multioperação. A Giracasa segue desativada e sem usuários. A carga Olist de 40
+dias terminou no Supabase sem falhas e os jobs temporários se removeram. O OAuth
 Olist foi validado e o canário de 07/09 fechou em 771 pedidos, 687 NFs válidas e
-R$ 44.042,64. O catálogo isolado possui 1.068 produtos; a carga de 40 dias roda
-com coordenador e acelerador temporários no Supabase, sem depender de máquina
-local. O callback Shopee isolado e o relay 302 no domínio n8n aprovado foram
+R$ 44.042,64. O catálogo isolado possui 1.068 produtos; a carga de 40 dias
+fechou com 25.899 pedidos e 23.189 notas, sem depender de máquina local. O
+callback Shopee isolado e o relay 302 no domínio n8n aprovado foram
 validados; a loja `984950642` foi autorizada e um canário direto gravou 87
 pedidos e 87 pacotes no schema Giracasa. O renovador exclusivo do token foi
 validado; o Supabase verifica a cada hora e mantém uma tentativa de recuperação
-antes do vencimento. As tarifas próprias de
+antes do vencimento. O único job Giracasa ativo é essa renovação; ingestões
+recorrentes continuam desligadas. As tarifas próprias de
 TikTok/ML são os próximos gates. Estado funcional anterior:
 Análise Comercial por dia/período em produção, com backend agregado, cron
 horário, ranking por quantidade e margem no período. Contrato: `docs/analise-comercial.md`.

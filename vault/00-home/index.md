@@ -15,6 +15,15 @@
 
 Build an operational intelligence system where Supabase is the canonical backend, Vercel is the product surface, and documentation preserves continuity across people and AI agents.
 
+## Update 2026-09-12 — Giracasa com carga Olist concluída
+
+- A carga remota de 40 dias terminou sem falhas; os jobs temporários se
+  removeram. Schema: 25.899 pedidos, 23.189 notas e 1.068 produtos Olist.
+- Shopee `984950642` conectada; canário com 87 pedidos/itens/pacotes e renovação
+  automática do token confirmada em 12/09.
+- Giracasa segue desativada, sem usuários e sem crons recorrentes de ingestão.
+- Estado: `docs/project-status-2026-09-12.md`.
+
 ## Update 2026-09-11 — OAuth Shopee Giracasa
 
 - Callback isolado publicado com state assinado e início protegido pelo Vault.
