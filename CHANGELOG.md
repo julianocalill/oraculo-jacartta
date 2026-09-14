@@ -2,6 +2,16 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-14] — Giracasa: conferência fiscal dos 40 dias
+
+- Receita (22.925 NFs, R$ 1.431.405,94), vínculos, itens, ICMS, DIFAL e lucro
+  por linha conferem. Resultado financeiro não aprovado.
+- Lucro de R$ 41 mil depende do crédito de PIS/COFINS; sem ele, −R$ 6,2 mil.
+- 471 NFs válidas de pedidos cancelados (R$ 32,9 mil) sem NF de devolução.
+- Margem e ROI da Giracasa corrigidos para usar só linhas com lucro (3,54% e
+  8,04%, antes 3,00% e 6,81%); migration na branch, aplicação pendente.
+- Detalhes e gates em `docs/project-status-2026-09-14-giracasa.md`.
+
 ## [2026-09-14] — Correção: pg_cron disputa conexão e CPU, não worker slot
 
 - A explicação da entrada de 12/09 comparava jobs com `max_worker_processes = 6`.
