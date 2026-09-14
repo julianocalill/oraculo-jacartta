@@ -2,23 +2,33 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-14] — Correção: pg_cron disputa conexão e CPU, não worker slot
+
+- A explicação da entrada de 12/09 comparava jobs com `max_worker_processes = 6`.
+  Em produção `cron.use_background_workers = off`: cada job roda como sessão de
+  cliente e consome `max_connections = 90`, não worker slot.
+- O remanejo de 12/09 continua correto. O ganho é tirar jobs pesados de cima
+  uns dos outros nas 2 vCPUs e no pool de conexões do PostgREST.
+- Retirada a pendência do `cron.max_running_jobs = 32`: com pico de 4 jobs e
+  26 conexões em uso de 90, o teto não é atingido.
+- Documentação corrigida em `docs/deployment-map.md` e nos comentários da
+  migration `20260912140000`.
+
 ## [2026-09-12] — Crons espalhados pela janela de execução
 
 - A correção de 05/08 moveu o `oraculo-unified-sku-cache` de :30 para :28
   olhando o minuto de disparo. Como o job leva 211s em média e 239s no pior
-  caso, ele continuava ocupando worker em :29, :30, :31 e :32 — de volta ao
+  caso, ele continuava rodando em :29, :30, :31 e :32 — de volta ao
   minuto que abriu o incidente.
-- Medição sobre 3 dias de `cron.job_run_details`: só 6 dos 48 jobs seguram
-  worker por mais de 5s; `commercial-hourly` e `take-rate-cache` rodavam juntos
-  toda hora no :42; e o pico da semana chegava a 6 jobs simultâneos, igual ao
-  `max_worker_processes`.
+- Medição sobre 3 dias de `cron.job_run_details`: só 6 dos 48 jobs rodam por
+  mais de 5s; `commercial-hourly` e `take-rate-cache` rodavam juntos toda hora
+  no :42; e o pico da semana chegava a 6 jobs simultâneos.
 - Remanejados sem mudar frequência nem comando: `unified-sku-cache` :28→:51,
   `commercial-hourly` :42→:47, os quatro `ads-daily` para :11/:17/:27/:33 e
   `giracasa-shopee-token-refresh` :15→:09.
 - Pico da semana cai de 6 para 4 jobs simultâneos, todos dispatchers de ~0,2s,
   e nenhum par de jobs pesados volta a se sobrepor. Abre folga para os crons da
   Giracasa sem afetar Uberlândia.
-- Pendência: `cron.max_running_jobs = 32` contra 6 workers reais.
 
 ## [2026-09-11] — Shopee Ads no Comercial
 
