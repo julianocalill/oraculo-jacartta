@@ -35,8 +35,9 @@ contador.
    3,54% e 8,04% corretos. O cálculo dividia pela receita de linhas sem lucro
    (TikTok e Mercado Livre sem tarifa). Mesmo defeito na margem por SKU e no
    snapshot. Uberlândia usa a mesma fórmula, mas confere (8,20% / 19,05%).
-   Correção na migration `20260914120000_giracasa_margin_only_profitable_lines.sql`;
-   **aplicação em produção pendente de autorização**.
+   Correção na migration `20260914120000_giracasa_margin_only_profitable_lines.sql`,
+   aplicada em produção em 15/09/2026 depois de confirmar que as três funções
+   não tinham mudado desde a cópia. Nenhuma função de Uberlândia foi alterada.
 4. **Tarifa só da Shopee.** TikTok e Mercado Livre (19% da receita) ficam sem
    lucro, como o contrato exige.
 5. **Loja Shopee Vari Útil não autorizada** (R$ 258 mil na janela). Só a loja
@@ -62,7 +63,7 @@ antes da ativação.
 
 1. Parecer do contador sobre crédito de PIS/COFINS, ICMS de entrada e NFs de
    pedidos cancelados.
-2. Aplicar a correção de margem em produção.
+2. Conferir em produção a margem e o ROI exibidos após a correção.
 3. Cadastro dos SKUs faltantes e duplicados na Olist da Giracasa.
 4. Autorizar a loja Shopee Vari Útil e cadastrar tarifas de TikTok e Mercado Livre.
 5. Carga histórica Shopee por loja, preview com usuário de teste e só então

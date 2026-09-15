@@ -9,7 +9,7 @@ Histórico de entregas e mudanças significativas.
 - Lucro de R$ 41 mil depende do crédito de PIS/COFINS; sem ele, −R$ 6,2 mil.
 - 471 NFs válidas de pedidos cancelados (R$ 32,9 mil) sem NF de devolução.
 - Margem e ROI da Giracasa corrigidos para usar só linhas com lucro (3,54% e
-  8,04%, antes 3,00% e 6,81%); migration na branch, aplicação pendente.
+  8,04%, antes 3,00% e 6,81%); migration aplicada em produção em 15/09.
 - Detalhes e gates em `docs/project-status-2026-09-14-giracasa.md`.
 
 ## [2026-09-14] — Correção: pg_cron disputa conexão e CPU, não worker slot
