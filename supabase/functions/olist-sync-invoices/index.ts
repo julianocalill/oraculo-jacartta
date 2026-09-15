@@ -310,13 +310,24 @@ async function getAccessToken(supabase: ReturnType<typeof createClient>) {
   return payload.access_token;
 }
 
+type InvoiceTipo = 'E' | 'S';
+
+/** Filtro opcional da API v3 (`GET /notas?tipo=E|S`). Sem valor, busca todas as notas, como antes. */
+function parseInvoiceTipo(value: unknown): InvoiceTipo | null {
+  if (value == null || value === '') return null;
+  const tipo = String(value).trim().toUpperCase();
+  if (tipo === 'E' || tipo === 'S') return tipo;
+  throw new Error(`tipo invalido: ${String(value)}. Use E (entrada) ou S (saida).`);
+}
+
 async function fetchInvoicePage(
   accessToken: string,
   endpoint: string,
   startDate: string,
   endDate: string,
   offset: number,
-  limit: number
+  limit: number,
+  tipo: InvoiceTipo | null
 ) {
   const baseUrl = env.olistApiBaseUrl.endsWith('/') ? env.olistApiBaseUrl : `${env.olistApiBaseUrl}/`;
   const url = new URL(endpoint.replace(/^\//, ''), baseUrl);
@@ -325,6 +336,7 @@ async function fetchInvoicePage(
   url.searchParams.set('orderBy', 'desc');
   url.searchParams.set('dataInicial', startDate);
   url.searchParams.set('dataFinal', endDate);
+  if (tipo) url.searchParams.set('tipo', tipo);
   return fetchJsonWithRetry(url, { headers: olistHeaders(accessToken) }, `Olist ${endpoint} offset=${offset}`);
 }
 
@@ -338,7 +350,8 @@ async function findResumeRun(
   supabase: ReturnType<typeof createClient>,
   endpoint: string,
   startDate: string,
-  endDate: string
+  endDate: string,
+  tipo: InvoiceTipo | null
 ) {
   const { data, error } = await supabase
     .from('olist_invoice_sync_runs')
@@ -351,7 +364,7 @@ async function findResumeRun(
     .limit(50);
 
   if (error) throw error;
-  return (data ?? []).sort((left: SyncRun, right: SyncRun) => {
+  return (data ?? []).filter((candidate: SyncRun) => (candidate.metadata?.tipo ?? null) === tipo).sort((left: SyncRun, right: SyncRun) => {
     const leftOffset = Number(left.metadata?.next_offset ?? 0);
     const rightOffset = Number(right.metadata?.next_offset ?? 0);
     if (rightOffset !== leftOffset) return rightOffset - leftOffset;
@@ -432,6 +445,7 @@ Deno.serve(async (req) => {
     const detailDelayMs = clampPositiveInt(body.detailDelayMs, 400, 10000);
     const hydrateDetails = body.hydrateDetails !== false;
     const resume = body.resume !== false;
+    const tipo = parseInvoiceTipo(body.tipo);
 
     supabase = createClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false }
@@ -442,13 +456,14 @@ Deno.serve(async (req) => {
       endpoint,
       page_size: pageSize,
       hydrate_details: hydrateDetails,
+      tipo,
       max_pages: maxPages,
       next_offset: 0,
       started_at: new Date().toISOString()
     };
 
     run = resume
-      ? await findResumeRun(supabase, endpoint, startDate, endDate) ?? null
+      ? await findResumeRun(supabase, endpoint, startDate, endDate, tipo) ?? null
       : null;
     run = run ?? await createRun(supabase, endpoint, startDate, endDate, runMetadata);
 
@@ -478,7 +493,7 @@ Deno.serve(async (req) => {
     let completed = false;
 
     for (let page = 0; page < maxPages; page += 1) {
-      const payload = await fetchInvoicePage(accessToken, endpoint, startDate, endDate, offset, pageSize) as JsonObject;
+      const payload = await fetchInvoicePage(accessToken, endpoint, startDate, endDate, offset, pageSize, tipo) as JsonObject;
       const rows = normalizeListRows(payload);
       const pagination = payload && typeof payload === 'object' ? payload.paginacao as JsonObject | undefined : undefined;
       totalReported = Number(pagination?.total ?? totalReported ?? 0);
@@ -572,6 +587,7 @@ Deno.serve(async (req) => {
       endpoint,
       window_start: startDate,
       window_end: endDate,
+      tipo,
       pages_processed: pagesProcessed,
       next_offset: offset,
       total_reported: totalReported,
