@@ -257,6 +257,60 @@ export const INTERNAL_ICMS_RATES = {
   RJ: 22, RN: 20, RS: 17, RO: 19.5, RR: 20, SC: 17, SP: 18, SE: 19, TO: 20
 };
 
+/**
+ * Alíquota interna de ICMS por UF usada no DIFAL da Giracasa (gira-casa-v2):
+ * tabela do contador repassada em 17/09/2026. Separada de INTERNAL_ICMS_RATES,
+ * que continua sendo a de Uberlândia.
+ */
+export const GIRA_CASA_INTERNAL_ICMS_RATES = {
+  AC: 17, AL: 18, AP: 18, AM: 18, BA: 18, CE: 18, DF: 18, ES: 17, GO: 17,
+  MA: 18, MT: 17, MS: 17, MG: 18, PA: 17, PB: 18, PR: 18, PE: 18, PI: 18,
+  RJ: 20, RN: 18, RS: 17, RO: 17.5, RR: 17, SC: 17, SP: 18, SE: 18, TO: 18
+};
+
+/**
+ * ICMS da compra (%) quando o produto nunca apareceu numa nota de entrada da
+ * Giracasa. Medido nas compras de dez/2025 a set/2026: nacional 12% (SC),
+ * importado 4% (Jacartta MG).
+ */
+export const GIRA_CASA_PURCHASE_ICMS_FALLBACK = { nacional: 12, importado: 4 };
+
+/**
+ * Custo líquido da Giracasa (gira-casa-v2), em ordem de precedência:
+ *  - custo líquido explícito;
+ *  - custo bruto − créditos recuperáveis medidos;
+ *  - custo bruto × (1 − ICMS da compra − PIS/COFINS), os dois sobre o custo cheio.
+ * O ICMS da compra vem da nota de entrada; sem ela, da origem.
+ */
+export function calcGiraCasaNetCost({
+  grossTotal,
+  netTotal,
+  recoverableTaxes,
+  purchaseIcmsRate,
+  origin = "nacional",
+  pisCofinsRate = 9.25
+} = {}) {
+  if (netTotal != null && Number.isFinite(Number(netTotal))) {
+    return { total: Math.max(0, toNumber(netTotal)), rule: "explicit_net_cost" };
+  }
+  if (grossTotal == null || !Number.isFinite(Number(grossTotal))) {
+    return { total: null, rule: "missing_cost" };
+  }
+  const base = toNumber(grossTotal);
+  if (recoverableTaxes != null && toNumber(recoverableTaxes) > 0) {
+    return { total: Math.max(0, base - toNumber(recoverableTaxes)), rule: "gross_minus_recoverable_taxes" };
+  }
+  const measured = purchaseIcmsRate != null && Number.isFinite(Number(purchaseIcmsRate));
+  const icms = measured
+    ? toNumber(purchaseIcmsRate)
+    : GIRA_CASA_PURCHASE_ICMS_FALLBACK[origin === "importado" ? "importado" : "nacional"];
+  return {
+    total: Math.max(0, base * (1 - (icms + toRate(pisCofinsRate)) / 100)),
+    rule: measured ? "gross_minus_purchase_icms_and_pis_cofins" : "gross_minus_origin_icms_and_pis_cofins",
+    purchaseIcmsRate: icms
+  };
+}
+
 /** Sul/Sudeste exceto ES — usado na alíquota interestadual nacional (12% vs 7%). */
 export const SOUTH_SOUTHEAST_WITHOUT_ES = new Set(["MG", "PR", "RJ", "RS", "SC", "SP"]);
 
@@ -349,9 +403,9 @@ export function calcDifalPorDentro({ base, internalRate, interstateRate, intrast
  * sem gross-up e cobrando intraestadual. O motor do Oráculo NÃO usa mais esta
  * regra — ver calcDifalPorDentro. Mantida como especificação do app original.
  */
-export function calcDifal({ base, destState, sourceState = "MG", origin = "nacional", explicitAmount, explicitRate } = {}) {
+export function calcDifal({ base, destState, sourceState = "MG", origin = "nacional", explicitAmount, explicitRate, internalRates = INTERNAL_ICMS_RATES } = {}) {
   const baseValue = toNumber(base);
-  const internalRate = INTERNAL_ICMS_RATES[String(destState ?? "").toUpperCase()] ?? null;
+  const internalRate = internalRates[String(destState ?? "").toUpperCase()] ?? null;
   const interstate = interstateIcmsRate(sourceState, destState, origin);
   const calculatedRate = internalRate == null ? 0 : Math.max(0, internalRate - interstate);
   const rate = toNumber(explicitRate) > 0 ? toNumber(explicitRate) : calculatedRate;

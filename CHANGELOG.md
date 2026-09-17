@@ -2,6 +2,20 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-17] — Giracasa: motor gira-casa-v2
+
+- Custo passa a ser líquido de ICMS da compra e de PIS/COFINS, conforme regra do
+  contador; PIS/COFINS da venda vira débito cheio e o DIFAL passa a usar as
+  alíquotas internas da tabela dele.
+- ICMS da compra medido nas notas de entrada (última compra por produto, kit pelos
+  componentes); sem compra registrada, 12% nacional e 4% importado.
+- NF 000001 da Jacartta, emitida com ICMS zero por erro pontual, entra como
+  exceção registrada em `oraculo_purchase_icms_overrides`.
+- Janela 30/07–07/09: lucro de R$ 41.031 (3,54%) para R$ 85.568 (7,37%), ROI 20,11%.
+- Migration ensaiada em transação revertida; ainda não aplicada. Uberlândia
+  intocada, com teste que prova o DIFAL dela inalterado.
+- Contrato atualizado e decisão em `docs/adr/ADR-009-giracasa-custo-liquido-icms.md`.
+
 ## [2026-09-14] — Giracasa: conferência fiscal dos 40 dias
 
 - Receita (22.925 NFs, R$ 1.431.405,94), vínculos, itens, ICMS, DIFAL e lucro

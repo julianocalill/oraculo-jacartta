@@ -1,6 +1,7 @@
 # Contrato financeiro da Giracasa
 
-Este documento define o comportamento do motor `gira-casa-v1` no Oráculo. A
+Este documento define o comportamento do motor `gira-casa-v2` no Oráculo
+(versão vigente desde 17/09/2026; ver `docs/adr/ADR-009-giracasa-custo-liquido-icms.md`). A
 referência original é o perfil **Gira Casa** do projeto Financeiro; o contrato
 abaixo registra também as adaptações necessárias para o faturamento canônico do
 Oráculo.
@@ -32,17 +33,38 @@ O DIFAL é calculado somente em operação interestadual:
 DIFAL = base da NF × max(alíquota interna do destino − alíquota interestadual, 0)
 ```
 
+As alíquotas internas são as da tabela do contador (17/09/2026), próprias da
+Giracasa: AC 17, AL 18, AP 18, AM 18, BA 18, CE 18, DF 18, ES 17, GO 17, MA 18,
+MT 17, MS 17, MG 18, PA 17, PB 18, PR 18, PE 18, PI 18, RJ 20, RN 18, RS 17,
+RO 17,5, RR 17, SC 17, SP 18, SE 18, TO 18. Uberlândia continua com a tabela
+vigente de 2026; as duas não se misturam.
+
 SP→SP produz DIFAL zero para produto nacional ou importado. Uma regra por UF,
 origem e vigência pode substituir a matriz depois de validação contábil.
 
 ## Custo
 
-A precedência reproduzida do Financeiro é:
+Regra do contador (15 e 17/09/2026): **custo = custo − ICMS − PIS/COFINS**, os
+dois créditos sobre o custo cheio.
 
-1. custo líquido explícito;
-2. custo bruto menos créditos recuperáveis medidos;
-3. transferência importada comprovada: custo bruto × `0,8425`;
-4. custo bruto sem redução.
+```text
+custo líquido = custo bruto × (1 − ICMS da compra − 9,25%)
+```
+
+A precedência é:
+
+1. custo líquido explícito por SKU;
+2. custo bruto menos créditos recuperáveis medidos por SKU;
+3. custo bruto × (1 − ICMS da compra − 9,25%).
+
+O ICMS da compra vem da última nota de entrada do produto (CFOP x101, x102,
+x401, x403). Kit soma o custo líquido de cada componente. Produto sem compra
+registrada usa 12% (nacional) ou 4% (importado), medidos nas compras de
+dez/2025 a set/2026. Nota divergente entra como exceção em
+`giracasa.oraculo_purchase_icms_overrides`, nunca como regra genérica.
+
+A transferência importada com fator `0,8425` foi descontinuada: o ICMS medido
+ocupa o lugar dela.
 
 O mesmo SKU em Uberlândia e na Giracasa representa dois cadastros operacionais.
 Custos, origem, composição do kit e exceções não são copiados entre empresas.
@@ -53,16 +75,15 @@ Kit só recebe resultado quando todos os componentes necessários possuem custo.
 A alíquota padrão do Financeiro é 9,25%:
 
 ```text
-débito = base da NF × 9,25%
-crédito = custo resolvido × 9,25%, quando habilitado
-PIS/COFINS = max(débito − crédito, 0)
+PIS/COFINS da venda = base da NF × 9,25%
 ```
 
-O Financeiro habilita o crédito por padrão. Na Giracasa, cada exceção por SKU e
-vigência grava `pis_cofins_credit_enabled`. Quando o custo líquido explícito ou
-os créditos recuperáveis medidos já incorporarem o mesmo PIS/COFINS, o campo
-deve ser desabilitado para não reconhecer o benefício duas vezes. Essa decisão
-faz parte da conferência da amostra de um dia.
+O crédito de 9,25% está no custo líquido, então **não** é abatido de novo no
+imposto da venda: reconhecê-lo dos dois lados seria crédito em dobro.
+
+Quando um SKU tiver custo líquido explícito ou créditos recuperáveis medidos em
+`oraculo_financial_product_rules`, esses valores já são o custo final e a fórmula
+não se aplica.
 
 ## Comissão, pendências e versão
 
@@ -80,7 +101,7 @@ faz parte da conferência da amostra de um dia.
 2. Produto importado SP→SP, ICMS 18% e sem DIFAL.
 3. Produto nacional de SP para MG e para uma UF fora do Sul/Sudeste.
 4. Produto importado interestadual com alíquota de 4%.
-5. Custo líquido explícito, crédito medido e transferência importada.
+5. Custo líquido explícito, crédito medido e ICMS de compra medido em nota.
 6. Kit completo e kit com componente sem custo.
 7. Crédito de PIS/COFINS habilitado e desabilitado.
 8. NF ausente, UF ausente, tarifa ausente e custo ausente, todos como pendência.
