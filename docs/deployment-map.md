@@ -7,7 +7,7 @@
 - Framework: `Next.js`
 - Data access: business-data reads use an authenticated server client (anon key + user JWT) under RLS via `createSupabaseUserClient()`; the `SUPABASE_SERVICE_ROLE_KEY` client is reserved for writes, `/usuarios` (auth.admin) and `/status` (sensitive tokens). See migration `20260710092000_rls_authenticated_read.sql`.
 - Production domain: `https://oraculo.oliverhome.com.br`
-- Latest documented feature deploy: `dpl_HB5NWFpPTt38G9s2AgQz7rFzrAyn`
+- Latest documented feature deploy: `dpl_AyYsNJn1WUqkkPjPmMtsVk7Z9ZxW`
   (2026-09-17, setor de RH com recrutamento e prontuário 360º, `Ready`)
 - Primary GitHub repository: `https://github.com/Grupo-Jacartta/oraculo.git`
 - Personal mirror: `https://github.com/julianocalill/oraculo-jacartta`

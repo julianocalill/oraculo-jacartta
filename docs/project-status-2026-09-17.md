@@ -15,7 +15,7 @@ continuam condicionados à modelagem de RLS, auditoria e retenção antes de uma
 integração produtiva.
 
 - Commit: `821ad0c`.
-- Deployment: `dpl_HB5NWFpPTt38G9s2AgQz7rFzrAyn`, estado `READY`.
+- Deployment final: `dpl_AyYsNJn1WUqkkPjPmMtsVk7Z9ZxW`, estado `READY`.
 - Produção: `https://oraculo.oliverhome.com.br/o/uberlandia/rh`.
 - Validações: 85 testes de domínio, TypeScript e build Next.js aprovados.
 
