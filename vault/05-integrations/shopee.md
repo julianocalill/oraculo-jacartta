@@ -25,6 +25,9 @@ assinatura com a chave errada, não token vencido).
   replicado. Desde 2026-08-09 também materializa pacotes, prazo, rastreio e
   status da expedição.
 - `shopee-escrow-sync` (30 min/loja): comissão/taxas/líquido por pedido.
+- `shopee-live-monitor` (5 min/loja, escalonado): consulta diretamente
+  `get_order_list` + `get_order_detail`, agrega hoje/ontem e grava um snapshot
+  sem PII para `/shopee/ao-vivo`. Não usa navegador nem renova token.
 - `shopee-sync-sbs` (horário, :42): inventário FBS por SKU × armazém via
   `/api/v2/sbs/get_current_inventory` — a Shopee entrega vendável/reservado,
   trânsito, cobertura, velocidade e janelas 7–90d prontos. Snapshot diário.
@@ -44,8 +47,14 @@ assinatura com a chave errada, não token vencido).
 - Falha de uma loja interrompe o relatório inteiro para impedir parcial.
 - Operação completa: `docs/shopee-sales-whatsapp-report.md`.
 
-## Produto — três abas em `/shopee`
+## Produto — cinco abas em `/shopee`
 
+- **Monitor ao vivo** (2026-09-17): faturamento, pedidos, unidades,
+  compradores, tendência horária, top produtos e saúde por loja, consolidando
+  as quatro lojas via Open Platform. Visitantes/cliques gerais/conversão ficam
+  explicitamente indisponíveis porque os endpoints oficiais de pedidos não os
+  expõem. Produção no deploy `dpl_FoMk7g27SqjoyAriQFSRdh8BmWGU`, alias
+  `https://oraculo.oliverhome.com.br`. Contrato: `docs/shopee-live-monitor.md`.
 - **Take Rate** (2026-07-13): comissão e ROI líquido por loja/SKU via escrow.
 - **Estoque & FBS**: posição completa por SKU × armazém (vendável FBS,
   reservado, não vendável, trânsito e vendável total do anúncio), ruptura FBS
@@ -61,6 +70,8 @@ assinatura com a chave errada, não token vencido).
   (regra de produto); **kits ficam de fora** (repõe-se o produto simples);
   filtro de loja em pills; **export .xlsx** (mesma lógica da tela) e
   **cadastro em massa do livro de custos por SKU** na própria aba.
+- **Preço × Custo**: preço atual dos anúncios comparado ao custo canônico e às
+  vendas do período, sem tratar preço atual como lucro histórico.
 
 ## Expedição Shopee × Bip
 

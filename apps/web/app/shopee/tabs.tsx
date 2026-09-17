@@ -38,9 +38,12 @@ export function LojaPills({
 }
 
 // Navegação entre as abas do canal Shopee
-export function ShopeeTabs({ active }: { active: "takerate" | "estoque" | "reposicao" | "precos" }) {
+export function ShopeeTabs({ active }: { active: "ao-vivo" | "takerate" | "estoque" | "reposicao" | "precos" }) {
   return (
-    <div className="pill-row" style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+    <div className="pill-row" style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+      <Link href="/shopee/ao-vivo" className={active === "ao-vivo" ? "pill pill-gold" : "pill"}>
+        Monitor ao vivo
+      </Link>
       <Link href="/shopee" className={active === "takerate" ? "pill pill-gold" : "pill"}>
         Take Rate
       </Link>

@@ -7,8 +7,8 @@
 - Framework: `Next.js`
 - Data access: business-data reads use an authenticated server client (anon key + user JWT) under RLS via `createSupabaseUserClient()`; the `SUPABASE_SERVICE_ROLE_KEY` client is reserved for writes, `/usuarios` (auth.admin) and `/status` (sensitive tokens). See migration `20260710092000_rls_authenticated_read.sql`.
 - Production domain: `https://oraculo.oliverhome.com.br`
-- Latest documented feature deploy: `dpl_3ZtT1c3R8ey1Q9eqcBDYtLooV64h`
-  (2026-09-01, novidades pós-login por 48 horas, `Ready`)
+- Latest documented feature deploy: `dpl_FoMk7g27SqjoyAriQFSRdh8BmWGU`
+  (2026-09-17, monitor consolidado Shopee por API, `Ready`)
 - Primary GitHub repository: `https://github.com/Grupo-Jacartta/oraculo.git`
 - Personal mirror: `https://github.com/julianocalill/oraculo-jacartta`
 - Current deployment mode: production deploys through Vercel CLI/GitHub integration.
@@ -92,6 +92,18 @@
   - Each shop has its **own partner app** — requests are signed with that
     shop's partner key. An `invalid_access_token` is usually a wrong signature
     (wrong app for the shop), not an expired token.
+- `shopee-live-monitor` — **a cada 5 min, uma loja por invocação e minutos escalonados**
+  - Consulta diretamente `order.get_order_list` e `order.get_order_detail`
+    desde o início de ontem em BRT; exclui não pagos/cancelados e materializa
+    faturamento, pedidos, unidades, compradores, série horária e produtos no
+    snapshot `shopee_live_monitor_snapshots`.
+  - Alimenta `/shopee/ao-vivo`; a tela lê o snapshot service-role-only e se
+    atualiza a cada minuto sem multiplicar chamadas externas por usuário.
+  - Não persiste PII/payload de pedidos no snapshot, não usa a sessão do Seller
+    Center e nunca renova tokens. Contrato: `docs/shopee-live-monitor.md`.
+  - Edge Function republicada em 17/09/2026; frontend correspondente no deploy
+    Vercel `dpl_FoMk7g27SqjoyAriQFSRdh8BmWGU`, alias de produção
+    `https://oraculo.oliverhome.com.br`.
 - `shopee-escrow-sync` — **ativo a cada 30 min, defasado por loja (`:11/:41` donacor, `:13/:43` espaço-de-bicho, `:17/:47` oliverhome, `:19/:49` jacartta)**
   - Pulls escrow detail per order (commission, fees, net) — the source of the
     take rate / net ROI on `/shopee`. Read-only on tokens.

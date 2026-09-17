@@ -14,6 +14,20 @@ Histórico de entregas e mudanças significativas.
 - O fechamento da manhã foi reprocessado e enviado pelo WhatsApp com 26 linhas
   e 130 caixas.
 
+## [2026-09-17] — Monitor consolidado de vendas Shopee por API
+
+- Nova aba `/shopee/ao-vivo` reúne as quatro lojas com faturamento, pedidos,
+  unidades, compradores, tendência horária, top produtos e saúde da coleta.
+- A Edge Function consulta somente a Open Platform, uma loja por invocação,
+  grava snapshot privado a cada cinco minutos e preserva o último dado bom em
+  falhas sem esconder cobertura parcial.
+- Visitantes, cliques gerais e conversão permanecem explicitamente
+  indisponíveis: os endpoints oficiais de pedidos não fornecem essas métricas e
+  o monitor não usa cookies ou endpoints internos do Seller Center.
+- Produção publicada no Vercel `dpl_FoMk7g27SqjoyAriQFSRdh8BmWGU` e no alias
+  `https://oraculo.oliverhome.com.br`; Edge Function republicada e quatro lojas
+  confirmadas saudáveis após o deploy.
+
 ## [2026-09-14] — Correção: pg_cron disputa conexão e CPU, não worker slot
 
 - A explicação da entrada de 12/09 comparava jobs com `max_worker_processes = 6`.

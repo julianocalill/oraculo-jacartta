@@ -26,6 +26,7 @@
   --amber-strong: #e3a93a;
   --gold-text: #f6c453;
   --on-gold: #121000;
+  --shopee: #ee4d2d;
 
   /* Superfícies auxiliares que variam por tema. */
   --tooltip-bg: #172033;
@@ -6846,3 +6847,54 @@ button:disabled { cursor: not-allowed; filter: grayscale(.6); opacity: .55; }
 
 .ads-all-insights { margin-top: 20px; }
 .ads-all-insights summary { cursor: pointer; color: var(--gold-text); margin-bottom: 14px; }
+
+/* Monitor de vendas Shopee — snapshot privado alimentado pela Open Platform. */
+.live-monitor-topbar { align-items: end; }
+.live-monitor-clock { display: grid; justify-items: end; gap: 5px; text-align: right; }
+.live-monitor-clock > span { border: 1px solid rgba(238,77,45,.45); border-radius: 999px; background: rgba(238,77,45,.13); color: var(--shopee); font-size: 11px; font-weight: 850; padding: 5px 10px; text-transform: uppercase; }
+.live-monitor-clock strong { font-family: var(--mono); font-size: 14px; }
+.live-monitor-clock small { color: var(--muted); max-width: 380px; }
+.live-monitor-warning { border-color: var(--warn-line); background: var(--warn-soft); }
+.live-monitor-warning strong { color: var(--gold-text); }
+.live-monitor-warning p { margin: 6px 0 0; }
+.live-revenue-hero { position: relative; overflow: hidden; display: grid; justify-items: center; gap: 4px; margin-bottom: 14px; padding: 28px 24px; border: 1px solid rgba(238,77,45,.4); border-radius: var(--radius); background: radial-gradient(circle at 75% 20%, rgba(255,255,255,.12), transparent 35%), linear-gradient(135deg, #d93d21, var(--shopee)); box-shadow: 0 18px 45px rgba(238,77,45,.13); color: #fff; text-align: center; }
+.live-revenue-hero::after { content: "S"; position: absolute; right: 4%; top: -48px; color: rgba(255,255,255,.08); font: 900 220px/1 var(--sans); transform: rotate(-8deg); }
+.live-revenue-hero > * { position: relative; z-index: 1; }
+.live-revenue-hero > span { font-size: 13px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.live-revenue-hero > strong { font-family: var(--mono); font-size: clamp(40px, 6vw, 76px); letter-spacing: -.05em; line-height: 1.05; }
+.live-revenue-hero > small { color: rgba(255,255,255,.83); }
+.live-monitor-metrics { grid-template-columns: repeat(6, minmax(135px, 1fr)); margin-bottom: 14px; }
+.live-monitor-main-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(320px, .8fr); gap: 14px; }
+.live-hourly-panel, .live-ranking-panel { min-width: 0; }
+.live-chart-scroll { overflow-x: auto; }
+.live-sales-chart { display: block; width: 100%; min-width: 660px; max-height: 360px; font: 11px var(--mono); }
+.live-chart-legend { display: flex; flex-wrap: wrap; gap: 18px; color: var(--muted); font-size: 12px; }
+.live-chart-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.live-chart-legend i { width: 24px; height: 3px; border-radius: 999px; background: var(--shopee); }
+.live-chart-legend i.previous { background: var(--cyan); opacity: .5; }
+.live-product-ranking { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.live-product-ranking li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.live-product-ranking li:last-child { border-bottom: 0; }
+.live-product-rank { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(238,77,45,.12); color: var(--shopee); font-family: var(--mono); font-weight: 900; }
+.live-product-ranking li > div { min-width: 0; }
+.live-product-ranking strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-product-ranking small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+.live-product-ranking li > span:last-child { text-align: right; }
+.live-product-ranking li > span:last-child b { display: block; color: var(--shopee); font-family: var(--mono); white-space: nowrap; }
+.live-monitor-method summary { cursor: pointer; color: var(--gold-text); font-weight: 800; }
+.live-monitor-method p:last-child { margin-bottom: 0; }
+@media (max-width: 1250px) {
+  .live-monitor-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .live-monitor-main-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 700px) {
+  .live-monitor-topbar { align-items: start; }
+  .live-monitor-clock { justify-items: start; text-align: left; }
+  .live-monitor-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .live-revenue-hero { padding: 24px 14px; }
+  .live-product-ranking li { grid-template-columns: 26px minmax(0, 1fr); }
+  .live-product-ranking li > span:last-child { grid-column: 2; text-align: left; }
+}
+@media (max-width: 430px) {
+  .live-monitor-metrics { grid-template-columns: minmax(0, 1fr); }
+}
