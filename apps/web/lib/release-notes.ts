@@ -24,6 +24,18 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-09-17-setor-rh",
+    title: "Novo setor de RH no Oráculo",
+    summary: "Indicadores de pessoas, recrutamento com IA e prontuário funcional agora estão reunidos em uma área própria.",
+    publishedAt: "2026-09-17T13:55:00-03:00",
+    changes: [{
+      title: "Gestão de Pessoas e recrutamento",
+      description: "A nova área apresenta o diagnóstico consolidado de RH, o fluxo futuro de recrutamento com IA e a estrutura de prontuário 360º. Os perfis individuais exibidos nesta primeira versão são demonstrativos e não representam colaboradores reais.",
+      href: "/rh",
+      linkLabel: "Abrir RH"
+    }]
+  },
+  {
     id: "2026-09-17-separacao-uma-caixa",
     title: "Separação inclui produtos a partir de uma caixa",
     summary: "SKUs que formam uma única caixa completa também passam a aparecer na lista operacional.",

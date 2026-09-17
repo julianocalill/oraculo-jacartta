@@ -1,5 +1,24 @@
 # Estado do projeto — 17/09/2026
 
+## Setor de RH no Oráculo
+
+O novo setor **Pessoas → RH** foi publicado em produção com cinco visões:
+Visão geral, Recrutamento, Pessoas, Desenvolvimento e Governança. A primeira
+versão incorpora o diagnóstico consolidado de RH, diferencia indicadores
+medidos de lacunas e apresenta o fluxo futuro de recrutamento com IA, n8n,
+WhatsApp oficial, Chatwoot, CRM do Oráculo, Supabase e Google Agenda.
+
+A visão Pessoas inclui o desenho do diretório e do prontuário funcional 360º.
+Os seis perfis desta versão são explicitamente fictícios; nenhum cadastro real
+de colaborador foi importado. Dados pessoais, saúde, remuneração e documentos
+continuam condicionados à modelagem de RLS, auditoria e retenção antes de uma
+integração produtiva.
+
+- Commit: `821ad0c`.
+- Deployment: `dpl_HB5NWFpPTt38G9s2AgQz7rFzrAyn`, estado `READY`.
+- Produção: `https://oraculo.oliverhome.com.br/o/uberlandia/rh`.
+- Validações: 85 testes de domínio, TypeScript e build Next.js aprovados.
+
 ## Separação operacional com mínimo de uma caixa
 
 O fechamento de `Logística → Separação` agora inclui todo SKU que formar ao
