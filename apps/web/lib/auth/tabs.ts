@@ -14,12 +14,13 @@ export type TabGroup = "main" | "admin";
 // sidebar. Aba `main` sem setor fica solta, sempre visível (Agenda,
 // Parâmetros). `group` continua mandando no acesso e em /usuarios — setor é
 // só organização visual.
-export type TabSector = "analitico" | "comercial" | "operacoes";
+export type TabSector = "analitico" | "comercial" | "operacoes" | "pessoas";
 
 export const SECTORS: ReadonlyArray<{ key: TabSector; label: string }> = [
   { key: "analitico", label: "Analítico" },
   { key: "comercial", label: "Comercial" },
-  { key: "operacoes", label: "Operações" }
+  { key: "operacoes", label: "Operações" },
+  { key: "pessoas", label: "Pessoas" }
 ];
 
 export type TabDefinition = {
@@ -54,6 +55,7 @@ export const TABS = [
   { key: "importacoes", label: "Importações", href: "/importacoes", group: "main", paths: ["/importacoes"], sector: "operacoes" },
   { key: "logistica", label: "Logística", href: "/logistica", group: "main", paths: ["/logistica"], sector: "operacoes" },
   { key: "full", label: "Full", href: "/full", group: "main", paths: ["/full"], sector: "operacoes" },
+  { key: "rh", label: "RH", href: "/rh", group: "main", paths: ["/rh"], sector: "pessoas" },
   { key: "calculadora", label: "Calculadora", href: "/calculadora", group: "main", paths: ["/calculadora"], sector: "comercial" },
   // Guarda CPF/endereço de centenas de afiliados: por ser opt-in por usuário,
   // a aba nasce invisível para todo mundo até ser liberada em /usuarios.
