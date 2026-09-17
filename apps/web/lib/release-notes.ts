@@ -24,6 +24,18 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-09-17-separacao-uma-caixa",
+    title: "Separação inclui produtos a partir de uma caixa",
+    summary: "SKUs que formam uma única caixa completa também passam a aparecer na lista operacional.",
+    publishedAt: "2026-09-17T08:00:00-03:00",
+    changes: [{
+      title: "Novo mínimo operacional",
+      description: "A impressão, o CSV e o WhatsApp agora incluem todos os SKUs com uma caixa completa ou mais. Tapetes higiênicos usam seis pacotes por caixa, com expansão dos kits pelos componentes do Olist.",
+      href: "/logistica/separacao",
+      linkLabel: "Abrir Separação"
+    }]
+  },
+  {
     id: "2026-09-11-shopee-ads",
     title: "Shopee Ads agora no Comercial",
     summary: "Acompanhe o investimento, o ROAS e as prioridades de cada dia dentro do Oráculo.",

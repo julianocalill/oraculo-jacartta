@@ -136,7 +136,8 @@ exige aplicar as tabelas e revalidar o app).
   auditoria de impressão congelam o consolidado Olist multicanal já usado no
   WhatsApp.
 - `/logistica/separacao` oferece alerta de atraso, recuperação manual, período
-  personalizado, histórico, A4 e CSV. Mantém o mínimo atual de duas caixas.
+  personalizado, histórico, A4 e CSV. Desde 17/09/2026, o mínimo operacional é
+  uma caixa completa.
 - Ativada em produção com rollout controlado. Contrato e operação:
   `docs/logistica-separacao.md`.
 

@@ -48,8 +48,8 @@ oficial nem envia WhatsApp.
 - `logistica_picking_cursor`: cursor oficial; somente `service_role`;
 - `logistica_picking_listas`: execução, origem, período, status, solicitante,
   erro, Olist e WhatsApp;
-- `logistica_picking_itens`: fotografia imutável das linhas com no mínimo duas
-  caixas;
+- `logistica_picking_itens`: fotografia imutável das linhas com no mínimo uma
+  caixa;
 - `logistica_picking_impressoes`: auditoria append-only do clique em Imprimir.
 
 Leituras autenticadas exigem, por RLS, acesso ativo à operação Uberlândia e à
@@ -61,8 +61,15 @@ O UUID da lista é a correlação auditável entre a interface e o n8n; a coluna
 
 Impressão A4, CSV e WhatsApp derivam do mesmo relatório congelado. As colunas
 são SKU, produto, descritivo, itens vendidos, caixas e unidades avulsas. Só
-entram linhas com duas caixas ou mais. Pedidos candidatos com `itens = []`
+entram linhas com uma caixa ou mais. Pedidos candidatos com `itens = []`
 bloqueiam a publicação e o avanço do cursor.
+
+Tapetes higiênicos usam uma regra operacional própria: **seis pacotes físicos
+por caixa**. Em produtos simples, cada unidade vendida representa um pacote.
+Em kits, `package_quantity` é calculado pela soma dos componentes de tapete no
+cadastro Olist e multiplicado pela quantidade vendida antes de dividir por
+seis. A regra reconhece somente descrições iniciadas por `TAPETE HIG`; tapetes
+musicais e de banheiro não entram por engano.
 
 ## Configuração e ativação controlada
 

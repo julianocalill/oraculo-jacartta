@@ -2,6 +2,18 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-17] — Separação a partir de uma caixa
+
+- Impressão, CSV e WhatsApp passam a incluir SKUs que formem ao menos uma
+  caixa completa; o limite anterior era de duas caixas.
+- O filtro foi alinhado no workflow n8n e na persistência transacional do
+  Oráculo para que todas as saídas usem o mesmo contrato.
+- Tapetes higiênicos passam a usar a regra operacional de seis pacotes por
+  caixa. Kits são convertidos em pacotes físicos pelos componentes cadastrados
+  no Olist antes do cálculo das caixas.
+- O fechamento da manhã foi reprocessado e enviado pelo WhatsApp com 26 linhas
+  e 130 caixas.
+
 ## [2026-09-14] — Correção: pg_cron disputa conexão e CPU, não worker slot
 
 - A explicação da entrada de 12/09 comparava jobs com `max_worker_processes = 6`.

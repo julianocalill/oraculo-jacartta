@@ -33,7 +33,8 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-11.md](docs/project-status-2026-09-11.md) **← start here** (Shopee Ads no Comercial)
+1. [docs/project-status-2026-09-17.md](docs/project-status-2026-09-17.md) **← start here** (Separação com mínimo de uma caixa e recuperação do fechamento)
+   — [docs/project-status-2026-09-11.md](docs/project-status-2026-09-11.md) (Shopee Ads no Comercial)
    — [docs/project-status-2026-09-10.md](docs/project-status-2026-09-10.md) (Correção das taxas TikTok na calculadora)
    — [docs/project-status-2026-09-09.md](docs/project-status-2026-09-09.md) (Separação operacional em produção)
    — [docs/project-status-2026-09-08.md](docs/project-status-2026-09-08.md) (implementação do Full e status dos syncs)
@@ -62,11 +63,13 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 ## Current production state
 
+Separação operacional atualizada em produção em 17/09/2026: [status de 17/09](docs/project-status-2026-09-17.md). O fechamento inclui SKUs a partir de uma caixa completa; tapetes higiênicos usam seis pacotes físicos por caixa, expandindo kits pelos componentes do Olist.
+
 Shopee Ads publicado em produção em 11/09/2026: [status de 11/09](docs/project-status-2026-09-11.md), com gasto × ROAS e análise diária.
 
 Correção de taxas TikTok publicada em 11/09/2026: [status](docs/project-status-2026-09-10.md).
 
-**Last update**: `2026-09-09` (see `docs/project-status-2026-09-09.md`) —
+**Last update**: `2026-09-17` (see `docs/project-status-2026-09-17.md`) —
 `Logística → Separação` com alerta do fechamento esperado, atualização manual,
 histórico, auditoria, impressão A4, CSV e períodos personalizados. A lista
 congelada agora é a fonte do Oráculo e do envio agendado por WhatsApp; o cursor
