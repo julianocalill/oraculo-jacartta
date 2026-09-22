@@ -234,8 +234,15 @@ export function csvEscape(value) {
   return `"${text.replace(/"/g, '""')}"`;
 }
 
+export function displaySeparationProduct(row) {
+  const product = String(row?.product || row?.description || 'Produto sem descrição').trim();
+  const warning = 'KIT SEM COMPOSIÇÃO NO OLIST';
+  return String(row?.description || '').includes(warning) && !product.includes(warning)
+    ? `${product} · ${warning}` : product;
+}
+
 export function buildOlistMultichannelCsv(report) {
-  const headers = ['SKU', 'Produto', 'Descritivo', 'Unidades a separar', 'Caixas', 'Unidades avulsas'];
+  const headers = ['SKU', 'Produto', 'Unidades a separar', 'Caixas', 'Unidades avulsas'];
   const lines = [headers.map(csvEscape).join(';')];
   const rows = (report?.rows || [])
     .filter((row) => asNumber(row.boxes) >= 1 || row.force_print === true)
@@ -243,8 +250,7 @@ export function buildOlistMultichannelCsv(report) {
   for (const row of rows) {
     lines.push([
       row.sku,
-      row.product,
-      row.description,
+      displaySeparationProduct(row),
       row.sold_quantity,
       row.boxes,
       row.loose_units,
@@ -276,7 +282,7 @@ export function buildOlistMultichannelMessages(report, context, maxChars = 3400)
     ? '_Mensagem de teste — cursor oficial não alterado._\n_Fonte: Olist ERP via Oráculo/Supabase_'
     : '_Fonte: Olist ERP via Oráculo/Supabase_';
   const lines = rows.length ? rows.map((row, index) => {
-    return `${index + 1}. SKU: *${row.sku || '-'}* | Produto: ${truncate(row.product, 70)} | Descritivo: ${truncate(row.description, 100)} | Unidades a separar: *${row.sold_quantity.toLocaleString('pt-BR')}* | Caixas: *${row.boxes.toLocaleString('pt-BR')}* | Unidades avulsas: *${row.loose_units.toLocaleString('pt-BR')}*`;
+    return `${index + 1}. SKU: *${row.sku || '-'}* | Produto: ${displaySeparationProduct(row)} | Unidades a separar: *${row.sold_quantity.toLocaleString('pt-BR')}* | Caixas: *${row.boxes.toLocaleString('pt-BR')}* | Unidades avulsas: *${row.loose_units.toLocaleString('pt-BR')}*`;
   }) : ['Nenhum SKU formou ao menos 1 caixa neste fechamento.'];
 
   const groups = [];

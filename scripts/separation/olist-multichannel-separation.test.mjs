@@ -68,5 +68,11 @@ test('kit sem composição mantém aviso e cálculo legado', () => {
       kit_without_components: true, expansion_sources: ['kit_sem_composicao:K'] }],
   }, { mappings: [] }, context);
   assert.equal(report.rows[0].force_print, true);
-  assert.match(buildOlistMultichannelCsv(report), /KIT SEM COMPOSIÇÃO NO OLIST/);
+  const csv = buildOlistMultichannelCsv(report);
+  const message = buildOlistMultichannelMessages(report, context)[0].message_text;
+  assert.match(csv, /KIT X · KIT SEM COMPOSIÇÃO NO OLIST/);
+  assert.match(message, /KIT X · KIT SEM COMPOSIÇÃO NO OLIST/);
+  assert.doesNotMatch(csv, /Descritivo/);
+  assert.doesNotMatch(message, /Descritivo/);
+  assert.equal(csv.trim().split('\n')[0].split(';').length, 5);
 });

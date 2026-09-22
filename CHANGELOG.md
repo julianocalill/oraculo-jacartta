@@ -2,6 +2,12 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-22] — Lista de separação sem coluna redundante
+
+- Retirada a coluna Descritivo da impressão A4, CSV e mensagem do WhatsApp.
+- O aviso de kit sem composição continua visível junto ao produto; a descrição
+  permanece armazenada para auditoria, sem alterar quantidades de listas prontas.
+
 ## [2026-09-22] — Separação por produto físico
 
 - Kits Olist com composição válida são abertos antes do agrupamento da lista;

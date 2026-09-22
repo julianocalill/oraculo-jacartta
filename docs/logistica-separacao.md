@@ -60,7 +60,9 @@ O UUID da lista é a correlação auditável entre a interface e o n8n; a coluna
 ## Contrato do documento
 
 Impressão A4, CSV e WhatsApp derivam do mesmo relatório congelado. As colunas
-são SKU, produto, descritivo, unidades a separar, caixas e unidades avulsas.
+são SKU, produto, unidades a separar, caixas e unidades avulsas. A descrição
+continua guardada na lista para auditoria e cubagem, mas não ocupa uma coluna.
+Se um kit não tem composição, o aviso aparece junto ao nome do produto.
 Entram linhas com uma caixa ou mais e componentes de kits ainda sem cubagem.
 Pedidos candidatos com `itens = []`
 bloqueiam a publicação e o avanço do cursor.

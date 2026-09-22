@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { getCurrentUser } from "../../../../../lib/auth/session";
 import { canAccessRequest } from "../../../../../lib/auth/access";
 import { loadPickingList } from "../../data";
+import { displaySeparationProduct } from "../../display-product";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +20,10 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
   if (!data || data.list.status !== "ready") return new Response("Lista não encontrada", { status: 404 });
 
   const lines = [
-    ["SKU", "Produto", "Descritivo", "Unidades a separar", "Caixas", "Unidades avulsas"].map(csvEscape).join(";")
+    ["SKU", "Produto", "Unidades a separar", "Caixas", "Unidades avulsas"].map(csvEscape).join(";")
   ];
   for (const item of data.items) {
-    lines.push([item.sku, item.product, item.description, item.sold_quantity, item.boxes, item.loose_units].map(csvEscape).join(";"));
+    lines.push([item.sku, displaySeparationProduct(item), item.sold_quantity, item.boxes, item.loose_units].map(csvEscape).join(";"));
   }
   const filename = data.list.slot_key
     ? `separacao-todos-marketplaces-${data.list.slot_key}.csv`

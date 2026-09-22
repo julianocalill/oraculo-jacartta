@@ -39,6 +39,18 @@ updatedPersisted = updatedPersisted.replaceAll(
   '.filter((row) => asNumber(row.boxes) >= 1)',
   '.filter((row) => true)',
 );
+updatedPersisted = updatedPersisted
+  .replace("'Produto', 'Descritivo',", "'Produto',")
+  .replace('      row.product,\n      row.description,', '      displaySeparationProduct(row),')
+  .replace('truncate(row.product, 70)} | Descritivo: ${truncate(row.description, 100)}', 'displaySeparationProduct(row)}');
+if (!updatedPersisted.includes('function displaySeparationProduct(row)')) {
+  const helper = library.match(/function displaySeparationProduct\(row\) \{[\s\S]*?\n\}/)?.[0];
+  if (!helper) throw new Error('Formatador de produto não encontrado.');
+  updatedPersisted = `${helper}\n\n${updatedPersisted}`;
+}
+if (updatedPersisted.includes('Descritivo') || !updatedPersisted.includes('displaySeparationProduct(row),')) {
+  throw new Error('Contrato CSV/WhatsApp do nó de reenvio mudou; atualização cancelada.');
+}
 if (updatedPersisted === oldPersisted && !oldPersisted.includes('Unidades a separar')) {
   throw new Error('Contrato do nó de reenvio mudou; atualização cancelada.');
 }

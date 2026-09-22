@@ -24,6 +24,18 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-09-22-separacao-sem-descritivo",
+    title: "Lista de separação mais enxuta",
+    summary: "A impressão e o CSV mostram só os dados necessários para separar os produtos.",
+    publishedAt: "2026-09-22T17:10:00-03:00",
+    changes: [{
+      title: "Coluna Descritivo removida",
+      description: "O nome do produto concentra a informação necessária, inclusive o aviso para kits sem composição. As quantidades da lista não mudam.",
+      href: "/logistica/separacao",
+      linkLabel: "Abrir Separação"
+    }]
+  },
+  {
     id: "2026-09-22-separacao-kits-fisicos",
     title: "Separação mostra os produtos dentro dos kits",
     summary: "Kits passam a ser somados aos produtos simples que o depósito precisa retirar.",

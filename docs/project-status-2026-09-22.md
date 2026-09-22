@@ -1,5 +1,13 @@
 # Estado do projeto — 22/09/2026
 
+## Ajuste de apresentação da separação
+
+A coluna redundante **Descritivo** foi removida da impressão A4, do CSV e da
+mensagem do WhatsApp. O aviso de kit sem composição aparece junto a **Produto**.
+A descrição segue persistida para auditoria e cubagem; as quantidades da lista
+personalizada já pronta permanecem congeladas. O workflow ativo recebe o mesmo
+formato pelo atualizador versionado, com backup anterior à publicação.
+
 ## Separação por produto físico
 
 A RPC `olist_multichannel_separation_report` agora abre kits válidos conforme

@@ -1,6 +1,7 @@
 import { OperationLink as Link } from "../../../../components/operation-provider";
 import { requireTabAccess } from "../../../../../lib/auth/access";
 import { loadPickingList } from "../../data";
+import { displaySeparationProduct } from "../../display-product";
 import { PrintTrigger } from "../../../etiqueta/imprimir/print-trigger";
 
 export const dynamic = "force-dynamic";
@@ -54,8 +55,8 @@ export default async function PrintSeparationPage({ params }: { params: Promise<
         </p>
         {items.length === 0 ? <div className="separation-empty">Nenhum produto para separar neste fechamento.</div> : (
           <table>
-            <thead><tr><th>#</th><th>SKU</th><th>Produto</th><th>Descritivo</th><th className="num">Unidades a separar</th><th className="num">Caixas</th><th className="num">Unidades avulsas</th></tr></thead>
-            <tbody>{items.map((item) => <tr key={item.position}><td>{item.position}</td><td>{item.sku ?? "—"}</td><td>{item.product}</td><td>{item.description}</td><td className="num">{numberFormatter.format(item.sold_quantity)}</td><td className="num">{numberFormatter.format(item.boxes)}</td><td className="num">{numberFormatter.format(item.loose_units)}</td></tr>)}</tbody>
+            <thead><tr><th>#</th><th>SKU</th><th>Produto</th><th className="num">Unidades a separar</th><th className="num">Caixas</th><th className="num">Unidades avulsas</th></tr></thead>
+            <tbody>{items.map((item) => <tr key={item.position}><td>{item.position}</td><td>{item.sku ?? "—"}</td><td>{displaySeparationProduct(item)}</td><td className="num">{numberFormatter.format(item.sold_quantity)}</td><td className="num">{numberFormatter.format(item.boxes)}</td><td className="num">{numberFormatter.format(item.loose_units)}</td></tr>)}</tbody>
           </table>
         )}
       </main>
