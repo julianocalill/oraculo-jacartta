@@ -2,6 +2,22 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-22] — Giracasa no ar
+
+- Operação ativada: `enabled=true` e as sete pessoas do Oráculo liberadas em
+  nove abas (Home, Pedidos, Mais Vendidos, SKUs, curvas, Previsão, Calculadora
+  e Documentação). As abas sem dado na operação ficaram de fora.
+- Dados recuperados de 08 a 22/09: 12.663 notas e 14.243 pedidos. Últimos 14
+  dias: margem 7,19%, lucro R$ 37.112,83, cobertura de item 98,4%.
+- Criados 11 crons `giracasa-*`: ingestão, derivados, estoque, catálogo,
+  vínculo NF→pedido e caches. A falta deles derrubava o token da Olist e
+  congelava os dados.
+- Invocador dos jobs criado dentro do schema `giracasa`, sem alterar função de
+  schema compartilhado e sem acesso para `authenticated`.
+- Pendências em `docs/project-status-2026-09-22-giracasa.md`: apuração de
+  agosto, 471 NFs de pedidos cancelados, tarifas de TikTok e Mercado Livre e
+  cadastro de SKUs.
+
 ## [2026-09-17] — Giracasa: motor gira-casa-v2
 
 - Custo passa a ser líquido de ICMS da compra e de PIS/COFINS, conforme regra do
