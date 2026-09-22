@@ -12,8 +12,9 @@ OLIST**. `expansion_sources` permite auditar os kits de origem.
 O workflow n8n `UGLCLNS6oVCK87o3` foi atualizado antes da RPC, com backup local
 em `tmp/n8n-backups/`. A mudança aceita o formato antigo e o novo durante a
 transição. Tapetes simples seguem com seis pacotes por caixa. Componentes sem
-cubagem ficam visíveis com zero caixas; potes marmita usam provisoriamente a
-menor capacidade física derivada dos perfis de kit existentes (370 ml: 48;
+cubagem ficam visíveis com zero caixas; potes marmita usam a cubagem explícita
+do SKU simples quando existir e, provisoriamente, a menor capacidade física
+derivada dos perfis de kit existentes (370 ml: 48;
 640 ml: 30). É uma estimativa até o depósito medir a capacidade do SKU simples.
 
 ## Lista corrigida do PDF

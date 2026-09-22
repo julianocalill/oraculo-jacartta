@@ -99,7 +99,8 @@ perca produtos. Os outros produtos continuam com o mínimo de uma caixa.
 
 Tapetes higiênicos são calculados sobre os pacotes simples, seis por caixa. Para
 potinhos marmita simples, o catálogo atual só tem perfis para kits fechados: o
-workflow usa a menor capacidade física implícita nesses perfis (370 ml: 48;
+workflow usa uma cubagem explícita do SKU simples quando existir; caso contrário,
+usa a menor capacidade física implícita nos perfis de kit (370 ml: 48;
 640 ml: 30) e identifica a origem como estimativa conservadora. Essa regra
 deve ser substituída por uma cubagem física medida do SKU simples quando o
 depósito a fornecer.

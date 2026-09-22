@@ -49,6 +49,18 @@ test('pote simples usa capacidade física conservadora dos perfis existentes', (
   assert.equal(report.rows[0].loose_units, 0);
 });
 
+test('cubagem explícita do SKU simples prevalece sobre estimativa de kit', () => {
+  const report = buildOlistMultichannelReport({
+    quantity_semantics: 'physical_components', rows: [{ sku: '213877',
+      product: 'POTE DE VIDRO MARMITA - BRANCO - 640ML',
+      description: 'POTE DE VIDRO MARMITA - BRANCO - 640ML', quantity: 60,
+      expansion_sources: ['kit:213969'] }],
+  }, { profiles: [{ display_name: 'KIT 5X POTE 640ML (TAMPADO)', units_per_box: 6 }],
+    mappings: [{ olist_sku: '213877', display_name: 'Pote 640', units_per_sale: 1, units_per_box: 20 }] }, context);
+  assert.equal(report.rows[0].boxes, 3);
+  assert.equal(report.rows[0].mapping_source, 'SKU Olist');
+});
+
 test('kit sem composição mantém aviso e cálculo legado', () => {
   const report = buildOlistMultichannelReport({
     quantity_semantics: 'physical_components', rows: [{ sku: 'K', product: 'KIT X',

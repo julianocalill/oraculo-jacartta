@@ -142,9 +142,10 @@ export function buildOlistMultichannelReport(source, catalog, context) {
   const rows = [];
   for (const item of grouped.values()) {
     const mapping = mappings.get(item.sku);
+    const usableMapping = mapping && (!physicalUnits || item.kit_without_components || asNumber(mapping.units_per_sale) === 1);
     const tapeteProfile = physicalUnits && !item.kit_without_components
       ? resolveTapeteHigienicoProfile(item) : mapping ? null : resolveTapeteHigienicoProfile(item);
-    const physicalPotProfile = physicalUnits && !item.kit_without_components
+    const physicalPotProfile = physicalUnits && !item.kit_without_components && !usableMapping
       ? resolvePhysicalPotProfile(item, catalog?.profiles) : null;
     const fallbackTargets = tapeteProfile
       ? [tapeteProfile]
@@ -153,7 +154,7 @@ export function buildOlistMultichannelReport(source, catalog, context) {
         : resolvePotProfiles(item, catalog?.profiles);
     const targets = tapeteProfile || physicalPotProfile
       ? fallbackTargets
-      : mapping
+      : usableMapping
       ? [{ ...mapping, units_per_sale: physicalUnits && !item.kit_without_components ? 1 : mapping.units_per_sale, mapping_source: 'SKU Olist' }]
       : fallbackTargets.length
         ? fallbackTargets
