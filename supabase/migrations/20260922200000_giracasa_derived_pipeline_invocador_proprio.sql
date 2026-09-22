@@ -1,19 +1,23 @@
--- Giracasa: pipeline de dados derivados (produtos, estoque, caches de venda).
+-- Giracasa: pipeline de dados derivados e estoque, sem tocar em schema comum.
 --
--- A operação só tinha pedidos e notas. O invocador aceitava três funções e
--- deixava de fora justamente as que alimentam Home, SKUs, Curvas e Previsão:
--- oraculo_daily_sales, oraculo_sku_current_unified e estoque estavam zerados.
+-- Substitui a migration 20260922180000, que trocava a lista de funções
+-- autorizadas dentro de oraculo_private.invoke_giracasa_olist_function — uma
+-- função de schema compartilhado. Aqui o invocador nasce dentro do schema
+-- giracasa, com lista própria, e os jobs passam a usá-lo. Nada fora da
+-- operação é alterado, e o segredo continua no Vault (não vai para o texto
+-- do cron, como ficaria se cada job montasse a chamada HTTP por conta).
 --
--- Espelha os jobs de Uberlândia (oraculo-olist-derived-hourly,
--- oraculo-olist-products-daily, oraculo-olist-stock-30m) com os mesmos
--- parâmetros, em minutos que não caem sobre os jobs pesados do banco.
+-- Sem esses jobs, a operação só tinha pedidos e notas: vendas diárias, SKUs
+-- unificados e estoque ficavam zerados, e Home, SKUs, Curvas e Previsão
+-- abriam vazias.
 --
--- A única mudança fora do schema giracasa é a lista de funções autorizadas
--- dentro de oraculo_private.invoke_giracasa_olist_function, que só serve à
--- Giracasa; nenhuma função de Uberlândia é tocada.
+-- Os minutos evitam os jobs pesados do banco (:12/:42 take-rate, :14 snapshots,
+-- :23 qty, :34 nf-cache, :47 comercial, :51-:55 SKU unificado).
 
-create or replace function oraculo_private.invoke_giracasa_olist_function(
-  p_function_name text, p_payload jsonb default '{}'::jsonb, p_timeout_milliseconds integer default 300000
+create or replace function giracasa.invoke_olist_function(
+  p_function_name text,
+  p_payload jsonb default '{}'::jsonb,
+  p_timeout_milliseconds integer default 280000
 )
 returns bigint
 language plpgsql
@@ -56,18 +60,24 @@ begin
       'x-sync-secret', v_sync_secret
     ),
     body := p_payload,
-    timeout_milliseconds := greatest(1000, least(coalesce(p_timeout_milliseconds, 300000), 300000))
+    timeout_milliseconds := greatest(1000, least(coalesce(p_timeout_milliseconds, 280000), 300000))
   );
 end;
 $function$;
 
+comment on function giracasa.invoke_olist_function(text, jsonb, integer) is
+  'Dispara as Edge Functions giracasa-olist-* pelos crons. Uso interno: nao concedido a authenticated.';
+
+revoke all on function giracasa.invoke_olist_function(text, jsonb, integer) from public;
+revoke all on function giracasa.invoke_olist_function(text, jsonb, integer) from authenticated;
+
 do $$
 begin
-  -- Derivados incrementais: vendas diárias, caches de canal e SKU.
+  -- Derivados incrementais: itens de pedido, vendas diárias e caches de canal.
   perform cron.schedule(
     'giracasa-olist-derived-hourly',
     '27 * * * *',
-    $cron$select oraculo_private.invoke_giracasa_olist_function(
+    $cron$select giracasa.invoke_olist_function(
       'giracasa-olist-derived-refresh',
       jsonb_build_object(
         'mode', 'incremental',
@@ -77,8 +87,7 @@ begin
         'includeStockSnapshot', false,
         'includeUnifiedSkuCache', false,
         'includeNfCache', false
-      ),
-      300000
+      )
     );$cron$
   );
 
@@ -86,7 +95,7 @@ begin
   perform cron.schedule(
     'giracasa-olist-products-daily',
     '33 7 * * *',
-    $cron$select oraculo_private.invoke_giracasa_olist_function(
+    $cron$select giracasa.invoke_olist_function(
       'giracasa-olist-derived-refresh',
       jsonb_build_object(
         'startDate', ((current_date - interval '2 days')::date)::text,
@@ -99,8 +108,7 @@ begin
         'includeNfCache', false,
         'includeUnifiedChannelCache', false,
         'includeUnifiedSkuCache', false
-      ),
-      300000
+      )
     );$cron$
   );
 
@@ -108,10 +116,22 @@ begin
   perform cron.schedule(
     'giracasa-olist-stock-30m',
     '7,37 * * * *',
-    $cron$select oraculo_private.invoke_giracasa_olist_function(
+    $cron$select giracasa.invoke_olist_function(
       'giracasa-olist-sync-stock',
-      '{"pagesPerRun": 1, "detailConcurrency": 1, "detailDelayMs": 300}'::jsonb,
-      300000
+      '{"pagesPerRun": 1, "detailConcurrency": 1, "detailDelayMs": 300}'::jsonb
     );$cron$
+  );
+
+  -- Caches pesados no próprio banco, fora dos minutos dos jobs de Uberlândia.
+  perform cron.schedule(
+    'giracasa-unified-sku-cache-daily',
+    '21 6 * * *',
+    $cron$set local statement_timeout = '20min'; select giracasa.refresh_oraculo_unified_sku_cache();$cron$
+  );
+
+  perform cron.schedule(
+    'giracasa-nf-cache-hourly',
+    '31 * * * *',
+    $cron$select giracasa.refresh_oraculo_nf_daily_cache((current_date - interval '2 days')::date, current_date);$cron$
   );
 end $$;
