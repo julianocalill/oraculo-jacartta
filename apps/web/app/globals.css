@@ -3258,6 +3258,23 @@ h2 {
   text-transform: uppercase;
 }
 
+.calc-tier-pct {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.calc-tier-pct input {
+  flex: 1;
+  min-width: 0;
+}
+
+.calc-tier-pct span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .calc-tier-open {
   color: var(--muted);
   font-size: 12.5px;

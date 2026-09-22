@@ -33,9 +33,12 @@ const RATE_FIELDS: Array<{ key: RateKey; label: string; suffix: "%" | "R$" }> = 
 // então tudo continua editável na tela. Último degrau é sempre faixa aberta.
 type MarketplaceKey = "shopee" | "meliClassico" | "meliPremium" | "tiktok";
 
+// Abaixo de R$ 12,50 o custo fixo do Mercado Livre é 50% do preço (fixedPct).
+const ML_FEES_SOURCE = "https://vendedores.mercadolivre.com.br/nota/como-funcionam-as-taxas-do-mercado-livre";
+
 const MARKETPLACE_PRESETS: Record<
   MarketplaceKey,
-  { label: string; note: string; tiers: Array<{ max: number; rate: number; fixed: number }> }
+  { label: string; note: string; source?: string; tiers: Array<{ max: number; rate: number; fixed: number; fixedPct?: number }> }
 > = {
   shopee: {
     label: "Shopee",
@@ -50,8 +53,10 @@ const MARKETPLACE_PRESETS: Record<
   },
   meliClassico: {
     label: "ML Clássico",
-    note: "Comissão 10–14% conforme categoria (padrão 13% — ajuste para a sua) + custo fixo por unidade até R$ 78,99. Itens abaixo de R$ 12,50 pagam 50% do item como tarifa (não modelado).",
+    note: "Comissão 10–14% conforme categoria (padrão 13% — ajuste para a sua). Custo fixo: abaixo de R$ 12,50 é 50% do preço; de R$ 12,50 a R$ 78,99 é por faixa; a partir de R$ 79 não há custo fixo. Frete e subsídio de frete grátis não incluídos.",
+    source: ML_FEES_SOURCE,
     tiers: [
+      { max: 12.49, rate: 13, fixed: 0, fixedPct: 50 },
       { max: 28.99, rate: 13, fixed: 6.25 },
       { max: 49.99, rate: 13, fixed: 6.5 },
       { max: 78.99, rate: 13, fixed: 6.75 },
@@ -60,8 +65,10 @@ const MARKETPLACE_PRESETS: Record<
   },
   meliPremium: {
     label: "ML Premium",
-    note: "Comissão 15–19% conforme categoria (padrão 18% — ajuste para a sua) + custo fixo por unidade até R$ 78,99. Parcelamento sem juros incluso no plano.",
+    note: "Comissão 15–19% conforme categoria (padrão 18% — ajuste para a sua), com parcelamento em até 12x sem juros. Custo fixo: abaixo de R$ 12,50 é 50% do preço; de R$ 12,50 a R$ 78,99 é por faixa; a partir de R$ 79 não há custo fixo. Frete e subsídio de frete grátis não incluídos.",
+    source: ML_FEES_SOURCE,
     tiers: [
+      { max: 12.49, rate: 18, fixed: 0, fixedPct: 50 },
       { max: 28.99, rate: 18, fixed: 6.25 },
       { max: 49.99, rate: 18, fixed: 6.5 },
       { max: 78.99, rate: 18, fixed: 6.75 },
@@ -104,7 +111,8 @@ function formatPercentValue(rate: number) {
   return `${decimalFmt.format(rate * 100)}%`;
 }
 
-type Tier = { max: number; rate: number; fixed: number };
+// fixedShare: custo fixo proporcional ao preço (ML abaixo de R$ 12,50).
+type Tier = { max: number; rate: number; fixed: number; fixedShare: number };
 type CalculationMode = "markup" | "price" | "netMargin";
 
 type CalculatorRates = {
@@ -125,7 +133,8 @@ function getTierLabel(tier: Tier, tiers: Tier[]) {
       : Number.isFinite(tier.max)
         ? `${money(previousMax + 0.01)} a ${money(tier.max)}`
         : `Acima de ${money(previousMax)}`;
-  return `${range}: ${formatPercentValue(tier.rate)} + ${money(tier.fixed)}`;
+  const fixed = tier.fixedShare ? `${formatPercentValue(tier.fixedShare)} do preço (fixo)` : money(tier.fixed);
+  return `${range}: ${formatPercentValue(tier.rate)} + ${fixed}`;
 }
 
 function roundUpToCent(value: number) {
@@ -143,6 +152,7 @@ function netProfitAtPrice(
     totalProductCost +
     salePrice * tier.rate +
     tier.fixed +
+    salePrice * tier.fixedShare +
     salePrice * rates.icmsMg +
     salePrice * rates.difal +
     addedValue * rates.pisCofins +
@@ -166,6 +176,7 @@ function findSalePriceForNetMargin(
     const priceShare =
       1 -
       tier.rate -
+      tier.fixedShare -
       rates.icmsMg -
       rates.difal -
       rates.pisCofins -
@@ -235,7 +246,11 @@ function calculate(
   const costs = [
     { name: "Custo dos produtos", basis: `${quantity} un. × ${money(unitCost)}`, value: totalProductCost },
     { name: "Marketplace variável", basis: formatPercentValue(marketplaceTier.rate), value: marketplaceVariable },
-    { name: "Marketplace fixo", basis: "Faixa", value: marketplaceTier.fixed },
+    {
+      name: "Marketplace fixo",
+      basis: marketplaceTier.fixedShare ? `${formatPercentValue(marketplaceTier.fixedShare)} do preço` : "Faixa",
+      value: marketplaceTier.fixed + salePrice * marketplaceTier.fixedShare
+    },
     { name: "ICMS MG", basis: `${formatPercentValue(rates.icmsMg)} venda`, value: icmsMg },
     { name: "DIFAL", basis: `${formatPercentValue(rates.difal)} venda`, value: difal },
     { name: "PIS/COFINS Lucro Real", basis: `${formatPercentValue(rates.pisCofins)} valor agregado`, value: pisCofins },
@@ -270,7 +285,8 @@ function tierStringsFor(key: MarketplaceKey) {
   return MARKETPLACE_PRESETS[key].tiers.map((tier) => ({
     max: Number.isFinite(tier.max) ? tier.max.toFixed(2) : "",
     rate: tier.rate.toFixed(2),
-    fixed: tier.fixed.toFixed(2)
+    fixed: tier.fixed.toFixed(2),
+    fixedPct: tier.fixedPct === undefined ? undefined : tier.fixedPct.toFixed(2)
   }));
 }
 
@@ -302,7 +318,8 @@ export function PricingCalculator() {
     const tiers: Tier[] = tierStrings.map((tier, index) => ({
       max: index === tierStrings.length - 1 ? Infinity : Math.max(asNumber(tier.max), 0),
       rate: Math.max(asNumber(tier.rate), 0) / 100,
-      fixed: Math.max(asNumber(tier.fixed), 0)
+      fixed: Math.max(asNumber(tier.fixed), 0),
+      fixedShare: tier.fixedPct === undefined ? 0 : Math.max(asNumber(tier.fixedPct), 0) / 100
     }));
 
     return calculate(
@@ -456,6 +473,9 @@ export function PricingCalculator() {
           {marketplace === "tiktok" && (
             <> <a href="https://seller-br.tiktok.com/university/essay?knowledge_id=24428156307201" target="_blank" rel="noopener noreferrer">Fonte oficial</a></>
           )}
+          {MARKETPLACE_PRESETS[marketplace].source && (
+            <> <a href={MARKETPLACE_PRESETS[marketplace].source} target="_blank" rel="noopener noreferrer">Fonte oficial</a></>
+          )}
         </p>
 
         <div className="calc-tiers">
@@ -488,14 +508,28 @@ export function PricingCalculator() {
                     setTierStrings(tierStrings.map((t, i) => (i === index ? { ...t, rate: e.target.value } : t)))
                   }
                 />
-                <input
-                  inputMode="decimal"
-                  value={tier.fixed}
-                  aria-label={`Valor fixo da faixa ${index + 1}`}
-                  onChange={(e) =>
-                    setTierStrings(tierStrings.map((t, i) => (i === index ? { ...t, fixed: e.target.value } : t)))
-                  }
-                />
+                {tier.fixedPct !== undefined ? (
+                  <span className="calc-tier-pct">
+                    <input
+                      inputMode="decimal"
+                      value={tier.fixedPct}
+                      aria-label={`Custo fixo em % do preço da faixa ${index + 1}`}
+                      onChange={(e) =>
+                        setTierStrings(tierStrings.map((t, i) => (i === index ? { ...t, fixedPct: e.target.value } : t)))
+                      }
+                    />
+                    <span title="% do preço de venda">%</span>
+                  </span>
+                ) : (
+                  <input
+                    inputMode="decimal"
+                    value={tier.fixed}
+                    aria-label={`Valor fixo da faixa ${index + 1}`}
+                    onChange={(e) =>
+                      setTierStrings(tierStrings.map((t, i) => (i === index ? { ...t, fixed: e.target.value } : t)))
+                    }
+                  />
+                )}
               </div>
             );
           })}
