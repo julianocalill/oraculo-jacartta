@@ -48,8 +48,7 @@ oficial nem envia WhatsApp.
 - `logistica_picking_cursor`: cursor oficial; somente `service_role`;
 - `logistica_picking_listas`: execução, origem, período, status, solicitante,
   erro, Olist e WhatsApp;
-- `logistica_picking_itens`: fotografia imutável das linhas com no mínimo uma
-  caixa;
+- `logistica_picking_itens`: fotografia imutável de todos os SKUs vendidos;
 - `logistica_picking_impressoes`: auditoria append-only do clique em Imprimir.
 
 Leituras autenticadas exigem, por RLS, acesso ativo à operação Uberlândia e à
@@ -63,7 +62,8 @@ Impressão A4, CSV e WhatsApp derivam do mesmo relatório congelado. As colunas
 são SKU, produto, unidades a separar, caixas e unidades avulsas. A descrição
 continua guardada na lista para auditoria e cubagem, mas não ocupa uma coluna.
 Se um kit não tem composição, o aviso aparece junto ao nome do produto.
-Entram linhas com uma caixa ou mais e componentes de kits ainda sem cubagem.
+Entram todos os SKUs com unidades vendidas, inclusive com zero caixas fechadas.
+As linhas são ordenadas por caixas em ordem decrescente, depois por avulsos e SKU.
 Pedidos candidatos com `itens = []`
 bloqueiam a publicação e o avanço do cursor.
 
@@ -95,9 +95,9 @@ linha. `quantity` e `package_quantity` agora representam unidades físicas;
 marketplaces permanecem auditáveis sem multiplicar o total de pedidos.
 
 Kit sem composição completa continua com o SKU original e o aviso **KIT SEM
-COMPOSIÇÃO NO OLIST**. Componentes de kits sem cubagem entram no documento com
-zero caixas e toda a quantidade em unidades avulsas, para que o depósito não
-perca produtos. Os outros produtos continuam com o mínimo de uma caixa.
+COMPOSIÇÃO NO OLIST**. Todo produto vendido sem caixa fechada entra no
+documento com zero caixas e a quantidade em unidades avulsas, para que o
+depósito não perca produtos.
 
 Tapetes higiênicos são calculados sobre os pacotes simples, seis por caixa. Para
 potinhos marmita simples, o catálogo atual só tem perfis para kits fechados: o
@@ -106,6 +106,11 @@ usa a menor capacidade física implícita nos perfis de kit (370 ml: 48;
 640 ml: 30) e identifica a origem como estimativa conservadora. Essa regra
 deve ser substituída por uma cubagem física medida do SKU simples quando o
 depósito a fornecer.
+
+Uma associação do SKU simples a um perfil chamado `KIT Nx POTE` não é cubagem
+explícita do produto simples: `units_per_box` nesse perfil conta kits fechados.
+O workflow descarta essa associação para pote marmita simples e usa a capacidade
+física derivada do kit. O caso `215789`/`213876` foi conferido em 22/09/2026.
 
 A coluna do documento, CSV e WhatsApp chama-se **Unidades a separar**. A lista
 `ready` é imutável; documentos antigos mantêm os números congelados e só o

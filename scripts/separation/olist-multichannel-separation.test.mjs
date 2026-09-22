@@ -34,6 +34,23 @@ test('componente sem cubagem segue visível como unidades avulsas', () => {
   assert.match(buildOlistMultichannelMessages(report, context)[0].message_text, /COMP/);
 });
 
+test('vendas sem caixa fechada entram no CSV e WhatsApp após os SKUs com mais caixas', () => {
+  const report = buildOlistMultichannelReport({
+    quantity_semantics: 'physical_components', rows: [
+      { sku: 'AVULSO', product: 'Produto avulso', description: 'Produto avulso', quantity: 2 },
+      { sku: 'CAIXA', product: 'Produto com caixa', description: 'Produto com caixa', quantity: 20 },
+    ],
+  }, { mappings: [
+    { olist_sku: 'AVULSO', units_per_sale: 1, units_per_box: 6 },
+    { olist_sku: 'CAIXA', units_per_sale: 1, units_per_box: 10 },
+  ] }, context);
+  assert.deepEqual(report.rows.map((row) => [row.sku, row.boxes]), [['CAIXA', 2], ['AVULSO', 0]]);
+  const csv = buildOlistMultichannelCsv(report);
+  const message = buildOlistMultichannelMessages(report, context)[0].message_text;
+  assert.ok(csv.indexOf('CAIXA') < csv.indexOf('AVULSO'));
+  assert.ok(message.indexOf('CAIXA') < message.indexOf('AVULSO'));
+});
+
 test('pote simples usa capacidade física conservadora dos perfis existentes', () => {
   const report = buildOlistMultichannelReport({
     quantity_semantics: 'physical_components', rows: [{ sku: '213877',
@@ -59,6 +76,19 @@ test('cubagem explícita do SKU simples prevalece sobre estimativa de kit', () =
     mappings: [{ olist_sku: '213877', display_name: 'Pote 640', units_per_sale: 1, units_per_box: 20 }] }, context);
   assert.equal(report.rows[0].boxes, 3);
   assert.equal(report.rows[0].mapping_source, 'SKU Olist');
+});
+
+test('perfil de kit associado a pote simples não usa a capacidade do kit como caixa física', () => {
+  const report = buildOlistMultichannelReport({
+    quantity_semantics: 'physical_components', rows: [{ sku: '215789',
+      product: 'POTE DE VIDRO MARMITA - VERMELHO - 370ML',
+      description: 'POTE DE VIDRO MARMITA - VERMELHO - 370ML', quantity: 505 }],
+  }, { profiles: [{ display_name: 'KIT 3X POTE 370ML (TAMPADO)', units_per_box: 16 }],
+    mappings: [{ olist_sku: '215789', display_name: 'KIT 3X POTE 370ML (TAMPADO)',
+      units_per_sale: 1, units_per_box: 16 }] }, context);
+  assert.equal(report.rows[0].boxes, 10);
+  assert.equal(report.rows[0].loose_units, 25);
+  assert.equal(report.rows[0].mapping_source, 'capacidade conservadora dos perfis de kit');
 });
 
 test('kit sem composição mantém aviso e cálculo legado', () => {

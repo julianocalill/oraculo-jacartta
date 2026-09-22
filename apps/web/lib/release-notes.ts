@@ -24,6 +24,18 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-09-22-separacao-todos-vendidos",
+    title: "Separação inclui todos os itens vendidos",
+    summary: "Produtos com zero caixas fechadas também aparecem na lista, em ordem decrescente de caixas.",
+    publishedAt: "2026-09-22T17:30:00-03:00",
+    changes: [{
+      title: "Lista completa por SKU",
+      description: "Impressão, CSV e WhatsApp incluem todos os SKUs vendidos. Produtos sem caixa fechada aparecem com zero caixas e suas unidades avulsas.",
+      href: "/logistica/separacao",
+      linkLabel: "Abrir Separação"
+    }]
+  },
+  {
     id: "2026-09-22-separacao-sem-descritivo",
     title: "Lista de separação mais enxuta",
     summary: "A impressão e o CSV mostram só os dados necessários para separar os produtos.",

@@ -142,7 +142,15 @@ export function buildOlistMultichannelReport(source, catalog, context) {
   const rows = [];
   for (const item of grouped.values()) {
     const mapping = mappings.get(item.sku);
-    const usableMapping = mapping && (!physicalUnits || item.kit_without_components || asNumber(mapping.units_per_sale) === 1);
+    const itemDescription = normalizeText(item.description);
+    const kitBoxMappingForSimplePot = physicalUnits
+      && !item.kit_without_components
+      && itemDescription.includes('POTE DE VIDRO MARMITA')
+      && !itemDescription.includes('KIT ')
+      && /^KIT\s+\d+X\s+POTE\b/.test(normalizeText(mapping?.display_name));
+    const usableMapping = mapping
+      && (!physicalUnits || item.kit_without_components || asNumber(mapping.units_per_sale) === 1)
+      && !kitBoxMappingForSimplePot;
     const tapeteProfile = physicalUnits && !item.kit_without_components
       ? resolveTapeteHigienicoProfile(item) : mapping ? null : resolveTapeteHigienicoProfile(item);
     const physicalPotProfile = physicalUnits && !item.kit_without_components && !usableMapping
@@ -245,7 +253,7 @@ export function buildOlistMultichannelCsv(report) {
   const headers = ['SKU', 'Produto', 'Unidades a separar', 'Caixas', 'Unidades avulsas'];
   const lines = [headers.map(csvEscape).join(';')];
   const rows = (report?.rows || [])
-    .filter((row) => asNumber(row.boxes) >= 1 || row.force_print === true)
+    .filter((row) => asNumber(row.sold_quantity) > 0)
     .sort((left, right) => asNumber(right.boxes) - asNumber(left.boxes) || asNumber(right.loose_units) - asNumber(left.loose_units));
   for (const row of rows) {
     lines.push([
@@ -261,7 +269,7 @@ export function buildOlistMultichannelCsv(report) {
 
 export function buildOlistMultichannelMessages(report, context, maxChars = 3400) {
   const rows = (Array.isArray(report?.rows) ? report.rows : [])
-    .filter((row) => asNumber(row.boxes) >= 1 || row.force_print === true)
+    .filter((row) => asNumber(row.sold_quantity) > 0)
     .sort((left, right) => asNumber(right.boxes) - asNumber(left.boxes) || asNumber(right.loose_units) - asNumber(left.loose_units));
   const mode = ['send', 'test_send', 'oraculo', 'resend'].includes(context?.mode) ? context.mode : 'preview';
   const formatDateTime = (value) => new Intl.DateTimeFormat('pt-BR', {
@@ -283,7 +291,7 @@ export function buildOlistMultichannelMessages(report, context, maxChars = 3400)
     : '_Fonte: Olist ERP via Oráculo/Supabase_';
   const lines = rows.length ? rows.map((row, index) => {
     return `${index + 1}. SKU: *${row.sku || '-'}* | Produto: ${displaySeparationProduct(row)} | Unidades a separar: *${row.sold_quantity.toLocaleString('pt-BR')}* | Caixas: *${row.boxes.toLocaleString('pt-BR')}* | Unidades avulsas: *${row.loose_units.toLocaleString('pt-BR')}*`;
-  }) : ['Nenhum SKU formou ao menos 1 caixa neste fechamento.'];
+  }) : ['Nenhum SKU vendido neste fechamento.'];
 
   const groups = [];
   let current = [];

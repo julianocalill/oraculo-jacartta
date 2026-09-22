@@ -1,5 +1,28 @@
 # Estado do projeto — 22/09/2026
 
+## Todos os itens vendidos na separação
+
+A lista passa a persistir e mostrar todo SKU com unidades vendidas, mesmo com
+zero caixas fechadas. Impressão, CSV e WhatsApp usam caixas em ordem decrescente;
+avulsos e SKU desempatem as linhas. Listas `ready` anteriores não são
+reescritas. A janela do PDF pode ser gerada novamente como lista personalizada,
+sem avançar o cursor ou enviar WhatsApp.
+
+A versão definitiva da janela 21/09 14:30 → 22/09 07:00 é
+`802476a4-c95a-4b0e-9885-3328a05c5840`: 1.271 pedidos, 79 SKUs,
+117 caixas e 4.172 unidades avulsas. Os 50 SKUs da lista anterior mantiveram
+exatamente as mesmas quantidades, caixas e avulsos; entraram 29 SKUs com zero
+caixas, somando 97 unidades. `whatsapp_status = not_requested` e o cursor
+oficial não avançou.
+
+A primeira tentativa `4abb239b-fb89-4374-8d44-e69de89cbfd2` foi substituída:
+uma associação Shopee ligava os SKUs simples `215789` e `213876` ao perfil de
+**kit 3x pote 370 ml**, cuja cubagem de 16 kits por caixa não é a cubagem de
+16 potes simples. O workflow agora reconhece essa associação e usa a capacidade
+física implícita de 48 potes por caixa, mantendo a quantidade de caixas da lista
+anterior. A tentativa foi marcada `failed`, com seus itens preservados para
+auditoria; não pode ser impressa e não foi enviada.
+
 ## Ajuste de apresentação da separação
 
 A coluna redundante **Descritivo** foi removida da impressão A4, do CSV e da

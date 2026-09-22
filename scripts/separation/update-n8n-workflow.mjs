@@ -37,7 +37,15 @@ const oldPersisted = persisted.parameters.jsCode;
 let updatedPersisted = oldPersisted.replaceAll('Itens vendidos', 'Unidades a separar');
 updatedPersisted = updatedPersisted.replaceAll(
   '.filter((row) => asNumber(row.boxes) >= 1)',
+  '.filter((row) => asNumber(row.sold_quantity) > 0)',
+);
+updatedPersisted = updatedPersisted.replaceAll(
   '.filter((row) => true)',
+  '.filter((row) => asNumber(row.sold_quantity) > 0)',
+);
+updatedPersisted = updatedPersisted.replaceAll(
+  'Nenhum SKU formou ao menos 1 caixa neste fechamento.',
+  'Nenhum SKU vendido neste fechamento.',
 );
 updatedPersisted = updatedPersisted
   .replace("'Produto', 'Descritivo',", "'Produto',")

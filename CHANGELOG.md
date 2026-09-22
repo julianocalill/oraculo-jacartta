@@ -2,6 +2,15 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-22] — Todos os vendidos na separação
+
+- Impressão, CSV e WhatsApp passam a incluir SKUs vendidos mesmo quando não
+  fecham uma caixa; a ordenação é por caixas em ordem decrescente.
+- A lista corrigida pode ser emitida novamente sem modificar documentos antigos,
+  o cursor oficial ou o envio de WhatsApp.
+- A versão definitiva da janela do PDF soma 79 SKUs e 117 caixas. Corrigida a
+  associação de potes simples ao perfil de caixa de um kit de três potes.
+
 ## [2026-09-22] — Lista de separação sem coluna redundante
 
 - Retirada a coluna Descritivo da impressão A4, CSV e mensagem do WhatsApp.

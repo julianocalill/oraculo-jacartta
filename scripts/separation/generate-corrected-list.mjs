@@ -1,7 +1,9 @@
 // Recria a janela do PDF como lista personalizada, sem cursor nem WhatsApp.
+// --new cria outra fotografia mesmo quando já existe lista dessa janela.
 const originalListId = 'd70a93fc-f504-4779-bd3b-75881cbd184a';
 const start = '2026-09-21T17:30:00Z';
 const end = '2026-09-22T10:00:00Z';
+const createNew = process.argv.includes('--new');
 const base = process.env.SUPABASE_URL?.replace(/\/+$/, '');
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const webhook = process.env.N8N_SEPARATION_WEBHOOK_URL;
@@ -24,7 +26,7 @@ const query = new URLSearchParams({ select: 'id,status,created_at',
   operation_id: 'eq.uberlandia', kind: 'eq.custom',
   cursor_start: `eq.${start}`, cursor_end: `eq.${end}`, order: 'created_at.desc' });
 const lists = await db(`logistica_picking_listas?${query}`);
-const existing = lists.find((list) => list.id !== originalListId);
+const existing = createNew ? null : lists.find((list) => list.id !== originalListId);
 if (existing) {
   console.log(JSON.stringify({ reused: true, id: existing.id, status: existing.status }));
   process.exit(0);
