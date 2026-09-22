@@ -24,6 +24,18 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-09-22-separacao-kits-fisicos",
+    title: "Separação mostra os produtos dentro dos kits",
+    summary: "Kits passam a ser somados aos produtos simples que o depósito precisa retirar.",
+    publishedAt: "2026-09-22T16:30:00-03:00",
+    changes: [{
+      title: "Lista por produto físico",
+      description: "A lista soma vendas diretas e componentes de kits no mesmo SKU. A quantidade aparece como Unidades a separar; kits sem composição são sinalizados para conferência.",
+      href: "/logistica/separacao",
+      linkLabel: "Abrir Separação"
+    }]
+  },
+  {
     id: "2026-09-17-setor-rh",
     title: "Novo setor de RH no Oráculo",
     summary: "Indicadores de pessoas, recrutamento com IA e prontuário funcional agora estão reunidos em uma área própria.",

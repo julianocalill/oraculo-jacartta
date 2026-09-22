@@ -33,7 +33,9 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-17.md](docs/project-status-2026-09-17.md) **← start here** (Separação com mínimo de uma caixa e recuperação do fechamento)
+1. [docs/project-status-2026-09-22.md](docs/project-status-2026-09-22.md) **← start here** (Separação por produto físico com kits abertos)
+   — [docs/project-status-2026-09-21.md](docs/project-status-2026-09-21.md) (Separação recuperada e hidratação automática de pedidos sem itens)
+   — [docs/project-status-2026-09-17.md](docs/project-status-2026-09-17.md) (Separação com mínimo de uma caixa)
    — [docs/project-status-2026-09-11.md](docs/project-status-2026-09-11.md) (Shopee Ads no Comercial)
    — [docs/project-status-2026-09-10.md](docs/project-status-2026-09-10.md) (Correção das taxas TikTok na calculadora)
    — [docs/project-status-2026-09-09.md](docs/project-status-2026-09-09.md) (Separação operacional em produção)
@@ -63,13 +65,13 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 ## Current production state
 
-Separação operacional atualizada em produção em 17/09/2026: [status de 17/09](docs/project-status-2026-09-17.md). O fechamento inclui SKUs a partir de uma caixa completa; tapetes higiênicos usam seis pacotes físicos por caixa, expandindo kits pelos componentes do Olist.
+Separação por produto físico publicada em 22/09/2026: [status de 22/09](docs/project-status-2026-09-22.md). Kits válidos são abertos pelos componentes do Olist antes da consolidação; a lista personalizada do PDF foi regenerada preservando a original.
 
 Shopee Ads publicado em produção em 11/09/2026: [status de 11/09](docs/project-status-2026-09-11.md), com gasto × ROAS e análise diária.
 
 Correção de taxas TikTok publicada em 11/09/2026: [status](docs/project-status-2026-09-10.md).
 
-**Last update**: `2026-09-17` (see `docs/project-status-2026-09-17.md`) —
+**Last update**: `2026-09-22` (see `docs/project-status-2026-09-22.md`) —
 `Logística → Separação` com alerta do fechamento esperado, atualização manual,
 histórico, auditoria, impressão A4, CSV e períodos personalizados. A lista
 congelada agora é a fonte do Oráculo e do envio agendado por WhatsApp; o cursor

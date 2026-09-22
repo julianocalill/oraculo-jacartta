@@ -60,9 +60,20 @@ O UUID da lista é a correlação auditável entre a interface e o n8n; a coluna
 ## Contrato do documento
 
 Impressão A4, CSV e WhatsApp derivam do mesmo relatório congelado. As colunas
-são SKU, produto, descritivo, itens vendidos, caixas e unidades avulsas. Só
-entram linhas com uma caixa ou mais. Pedidos candidatos com `itens = []`
+são SKU, produto, descritivo, unidades a separar, caixas e unidades avulsas.
+Entram linhas com uma caixa ou mais e componentes de kits ainda sem cubagem.
+Pedidos candidatos com `itens = []`
 bloqueiam a publicação e o avanço do cursor.
+
+Antes de consolidar uma lista agendada ou solicitada no Oráculo, o workflow
+consulta `logistica_picking_missing_order_ids` na janela exata do cursor e
+hidrata os detalhes faltantes por ID via `olist-sync-orders` no modo
+`hydrate_missing_picking`. Isso cobre pedidos antigos descobertos por uma
+importação tardia, mesmo fora da janela de criação do sync recente. Acima de
+100 lacunas ou se algum detalhe continuar sem itens, a execução falha sem
+publicar documento parcial. O reenvio explícito de lista já pronta lê o
+documento persistido e não repete o cálculo; `whatsapp_status = sent` bloqueia
+novo envio.
 
 Tapetes higiênicos usam uma regra operacional própria: **seis pacotes físicos
 por caixa**. Em produtos simples, cada unidade vendida representa um pacote.
@@ -70,6 +81,34 @@ Em kits, `package_quantity` é calculado pela soma dos componentes de tapete no
 cadastro Olist e multiplicado pela quantidade vendida antes de dividir por
 seis. A regra reconhece somente descrições iniciadas por `TAPETE HIG`; tapetes
 musicais e de banheiro não entram por engano.
+
+### Produtos físicos de kits (22/09/2026)
+
+Antes do agrupamento, `olist_multichannel_separation_report` identifica kits
+por `olist_products.tipo = 'K'` (o tipo no payload do pedido pode ser `P`). Cada
+componente válido gera `quantidade vendida × quantidade no kit` unidades do seu
+SKU simples. Vendas diretas e kits diferentes do mesmo SKU são somados em uma
+linha. `quantity` e `package_quantity` agora representam unidades físicas;
+`expansion_sources` registra os SKUs comerciais de origem. Pedidos distintos e
+marketplaces permanecem auditáveis sem multiplicar o total de pedidos.
+
+Kit sem composição completa continua com o SKU original e o aviso **KIT SEM
+COMPOSIÇÃO NO OLIST**. Componentes de kits sem cubagem entram no documento com
+zero caixas e toda a quantidade em unidades avulsas, para que o depósito não
+perca produtos. Os outros produtos continuam com o mínimo de uma caixa.
+
+Tapetes higiênicos são calculados sobre os pacotes simples, seis por caixa. Para
+potinhos marmita simples, o catálogo atual só tem perfis para kits fechados: o
+workflow usa a menor capacidade física implícita nesses perfis (370 ml: 48;
+640 ml: 30) e identifica a origem como estimativa conservadora. Essa regra
+deve ser substituída por uma cubagem física medida do SKU simples quando o
+depósito a fornecer.
+
+A coluna do documento, CSV e WhatsApp chama-se **Unidades a separar**. A lista
+`ready` é imutável; documentos antigos mantêm os números congelados e só o
+título da coluna na interface muda. Atualizador reproduzível do workflow:
+`scripts/separation/update-n8n-workflow.mjs` (prévia por padrão; `--apply` faz
+backup em `tmp/n8n-backups/` antes de atualizar os dois nós de código).
 
 ## Configuração e ativação controlada
 

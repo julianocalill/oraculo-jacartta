@@ -19,7 +19,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
   if (!data || data.list.status !== "ready") return new Response("Lista não encontrada", { status: 404 });
 
   const lines = [
-    ["SKU", "Produto", "Descritivo", "Itens vendidos", "Caixas", "Unidades avulsas"].map(csvEscape).join(";")
+    ["SKU", "Produto", "Descritivo", "Unidades a separar", "Caixas", "Unidades avulsas"].map(csvEscape).join(";")
   ];
   for (const item of data.items) {
     lines.push([item.sku, item.product, item.description, item.sold_quantity, item.boxes, item.loose_units].map(csvEscape).join(";"));

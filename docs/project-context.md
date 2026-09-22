@@ -27,6 +27,15 @@ The current product direction is practical executive intelligence for the operat
 - `Obsidian` can store durable project memory, but repository docs are the source of truth.
 - `AI agents` assist architecture, coding, review and documentation, but repository files remain the source of truth.
 
+## Current state on 2026-09-22
+
+`Logística → Separação` apresenta SKUs físicos: a RPC abre kits válidos conforme
+o cadastro Olist antes de somar as vendas e o workflow calcula caixas após o
+agrupamento. A lista do período de 21/09 14:30 a 22/09 07:00 foi gerada de
+novo, com 50 linhas, mantendo o documento original congelado. Contrato e
+limites de cubagem: `docs/logistica-separacao.md`; evidências em
+`docs/project-status-2026-09-22.md`.
+
 ## Current state on 2026-09-11
 
 Shopee Ads em Comercial (`/ads`): dashboard gasto × ROAS, análise diária por

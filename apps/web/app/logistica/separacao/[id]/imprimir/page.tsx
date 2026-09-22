@@ -52,9 +52,9 @@ export default async function PrintSeparationPage({ params }: { params: Promise<
           {list.slot_key ? ` · fechamento ${list.slot_key}` : " · período personalizado"}
           {` · ${numberFormatter.format(list.orders_count)} pedidos · ${numberFormatter.format(list.rows_count)} linhas`}
         </p>
-        {items.length === 0 ? <div className="separation-empty">Nenhum SKU formou ao menos uma caixa neste fechamento.</div> : (
+        {items.length === 0 ? <div className="separation-empty">Nenhum produto para separar neste fechamento.</div> : (
           <table>
-            <thead><tr><th>#</th><th>SKU</th><th>Produto</th><th>Descritivo</th><th className="num">Itens vendidos</th><th className="num">Caixas</th><th className="num">Unidades avulsas</th></tr></thead>
+            <thead><tr><th>#</th><th>SKU</th><th>Produto</th><th>Descritivo</th><th className="num">Unidades a separar</th><th className="num">Caixas</th><th className="num">Unidades avulsas</th></tr></thead>
             <tbody>{items.map((item) => <tr key={item.position}><td>{item.position}</td><td>{item.sku ?? "—"}</td><td>{item.product}</td><td>{item.description}</td><td className="num">{numberFormatter.format(item.sold_quantity)}</td><td className="num">{numberFormatter.format(item.boxes)}</td><td className="num">{numberFormatter.format(item.loose_units)}</td></tr>)}</tbody>
           </table>
         )}

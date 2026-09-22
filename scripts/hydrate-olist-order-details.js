@@ -218,8 +218,30 @@ async function main() {
     : Number.POSITIVE_INFINITY;
   const concurrency = Number(process.env.DETAIL_CONCURRENCY || "2");
   const detailDelayMs = Number(process.env.DETAIL_DELAY_MS || "0");
+  const targetOrderIds = (process.env.DETAIL_ORDER_IDS || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
 
   const accessToken = await getAccessToken(env);
+  if (targetOrderIds.length > 0) {
+    if (targetOrderIds.some((id) => !/^\d+$/.test(id))) {
+      throw new Error("DETAIL_ORDER_IDS aceita apenas IDs numericos separados por virgula.");
+    }
+
+    const detailed = await mapConcurrent([...new Set(targetOrderIds)], concurrency, async (id) => {
+      const detail = await fetchOrderDetail(env, accessToken, id, detailDelayMs);
+      if (String(detail.id) !== id || !Array.isArray(detail.itens) || detail.itens.length === 0) {
+        throw new Error(`Detalhe Olist inconsistente ou sem itens para o pedido ${id}.`);
+      }
+      return normalizeDetailedOrder(detail);
+    });
+
+    await upsertOrders(env, detailed);
+    console.log(JSON.stringify({ ok: true, hydrated: detailed.length, orderIds: targetOrderIds }, null, 2));
+    return;
+  }
+
   let offset = 0;
   let hydrated = 0;
 

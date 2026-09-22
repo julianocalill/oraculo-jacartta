@@ -369,6 +369,57 @@ async function hydrateOrderDetails(
   return detailedRows;
 }
 
+async function hydrateMissingPickingOrders(
+  supabase: ReturnType<typeof createClient>,
+  start: string,
+  end: string
+) {
+  if (!Number.isFinite(Date.parse(start)) || !Number.isFinite(Date.parse(end)) || Date.parse(end) <= Date.parse(start)) {
+    throw new Error('Janela de first_seen_at invalida para a separacao.');
+  }
+
+  const findMissing = async (limit: number) => {
+    const { data, error } = await supabase.rpc('logistica_picking_missing_order_ids', {
+      p_start: start,
+      p_end: end,
+      p_limit: limit
+    });
+    if (error) throw error;
+    return (data ?? []) as { order_id: string }[];
+  };
+
+  const missing = await findMissing(101);
+  if (missing.length > 100) {
+    throw new Error('Mais de 100 pedidos sem itens na separacao; hidratacao automatica suspensa para evitar timeout.');
+  }
+  if (missing.length === 0) {
+    return { ok: true, mode: 'hydrate_missing_picking', hydrated: 0, remaining: 0 };
+  }
+
+  const accessToken = await getAccessToken(supabase);
+  const detailedRows: Record<string, unknown>[] = [];
+  for (const { order_id: orderId } of missing) {
+    const row = await fetchOlistOrderDetail(accessToken, orderId);
+    const payload = row.payload as Record<string, unknown>;
+    if (String(row.id) !== orderId || !Array.isArray(payload.itens) || payload.itens.length === 0) {
+      throw new Error(`Detalhe Olist inconsistente ou sem itens para o pedido ${orderId}.`);
+    }
+    detailedRows.push(row);
+  }
+
+  for (const batch of chunk(detailedRows, 50)) {
+    const { error } = await supabase.from('olist_orders').upsert(batch, { onConflict: 'id' });
+    if (error) throw error;
+  }
+
+  const remaining = await findMissing(1);
+  if (remaining.length > 0) {
+    throw new Error('Ainda ha pedidos sem itens apos a hidratacao direcionada.');
+  }
+
+  return { ok: true, mode: 'hydrate_missing_picking', hydrated: detailedRows.length, remaining: 0 };
+}
+
 async function findResumeRun(
   supabase: ReturnType<typeof createClient>,
   startDate: string,
@@ -451,6 +502,14 @@ Deno.serve(async (req) => {
     const body = req.headers.get('content-type')?.includes('application/json')
       ? await req.json().catch(() => ({})) as JsonObject
       : {};
+
+    if (body.mode === 'hydrate_missing_picking') {
+      return jsonResponse(await hydrateMissingPickingOrders(
+        supabase,
+        String(body.cursorStart ?? ''),
+        String(body.cursorEnd ?? '')
+      ));
+    }
 
     // Window: explicit startDate/endDate wins; otherwise fall back to lookbackDays (legacy).
     const lookbackDays = clampPositiveInt(body.lookbackDays, 2, 31);

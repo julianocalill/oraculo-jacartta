@@ -2,6 +2,28 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-22] — Separação por produto físico
+
+- Kits Olist com composição válida são abertos antes do agrupamento da lista;
+  vendas diretas e componentes de kits somam no mesmo SKU simples.
+- Kits sem composição ficam sinalizados. Componentes sem cubagem continuam
+  visíveis com zero caixas e sua quantidade física em unidades avulsas.
+- Impressão, CSV e WhatsApp passam a chamar a quantidade de **Unidades a
+  separar**; o workflow tem atualizador e backup reproduzíveis no repositório.
+- A lista personalizada do PDF foi regenerada com 50 linhas e 117 caixas,
+  preservando a lista original de 25 linhas e 96 caixas, sem envio ao WhatsApp.
+
+## [2026-09-21] — Recuperação e hidratação automática da separação
+
+- Recuperados 14 pedidos Olist antigos que tinham entrado no cursor sem itens;
+  a lista de 07:00 foi publicada com 42 linhas e 500 caixas e enviada no
+  WhatsApp.
+- Fechamentos agendados e manuais passam a hidratar por ID os pedidos sem
+  itens antes da consolidação, incluindo os descobertos fora da janela recente
+  de criação.
+- Corrigida a rota de envio de lista já pronta pelo webhook, preservando a
+  proteção contra duplicidade.
+
 ## [2026-09-17] — Separação a partir de uma caixa
 
 - Impressão, CSV e WhatsApp passam a incluir SKUs que formem ao menos uma
