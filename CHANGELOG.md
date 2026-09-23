@@ -2,6 +2,17 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-23] — Preços para colaboradores em Pessoas
+
+- Nova aba com 254 linhas da tabela vigente, busca por nome ou código e
+  ordenação por código, produto ou preço.
+- Custos e fórmulas da planilha não são publicados; somente código, descrição e
+  preço final entram no catálogo.
+- O código duplicado `214858` foi mantido nas duas linhas e sinalizado para
+  conferência, sem escolher silenciosamente um dos preços conflitantes.
+- Importador reproduzível valida a estrutura do `.xlsx` antes de regenerar os
+  dados tipados usados pela página.
+
 ## [2026-09-23] — Fechamento oficial da Separação recuperado e validado
 
 - A execução das 07:00 falhou na hidratação com HTTP 500; a consulta de pedidos

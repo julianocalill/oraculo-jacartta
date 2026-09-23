@@ -66,6 +66,11 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 ## Current production state
 
+Catálogo de preços para colaboradores implementado no setor Pessoas em
+`/precos-colaboradores`: 254 linhas da planilha vigente, busca por produto ou
+código e aviso explícito para o único código duplicado na origem. Estado e
+validação: [status de 23/09](docs/project-status-2026-09-23.md).
+
 Separação por produto físico publicada em 22/09/2026 e fechamento oficial de
 23/09 validado: [status de 23/09](docs/project-status-2026-09-23.md). Kits válidos
 são abertos pelos componentes do Olist, inclusive em listas com zero caixas.
@@ -162,8 +167,8 @@ terceiros em escala e primeira geração de PDF por biblioteca).
 
 ### Navigation
 - Persistent sidebar (`AppShell` + `SidebarNav`) on every authenticated page,
-  filtrada pelas abas liberadas do usuário (16 no total: 14 em Principal + 2 em
-  Admin, definidas em `lib/auth/tabs.ts`). Active link auto-highlighted
+  filtrada pelas abas liberadas do usuário, definidas centralmente em
+  `lib/auth/tabs.ts`. Active link auto-highlighted
   via `usePathname`.
 - Sidebar badges via mapa `badges` (href → contador) montado pelo `AppShell`:
   alertas (`loadActionableAlertCount()`, global — same number on every page) e

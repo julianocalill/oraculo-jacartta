@@ -193,6 +193,7 @@ const GLOBAL_COLUMN_HINTS: Record<string, string> = {
   "perda dia": HINTS.perdaDia,
   "prazo": "Data ou horário limite para concluir esta atividade.",
   "preco": "Preço de venda considerado nesta linha.",
+  "preco para colaborador": "Valor final para compra pelo colaborador, conforme a planilha vigente enviada ao Oráculo.",
   "produto": "Produto ao qual os valores desta linha pertencem.",
   "produto e justificativa": "Produto Shopee acompanhado do motivo que levou à sugestão de reposição.",
   "qtd": "Quantidade de unidades deste item.",

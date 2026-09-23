@@ -1,5 +1,18 @@
 # Estado do projeto — 23/09/2026
 
+## Preços para colaboradores em Pessoas
+
+- Nova aba `/precos-colaboradores` no setor Pessoas, com acesso governado pela
+  matriz de abas de `/usuarios` e busca por nome ou código.
+- A carga congelada veio de `PREÇO PARA COLABORADORES 1.xlsx`: 254 linhas, 253
+  códigos únicos e nenhum item sem descrição ou preço final. A interface não
+  publica custo nem fórmula da planilha.
+- O código `214858` aparece duas vezes na origem, com o mesmo produto e preços
+  de R$ 49,44 e R$ 52,48. As duas linhas foram preservadas e recebem um aviso
+  de duplicidade até a área responsável confirmar qual deve permanecer.
+- `apps/web/scripts/import-employee-prices.mjs` valida os cabeçalhos e regenera
+  o catálogo tipado para futuras atualizações da planilha.
+
 ## Fechamento oficial da Separação às 07:00
 
 A execução agendada do n8n `96976` falhou às 07:00 BRT no nó **Hidratar

@@ -56,6 +56,7 @@ export const TABS = [
   { key: "logistica", label: "Logística", href: "/logistica", group: "main", paths: ["/logistica"], sector: "operacoes" },
   { key: "full", label: "Full", href: "/full", group: "main", paths: ["/full"], sector: "operacoes" },
   { key: "rh", label: "RH", href: "/rh", group: "main", paths: ["/rh"], sector: "pessoas" },
+  { key: "precos-colaboradores", label: "Preços para colaboradores", href: "/precos-colaboradores", group: "main", paths: ["/precos-colaboradores"], sector: "pessoas" },
   { key: "calculadora", label: "Calculadora", href: "/calculadora", group: "main", paths: ["/calculadora"], sector: "comercial" },
   // Guarda CPF/endereço de centenas de afiliados: por ser opt-in por usuário,
   // a aba nasce invisível para todo mundo até ser liberada em /usuarios.

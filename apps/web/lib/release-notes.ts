@@ -24,6 +24,18 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-09-23-precos-colaboradores",
+    title: "Preços para colaboradores no Oráculo",
+    summary: "O setor Pessoas agora reúne a tabela de produtos e valores para compra interna.",
+    publishedAt: "2026-09-23T12:00:00-03:00",
+    changes: [{
+      title: "Consulta por nome ou código",
+      description: "A nova aba mostra 254 itens da planilha vigente, permite busca e ordenação e sinaliza códigos repetidos para conferência antes da compra.",
+      href: "/precos-colaboradores",
+      linkLabel: "Consultar preços"
+    }]
+  },
+  {
     id: "2026-09-22-separacao-todos-vendidos",
     title: "Separação inclui todos os itens vendidos",
     summary: "Produtos com zero caixas fechadas também aparecem na lista, em ordem decrescente de caixas.",

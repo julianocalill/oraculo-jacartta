@@ -1699,6 +1699,23 @@ h2 {
   padding-bottom: 0;
 }
 
+.employee-price-filter {
+  justify-content: flex-start;
+  margin-bottom: 12px;
+}
+
+.employee-price-filter label {
+  flex: 1 1 320px;
+  max-width: 620px;
+}
+
+.employee-price-note {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+  margin: 0 0 14px;
+}
+
 .sku-toolbar {
   display: flex;
   justify-content: space-between;
