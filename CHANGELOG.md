@@ -2,6 +2,14 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-23] — Fechamento oficial da Separação recuperado e validado
+
+- A execução das 07:00 falhou na hidratação com HTTP 500; a consulta de pedidos
+  sem itens e a Edge Function voltaram a responder sem lacunas.
+- A lista oficial pendente foi retomada: 90 SKUs, incluindo 71 com zero caixas,
+  115 caixas ao todo e WhatsApp confirmado uma vez, após persistência e avanço
+  atômico do cursor. A causa do 500 inicial segue não identificada.
+
 ## [2026-09-22] — Todos os vendidos na separação
 
 - Impressão, CSV e WhatsApp passam a incluir SKUs vendidos mesmo quando não

@@ -33,7 +33,8 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-22.md](docs/project-status-2026-09-22.md) **← start here** (Separação por produto físico com kits abertos)
+1. [docs/project-status-2026-09-23.md](docs/project-status-2026-09-23.md) **← start here** (Fechamento oficial da Separação validado)
+   — [docs/project-status-2026-09-22.md](docs/project-status-2026-09-22.md) (Separação por produto físico com kits abertos)
    — [docs/project-status-2026-09-21.md](docs/project-status-2026-09-21.md) (Separação recuperada e hidratação automática de pedidos sem itens)
    — [docs/project-status-2026-09-17.md](docs/project-status-2026-09-17.md) (Separação com mínimo de uma caixa)
    — [docs/project-status-2026-09-11.md](docs/project-status-2026-09-11.md) (Shopee Ads no Comercial)
@@ -65,13 +66,15 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 ## Current production state
 
-Separação por produto físico publicada em 22/09/2026: [status de 22/09](docs/project-status-2026-09-22.md). Kits válidos são abertos pelos componentes do Olist antes da consolidação; a lista personalizada do PDF foi regenerada preservando a original.
+Separação por produto físico publicada em 22/09/2026 e fechamento oficial de
+23/09 validado: [status de 23/09](docs/project-status-2026-09-23.md). Kits válidos
+são abertos pelos componentes do Olist, inclusive em listas com zero caixas.
 
 Shopee Ads publicado em produção em 11/09/2026: [status de 11/09](docs/project-status-2026-09-11.md), com gasto × ROAS e análise diária.
 
 Correção de taxas TikTok publicada em 11/09/2026: [status](docs/project-status-2026-09-10.md).
 
-**Last update**: `2026-09-22` (see `docs/project-status-2026-09-22.md`) —
+**Last update**: `2026-09-23` (see `docs/project-status-2026-09-23.md`) —
 `Logística → Separação` com alerta do fechamento esperado, atualização manual,
 histórico, auditoria, impressão A4, CSV e períodos personalizados. A lista
 congelada agora é a fonte do Oráculo e do envio agendado por WhatsApp; o cursor
