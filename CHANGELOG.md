@@ -2,6 +2,13 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-23] — Afiliado opcional na calculadora
+
+- Shopee e TikTok passam a aceitar uma comissão percentual de afiliado, sempre
+  vazia por padrão e zerada ao trocar de marketplace ou restaurar os padrões.
+- Quando informada, a comissão reduz o lucro, aparece na decomposição e entra
+  no cálculo reverso do preço necessário para atingir a margem líquida.
+
 ## [2026-09-23] — Preços para colaboradores em Pessoas
 
 - Nova aba com 254 linhas da tabela vigente, busca por nome ou código e

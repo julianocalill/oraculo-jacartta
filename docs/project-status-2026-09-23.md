@@ -1,5 +1,15 @@
 # Estado do projeto — 23/09/2026
 
+## Comissão opcional de afiliado na calculadora
+
+- Os presets Shopee e TikTok de `/calculadora` ganharam um campo opcional de
+  comissão de afiliado. O campo sempre começa vazio, é limpo ao trocar de
+  marketplace ou restaurar os padrões e, vazio, equivale a 0%.
+- Quando preenchido, o percentual incide sobre o preço de venda, aparece na
+  decomposição de custos e também participa da busca do menor preço por margem
+  líquida. Mercado Livre permanece sem esse campo.
+- Sem alteração no motor fiscal, no banco ou nos presets de comissão dos canais.
+
 ## Preços para colaboradores em Pessoas
 
 - Nova aba `/precos-colaboradores` no setor Pessoas, com acesso governado pela

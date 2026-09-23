@@ -8,7 +8,12 @@ const source = fs.readFileSync(__dirname + '/../apps/web/app/calculadora/calcula
 const ctx = vm.createContext({ Intl });
 vm.runInContext(ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText + '\nObject.assign(globalThis, { calculate, findSalePriceForNetMargin, MARKETPLACE_PRESETS });', ctx);
 const rates = { icmsMg: .013, difal: .06, pisCofins: .0925, ads: .03, fixedOperational: .03, averageRefund: 1 };
-const tiers = ctx.MARKETPLACE_PRESETS.tiktok.tiers.map(t => ({ ...t, rate: t.rate / 100 }));
+const tiers = ctx.MARKETPLACE_PRESETS.tiktok.tiers.map(t => ({
+  max: t.max,
+  rate: t.rate / 100,
+  fixed: t.fixed,
+  fixedShare: (t.fixedPct ?? 0) / 100
+}));
 const calc = (price, cost = 65) => ctx.calculate(cost, 1, 'price', 0, price, 0, rates, tiers);
 
 test('TikTok: exemplos oficiais e fronteiras de preço mantêm a tarifa fixa', () => {
@@ -37,4 +42,20 @@ test('meta líquida encontra menor preço com as novas faixas', () => {
       assert.ok(profit / p < target - 1e-9);
     }
   }
+});
+
+test('comissão opcional de afiliado reduz o lucro e entra na busca por margem', () => {
+  const affiliateRates = { ...rates, affiliate: .08 };
+  const withoutAffiliate = calc(129.9);
+  const withAffiliate = ctx.calculate(65, 1, 'price', 0, 129.9, 0, affiliateRates, tiers);
+  const affiliateCost = withAffiliate.costs.find(c => c.name === 'Afiliado');
+
+  assert.equal(affiliateCost.value.toFixed(2), '10.39');
+  assert.equal((withoutAffiliate.netProfit - withAffiliate.netProfit).toFixed(2), '10.39');
+
+  const target = .2;
+  const price = ctx.findSalePriceForNetMargin(target, 65, affiliateRates, tiers);
+  assert.ok(price !== null);
+  const result = ctx.calculate(65, 1, 'price', 0, price, 0, affiliateRates, tiers);
+  assert.ok(result.netMargin >= target - 1e-9);
 });

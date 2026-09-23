@@ -77,7 +77,7 @@ const MARKETPLACE_PRESETS: Record<
   },
   tiktok: {
     label: "TikTok Shop",
-    note: "Regra desde 15/07/2026: abaixo de R$ 50, 10% + R$ 4; a partir de R$ 50, 6% + R$ 6 por item vendido. Use o preço após descontos do vendedor. Programa de frete e afiliados não incluídos. Confira eventuais condições específicas da sua loja.",
+    note: "Regra desde 15/07/2026: abaixo de R$ 50, 10% + R$ 4; a partir de R$ 50, 6% + R$ 6 por item vendido. Use o preço após descontos do vendedor. Programa de frete não incluído; a comissão de afiliado só entra quando preenchida abaixo. Confira eventuais condições específicas da sua loja.",
     tiers: [
       { max: 49.99, rate: 10, fixed: 4 },
       { max: Infinity, rate: 6, fixed: 6 }
@@ -122,6 +122,7 @@ type CalculatorRates = {
   ads: number;
   fixedOperational: number;
   averageRefund: number;
+  affiliate?: number;
 };
 
 function getTierLabel(tier: Tier, tiers: Tier[]) {
@@ -147,6 +148,7 @@ function netProfitAtPrice(
   rates: CalculatorRates,
   tier: Tier
 ) {
+  const affiliateRate = rates.affiliate ?? 0;
   const addedValue = salePrice - totalProductCost;
   const totalCosts =
     totalProductCost +
@@ -157,6 +159,7 @@ function netProfitAtPrice(
     salePrice * rates.difal +
     addedValue * rates.pisCofins +
     salePrice * rates.ads +
+    salePrice * affiliateRate +
     salePrice * rates.fixedOperational +
     rates.averageRefund;
 
@@ -173,6 +176,7 @@ function findSalePriceForNetMargin(
   let previousMax = -0.01;
 
   for (const tier of marketplaceTiers) {
+    const affiliateRate = rates.affiliate ?? 0;
     const priceShare =
       1 -
       tier.rate -
@@ -181,6 +185,7 @@ function findSalePriceForNetMargin(
       rates.difal -
       rates.pisCofins -
       rates.ads -
+      affiliateRate -
       rates.fixedOperational;
 
     const marginShare = priceShare - targetNetMargin;
@@ -241,6 +246,8 @@ function calculate(
   const difal = salePrice * rates.difal;
   const pisCofins = addedValue * rates.pisCofins;
   const ads = salePrice * rates.ads;
+  const affiliateRate = rates.affiliate ?? 0;
+  const affiliate = salePrice * affiliateRate;
   const fixedOperational = salePrice * rates.fixedOperational;
 
   const costs = [
@@ -255,6 +262,9 @@ function calculate(
     { name: "DIFAL", basis: `${formatPercentValue(rates.difal)} venda`, value: difal },
     { name: "PIS/COFINS Lucro Real", basis: `${formatPercentValue(rates.pisCofins)} valor agregado`, value: pisCofins },
     { name: "Ads", basis: `${formatPercentValue(rates.ads)} venda`, value: ads },
+    ...(affiliateRate > 0
+      ? [{ name: "Afiliado", basis: `${formatPercentValue(affiliateRate)} venda`, value: affiliate }]
+      : []),
     { name: "Custo fixo operacional", basis: `${formatPercentValue(rates.fixedOperational)} venda`, value: fixedOperational },
     { name: "Reembolso médio", basis: "Por pedido", value: rates.averageRefund }
   ];
@@ -300,10 +310,12 @@ export function PricingCalculator() {
   const [rateStrings, setRateStrings] = useState(DEFAULT_RATE_STRINGS);
   const [marketplace, setMarketplace] = useState<MarketplaceKey>("shopee");
   const [tierStrings, setTierStrings] = useState(() => tierStringsFor("shopee"));
+  const [affiliateRate, setAffiliateRate] = useState("");
 
   function selectMarketplace(key: MarketplaceKey) {
     setMarketplace(key);
     setTierStrings(tierStringsFor(key));
+    setAffiliateRate("");
   }
 
   const result = useMemo(() => {
@@ -313,7 +325,11 @@ export function PricingCalculator() {
       pisCofins: Math.max(asNumber(rateStrings.pisCofins), 0) / 100,
       ads: Math.max(asNumber(rateStrings.ads), 0) / 100,
       fixedOperational: Math.max(asNumber(rateStrings.fixedOperational), 0) / 100,
-      averageRefund: Math.max(asNumber(rateStrings.averageRefund), 0)
+      averageRefund: Math.max(asNumber(rateStrings.averageRefund), 0),
+      affiliate:
+        marketplace === "shopee" || marketplace === "tiktok"
+          ? Math.max(asNumber(affiliateRate), 0) / 100
+          : 0
     };
     const tiers: Tier[] = tierStrings.map((tier, index) => ({
       max: index === tierStrings.length - 1 ? Infinity : Math.max(asNumber(tier.max), 0),
@@ -332,7 +348,7 @@ export function PricingCalculator() {
       rates,
       tiers
     );
-  }, [unitCost, quantity, mode, markup, salePrice, netMargin, rateStrings, tierStrings]);
+  }, [unitCost, quantity, mode, markup, salePrice, netMargin, rateStrings, tierStrings, marketplace, affiliateRate]);
 
   const status =
     !result.targetReachable
@@ -346,6 +362,7 @@ export function PricingCalculator() {
   function resetRates() {
     setRateStrings(DEFAULT_RATE_STRINGS);
     setTierStrings(tierStringsFor(marketplace));
+    setAffiliateRate("");
   }
 
   return (
@@ -477,6 +494,20 @@ export function PricingCalculator() {
             <> <a href={MARKETPLACE_PRESETS[marketplace].source} target="_blank" rel="noopener noreferrer">Fonte oficial</a></>
           )}
         </p>
+
+        {(marketplace === "shopee" || marketplace === "tiktok") && (
+          <div className="calc-field-grid">
+            <label className="calc-field">
+              <span>Comissão de afiliado (%)</span>
+              <input
+                inputMode="decimal"
+                value={affiliateRate}
+                placeholder="Em branco = 0%"
+                onChange={(e) => setAffiliateRate(e.target.value)}
+              />
+            </label>
+          </div>
+        )}
 
         <div className="calc-tiers">
           <div className="calc-tier calc-tier-head" aria-hidden="true">
