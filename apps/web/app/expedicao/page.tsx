@@ -122,7 +122,8 @@ async function loadData(from: string, to: string) {
     salesDaily: (salesDaily.data ?? []) as SalesDaily[],
     shops: (shops.data ?? []) as Shop[],
     exceptions: (exceptions.data ?? []) as ExceptionRow[],
-    error: summary.error?.message || daily.error?.message || salesDaily.error?.message || shops.error?.message || exceptions.error?.message || null
+    error: summary.error?.message || daily.error?.message || shops.error?.message || exceptions.error?.message || null,
+    salesError: salesDaily.error?.message || null
   };
 }
 
@@ -161,6 +162,7 @@ export default async function ExpedicaoPage({
     if (!row.data_refreshed_at) return latest;
     return !latest || row.data_refreshed_at > latest ? row.data_refreshed_at : latest;
   }, null);
+  const salesAvailable = !data.salesError;
   const salesByDay = new Map(data.salesDaily.map((row) => [row.sale_day, row]));
   const fulfillmentByDay = new Map(data.daily.map((row) => [row.due_day, row]));
   const historyDays = [...new Set([...salesByDay.keys(), ...fulfillmentByDay.keys()])].sort();
@@ -185,13 +187,16 @@ export default async function ExpedicaoPage({
 
       <section>
         <div className="section-head"><p className="eyebrow">Vendas no período</p><h2>O que foi vendido</h2></div>
+        {data.salesError ? (
+          <div className="status-alerts"><div className="status-alert status-alert-critical">Vendas temporariamente indisponíveis: {data.salesError}</div></div>
+        ) : null}
         <div className="metric-grid">
-          <MetricCard accent="accent-blue" label="Pedidos pagos" value={count(sales.soldOrders)} caption="Pela data de pagamento na Shopee" />
-          <MetricCard accent="accent-violet" label="Unidades vendidas" value={count(sales.soldUnits)} caption="Quantidade somada dos itens" />
-          <MetricCard accent="accent-cyan" label="Pacotes dessas vendas" value={count(sales.packages)} caption="Um pedido pode gerar mais de um pacote" />
-          <MetricCard accent={sales.missingPackages ? "accent-red" : "accent-green"} label="Vendas sem pacote" value={count(sales.missingPackages)} caption={sales.missingPackages ? "Exigem correção na sincronização" : "Cobertura completa no período"} />
+          <MetricCard accent="accent-blue" label="Pedidos pagos" value={salesAvailable ? count(sales.soldOrders) : "—"} caption="Pela data de pagamento na Shopee" />
+          <MetricCard accent="accent-violet" label="Unidades vendidas" value={salesAvailable ? count(sales.soldUnits) : "—"} caption="Quantidade somada dos itens" />
+          <MetricCard accent="accent-cyan" label="Pacotes dessas vendas" value={salesAvailable ? count(sales.packages) : "—"} caption="Um pedido pode gerar mais de um pacote" />
+          <MetricCard accent={!salesAvailable || sales.missingPackages ? "accent-red" : "accent-green"} label="Vendas sem pacote" value={salesAvailable ? count(sales.missingPackages) : "—"} caption={!salesAvailable ? "Sem dado confiável nesta leitura" : sales.missingPackages ? "Exigem correção na sincronização" : "Cobertura completa no período"} />
         </div>
-        <p className="muted">Vendas atualizadas em {dateTime(salesUpdatedAt)}. A Shopee sincroniza cada loja a cada 15 minutos.</p>
+        <p className="muted">Vendas atualizadas em {salesAvailable ? dateTime(salesUpdatedAt) : "—"}. A Shopee sincroniza cada loja a cada 15 minutos.</p>
       </section>
 
       <section>

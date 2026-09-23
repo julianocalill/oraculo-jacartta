@@ -80,6 +80,9 @@ Shopee Ads publicado em produção em 11/09/2026: [status de 11/09](docs/project
 Correção de taxas TikTok publicada em 11/09/2026: [status](docs/project-status-2026-09-10.md).
 
 **Last update**: `2026-09-23` (see `docs/project-status-2026-09-23.md`) —
+`Expedição` atualizada, com apuração de vendas protegida contra timeout e sem
+zeros falsos quando uma consulta fica indisponível; quatro lojas Shopee e
+espelho do Bip reconciliados em produção. Também,
 `Logística → Separação` com alerta do fechamento esperado, atualização manual,
 histórico, auditoria, impressão A4, CSV e períodos personalizados. A lista
 congelada agora é a fonte do Oráculo e do envio agendado por WhatsApp; o cursor

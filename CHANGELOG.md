@@ -2,6 +2,16 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-23] — Expedição sem timeout e sem zeros falsos
+
+- Otimizada a apuração de vendas pagas da Expedição com índices de cobertura
+  para pedidos, itens e pacotes; a janela padrão volta a responder dentro do
+  limite do PostgREST mesmo junto das demais consultas da página.
+- Falha isolada da consulta de vendas agora aparece como indisponibilidade, sem
+  substituir pedidos e unidades reais por zero.
+- Atualização manual das quatro lojas Shopee e do espelho do Bip concluída;
+  conciliação auditada sem duplicação de pacote ou rastreio.
+
 ## [2026-09-23] — Afiliado opcional na calculadora
 
 - Shopee e TikTok passam a aceitar uma comissão percentual de afiliado, sempre

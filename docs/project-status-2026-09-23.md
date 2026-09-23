@@ -1,5 +1,25 @@
 # Estado do projeto — 23/09/2026
 
+## Expedição atualizada e protegida contra zeros falsos
+
+- A janela padrão de sete dias de `/expedicao` estourava o `statement_timeout`
+  do PostgREST em cache frio. A UI recebia erro da RPC de vendas, reduzia a
+  resposta vazia e mostrava zero pedidos/unidades apesar de o funil e os syncs
+  estarem saudáveis.
+- A RPC `oraculo_fulfillment_sales_daily` ganhou índices de cobertura para
+  pedidos pagos, quantidade dos itens e pacotes por pedido. Na validação após a
+  migration, a mesma janela respondeu dentro do limite também em paralelo com
+  as demais consultas da página.
+- A interface não transforma mais erro de vendas em zero: apresenta `—` e uma
+  mensagem específica, preservando o restante do funil operacional.
+- As quatro lojas Shopee e o espelho do Bip foram atualizados. Em 17–23/09 a
+  leitura final registrou 8.469 pedidos pagos, 8.966 unidades e 8.469 pacotes
+  dessas vendas, sem pedido sem pacote. A carga por prazo somou 8.258 pacotes;
+  os blocos diferem por contrato porque usam datas distintas (pagamento versus
+  prazo de envio).
+- A auditoria confirmou 183.470 pacotes, uma linha no pipeline por pacote,
+  nenhum rastreio duplicado e nenhum código do Bip duplicado.
+
 ## Comissão opcional de afiliado na calculadora
 
 - Os presets Shopee e TikTok de `/calculadora` ganharam um campo opcional de
