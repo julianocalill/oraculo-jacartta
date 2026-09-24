@@ -2,6 +2,13 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-24] — Itens da fatura no acompanhamento de importações
+
+- O número da fatura nas tabelas de Importações passa a abrir um pop-up com os
+  produtos embarcados e suas respectivas quantidades.
+- Quando a quantidade direta não está preenchida, a tela calcula o total por
+  caixas × unidades por caixa e identifica essa composição no detalhe.
+
 ## [2026-09-23] — Expedição sem timeout e sem zeros falsos
 
 - Otimizada a apuração de vendas pagas da Expedição com índices de cobertura

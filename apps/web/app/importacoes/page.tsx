@@ -60,6 +60,18 @@ function shortDate(value: string | null) {
   return `${day}/${month}/${year}`;
 }
 
+function itemQuantity(item: {
+  quantity: number | null;
+  cartons: number | null;
+  quantity_per_carton: number | null;
+}) {
+  if (item.quantity != null) return item.quantity;
+  if (item.cartons != null && item.quantity_per_carton != null) {
+    return item.cartons * item.quantity_per_carton;
+  }
+  return null;
+}
+
 /** Texto curto da idade da posição — "há 3 h", "há 12 dias". */
 function positionAge(hours: number | null) {
   if (hours == null) return "sem posição";
@@ -80,7 +92,12 @@ function aisWarning(aisRun: AisRun | null, staleCount: number) {
   return null;
 }
 
-export default async function ImportacoesPage() {
+export default async function ImportacoesPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ fatura?: string }>;
+}) {
+  const params = (await searchParams) ?? {};
   const [{ allowed }, alertCount, { faturas, itens, navios, posicoes, aisRun }] = await Promise.all([
     requireTabAccess("importacoes"),
     loadActionableAlertCount(),
@@ -107,8 +124,20 @@ export default async function ImportacoesPage() {
     itemCountByInvoice.set(item.invoice_number, (itemCountByInvoice.get(item.invoice_number) ?? 0) + 1);
   }
 
+  const selectedInvoice = params.fatura
+    ? faturas.find((fatura) => fatura.invoice_number === params.fatura) ?? null
+    : null;
+  const selectedItems = selectedInvoice
+    ? itens.filter((item) => item.invoice_number === selectedInvoice.invoice_number)
+    : [];
+
   const rows: SortableCell[][] = faturas.map((fatura) => [
-    { text: fatura.invoice_number, sort: fatura.invoice_number, subtitle: fatura.origin === "planilha" ? `planilha · linha ${fatura.source_first_row ?? "-"}` : "cadastro manual" },
+    {
+      text: fatura.invoice_number,
+      sort: fatura.invoice_number,
+      href: `/importacoes?fatura=${encodeURIComponent(fatura.invoice_number)}`,
+      subtitle: fatura.origin === "planilha" ? `planilha · linha ${fatura.source_first_row ?? "-"}` : "cadastro manual"
+    },
     {
       text: fatura.entregue ? "entregue" : "em trânsito",
       sort: fatura.entregue ? 1 : 0,
@@ -253,7 +282,12 @@ export default async function ImportacoesPage() {
               {faturas.map((fatura) => (
                 <tr key={fatura.invoice_number}>
                   <td>
-                    {fatura.invoice_number}
+                    <Link
+                      className="row-link"
+                      href={`/importacoes?fatura=${encodeURIComponent(fatura.invoice_number)}`}
+                    >
+                      {fatura.invoice_number}
+                    </Link>
                     <span className="row-subtitle">{fatura.vessel_name ?? "sem navio"}</span>
                   </td>
                   <td>{fatura.container_number ?? "-"}</td>
@@ -298,6 +332,75 @@ export default async function ImportacoesPage() {
           </table>
         </div>
       </section>
+
+      {params.fatura ? (
+        <div className="agenda-modal-overlay">
+          <Link
+            href="/importacoes"
+            className="agenda-modal-backdrop"
+            aria-label="Fechar itens da fatura"
+          />
+          <section
+            className="agenda-modal importacoes-invoice-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="importacoes-invoice-title"
+          >
+            <div className="agenda-modal-head">
+              <div>
+                <p className="eyebrow">Itens da fatura</p>
+                <h2 id="importacoes-invoice-title">
+                  {selectedInvoice?.invoice_number ?? "Fatura não encontrada"}
+                </h2>
+                {selectedInvoice ? (
+                  <p className="importacoes-invoice-summary">
+                    {selectedInvoice.vessel_name ?? "Navio não informado"}
+                    {selectedInvoice.container_number ? ` · contêiner ${selectedInvoice.container_number}` : ""}
+                  </p>
+                ) : null}
+              </div>
+              <Link className="agenda-modal-close" href="/importacoes" aria-label="Fechar">
+                ×
+              </Link>
+            </div>
+
+            {!selectedInvoice ? (
+              <p className="empty-state">A fatura selecionada não existe mais.</p>
+            ) : selectedItems.length === 0 ? (
+              <p className="empty-state">Nenhum item foi cadastrado para esta fatura.</p>
+            ) : (
+              <div className="table-wrap importacoes-invoice-items">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Produto</th>
+                      <th className="numeric">Quantidade</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedItems.map((item) => {
+                      const quantity = itemQuantity(item);
+                      return (
+                        <tr key={item.id}>
+                          <td>{item.description}</td>
+                          <td className="numeric">
+                            {quantity == null ? "-" : count(quantity)}
+                            {item.quantity == null && item.cartons != null && item.quantity_per_carton != null ? (
+                              <span className="row-subtitle">
+                                {count(item.cartons)} caixas × {count(item.quantity_per_carton)}
+                              </span>
+                            ) : null}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        </div>
+      ) : null}
     </AppShell>
   );
 }
