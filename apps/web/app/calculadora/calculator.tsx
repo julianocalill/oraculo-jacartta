@@ -35,7 +35,7 @@ type MarketplaceKey = "shopee" | "meliClassico" | "meliPremium" | "tiktok";
 // Abaixo de R$ 12,50 o custo fixo do Mercado Livre é 50% do preço (fixedPct).
 const ML_FEES_SOURCE = "https://vendedores.mercadolivre.com.br/nota/como-funcionam-as-taxas-do-mercado-livre";
 
-type FixedShippingRule = { below: number; fixed: number };
+type FixedShippingRule = { name: string; below: number; fixed: number; fixedAbove?: number };
 type MarketplacePreset = {
   label: string;
   note: string;
@@ -60,7 +60,7 @@ const MARKETPLACE_PRESETS: Record<MarketplaceKey, MarketplacePreset> = {
     label: "ML Clássico",
     note: "Comissão 10–14% conforme categoria (padrão 13% — ajuste para a sua). Custo fixo: abaixo de R$ 12,50 é 50% do preço; de R$ 12,50 a R$ 78,99 é por faixa; a partir de R$ 79 não há custo fixo. Envio fixo de R$ 12 para preços abaixo de R$ 79,99; outros custos e subsídios de frete não incluídos.",
     source: ML_FEES_SOURCE,
-    shipping: { below: 79.99, fixed: 12 },
+    shipping: { name: "Envio Mercado Livre", below: 79.99, fixed: 12 },
     tiers: [
       { max: 12.49, rate: 13, fixed: 0, fixedPct: 50 },
       { max: 28.99, rate: 13, fixed: 6.25 },
@@ -73,7 +73,7 @@ const MARKETPLACE_PRESETS: Record<MarketplaceKey, MarketplacePreset> = {
     label: "ML Premium",
     note: "Comissão 15–19% conforme categoria (padrão 18% — ajuste para a sua), com parcelamento em até 12x sem juros. Custo fixo: abaixo de R$ 12,50 é 50% do preço; de R$ 12,50 a R$ 78,99 é por faixa; a partir de R$ 79 não há custo fixo. Envio fixo de R$ 12 para preços abaixo de R$ 79,99; outros custos e subsídios de frete não incluídos.",
     source: ML_FEES_SOURCE,
-    shipping: { below: 79.99, fixed: 12 },
+    shipping: { name: "Envio Mercado Livre", below: 79.99, fixed: 12 },
     tiers: [
       { max: 12.49, rate: 18, fixed: 0, fixedPct: 50 },
       { max: 28.99, rate: 18, fixed: 6.25 },
@@ -84,10 +84,11 @@ const MARKETPLACE_PRESETS: Record<MarketplaceKey, MarketplacePreset> = {
   },
   tiktok: {
     label: "TikTok Shop",
-    note: "Abaixo de R$ 50: 10% + R$ 12,10; a partir de R$ 50: 6% + R$ 19,30 por item vendido. Use o preço após descontos do vendedor. Programa de frete não incluído; a comissão de afiliado só entra quando preenchida abaixo. Confira eventuais condições específicas da sua loja.",
+    note: "Comissão e fixo do marketplace permanecem por faixa. Envio: R$ 12,10 abaixo de R$ 50 e R$ 19,30 a partir de R$ 50. Use o preço após descontos do vendedor; a comissão de afiliado só entra quando preenchida abaixo.",
+    shipping: { name: "Envio TikTok", below: 50, fixed: 12.1, fixedAbove: 19.3 },
     tiers: [
-      { max: 49.99, rate: 10, fixed: 12.1 },
-      { max: Infinity, rate: 6, fixed: 19.3 }
+      { max: 49.99, rate: 10, fixed: 4 },
+      { max: Infinity, rate: 6, fixed: 6 }
     ]
   }
 };
@@ -150,7 +151,8 @@ function roundUpToCent(value: number) {
 }
 
 function fixedShippingAtPrice(salePrice: number, shipping?: FixedShippingRule) {
-  return shipping && salePrice < shipping.below ? shipping.fixed : 0;
+  if (!shipping) return 0;
+  return salePrice < shipping.below ? shipping.fixed : shipping.fixedAbove ?? 0;
 }
 
 function netProfitAtPrice(
@@ -209,7 +211,7 @@ function findSalePriceForNetMargin(
       const segments = shipping
         ? [
             { min: tierMinimum, max: Math.min(tier.max, shipping.below - 0.01), shippingFixed: shipping.fixed },
-            { min: Math.max(tierMinimum, shipping.below), max: tier.max, shippingFixed: 0 }
+            { min: Math.max(tierMinimum, shipping.below), max: tier.max, shippingFixed: shipping.fixedAbove ?? 0 }
           ]
         : [{ min: tierMinimum, max: tier.max, shippingFixed: 0 }];
 
@@ -287,7 +289,11 @@ function calculate(
       value: marketplaceTier.fixed + salePrice * marketplaceTier.fixedShare
     },
     ...(shipping
-      ? [{ name: "Envio Mercado Livre", basis: `Abaixo de ${money(shipping.below)}`, value: fixedShipping }]
+      ? [{
+          name: shipping.name,
+          basis: salePrice < shipping.below ? `Abaixo de ${money(shipping.below)}` : `A partir de ${money(shipping.below)}`,
+          value: fixedShipping
+        }]
       : []),
     { name: "ICMS MG", basis: `${formatPercentValue(rates.icmsMg)} venda`, value: icmsMg },
     { name: "DIFAL", basis: `${formatPercentValue(rates.difal)} venda`, value: difal },
@@ -343,12 +349,14 @@ export function PricingCalculator() {
   const [tierStrings, setTierStrings] = useState(() => tierStringsFor("shopee"));
   const [affiliateRate, setAffiliateRate] = useState("");
   const [shippingFixed, setShippingFixed] = useState("");
+  const [shippingFixedAbove, setShippingFixedAbove] = useState("");
 
   function selectMarketplace(key: MarketplaceKey) {
     setMarketplace(key);
     setTierStrings(tierStringsFor(key));
     setAffiliateRate("");
     setShippingFixed(MARKETPLACE_PRESETS[key].shipping?.fixed.toFixed(2) ?? "");
+    setShippingFixedAbove(MARKETPLACE_PRESETS[key].shipping?.fixedAbove?.toFixed(2) ?? "");
   }
 
   const result = useMemo(() => {
@@ -372,7 +380,13 @@ export function PricingCalculator() {
     }));
     const presetShipping = MARKETPLACE_PRESETS[marketplace].shipping;
     const shipping = presetShipping
-      ? { ...presetShipping, fixed: Math.max(asNumber(shippingFixed), 0) }
+      ? {
+          ...presetShipping,
+          fixed: Math.max(asNumber(shippingFixed), 0),
+          fixedAbove: presetShipping.fixedAbove === undefined
+            ? undefined
+            : Math.max(asNumber(shippingFixedAbove), 0)
+        }
       : undefined;
 
     return calculate(
@@ -386,7 +400,7 @@ export function PricingCalculator() {
       tiers,
       shipping
     );
-  }, [unitCost, quantity, mode, markup, salePrice, netMargin, rateStrings, tierStrings, marketplace, affiliateRate, shippingFixed]);
+  }, [unitCost, quantity, mode, markup, salePrice, netMargin, rateStrings, tierStrings, marketplace, affiliateRate, shippingFixed, shippingFixedAbove]);
 
   const status =
     !result.targetReachable
@@ -402,6 +416,7 @@ export function PricingCalculator() {
     setTierStrings(tierStringsFor(marketplace));
     setAffiliateRate("");
     setShippingFixed(MARKETPLACE_PRESETS[marketplace].shipping?.fixed.toFixed(2) ?? "");
+    setShippingFixedAbove(MARKETPLACE_PRESETS[marketplace].shipping?.fixedAbove?.toFixed(2) ?? "");
   }
 
   return (
@@ -548,13 +563,23 @@ export function PricingCalculator() {
         {MARKETPLACE_PRESETS[marketplace].shipping && (
           <div className="calc-field-grid">
             <label className="calc-field">
-              <span>Envio fixo abaixo de R$ 79,99 (R$)</span>
+              <span>Envio fixo abaixo de {money(MARKETPLACE_PRESETS[marketplace].shipping.below)} (R$)</span>
               <input
                 inputMode="decimal"
                 value={shippingFixed}
                 onChange={(e) => setShippingFixed(e.target.value)}
               />
             </label>
+            {MARKETPLACE_PRESETS[marketplace].shipping.fixedAbove !== undefined && (
+              <label className="calc-field">
+                <span>Envio fixo a partir de {money(MARKETPLACE_PRESETS[marketplace].shipping.below)} (R$)</span>
+                <input
+                  inputMode="decimal"
+                  value={shippingFixedAbove}
+                  onChange={(e) => setShippingFixedAbove(e.target.value)}
+                />
+              </label>
+            )}
           </div>
         )}
 

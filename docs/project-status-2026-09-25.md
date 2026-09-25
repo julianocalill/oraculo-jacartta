@@ -10,11 +10,12 @@
 - A alteração foi baseada no comunicado visual fornecido pela operação em
   25/09/2026.
 
-## Tarifas fixas do TikTok na calculadora
+## Envio fixo do TikTok na calculadora
 
-- O preset **TikTok Shop** usa R$ 12,10 de tarifa fixa abaixo de R$ 50 e
-  R$ 19,30 a partir de R$ 50.
-- As comissões das duas faixas permanecem, respectivamente, em 10% e 6%.
+- O preset **TikTok Shop** desconta R$ 12,10 de envio abaixo de R$ 50 e
+  R$ 19,30 a partir de R$ 50, em dois campos próprios e editáveis.
+- As comissões permanecem em 10% e 6%; os fixos do marketplace permanecem em
+  R$ 4 e R$ 6, respectivamente.
 - Afiliado opcional, impostos, custos operacionais e demais marketplaces não
   foram alterados por esta regra.
 - Os novos valores participam da decomposição e do modo **Por lucro líquido**.
@@ -42,8 +43,9 @@
   presets Clássico e Premium.
 - O cálculo reverso foi comparado centavo a centavo até o preço encontrado para
   garantir que não ignora a descontinuidade da taxa.
-- Testes automatizados do TikTok confirmam R$ 12,10 em R$ 49,99 e R$ 19,30 em
-  R$ 50, além do cálculo reverso e da comissão opcional de afiliado.
+- Testes automatizados do TikTok confirmam os envios de R$ 12,10 em R$ 49,99
+  e R$ 19,30 em R$ 50, separados dos fixos de R$ 4/R$ 6, além do cálculo
+  reverso e da comissão opcional de afiliado.
 - TypeScript do app web validado com o `tsc --noEmit` instalado no workspace.
 
 Não há alteração em banco, motor fiscal, integrações ou deploy de Edge Function.

@@ -17,12 +17,12 @@ Histórico de entregas e mudanças significativas.
 - A comissão de 20% e todas as faixas acima de R$ 79,99 permanecem
   inalteradas.
 
-## [2026-09-25] — Novas tarifas fixas do TikTok na calculadora
+## [2026-09-25] — Envio fixo do TikTok na calculadora
 
-- O preset TikTok passa a usar R$ 12,10 de tarifa fixa abaixo de R$ 50 e
-  R$ 19,30 a partir de R$ 50.
-- As comissões permanecem em 10% e 6%, respectivamente; afiliado, impostos e
-  demais custos continuam como estavam.
+- O preset TikTok passa a descontar separadamente R$ 12,10 de envio abaixo de
+  R$ 50 e R$ 19,30 a partir de R$ 50, com dois campos editáveis na tela.
+- As comissões permanecem em 10% e 6% e os fixos do marketplace em R$ 4 e
+  R$ 6, respectivamente; afiliado, impostos e demais custos continuam iguais.
 - O cálculo reverso por margem líquida usa os novos valores. A atribuição à
   fonte oficial anterior foi retirada para não validar indevidamente o novo
   parâmetro operacional.

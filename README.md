@@ -69,8 +69,8 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 Calculadora atualizada em 25/09/2026: os presets Mercado Livre Clássico e
 Premium descontam R$ 12 de envio em preços abaixo de R$ 79,99, inclusive no
-cálculo reverso por margem líquida. O TikTok usa tarifa fixa de R$ 12,10 abaixo
-de R$ 50 e R$ 19,30 a partir de R$ 50. Estado e validação: [status de 25/09](docs/project-status-2026-09-25.md).
+cálculo reverso por margem líquida. O TikTok desconta envio de R$ 12,10 abaixo
+de R$ 50 e R$ 19,30 a partir de R$ 50, separado do fixo do marketplace. Estado e validação: [status de 25/09](docs/project-status-2026-09-25.md).
 Na Shopee, a primeira faixa passa a cobrar R$ 4,50 por item a partir de
 01/10/2026; as demais faixas ficam inalteradas.
 
