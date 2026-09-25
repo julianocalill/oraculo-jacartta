@@ -27,8 +27,7 @@ const RATE_FIELDS: Array<{ key: RateKey; label: string; suffix: "%" | "R$" }> = 
 ];
 
 // Presets de comissão por marketplace. Shopee = faixas originais da calculadora.
-// ML = presets editáveis por categoria; TikTok conferido na fonte oficial em 10/09/2026.
-// TikTok: https://seller-br.tiktok.com/university/essay?knowledge_id=24428156307201
+// ML = presets editáveis por categoria; TikTok atualizado operacionalmente em 25/09/2026.
 // A comissão pode variar por condições comerciais,
 // então tudo continua editável na tela. Último degrau é sempre faixa aberta.
 type MarketplaceKey = "shopee" | "meliClassico" | "meliPremium" | "tiktok";
@@ -36,15 +35,21 @@ type MarketplaceKey = "shopee" | "meliClassico" | "meliPremium" | "tiktok";
 // Abaixo de R$ 12,50 o custo fixo do Mercado Livre é 50% do preço (fixedPct).
 const ML_FEES_SOURCE = "https://vendedores.mercadolivre.com.br/nota/como-funcionam-as-taxas-do-mercado-livre";
 
-const MARKETPLACE_PRESETS: Record<
-  MarketplaceKey,
-  { label: string; note: string; source?: string; tiers: Array<{ max: number; rate: number; fixed: number; fixedPct?: number }> }
-> = {
+type FixedShippingRule = { below: number; fixed: number };
+type MarketplacePreset = {
+  label: string;
+  note: string;
+  source?: string;
+  shipping?: FixedShippingRule;
+  tiers: Array<{ max: number; rate: number; fixed: number; fixedPct?: number }>;
+};
+
+const MARKETPLACE_PRESETS: Record<MarketplaceKey, MarketplacePreset> = {
   shopee: {
     label: "Shopee",
-    note: "Faixas originais da calculadora (comissão + fixo por faixa de preço).",
+    note: "A partir de 01/10/2026, produtos de até R$ 79,99 usam valor fixo de R$ 4,50 por item. As demais faixas permanecem inalteradas.",
     tiers: [
-      { max: 79.99, rate: 20, fixed: 4 },
+      { max: 79.99, rate: 20, fixed: 4.5 },
       { max: 99.99, rate: 14, fixed: 16 },
       { max: 199.99, rate: 14, fixed: 20 },
       { max: 499.99, rate: 14, fixed: 26 },
@@ -53,8 +58,9 @@ const MARKETPLACE_PRESETS: Record<
   },
   meliClassico: {
     label: "ML Clássico",
-    note: "Comissão 10–14% conforme categoria (padrão 13% — ajuste para a sua). Custo fixo: abaixo de R$ 12,50 é 50% do preço; de R$ 12,50 a R$ 78,99 é por faixa; a partir de R$ 79 não há custo fixo. Frete e subsídio de frete grátis não incluídos.",
+    note: "Comissão 10–14% conforme categoria (padrão 13% — ajuste para a sua). Custo fixo: abaixo de R$ 12,50 é 50% do preço; de R$ 12,50 a R$ 78,99 é por faixa; a partir de R$ 79 não há custo fixo. Envio fixo de R$ 12 para preços abaixo de R$ 79,99; outros custos e subsídios de frete não incluídos.",
     source: ML_FEES_SOURCE,
+    shipping: { below: 79.99, fixed: 12 },
     tiers: [
       { max: 12.49, rate: 13, fixed: 0, fixedPct: 50 },
       { max: 28.99, rate: 13, fixed: 6.25 },
@@ -65,8 +71,9 @@ const MARKETPLACE_PRESETS: Record<
   },
   meliPremium: {
     label: "ML Premium",
-    note: "Comissão 15–19% conforme categoria (padrão 18% — ajuste para a sua), com parcelamento em até 12x sem juros. Custo fixo: abaixo de R$ 12,50 é 50% do preço; de R$ 12,50 a R$ 78,99 é por faixa; a partir de R$ 79 não há custo fixo. Frete e subsídio de frete grátis não incluídos.",
+    note: "Comissão 15–19% conforme categoria (padrão 18% — ajuste para a sua), com parcelamento em até 12x sem juros. Custo fixo: abaixo de R$ 12,50 é 50% do preço; de R$ 12,50 a R$ 78,99 é por faixa; a partir de R$ 79 não há custo fixo. Envio fixo de R$ 12 para preços abaixo de R$ 79,99; outros custos e subsídios de frete não incluídos.",
     source: ML_FEES_SOURCE,
+    shipping: { below: 79.99, fixed: 12 },
     tiers: [
       { max: 12.49, rate: 18, fixed: 0, fixedPct: 50 },
       { max: 28.99, rate: 18, fixed: 6.25 },
@@ -77,10 +84,10 @@ const MARKETPLACE_PRESETS: Record<
   },
   tiktok: {
     label: "TikTok Shop",
-    note: "Regra desde 15/07/2026: abaixo de R$ 50, 10% + R$ 4; a partir de R$ 50, 6% + R$ 6 por item vendido. Use o preço após descontos do vendedor. Programa de frete não incluído; a comissão de afiliado só entra quando preenchida abaixo. Confira eventuais condições específicas da sua loja.",
+    note: "Abaixo de R$ 50: 10% + R$ 12,10; a partir de R$ 50: 6% + R$ 19,30 por item vendido. Use o preço após descontos do vendedor. Programa de frete não incluído; a comissão de afiliado só entra quando preenchida abaixo. Confira eventuais condições específicas da sua loja.",
     tiers: [
-      { max: 49.99, rate: 10, fixed: 4 },
-      { max: Infinity, rate: 6, fixed: 6 }
+      { max: 49.99, rate: 10, fixed: 12.1 },
+      { max: Infinity, rate: 6, fixed: 19.3 }
     ]
   }
 };
@@ -142,11 +149,16 @@ function roundUpToCent(value: number) {
   return Math.ceil((value - 1e-9) * 100) / 100;
 }
 
+function fixedShippingAtPrice(salePrice: number, shipping?: FixedShippingRule) {
+  return shipping && salePrice < shipping.below ? shipping.fixed : 0;
+}
+
 function netProfitAtPrice(
   salePrice: number,
   totalProductCost: number,
   rates: CalculatorRates,
-  tier: Tier
+  tier: Tier,
+  shipping?: FixedShippingRule
 ) {
   const affiliateRate = rates.affiliate ?? 0;
   const addedValue = salePrice - totalProductCost;
@@ -155,6 +167,7 @@ function netProfitAtPrice(
     salePrice * tier.rate +
     tier.fixed +
     salePrice * tier.fixedShare +
+    fixedShippingAtPrice(salePrice, shipping) +
     salePrice * rates.icmsMg +
     salePrice * rates.difal +
     addedValue * rates.pisCofins +
@@ -170,7 +183,8 @@ function findSalePriceForNetMargin(
   targetNetMargin: number,
   totalProductCost: number,
   rates: CalculatorRates,
-  marketplaceTiers: Tier[]
+  marketplaceTiers: Tier[],
+  shipping?: FixedShippingRule
 ) {
   const candidates: number[] = [];
   let previousMax = -0.01;
@@ -191,20 +205,32 @@ function findSalePriceForNetMargin(
     const marginShare = priceShare - targetNetMargin;
 
     if (marginShare > 0) {
-      const exactPrice =
-        (totalProductCost * (1 - rates.pisCofins) +
-          tier.fixed +
-          rates.averageRefund) /
-        marginShare;
       const tierMinimum = roundUpToCent(previousMax + 0.01);
-      const candidate = Math.max(roundUpToCent(exactPrice), tierMinimum, 0.01);
-      const candidateNetMargin = netProfitAtPrice(candidate, totalProductCost, rates, tier) / candidate;
+      const segments = shipping
+        ? [
+            { min: tierMinimum, max: Math.min(tier.max, shipping.below - 0.01), shippingFixed: shipping.fixed },
+            { min: Math.max(tierMinimum, shipping.below), max: tier.max, shippingFixed: 0 }
+          ]
+        : [{ min: tierMinimum, max: tier.max, shippingFixed: 0 }];
 
-      if (
-        candidate <= tier.max + Number.EPSILON &&
-        candidateNetMargin >= targetNetMargin - 1e-9
-      ) {
-        candidates.push(candidate);
+      for (const segment of segments) {
+        if (segment.min > segment.max + Number.EPSILON) continue;
+
+        const exactPrice =
+          (totalProductCost * (1 - rates.pisCofins) +
+            tier.fixed +
+            segment.shippingFixed +
+            rates.averageRefund) /
+          marginShare;
+        const candidate = Math.max(roundUpToCent(exactPrice), segment.min, 0.01);
+        const candidateNetMargin = netProfitAtPrice(candidate, totalProductCost, rates, tier, shipping) / candidate;
+
+        if (
+          candidate <= segment.max + Number.EPSILON &&
+          candidateNetMargin >= targetNetMargin - 1e-9
+        ) {
+          candidates.push(candidate);
+        }
       }
     }
 
@@ -224,12 +250,13 @@ function calculate(
   salePriceInput: number,
   netMarginInput: number,
   rates: CalculatorRates,
-  marketplaceTiers: Tier[]
+  marketplaceTiers: Tier[],
+  shipping?: FixedShippingRule
 ) {
   const totalProductCost = unitCost * quantity;
   const targetSalePrice =
     mode === "netMargin"
-      ? findSalePriceForNetMargin(netMarginInput, totalProductCost, rates, marketplaceTiers)
+      ? findSalePriceForNetMargin(netMarginInput, totalProductCost, rates, marketplaceTiers, shipping)
       : null;
   const salePrice =
     mode === "markup"
@@ -249,6 +276,7 @@ function calculate(
   const affiliateRate = rates.affiliate ?? 0;
   const affiliate = salePrice * affiliateRate;
   const fixedOperational = salePrice * rates.fixedOperational;
+  const fixedShipping = fixedShippingAtPrice(salePrice, shipping);
 
   const costs = [
     { name: "Custo dos produtos", basis: `${quantity} un. × ${money(unitCost)}`, value: totalProductCost },
@@ -258,6 +286,9 @@ function calculate(
       basis: marketplaceTier.fixedShare ? `${formatPercentValue(marketplaceTier.fixedShare)} do preço` : "Faixa",
       value: marketplaceTier.fixed + salePrice * marketplaceTier.fixedShare
     },
+    ...(shipping
+      ? [{ name: "Envio Mercado Livre", basis: `Abaixo de ${money(shipping.below)}`, value: fixedShipping }]
+      : []),
     { name: "ICMS MG", basis: `${formatPercentValue(rates.icmsMg)} venda`, value: icmsMg },
     { name: "DIFAL", basis: `${formatPercentValue(rates.difal)} venda`, value: difal },
     { name: "PIS/COFINS Lucro Real", basis: `${formatPercentValue(rates.pisCofins)} valor agregado`, value: pisCofins },
@@ -346,7 +377,8 @@ export function PricingCalculator() {
       Math.max(asNumber(salePrice), 0),
       Math.max(asNumber(netMargin), 0) / 100,
       rates,
-      tiers
+      tiers,
+      MARKETPLACE_PRESETS[marketplace].shipping
     );
   }, [unitCost, quantity, mode, markup, salePrice, netMargin, rateStrings, tierStrings, marketplace, affiliateRate]);
 
@@ -487,9 +519,6 @@ export function PricingCalculator() {
 
         <p className="table-note">
           {MARKETPLACE_PRESETS[marketplace].note}
-          {marketplace === "tiktok" && (
-            <> <a href="https://seller-br.tiktok.com/university/essay?knowledge_id=24428156307201" target="_blank" rel="noopener noreferrer">Fonte oficial</a></>
-          )}
           {MARKETPLACE_PRESETS[marketplace].source && (
             <> <a href={MARKETPLACE_PRESETS[marketplace].source} target="_blank" rel="noopener noreferrer">Fonte oficial</a></>
           )}

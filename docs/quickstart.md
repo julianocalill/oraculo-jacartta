@@ -107,6 +107,9 @@ Every metric card can take an optional `delta` (variation chip) and `spark` (arr
 **File**: `apps/web/app/calculadora/calculator.tsx` (client) + `apps/web/app/calculadora/page.tsx` (server)
 
 Standalone rules ported from the external `calculadora.oliverhome.com.br` project — intentionally does not import from `packages/domain/fiscal.js` or read Oráculo's fiscal snapshots. Marketplace presets (Shopee/ML/TikTok) are plain data objects (`MARKETPLACE_PRESETS`); add a new marketplace by adding a preset, not new logic.
+The ML Clássico and Premium presets also declare a data-driven fixed shipping rule: R$ 12 below R$ 79,99. It is shown separately from the marketplace fee and is included in reverse net-margin pricing.
+The TikTok preset uses a R$ 12,10 fixed fee below R$ 50 and R$ 19,30 from R$ 50 onward, while retaining its 10% and 6% commission tiers.
+The Shopee preset uses a R$ 4,50 fixed fee through R$ 79,99 for the rule effective from 2026-10-01; higher tiers are unchanged.
 
 ### Database migrations
 **Directory**: `supabase/migrations/`

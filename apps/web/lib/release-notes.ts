@@ -24,6 +24,18 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-09-25-calculadora-marketplaces",
+    title: "Novas tarifas na calculadora",
+    summary: "Mercado Livre, TikTok e Shopee foram atualizados com os novos custos fixos de precificação.",
+    publishedAt: "2026-09-25T10:30:00-03:00",
+    changes: [{
+      title: "Simulações com as novas regras",
+      description: "Mercado Livre inclui R$ 12 de envio abaixo de R$ 79,99; TikTok usa R$ 12,10 abaixo de R$ 50 e R$ 19,30 a partir de R$ 50; Shopee passa a R$ 4,50 até R$ 79,99 na regra vigente em 01/10.",
+      href: "/calculadora",
+      linkLabel: "Abrir calculadora"
+    }]
+  },
+  {
     id: "2026-09-23-precos-colaboradores",
     title: "Preços para colaboradores no Oráculo",
     summary: "O setor Pessoas agora reúne a tabela de produtos e valores para compra interna.",

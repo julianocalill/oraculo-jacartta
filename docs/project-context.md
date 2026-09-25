@@ -27,6 +27,17 @@ The current product direction is practical executive intelligence for the operat
 - `Obsidian` can store durable project memory, but repository docs are the source of truth.
 - `AI agents` assist architecture, coding, review and documentation, but repository files remain the source of truth.
 
+## Current state on 2026-09-25
+
+`/calculadora` aplica R$ 12 de envio nos presets Mercado Livre Clássico e
+Premium quando o preço é inferior a R$ 79,99. A despesa é separada das tarifas
+do marketplace e entra também no cálculo reverso por margem líquida. O preset
+TikTok usa tarifa fixa de R$ 12,10 abaixo de R$ 50 e R$ 19,30 a partir de
+R$ 50, preservando as comissões de 10% e 6%. O motor fiscal permanece
+inalterado. Na Shopee, a tarifa da faixa até R$ 79,99 passa de R$ 4 para
+R$ 4,50 por item a partir de 01/10/2026; evidências em
+`docs/project-status-2026-09-25.md`.
+
 ## Current state on 2026-09-22
 
 `Logística → Separação` apresenta SKUs físicos: a RPC abre kits válidos conforme

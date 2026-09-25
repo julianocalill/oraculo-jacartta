@@ -835,7 +835,7 @@ Caso contrário                 → "Rentável" (verde)
 
 | Marketplace | Faixa de preço | Comissão | + Fixo |
 |---|---|---|---|
-| **Shopee** | até R$79,99 | 20% | R$4,00 |
+| **Shopee** | até R$79,99 | 20% | R$4,50 a partir de 01/10/2026 |
 | | até R$99,99 | 14% | R$16,00 |
 | | até R$199,99 | 14% | R$20,00 |
 | | até R$499,99 | 14% | R$26,00 |
@@ -845,17 +845,18 @@ Caso contrário                 → "Rentável" (verde)
 | | até R$78,99 | 13% | R$6,75 |
 | | acima | 13% | R$0,00 |
 | **ML Premium** | mesmas faixas do Clássico | 18% | (mesmos valores fixos) |
-| **TikTok Shop** | até R$78,99 | 6% | R$4,00 |
-| | acima | 6% | R$0,00 |
+| **TikTok Shop** | abaixo de R$50,00 | 10% | R$12,10 |
+| | a partir de R$50,00 | 6% | R$19,30 |
 
 > Notas do próprio sistema: itens abaixo de R$12,50 no Mercado Livre pagam
-> uma tarifa especial (50% do valor do item) que **não está modelada** aqui;
-> o programa de frete grátis da TikTok Shop (SFP, ~6% adicional, teto R$50)
-> também não está incluído. Trate os resultados da calculadora como
+> uma tarifa especial de 50% do valor do item. O Mercado Livre também recebe
+> R$12 de envio abaixo de R$79,99; o programa de frete grátis da TikTok Shop
+> não está incluído. Trate os resultados da calculadora como
 > estimativa, não como o valor final exato.
 
-Todas as taxas e faixas são editáveis na tela; o botão "Restaurar padrão"
-volta aos valores acima.
+As comissões e tarifas por faixa são editáveis na tela; o botão "Restaurar
+padrão" volta aos valores acima. A regra separada de envio do Mercado Livre é
+fixa no preset.
 
 ---
 

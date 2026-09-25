@@ -2,6 +2,32 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-25] — Tarifa fixa da Shopee a partir de outubro
+
+- O preset Shopee da calculadora passa a usar R$ 4,50 por item na faixa de
+  produtos de até R$ 79,99, conforme regra vigente a partir de 01/10/2026.
+- A comissão de 20% e todas as faixas acima de R$ 79,99 permanecem
+  inalteradas.
+
+## [2026-09-25] — Novas tarifas fixas do TikTok na calculadora
+
+- O preset TikTok passa a usar R$ 12,10 de tarifa fixa abaixo de R$ 50 e
+  R$ 19,30 a partir de R$ 50.
+- As comissões permanecem em 10% e 6%, respectivamente; afiliado, impostos e
+  demais custos continuam como estavam.
+- O cálculo reverso por margem líquida usa os novos valores. A atribuição à
+  fonte oficial anterior foi retirada para não validar indevidamente o novo
+  parâmetro operacional.
+
+## [2026-09-25] — Envio fixo do Mercado Livre na calculadora
+
+- Os presets Mercado Livre Clássico e Premium passam a descontar R$ 12 de
+  envio quando o preço de venda é inferior a R$ 79,99.
+- A despesa aparece separada na decomposição e participa do cálculo reverso do
+  menor preço necessário para atingir a margem líquida.
+- Comissões, tarifas fixas por faixa e regras dos demais marketplaces não
+  foram alteradas.
+
 ## [2026-09-24] — Itens da fatura no acompanhamento de importações
 
 - O número da fatura nas tabelas de Importações passa a abrir um pop-up com os

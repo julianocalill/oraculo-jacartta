@@ -33,7 +33,8 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-23.md](docs/project-status-2026-09-23.md) **← start here** (Fechamento oficial da Separação validado)
+1. [docs/project-status-2026-09-25.md](docs/project-status-2026-09-25.md) **← start here** (tarifas da calculadora para Shopee, Mercado Livre e TikTok)
+   — [docs/project-status-2026-09-23.md](docs/project-status-2026-09-23.md) (Fechamento oficial da Separação validado)
    — [docs/project-status-2026-09-22.md](docs/project-status-2026-09-22.md) (Separação por produto físico com kits abertos)
    — [docs/project-status-2026-09-21.md](docs/project-status-2026-09-21.md) (Separação recuperada e hidratação automática de pedidos sem itens)
    — [docs/project-status-2026-09-17.md](docs/project-status-2026-09-17.md) (Separação com mínimo de uma caixa)
@@ -66,6 +67,13 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 ## Current production state
 
+Calculadora atualizada em 25/09/2026: os presets Mercado Livre Clássico e
+Premium descontam R$ 12 de envio em preços abaixo de R$ 79,99, inclusive no
+cálculo reverso por margem líquida. O TikTok usa tarifa fixa de R$ 12,10 abaixo
+de R$ 50 e R$ 19,30 a partir de R$ 50. Estado e validação: [status de 25/09](docs/project-status-2026-09-25.md).
+Na Shopee, a primeira faixa passa a cobrar R$ 4,50 por item a partir de
+01/10/2026; as demais faixas ficam inalteradas.
+
 Catálogo de preços para colaboradores implementado no setor Pessoas em
 `/precos-colaboradores`: 254 linhas da planilha vigente, busca por produto ou
 código e aviso explícito para o único código duplicado na origem. Estado e
@@ -79,8 +87,10 @@ Shopee Ads publicado em produção em 11/09/2026: [status de 11/09](docs/project
 
 Correção de taxas TikTok publicada em 11/09/2026: [status](docs/project-status-2026-09-10.md).
 
-**Last update**: `2026-09-23` (see `docs/project-status-2026-09-23.md`) —
-`Expedição` atualizada, com apuração de vendas protegida contra timeout e sem
+**Last update**: `2026-09-25` (see `docs/project-status-2026-09-25.md`) —
+calculadora do Mercado Livre atualizada com envio fixo de R$ 12 abaixo de
+R$ 79,99, tarifa fixa do TikTok atualizada para R$ 12,10/R$ 19,30 e primeira
+faixa da Shopee preparada com R$ 4,50 para 01/10/2026. Estado operacional anterior: `Expedição` atualizada, com apuração de vendas protegida contra timeout e sem
 zeros falsos quando uma consulta fica indisponível; quatro lojas Shopee e
 espelho do Bip reconciliados em produção. Também,
 `Logística → Separação` com alerta do fechamento esperado, atualização manual,
