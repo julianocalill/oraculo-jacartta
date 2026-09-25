@@ -25,6 +25,8 @@
 
 - Os presets **ML Clássico** e **ML Premium** de `/calculadora` descontam
   R$ 12 de envio quando o preço de venda é estritamente inferior a R$ 79,99.
+- O valor aparece em um campo próprio e editável junto às faixas do Mercado
+  Livre; trocar de preset ou restaurar os padrões repõe R$ 12.
 - O envio aparece em uma linha própria da decomposição, sem substituir nem
   somar-se silenciosamente ao custo fixo por faixa do marketplace.
 - O modo **Por lucro líquido** considera a quebra em R$ 79,99 ao procurar o

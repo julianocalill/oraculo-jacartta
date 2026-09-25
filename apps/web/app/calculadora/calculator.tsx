@@ -342,11 +342,13 @@ export function PricingCalculator() {
   const [marketplace, setMarketplace] = useState<MarketplaceKey>("shopee");
   const [tierStrings, setTierStrings] = useState(() => tierStringsFor("shopee"));
   const [affiliateRate, setAffiliateRate] = useState("");
+  const [shippingFixed, setShippingFixed] = useState("");
 
   function selectMarketplace(key: MarketplaceKey) {
     setMarketplace(key);
     setTierStrings(tierStringsFor(key));
     setAffiliateRate("");
+    setShippingFixed(MARKETPLACE_PRESETS[key].shipping?.fixed.toFixed(2) ?? "");
   }
 
   const result = useMemo(() => {
@@ -368,6 +370,10 @@ export function PricingCalculator() {
       fixed: Math.max(asNumber(tier.fixed), 0),
       fixedShare: tier.fixedPct === undefined ? 0 : Math.max(asNumber(tier.fixedPct), 0) / 100
     }));
+    const presetShipping = MARKETPLACE_PRESETS[marketplace].shipping;
+    const shipping = presetShipping
+      ? { ...presetShipping, fixed: Math.max(asNumber(shippingFixed), 0) }
+      : undefined;
 
     return calculate(
       Math.max(asNumber(unitCost), 0),
@@ -378,9 +384,9 @@ export function PricingCalculator() {
       Math.max(asNumber(netMargin), 0) / 100,
       rates,
       tiers,
-      MARKETPLACE_PRESETS[marketplace].shipping
+      shipping
     );
-  }, [unitCost, quantity, mode, markup, salePrice, netMargin, rateStrings, tierStrings, marketplace, affiliateRate]);
+  }, [unitCost, quantity, mode, markup, salePrice, netMargin, rateStrings, tierStrings, marketplace, affiliateRate, shippingFixed]);
 
   const status =
     !result.targetReachable
@@ -395,6 +401,7 @@ export function PricingCalculator() {
     setRateStrings(DEFAULT_RATE_STRINGS);
     setTierStrings(tierStringsFor(marketplace));
     setAffiliateRate("");
+    setShippingFixed(MARKETPLACE_PRESETS[marketplace].shipping?.fixed.toFixed(2) ?? "");
   }
 
   return (
@@ -533,6 +540,19 @@ export function PricingCalculator() {
                 value={affiliateRate}
                 placeholder="Em branco = 0%"
                 onChange={(e) => setAffiliateRate(e.target.value)}
+              />
+            </label>
+          </div>
+        )}
+
+        {MARKETPLACE_PRESETS[marketplace].shipping && (
+          <div className="calc-field-grid">
+            <label className="calc-field">
+              <span>Envio fixo abaixo de R$ 79,99 (R$)</span>
+              <input
+                inputMode="decimal"
+                value={shippingFixed}
+                onChange={(e) => setShippingFixed(e.target.value)}
               />
             </label>
           </div>

@@ -30,7 +30,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
     publishedAt: "2026-09-25T10:30:00-03:00",
     changes: [{
       title: "Simulações com as novas regras",
-      description: "Mercado Livre inclui R$ 12 de envio abaixo de R$ 79,99; TikTok usa R$ 12,10 abaixo de R$ 50 e R$ 19,30 a partir de R$ 50; Shopee passa a R$ 4,50 até R$ 79,99 na regra vigente em 01/10.",
+      description: "Mercado Livre inclui um campo editável de R$ 12 de envio abaixo de R$ 79,99; TikTok usa R$ 12,10 abaixo de R$ 50 e R$ 19,30 a partir de R$ 50; Shopee passa a R$ 4,50 até R$ 79,99 na regra vigente em 01/10.",
       href: "/calculadora",
       linkLabel: "Abrir calculadora"
     }]

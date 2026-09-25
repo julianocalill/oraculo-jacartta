@@ -855,8 +855,8 @@ Caso contrário                 → "Rentável" (verde)
 > estimativa, não como o valor final exato.
 
 As comissões e tarifas por faixa são editáveis na tela; o botão "Restaurar
-padrão" volta aos valores acima. A regra separada de envio do Mercado Livre é
-fixa no preset.
+padrão" volta aos valores acima. O envio do Mercado Livre também tem campo
+próprio e editável, com padrão de R$12.
 
 ---
 

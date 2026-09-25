@@ -2,6 +2,14 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-25] — Campo visível para o envio do Mercado Livre
+
+- Os R$ 12 de envio abaixo de R$ 79,99 deixam de aparecer apenas na nota e na
+  decomposição: agora há um campo próprio e editável nos presets ML Clássico e
+  ML Premium.
+- Trocar de marketplace ou restaurar os padrões repõe corretamente o valor de
+  R$ 12, sem alterar as tarifas do marketplace.
+
 ## [2026-09-25] — Tarifa fixa da Shopee a partir de outubro
 
 - O preset Shopee da calculadora passa a usar R$ 4,50 por item na faixa de

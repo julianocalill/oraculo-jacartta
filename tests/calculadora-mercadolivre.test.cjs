@@ -49,3 +49,12 @@ test('meta líquida do ML considera a descontinuidade da taxa de envio', () => {
     assert.ok(candidateResult.netMargin < target - 1e-9);
   }
 });
+
+test('envio do ML continua parametrizável sem alterar as demais tarifas', () => {
+  const { tiers, shipping } = presetFor('meliClassico');
+  const customizedShipping = { ...shipping, fixed: 15 };
+  const result = ctx.calculate(20, 1, 'price', 0, 50, 0, rates, tiers, customizedShipping);
+
+  assert.equal(result.costs.find(c => c.name === 'Envio Mercado Livre').value, 15);
+  assert.equal(result.costs.find(c => c.name === 'Marketplace fixo').value, 6.75);
+});
