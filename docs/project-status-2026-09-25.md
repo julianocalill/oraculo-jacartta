@@ -45,3 +45,10 @@
 - TypeScript do app web validado com o `tsc --noEmit` instalado no workspace.
 
 Não há alteração em banco, motor fiscal, integrações ou deploy de Edge Function.
+
+## Publicação
+
+- Commit funcional: `5f41dde`.
+- Deploy de produção validado como `Ready` na Vercel:
+  `dpl_AU7EmzD1oHZBMU68oKMZsACsmUqq`.
+- Alias público confirmado: `https://oraculo.oliverhome.com.br`.
