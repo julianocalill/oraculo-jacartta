@@ -5,11 +5,12 @@ import { OperationLink as Link } from "../components/operation-provider";
 // que o canal não devolve nada.
 export function DevolucoesTabs({
   active,
-  month,
+  query,
   channels
 }: {
   active: string;
-  month: string;
+  /** Janela ativa já serializada (`inicio=...&fim=...`), preservada ao trocar de canal. */
+  query: string;
   channels: { key: string; label: string; count: number }[];
 }) {
   const tabs = [{ key: "todos", label: "Todos os canais", count: null as number | null }, ...channels];
@@ -19,7 +20,7 @@ export function DevolucoesTabs({
       {tabs.map((tab) => (
         <Link
           key={tab.key}
-          href={`/devolucoes?mes=${month}&canal=${tab.key}`}
+          href={`/devolucoes?${query}&canal=${tab.key}`}
           className={active === tab.key ? "pill pill-gold" : "pill"}
         >
           {tab.label}

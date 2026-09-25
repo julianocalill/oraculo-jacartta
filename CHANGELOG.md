@@ -2,6 +2,20 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-25] — Devoluções: período livre e taxa de devolução
+
+- `/devolucoes` troca o filtro travado no mês por Início e Fim (`?inicio=&fim=`,
+  dias civis de São Paulo). Os atalhos de mês continuam, só preenchendo as
+  datas; links antigos com `?mes=` seguem funcionando. A troca de canal
+  preserva a janela.
+- Novo card **Taxa de devolução** = devoluções abertas ÷ pedidos válidos do
+  período (Olist, `oraculo_channel_sales_unified_cache`, sem cancelados), com
+  variação em p.p. contra o período anterior de mesmo tamanho. A tabela
+  "Canais lado a lado" ganhou as colunas Pedidos e Taxa.
+- Em "todos os canais" o denominador soma só os canais com devolução no
+  período — Amazon/Kwai/Shein não têm devolução integrada e o TikTok depende
+  da planilha do mês; incluí-los baixaria a taxa sem motivo.
+
 ## [2026-09-25] — Campo visível para o envio do Mercado Livre
 
 - Os R$ 12 de envio abaixo de R$ 79,99 deixam de aparecer apenas na nota e na

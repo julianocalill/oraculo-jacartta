@@ -591,6 +591,14 @@ p {
   justify-content: flex-end;
 }
 
+/* Filtro de datas + atalhos numa coluna só, alinhada à direita da topbar
+   (/devolucoes). */
+.filter-stack {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
 .filter-form label {
   display: grid;
   gap: 5px;

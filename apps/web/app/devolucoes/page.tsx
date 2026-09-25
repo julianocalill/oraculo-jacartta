@@ -20,6 +20,7 @@ import { TaxDonut, RevenueArea } from "../components/fiscal-charts";
 import { ReturnsFunnel, DecisionBar, type FunnelStep, type DecisionSlice } from "../components/returns-funnel";
 import { DevolucoesTabs } from "./tabs";
 import { importTikTokReturns } from "../../lib/returns-upload";
+import { fetchAllPages } from "../mercado-livre/data";
 
 export const dynamic = "force-dynamic";
 
@@ -126,23 +127,79 @@ function dateTime(value: string | null) {
   }).format(new Date(value));
 }
 
-function monthWindow(monthParam?: string) {
-  const now = new Date();
-  const [y, m] = monthParam?.match(/^\d{4}-\d{2}$/)
-    ? monthParam.split("-").map(Number)
-    : [now.getUTCFullYear(), now.getUTCMonth() + 1];
+const isIsoDate = (v?: string): v is string => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
+
+function addDays(iso: string, days: number) {
+  const d = new Date(`${iso}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function todaySaoPaulo() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+}
+
+const shortDay = (iso: string) =>
+  new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${iso}T00:00:00.000Z`));
+
+// Dia civil de São Paulo → instante UTC. opened_at é timestamptz; sem o fuso,
+// devolução aberta às 22h do dia 31 caía no mês seguinte.
+const spMidnight = (iso: string) => new Date(`${iso}T00:00:00-03:00`).toISOString();
+
+/**
+ * Janela livre Início–Fim (datas inclusivas, calendário de São Paulo).
+ * `mes` continua aceito para links antigos e para os atalhos de mês.
+ * O período de comparação tem o mesmo número de dias, imediatamente antes.
+ */
+function periodWindow(params: { inicio?: string; fim?: string; mes?: string }) {
+  const today = todaySaoPaulo();
+  let start: string;
+  let end: string;
+  if (isIsoDate(params.inicio) || isIsoDate(params.fim)) {
+    start = isIsoDate(params.inicio) ? params.inicio : `${today.slice(0, 8)}01`;
+    end = isIsoDate(params.fim) ? params.fim : today;
+    if (start > end) [start, end] = [end, start];
+  } else {
+    const month = params.mes?.match(/^\d{4}-\d{2}$/) ? params.mes : today.slice(0, 7);
+    start = `${month}-01`;
+    end = addDays(`${addDays(start, 31).slice(0, 7)}-01`, -1);
+  }
+  const days = Math.round((Date.parse(end) - Date.parse(start)) / 86_400_000) + 1;
+  const prevEnd = addDays(start, -1);
+  const prevStart = addDays(start, -days);
   return {
-    from: new Date(Date.UTC(y, m - 1, 1)).toISOString(),
-    to: new Date(Date.UTC(y, m, 1)).toISOString(),
-    prevFrom: new Date(Date.UTC(y, m - 2, 1)).toISOString(),
-    prevTo: new Date(Date.UTC(y, m - 1, 1)).toISOString(),
-    label: new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }).format(
-      new Date(Date.UTC(y, m - 1, 1))
-    ),
-    value: `${y}-${String(m).padStart(2, "0")}`,
-    isCurrent: y === now.getUTCFullYear() && m === now.getUTCMonth() + 1
+    start,
+    end,
+    prevStart,
+    prevEnd,
+    days,
+    from: spMidnight(start),
+    to: spMidnight(addDays(end, 1)),
+    prevFrom: spMidnight(prevStart),
+    prevTo: spMidnight(start),
+    label: `${shortDay(start)} a ${shortDay(end)}`,
+    query: `inicio=${start}&fim=${end}`,
+    isCurrent: end >= today
   };
 }
+
+type PeriodWindow = ReturnType<typeof periodWindow>;
+
+/** Canal de venda da Olist → canal de devolução. Só estes três têm devolução integrada. */
+function returnChannelOf(channelName: string | null): string | null {
+  const name = (channelName ?? "").toLowerCase();
+  if (name.startsWith("shopee")) return "shopee";
+  if (name.startsWith("tiktok")) return "tiktok";
+  if (name.startsWith("mercado livre")) return "mercadolivre";
+  return null;
+}
+
+type OrderCacheRow = {
+  order_date: string;
+  channel_name: string | null;
+  orders_count: number | null;
+  canceled_orders: number | null;
+};
 
 /** Variação percentual entre períodos. `invert` marca métrica onde subir é ruim. */
 function delta(current: number, previous: number, invert = true): MetricDelta {
@@ -152,16 +209,16 @@ function delta(current: number, previous: number, invert = true): MetricDelta {
   return {
     direction: change >= 0 ? "up" : "down",
     text: `${Math.abs(change).toFixed(1).replace(".", ",")}%`,
-    title: `Mês anterior: ${nf.format(previous)}`,
+    title: `Período anterior: ${nf.format(previous)}`,
     invert
   };
 }
 
-async function loadData(win: ReturnType<typeof monthWindow>, channel: string | null) {
+async function loadData(win: PeriodWindow, channel: string | null) {
   const supabase = createSupabaseAdminClient();
   const args = { p_from: win.from, p_to: win.to, p_channel: channel };
 
-  const [funnel, summary, reasons, skus, disputes, daily, channels, prevSummary, batches] =
+  const [funnel, summary, reasons, skus, disputes, daily, channels, prevSummary, batches, orderRows] =
     await Promise.all([
       supabase.rpc("oraculo_returns_funnel", args),
       supabase.rpc("oraculo_returns_summary", args),
@@ -179,8 +236,33 @@ async function loadData(win: ReturnType<typeof monthWindow>, channel: string | n
         .from("oraculo_returns_upload_batches")
         .select("file_name, uploaded_at, sheet_names, rows_read, rows_inserted, rows_rejected, notes")
         .order("uploaded_at", { ascending: false })
-        .limit(1)
+        .limit(1),
+      // Denominador da taxa: pedidos do período atual e do anterior numa ida
+      // só. Olist é a verdade dos pedidos de todos os canais (source='olist');
+      // somar source='shopee' contaria a mesma venda duas vezes. A PostgREST
+      // corta em 1.000 linhas e são ~15 canais por dia, então pagina.
+      fetchAllPages<OrderCacheRow>((from, to) =>
+        supabase
+          .from("oraculo_channel_sales_unified_cache")
+          .select("order_date, channel_name, orders_count, canceled_orders")
+          .eq("source", "olist")
+          .gte("order_date", win.prevStart)
+          .lte("order_date", win.end)
+          .order("order_date")
+          .range(from, to)
+      )
     ]);
+
+  // Pedido cancelado não chega a ser entregue, então não pode virar devolução:
+  // fica fora do denominador.
+  const orders = { current: new Map<string, number>(), previous: new Map<string, number>() };
+  for (const row of orderRows) {
+    const key = returnChannelOf(row.channel_name);
+    if (!key) continue;
+    const bucket = row.order_date >= win.start ? orders.current : orders.previous;
+    const valid = Number(row.orders_count ?? 0) - Number(row.canceled_orders ?? 0);
+    bucket.set(key, (bucket.get(key) ?? 0) + valid);
+  }
 
   return {
     funnel: (funnel.data ?? []) as FunnelRow[],
@@ -191,7 +273,8 @@ async function loadData(win: ReturnType<typeof monthWindow>, channel: string | n
     daily: (daily.data ?? []) as DailyRow[],
     channels: (channels.data ?? []) as ChannelRow[],
     prevSummary: (prevSummary.data ?? []) as SummaryRow[],
-    batch: ((batches.data ?? [])[0] ?? null) as Batch | null
+    batch: ((batches.data ?? [])[0] ?? null) as Batch | null,
+    orders
   };
 }
 
@@ -249,10 +332,10 @@ function buildDecision(rows: FunnelRow[]): { slices: DecisionSlice[]; total: num
 export default async function DevolucoesPage({
   searchParams
 }: {
-  searchParams: Promise<{ mes?: string; canal?: string }>;
+  searchParams: Promise<{ inicio?: string; fim?: string; mes?: string; canal?: string }>;
 }) {
   const params = await searchParams;
-  const win = monthWindow(params.mes);
+  const win = periodWindow(params);
   const activeTab = params.canal ?? "todos";
   const channel = activeTab !== "todos" ? activeTab : null;
 
@@ -293,11 +376,37 @@ export default async function DevolucoesPage({
       color: REASON_COLOR[r.reason_group] ?? "#5d6980"
     }));
 
-  const now = new Date();
+  // Atalhos de mês: só preenchem Início/Fim, a janela continua livre.
+  const today = todaySaoPaulo();
   const months = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
-    return monthWindow(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`);
+    const d = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 1 - i, 1));
+    const m = periodWindow({ mes: d.toISOString().slice(0, 7) });
+    return {
+      ...m,
+      name: new Intl.DateTimeFormat("pt-BR", { month: "short", year: "2-digit", timeZone: "UTC" }).format(d)
+    };
   });
+
+  // Taxa de devolução = devoluções abertas no período ÷ pedidos válidos do
+  // período. Em "todos os canais" o denominador soma só os canais que têm
+  // devolução no período: Amazon, Kwai e Shein vendem mas não têm devolução
+  // integrada, e o TikTok só entra quando a planilha do mês foi subida —
+  // pedido sem devolução possível no numerador baixaria a taxa sem motivo.
+  const ordersOf = (map: Map<string, number>, rows: SummaryRow[]) =>
+    rows.reduce((acc, r) => acc + (map.get(r.channel) ?? 0), 0);
+  const totalOrders = ordersOf(data.orders.current, data.summary);
+  const prevOrders = ordersOf(data.orders.previous, data.prevSummary);
+  const returnRate = totalOrders > 0 ? (totalReturns / totalOrders) * 100 : null;
+  const prevReturnRate = prevOrders > 0 ? (prevReturns / prevOrders) * 100 : null;
+  const rateDelta: MetricDelta =
+    returnRate != null && prevReturnRate != null && Math.abs(returnRate - prevReturnRate) >= 0.05
+      ? {
+          direction: returnRate >= prevReturnRate ? "up" : "down",
+          text: `${Math.abs(returnRate - prevReturnRate).toFixed(1).replace(".", ",")} p.p.`,
+          title: `Período anterior: ${pct(prevReturnRate)} (${nf.format(prevReturns)} de ${nf.format(prevOrders)} pedidos)`,
+          invert: true
+        }
+      : null;
 
   const tabChannels = data.channels.map((c) => ({
     key: c.channel,
@@ -317,31 +426,52 @@ export default async function DevolucoesPage({
             Funil por canal cruzado com a NF de devolução da Olist · {win.label} · {channelName}
           </p>
         </div>
-        <div className="filter-row">
-          {months.map((m) => (
-            <OperationAnchor
-              key={m.value}
-              href={`/devolucoes?mes=${m.value}&canal=${activeTab}`}
-              className={m.value === win.value ? "chip chip-active" : "chip"}
-            >
-              {m.label}
-            </OperationAnchor>
-          ))}
+        <div className="filter-stack">
+          <form className="filter-row filter-form" method="get">
+            <input type="hidden" name="canal" value={activeTab} />
+            <label>
+              <span>Início</span>
+              <input type="date" name="inicio" defaultValue={win.start} max={today} />
+            </label>
+            <label>
+              <span>Fim</span>
+              <input type="date" name="fim" defaultValue={win.end} max={today} />
+            </label>
+            <button type="submit">Aplicar</button>
+          </form>
+          <div className="filter-row">
+            {months.map((m) => (
+              <OperationAnchor
+                key={m.query}
+                href={`/devolucoes?${m.query}&canal=${activeTab}`}
+                className={m.start === win.start && m.end === win.end ? "chip chip-active" : "chip"}
+              >
+                {m.name}
+              </OperationAnchor>
+            ))}
+          </div>
         </div>
       </header>
 
-      <DevolucoesTabs active={activeTab} month={win.value} channels={tabChannels} />
+      <DevolucoesTabs active={activeTab} query={win.query} channels={tabChannels} />
 
       {win.isCurrent ? (
         <section className="status-alerts">
           <div className="status-alert">
-            Mês em curso: o topo do funil sempre parece inflado em relação ao fundo, porque as
-            devoluções ainda vão ser decididas. Compare meses fechados.
+            Período em curso: o topo do funil sempre parece inflado em relação ao fundo, porque as
+            devoluções ainda vão ser decididas. Compare períodos fechados.
           </div>
         </section>
       ) : null}
 
-      <section className="metric-grid">
+      <section className="metric-grid metric-grid-five">
+        <MetricCard
+          accent="accent-cyan"
+          label="Taxa de devolução"
+          value={returnRate == null ? "—" : pct(returnRate)}
+          caption={`${count(totalReturns)} devoluções ÷ ${count(totalOrders)} pedidos`}
+          delta={rateDelta}
+        />
         <MetricCard
           accent="accent-blue"
           label="Devoluções abertas"
@@ -460,7 +590,9 @@ export default async function DevolucoesPage({
               <thead>
                 <tr>
                   <th>Canal</th>
+                  <th className="numeric">Pedidos</th>
                   <th className="numeric">Devoluções</th>
+                  <th className="numeric">Taxa</th>
                   <th className="numeric">Contam como perda</th>
                   <th className="numeric">Unidades</th>
                   <th className="numeric">Estornado</th>
@@ -474,13 +606,19 @@ export default async function DevolucoesPage({
               <tbody>
                 {data.summary.length === 0 ? (
                   <tr>
-                    <td colSpan={10}>Nenhuma devolução no período.</td>
+                    <td colSpan={12}>Nenhuma devolução no período.</td>
                   </tr>
                 ) : (
-                  data.summary.map((row) => (
+                  data.summary.map((row) => {
+                    const orders = data.orders.current.get(row.channel) ?? 0;
+                    return (
                     <tr key={row.channel}>
                       <td>{CHANNEL_LABEL[row.channel] ?? row.channel}</td>
+                      <td className="numeric">{orders > 0 ? count(orders) : "—"}</td>
                       <td className="numeric">{count(row.returns_total)}</td>
+                      <td className="numeric">
+                        {orders > 0 ? pct((Number(row.returns_total ?? 0) / orders) * 100) : "—"}
+                      </td>
                       <td className="numeric">{count(row.returns_loss)}</td>
                       <td className="numeric">{count(row.units)}</td>
                       <td className="numeric">{money(row.refund_amount)}</td>
@@ -490,7 +628,8 @@ export default async function DevolucoesPage({
                       <td className="numeric">{money(row.sem_nf_amount)}</td>
                       <td className="numeric">{count(row.divergencia_count)}</td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -614,7 +753,15 @@ export default async function DevolucoesPage({
         <ul className="muted">
           <li>
             <strong>É distribuição de estado, não coorte.</strong> As devoluções aguardando decisão
-            ainda vão virar concedido ou recusado. Compare meses fechados.
+            ainda vão virar concedido ou recusado. Compare períodos fechados.
+          </li>
+          <li>
+            <strong>A taxa de devolução cruza datas diferentes.</strong> O numerador é a devolução
+            aberta no período; o denominador, os pedidos feitos no período (Olist, sem cancelados).
+            A devolução de hoje costuma ser de um pedido de dias atrás, então em janela curta a taxa
+            oscila — leia em janelas de um mês ou mais. Em &ldquo;todos os canais&rdquo; o
+            denominador soma só os canais com devolução registrada no período — o TikTok, que entra
+            por planilha, fica de fora enquanto a planilha do mês não for subida.
           </li>
           <li>
             <strong>&ldquo;Sem NF de venda&rdquo; não é furo.</strong> A base de notas da Olist

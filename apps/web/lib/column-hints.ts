@@ -266,6 +266,8 @@ const PAGE_COLUMN_HINTS: Array<[string, Record<string, string>]> = [
     "contam como perda": "Casos em que o reembolso foi concedido; reembolso recusado e caso cancelado não entram na perda.",
     "custo perdido": "Custo unitário multiplicado pelas unidades que contam como perda.",
     "divergencias": "Casos em que a nota de devolução existe, mas o valor diverge da nota de venda além da tolerância.",
+    "pedidos": "Pedidos do canal feitos no período (Olist), sem os cancelados. É o denominador da taxa de devolução.",
+    "taxa": "Devoluções abertas no período divididas pelos pedidos do período. Datas diferentes: em janela curta, oscila.",
     "resultado": "Resultado da disputa: comprador favorecido, empresa favorecida ou sem decisão.",
     "r$ sem nf": "Valor dos casos que exigem nota de devolução e ainda não possuem uma nota conciliada.",
     "sem nf de devolucao": "Casos com retorno físico e reembolso concedido que ainda não têm NF de devolução conciliada.",

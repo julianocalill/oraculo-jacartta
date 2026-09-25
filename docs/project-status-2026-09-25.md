@@ -56,3 +56,15 @@ Não há alteração em banco, motor fiscal, integrações ou deploy de Edge Fun
 - Deploy de produção validado como `Ready` na Vercel:
   `dpl_AU7EmzD1oHZBMU68oKMZsACsmUqq`.
 - Alias público confirmado: `https://oraculo.oliverhome.com.br`.
+
+## Devoluções: período livre e taxa de devolução
+
+- `/devolucoes` aceita qualquer janela Início–Fim (`?inicio=YYYY-MM-DD&fim=YYYY-MM-DD`);
+  `?mes=` continua válido. O corte usa meia-noite de São Paulo sobre `opened_at`.
+- Taxa de devolução = devoluções abertas no período ÷ pedidos do período sem
+  cancelados, lidos de `oraculo_channel_sales_unified_cache` com `source='olist'`
+  (canal mapeado por prefixo do `channel_name`: Shopee*, TikTok*, Mercado Livre*).
+- Numerador e denominador usam datas diferentes (abertura da devolução × data do
+  pedido): em janelas curtas a taxa oscila. A ressalva está na própria tela.
+- Validado no navegador: agosto/2026 = 3,4%; 10/07–20/08 = 4,3% (Shopee 4,3%,
+  TikTok 5,1%, ML 0,1%). Sem alteração de banco.
