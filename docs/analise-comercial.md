@@ -6,6 +6,14 @@ Padrão: hoje em `America/Sao_Paulo`. Atalhos: Hoje, Ontem, Últimos 7 dias e Es
 mês. Datas inválidas, invertidas, futuras ou intervalos acima de 366 dias geram
 mensagem explícita; nunca há substituição silenciosa pelo mês atual.
 
+O botão **Exportar CSV** baixa o ranking exibido, com período, loja/canal e
+busca por nome/SKU aplicados. O arquivo usa as mesmas colunas da tabela, em
+ordem de unidades decrescente, e deixa vazias as métricas de margem, resultado,
+custo ou comissão que estejam pendentes. A rota `/analise-comercial/export`
+reusa `loadCommercialAnalysis`, exige acesso à aba e mantém a operação ativa
+(Uberlândia ou Giracasa). O CSV usa UTF-8 com BOM, `;` e vírgula decimal para
+abrir corretamente em planilhas brasileiras.
+
 ## Contrato dos números
 
 - A data é **emissão da NF válida**, conforme o contrato fiscal do Oráculo.

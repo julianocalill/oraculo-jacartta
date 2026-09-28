@@ -1,5 +1,14 @@
 # Estado do projeto — 28/09/2026
 
+## Análise Comercial: exportação CSV
+
+A tela `/analise-comercial` ganhou **Exportar CSV**. O download leva os produtos
+do intervalo e da loja selecionados, respeita a busca por nome/SKU e usa a
+mesma RPC e a mesma operação da página. Inclui unidades, receita, margem,
+resultado, preço médio, custo, impostos, comissão e situação. Métricas pendentes
+ficam vazias no arquivo, como na tabela. A rota valida período (até 366 dias),
+sessão e acesso à aba antes da consulta. Contrato em `docs/analise-comercial.md`.
+
 ## Giracasa/SP: navegação e Análise Comercial
 
 A Giracasa foi ativada em 22/09/2026, depois do retrato de 05/09 que ainda a

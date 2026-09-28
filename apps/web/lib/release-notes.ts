@@ -24,6 +24,18 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-09-28-analise-comercial-csv",
+    title: "Exporte a Análise Comercial",
+    summary: "Baixe em CSV os produtos vendidos no período que você selecionou.",
+    publishedAt: "2026-09-28T12:00:00-03:00",
+    changes: [{
+      title: "Ranking pronto para planilha",
+      description: "O arquivo acompanha o período, a loja e a busca da tela, incluindo unidades, receita, margem e a situação de cada produto.",
+      href: "/analise-comercial",
+      linkLabel: "Abrir Análise Comercial"
+    }]
+  },
+  {
     id: "2026-09-25-calculadora-marketplaces",
     title: "Novas tarifas na calculadora",
     summary: "Mercado Livre, TikTok e Shopee foram atualizados com os novos custos fixos de precificação.",

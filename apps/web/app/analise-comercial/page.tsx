@@ -1,5 +1,5 @@
 import { OperationForm } from "../components/operation-provider";
-import { OperationLink as Link } from "../components/operation-provider";
+import { OperationAnchor, OperationLink as Link } from "../components/operation-provider";
 import { commercialPeriod, commercialTotals, commercialMargin } from '@oraculo/domain/commercial-analysis.js';
 import { requireTabAccess } from '../../lib/auth/access';
 import { loadActionableAlertCount } from '../../lib/alert-count';
@@ -9,7 +9,7 @@ import { AppShell } from '../components/app-shell';
 import { NoAccess } from '../components/no-access';
 import { MetricCard } from '../components/metric-card';
 import { SortableTable } from '../components/sortable-table';
-import { loadCommercialAnalysis, type CommercialData } from './data';
+import { commercialProductStatus, filterCommercialProducts, loadCommercialAnalysis, type CommercialData } from './data';
 
 export const dynamic = 'force-dynamic';
 const money = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -50,7 +50,7 @@ export default async function CommercialPage({ searchParams }: { searchParams?: 
   const revenue = data?.daily.reduce((sum, day) => sum + Number(day.revenue), 0) ?? 0;
   const invoices = data?.daily.reduce((sum, day) => sum + Number(day.invoices), 0) ?? 0;
   const query = (params.q ?? '').trim();
-  const visible = (data?.products ?? []).filter((row) => `${row.sku} ${row.product_name ?? ''}`.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR')));
+  const visible = filterCommercialProducts(data?.products ?? [], query);
   const pendingDays = Math.max(0, days - (data?.processed_days ?? 0));
   const stale = data?.recent_refresh && Date.now() - Date.parse(data.recent_refresh) > 2 * 60 * 60 * 1000;
   const missingItems = Math.max(0, revenue - totals.revenue);
@@ -63,6 +63,7 @@ export default async function CommercialPage({ searchParams }: { searchParams?: 
   ];
   const rangeLabel = start === end ? formatBrDate(start) : `${formatBrDate(start)} a ${formatBrDate(end)}`;
   const coveredMargin = totals.covered_revenue > 0 ? totals.covered_profit / totals.covered_revenue : null;
+  const exportParams = new URLSearchParams({ start, end, ...(params.canal ? { canal: params.canal } : {}), ...(query ? { q: query } : {}) });
 
   return <AppShell alertCount={alertCount}>
     <header className="topbar">
@@ -85,7 +86,7 @@ export default async function CommercialPage({ searchParams }: { searchParams?: 
       </OperationForm>
     </section>
     {failure ? <section className="panel" role="alert"><h2>Análise indisponível</h2><p>{failure}</p></section> : data ? <>
-      <div className="commercial-context"><strong>{rangeLabel}</strong><span>{params.canal || 'Todas as lojas'} · Última atualização: {timestamp(data.latest_refresh)}</span></div>
+      <div className="commercial-context"><strong>{rangeLabel}</strong><span>{params.canal || 'Todas as lojas'} · Última atualização: {timestamp(data.latest_refresh)}</span><OperationAnchor className="button-link" href={`/analise-comercial/export?${exportParams}`}>Exportar CSV</OperationAnchor></div>
       {pendingDays > 0 ? <section className="panel commercial-notice" role="status"><strong>Período incompleto: {pendingDays} de {days} dias ainda não calculados.</strong><p>Os valores abaixo cobrem somente os dias processados. O histórico é preenchido automaticamente; datas anteriores à base podem permanecer sem dados.</p></section> : null}
       {end === today || stale ? <section className="panel commercial-notice"><strong>{stale ? 'Atualização atrasada.' : 'Dia em andamento.'}</strong><p>{stale ? 'Os dias recentes não são recalculados há mais de 2 horas. Os valores podem estar desatualizados.' : 'As vendas faturadas de hoje são parciais. O resumo é atualizado de hora em hora, conforme a importação das notas.'}</p></section> : null}
       <section className="metric-grid commercial-metrics">
@@ -116,7 +117,7 @@ export default async function CommercialPage({ searchParams }: { searchParams?: 
           const margin = commercialMargin(row);
           const costPending = row.missing_cost_lines > 0;
           const feePending = row.missing_fee_lines > 0;
-          const status = costPending && feePending ? 'Custo e comissão pendentes' : costPending ? 'Custo pendente' : feePending ? 'Comissão pendente' : margin === null ? 'Sem base de margem' : margin < 0 ? 'Margem negativa' : 'Margem calculada';
+          const status = commercialProductStatus(row);
           return [
             { text: row.product_name || (row.sku ? `Produto ${row.sku}` : 'Produto sem SKU'), sort: row.product_name || row.sku },
             { text: row.sku || 'Sem SKU', sort: row.sku || null },

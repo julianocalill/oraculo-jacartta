@@ -2,6 +2,13 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-28] — Exportação da Análise Comercial
+
+- Botão **Exportar CSV** baixa o ranking do período selecionado, com filtro de
+  loja/canal e busca por produto ou SKU, tanto em Uberlândia como na Giracasa.
+- O arquivo mantém as colunas e as pendências da tela; a rota reutiliza a
+  consulta da página e valida sessão, acesso e período.
+
 ## [2026-09-28] — Giracasa: navegação e análise comercial
 
 - Os links e formulários passam a acompanhar a operação da URL atual após a
