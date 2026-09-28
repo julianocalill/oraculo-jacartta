@@ -170,8 +170,10 @@ terceiros em escala e primeira geração de PDF por biblioteca).
 ### Deployment & auth
 - **Multioperação**: URLs `/o/uberlandia/*` e `/o/giracasa/*`; permissões são por operação + aba. Giracasa está ativa desde 22/09, com carga parcial por fonte; ver `docs/giracasa-onboarding.md`.
 - Production URL: `https://oraculo.oliverhome.com.br`
-- Latest documented feature deploy: `dpl_AU7EmzD1oHZBMU68oKMZsACsmUqq`
+- Previous documented feature deploy: `dpl_AU7EmzD1oHZBMU68oKMZsACsmUqq`
   (2026-09-25, novas tarifas da calculadora, `Ready` em produção)
+- Latest deployment: `dpl_7Db5xgcCceVUJk5qWU6t3YuVFLTc`
+  (2026-09-28, navegação Giracasa, `Ready` no domínio público)
 - **Dois remotes**: `origin` = `Grupo-Jacartta/oraculo`, `personal` = `julianocalill/oraculo-jacartta`.
   A Vercel escuta o **`personal`** — push só no `origin` não publica.
 - Business-data reads run under RLS via an authenticated client (anon key + user

@@ -40,5 +40,10 @@ validar cada fonte própria de SP pelo runbook `docs/giracasa-onboarding.md`.
 - RPC Giracasa para 27/09: `processed_days=1`, 31 produtos consolidados.
 - Job `giracasa-commercial-hourly`: ativo no `pg_cron`.
 
-O build e a publicação do ajuste de navegação devem ser registrados após o
-deploy web. O job e o backfill já estão no banco de produção.
+## Publicação
+
+Commit `561ac0f` enviado a `origin/main` e `personal/main`. Deploy Vercel
+`dpl_7Db5xgcCceVUJk5qWU6t3YuVFLTc` confirmado como `Ready` e associado ao
+alias `https://oraculo.oliverhome.com.br`. O build Next.js de produção concluiu
+sem erro. O job e o backfill foram verificados no banco de produção; a execução
+manual de `giracasa.oraculo_commercial_tick()` terminou em 6,5 s.
