@@ -33,7 +33,8 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-25.md](docs/project-status-2026-09-25.md) **← start here** (tarifas da calculadora para Shopee, Mercado Livre e TikTok)
+1. [docs/project-status-2026-09-28.md](docs/project-status-2026-09-28.md) **← start here** (Giracasa: navegação, Análise Comercial e lacunas das fontes)
+   — [docs/project-status-2026-09-25.md](docs/project-status-2026-09-25.md) (tarifas da calculadora para Shopee, Mercado Livre e TikTok)
    — [docs/project-status-2026-09-23.md](docs/project-status-2026-09-23.md) (Fechamento oficial da Separação validado)
    — [docs/project-status-2026-09-22.md](docs/project-status-2026-09-22.md) (Separação por produto físico com kits abertos)
    — [docs/project-status-2026-09-21.md](docs/project-status-2026-09-21.md) (Separação recuperada e hidratação automática de pedidos sem itens)
@@ -67,6 +68,12 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 ## Current production state
 
+Giracasa/SP está ativa desde 22/09/2026. A Análise Comercial paulista foi
+preenchida para 30/07–28/09 e ganhou atualização horária própria em 28/09;
+o ajuste de navegação entre operações está descrito no
+[status de 28/09](docs/project-status-2026-09-28.md). Mercado Livre/SP e parte
+das fontes Shopee/SP ainda aguardam integração e carga.
+
 Calculadora atualizada em 25/09/2026: os presets Mercado Livre Clássico e
 Premium descontam R$ 12 de envio em preços abaixo de R$ 79,99, inclusive no
 cálculo reverso por margem líquida. O TikTok desconta envio de R$ 12,10 abaixo
@@ -87,7 +94,10 @@ Shopee Ads publicado em produção em 11/09/2026: [status de 11/09](docs/project
 
 Correção de taxas TikTok publicada em 11/09/2026: [status](docs/project-status-2026-09-10.md).
 
-**Last update**: `2026-09-25` (see `docs/project-status-2026-09-25.md`) —
+**Last update**: `2026-09-28` (see `docs/project-status-2026-09-28.md`) —
+Giracasa/SP com histórico comercial e job horário próprios; o menu acompanha a
+operação da URL durante a navegação cliente. Atualização anterior da
+calculadora em `2026-09-25` —
 calculadora do Mercado Livre atualizada com envio fixo de R$ 12 abaixo de
 R$ 79,99, tarifa fixa do TikTok atualizada para R$ 12,10/R$ 19,30 e primeira
 faixa da Shopee preparada com R$ 4,50 para 01/10/2026. Estado operacional anterior: `Expedição` atualizada, com apuração de vendas protegida contra timeout e sem
@@ -104,8 +114,9 @@ aprovador escolhido pelo criador. O fluxo humano até o agendamento está
 liberado e o monitoramento externo segue bloqueado por canal até validação real; o planejador
 semanal legado foi desativado. A interface multioperação voltou ao `main` com os
 hotfixes de autorização preservados; um ciclo de `MutationObserver` introduzido
-na restauração foi corrigido para não travar páginas com tabelas. A Giracasa permanece desativada,
-sem credenciais, usuários, crons ou carga. Também,
+na restauração foi corrigido para não travar páginas com tabelas. Naquele
+momento a Giracasa ainda estava desativada, sem credenciais, usuários, crons
+ou carga; foi ativada em 22/09. Também,
 Shopee → Estoque & FBS agora abre a posição completa por SKU × armazém e
 distingue vendável FBS, reservado, não vendável, trânsito e vendável total do
 anúncio; a nomenclatura antiga de "estoque local" foi corrigida porque o campo
@@ -157,7 +168,7 @@ Pagamento a Autônomo em PDF por CPF; primeira feature com dado pessoal de
 terceiros em escala e primeira geração de PDF por biblioteca).
 
 ### Deployment & auth
-- **Multioperação**: URLs `/o/uberlandia/*` e `/o/giracasa/*`; permissões são por operação + aba. Giracasa permanece desativada até concluir `docs/giracasa-onboarding.md`.
+- **Multioperação**: URLs `/o/uberlandia/*` e `/o/giracasa/*`; permissões são por operação + aba. Giracasa está ativa desde 22/09, com carga parcial por fonte; ver `docs/giracasa-onboarding.md`.
 - Production URL: `https://oraculo.oliverhome.com.br`
 - Latest documented feature deploy: `dpl_AU7EmzD1oHZBMU68oKMZsACsmUqq`
   (2026-09-25, novas tarifas da calculadora, `Ready` em produção)

@@ -41,6 +41,15 @@ Versão inicial `gira-casa-v1`: origem SP; ICMS nacional de 18% para SP, 12% par
 
 Custos seguem o Financeiro: líquido explícito, créditos recuperáveis explícitos, transferência comprovada de importado (4% + 11,75%) e custo bruto. Sem comprovação, Giracasa conserva o custo bruto. Exceções ficam em `giracasa.oraculo_financial_product_rules` por SKU e vigência.
 
-## Registro da implantação
+## Estado em 28/09/2026
 
-Em 05/09/2026 as migrations de cadastro, isolamento, motor financeiro e exposição controlada do schema foram executadas em produção. Pós-check: 101 tabelas, 94 funções e 34 views no schema Giracasa; zero pedidos, zero notas, zero concessões e `enabled=false`. As 26 Edge Functions `giracasa-*` foram publicadas. Não existem secrets `GIRACASA_*`, portanto a carga e os crons continuam bloqueados por configuração, sem risco de usar as contas de Uberlândia.
+A operação foi ativada em 22/09/2026. A carga Olist/Tiny já tem pedidos,
+notas, itens e produtos; a Análise Comercial foi recuperada em 28/09, com
+histórico desde 30/07 e cron horário `giracasa-commercial-hourly`. Mercado
+Livre/SP ainda não tem conta cadastrada. Shopee/SP tem pedidos parciais, mas
+não tem séries analíticas, escrow nem Ads. Validar cada integração própria
+antes de considerar suas telas completas. Ver `docs/project-status-2026-09-28.md`.
+
+## Registro inicial da implantação
+
+Em 05/09/2026 as migrations de cadastro, isolamento, motor financeiro e exposição controlada do schema foram executadas em produção. Naquele dia o pós-check apontou 101 tabelas, 94 funções e 34 views no schema Giracasa; zero pedidos, zero notas, zero concessões e `enabled=false`. As 26 Edge Functions `giracasa-*` foram publicadas. Naquele momento ainda não existiam secrets `GIRACASA_*`, carga ou crons.

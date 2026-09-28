@@ -2,6 +2,15 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-28] — Giracasa: navegação e análise comercial
+
+- Os links e formulários passam a acompanhar a operação da URL atual após a
+  troca MG ↔ SP, inclusive durante navegação cliente.
+- Análise Comercial de SP ganha cron próprio e histórico de 30/07 a 28/09;
+  o cálculo de 27/09 foi conciliado com 1.418 NFs e R$ 86.365,27 da fonte fiscal.
+- Lacunas das demais integrações paulistas foram medidas e registradas no
+  [status de 28/09](docs/project-status-2026-09-28.md).
+
 ## [2026-09-25] — Devoluções: período livre e taxa de devolução
 
 - `/devolucoes` troca o filtro travado no mês por Início e Fim (`?inicio=&fim=`,
