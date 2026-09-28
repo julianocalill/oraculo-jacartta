@@ -11,6 +11,8 @@
 // acima da fita) e rotulado — senão o funil esconde justamente a informação
 // que importa: onde as devoluções pararam e por quê.
 
+import { tipAttrs } from "./chart-hits";
+
 export type FunnelStep = {
   key: string;
   label: string;
@@ -88,8 +90,14 @@ export function ReturnsFunnel({ steps }: { steps: FunnelStep[] }) {
           return (
             <g key={`band-${step.key}`}>
               <path
+                className="funnel-band"
                 d={`M${x1},${mid - h1} L${x2},${mid - h2} L${x2},${mid + h2} L${x1},${mid + h1} Z`}
                 fill="url(#funnel-band)"
+                tabIndex={0}
+                {...tipAttrs(`${step.label} → ${next.label}`, [
+                  { label: "Avançaram", value: `${count(next.count)} (${step.count > 0 ? ((next.count / step.count) * 100).toFixed(0) : 0}%)` },
+                  { label: "Não avançaram", value: count(dropped) }
+                ], step.dropLabel ? `Motivo: ${step.dropLabel}` : undefined)}
               />
               {dropped > 0 && step.dropLabel ? (
                 <>
@@ -98,7 +106,7 @@ export function ReturnsFunnel({ steps }: { steps: FunnelStep[] }) {
                     y1={mid - h1}
                     x2={(x1 + x2) / 2}
                     y2={padTop - 26}
-                    stroke="#33405a"
+                    stroke="var(--line-strong)"
                     strokeWidth="1"
                     strokeDasharray="3 3"
                   />
@@ -132,9 +140,24 @@ export function ReturnsFunnel({ steps }: { steps: FunnelStep[] }) {
           const h = half(step.count);
           const x = cx(i);
           const share = top > 0 ? step.count / top : 0;
+          const previous = i > 0 ? steps[i - 1] : null;
 
           return (
-            <g key={step.key}>
+            <g
+              key={step.key}
+              className="funnel-col"
+              tabIndex={0}
+              {...tipAttrs(step.label, [
+                { label: "Casos", value: count(step.count), color },
+                { label: "Valor", value: money(step.amount) },
+                { label: "Do total aberto", value: `${(share * 100).toFixed(1).replace(".", ",")}%` },
+                ...(previous && previous.count > 0
+                  ? [{ label: `Do passo anterior`, value: `${((step.count / previous.count) * 100).toFixed(1).replace(".", ",")}%` }]
+                  : [])
+              ])}
+            >
+              {/* Área de toque da coluna inteira (a barra sozinha é fina demais). */}
+              <rect x={x - colW / 2 + 4} y={0} width={colW - 8} height={H} fill="transparent" />
               <rect
                 x={x - 7}
                 y={mid - h}
@@ -147,7 +170,7 @@ export function ReturnsFunnel({ steps }: { steps: FunnelStep[] }) {
               <text
                 x={x}
                 y={mid + band / 2 + 26}
-                fill="#eef1f8"
+                fill="var(--text)"
                 fontSize="12"
                 fontWeight={600}
                 textAnchor="middle"
@@ -206,7 +229,7 @@ export function DecisionBar({ slices, total }: { slices: DecisionSlice[]; total:
   let offset = 0;
 
   return (
-    <div className="decision-bar">
+    <div className="decision-bar" data-chart data-link>
       <div className="table-wrap">
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} role="img" aria-label="Partição das devoluções por decisão">
           {slices.map((slice) => {
@@ -216,7 +239,22 @@ export function DecisionBar({ slices, total }: { slices: DecisionSlice[]; total:
             if (w <= 0) return null;
             return (
               <g key={slice.key}>
-                <rect x={x} y={0} width={Math.max(w - 2, 1)} height={H} rx={6} fill={slice.color} fillOpacity="0.55" />
+                <rect
+                  x={x}
+                  y={0}
+                  width={Math.max(w - 2, 1)}
+                  height={H}
+                  rx={6}
+                  fill={slice.color}
+                  fillOpacity="0.55"
+                  tabIndex={0}
+                  data-series={slice.key}
+                  {...tipAttrs(slice.label, [
+                    { label: "Casos", value: count(slice.count), color: slice.color },
+                    { label: "Do total", value: `${((slice.count / total) * 100).toFixed(1).replace(".", ",")}%` },
+                    { label: "Valor", value: money(slice.amount) }
+                  ])}
+                />
                 {w > 70 ? (
                   <text
                     x={x + w / 2}
@@ -236,7 +274,7 @@ export function DecisionBar({ slices, total }: { slices: DecisionSlice[]; total:
       </div>
       <ul className="decision-legend">
         {slices.map((slice) => (
-          <li key={slice.key}>
+          <li key={slice.key} data-series={slice.key}>
             <span className="dot" style={{ background: slice.color }} aria-hidden="true" />
             {slice.label}
             <b>{count(slice.count)}</b>

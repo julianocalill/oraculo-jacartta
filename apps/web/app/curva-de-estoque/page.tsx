@@ -1,4 +1,5 @@
 import { getRequestOperation, type OperationId } from "../../lib/operation-context";
+import { tipAttrs } from "../components/chart-hits";
 import { OperationLink as Link } from "../components/operation-provider";
 import { unstable_cache } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
@@ -199,7 +200,16 @@ export default async function CurvaDeEstoquePage({
             {data.summaries.map((summary) => {
               const width = Math.max((summary.products / maxProducts) * 100, summary.products > 0 ? 2 : 0);
               return (
-                <div className={`horizontal-curve-row curve-${summary.curve.toLowerCase()}`} key={summary.curve}>
+                <div
+                  className={`horizontal-curve-row curve-${summary.curve.toLowerCase()}`}
+                  key={summary.curve}
+                  tabIndex={0}
+                  {...tipAttrs(summary.label, [
+                    { label: "Produtos", value: count(summary.products) },
+                    { label: "Unidades em estoque", value: count(summary.stock) },
+                    { label: "Dos produtos", value: `${((summary.products) / Math.max(data.summaries.reduce((sum, item) => sum + item.products, 0), 1) * 100).toFixed(1).replace(".", ",")}%` }
+                  ], summary.description)}
+                >
                   <div className="horizontal-curve-label">
                     <strong>{summary.label}</strong>
                     <span>{summary.description}</span>
@@ -229,7 +239,16 @@ export default async function CurvaDeEstoquePage({
             {data.summaries.map((summary) => {
               const width = Math.max((summary.stock / maxStock) * 100, summary.stock > 0 ? 2 : 0);
               return (
-                <div className={`horizontal-curve-row curve-${summary.curve.toLowerCase()}`} key={summary.curve}>
+                <div
+                  className={`horizontal-curve-row curve-${summary.curve.toLowerCase()}`}
+                  key={summary.curve}
+                  tabIndex={0}
+                  {...tipAttrs(summary.label, [
+                    { label: "Unidades em estoque", value: count(summary.stock) },
+                    { label: "Produtos", value: count(summary.products) },
+                    { label: "Do estoque", value: `${((summary.stock) / Math.max(data.summaries.reduce((sum, item) => sum + item.stock, 0), 1) * 100).toFixed(1).replace(".", ",")}%` }
+                  ], summary.description)}
+                >
                   <div className="horizontal-curve-label">
                     <strong>{summary.label}</strong>
                     <span>{summary.description}</span>

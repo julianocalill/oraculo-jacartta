@@ -1,5 +1,6 @@
 "use client";
 import { OperationAnchor } from "../components/operation-provider";
+import { tipAttrs } from "../components/chart-hits";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { IntelligencePayload, IntelligenceProduct, MarketAction } from "./data";
@@ -79,7 +80,13 @@ function TrendBars({ values }: { values: [number, number, number, number] }) {
   return (
     <div className="market-trend" aria-label={`Últimas quatro semanas: ${values.join(", ")}`}>
       {values.map((value, index) => (
-        <i key={index} style={{ height: `${Math.max(8, (value / max) * 100)}%` }} />
+        <i
+          key={index}
+          style={{ height: `${Math.max(8, (value / max) * 100)}%` }}
+          {...tipAttrs(index === values.length - 1 ? "Semana atual" : `${values.length - 1 - index} semana(s) atrás`, [
+            { label: "Vendas", value: value.toLocaleString("pt-BR") }
+          ])}
+        />
       ))}
     </div>
   );

@@ -6687,12 +6687,15 @@ a.pill-gold:hover,
 .commercial-ranking .dense-table td:nth-child(2) { white-space: normal; min-width: 200px; max-width: 260px; overflow-wrap: anywhere; }
 
 /* A operação faz parte de cada URL e permanece visível durante a navegação. */
-.operation-switcher { display: grid; gap: 6px; padding: 12px 0 18px; font-size: 13px; }
-.operation-switcher a { color: var(--gold); font-size: 12px; }
 .operation-picker { width: min(640px, 100%); }
 .operation-options { display: grid; gap: 16px; margin: 24px 0; }
 .operation-option { display: flex; justify-content: space-between; gap: 16px; padding: 24px; text-decoration: none; }
 .operation-option:hover { border-color: var(--gold); }
+.operation-option { color: var(--text); align-items: center; border-radius: var(--radius); background: var(--panel-soft); box-shadow: none; }
+.operation-option:hover { background: var(--tint-soft); }
+.operation-option span { color: var(--gold-text); font-weight: 600; }
+.login-card .operation-welcome { margin: 18px 0 4px; color: var(--gold-text); font-size: 17px; font-weight: 600; }
+.operation-session-link { color: var(--gold-text); font-size: 14px; font-weight: 600; }
 .operation-permissions { display: grid; gap: 18px; grid-column: 1 / -1; min-width: 0; }
 .operation-permissions fieldset { border: 1px solid var(--border); border-radius: 12px; padding: 16px; min-width: 0; }
 .operation-permissions legend { padding: 0 8px; color: var(--gold); }
@@ -6808,7 +6811,11 @@ button:disabled { cursor: not-allowed; filter: grayscale(.6); opacity: .55; }
 
 /* Shopee Ads — mesmas superfícies e paleta do setor Comercial. */
 .ads-chart-scroll { overflow-x: auto; }
-.ads-chart { display: block; width: 100%; min-width: 620px; max-height: 380px; font: 11px var(--mono); }
+/* Sem max-height: com viewBox proporcional, limitar a altura desalinhava a
+   caixa do SVG do desenho (e a camada de toque dos gráficos). Limita-se a
+   LARGURA do plot, que mantém a proporção. */
+.ads-chart { display: block; width: 100%; min-width: 620px; font: 11px var(--mono); }
+.ads-chart-scroll > .chart-plot { max-width: 1165px; min-width: 620px; margin: 0 auto; }
 .ads-legend, .ads-counts { display: flex; flex-wrap: wrap; gap: 12px; }
 .ads-legend span:first-child { color: var(--gold-text); }
 .ads-legend span:last-child { color: var(--indigo); }
@@ -6852,9 +6859,11 @@ button:disabled { cursor: not-allowed; filter: grayscale(.6); opacity: .55; }
 .live-monitor-main-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(320px, .8fr); gap: 14px; }
 .live-hourly-panel, .live-ranking-panel { min-width: 0; }
 .live-chart-scroll { overflow-x: auto; }
-.live-sales-chart { display: block; width: 100%; min-width: 660px; max-height: 360px; font: 11px var(--mono); }
+.live-sales-chart { display: block; width: 100%; min-width: 660px; font: 11px var(--mono); }
+.live-chart-scroll > .chart-plot { max-width: 1070px; min-width: 660px; margin: 0 auto; }
 .live-chart-legend { display: flex; flex-wrap: wrap; gap: 18px; color: var(--muted); font-size: 12px; }
-.live-chart-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.live-chart-legend span,
+.live-chart-legend button { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; }
 .live-chart-legend i { width: 24px; height: 3px; border-radius: 999px; background: var(--shopee); }
 .live-chart-legend i.previous { background: var(--cyan); opacity: .5; }
 .live-product-ranking { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
@@ -6928,7 +6937,9 @@ button:disabled { cursor: not-allowed; filter: grayscale(.6); opacity: .55; }
 .rh-panel-wide { min-width: 0; }
 
 .rh-line-chart { min-width: 0; }
-.rh-line-chart svg { display: block; width: 100%; min-height: 220px; overflow: visible; }
+/* Altura proporcional (sem min-height): com viewBox "meet", um min-height
+   maior que a proporção deixava faixas vazias e desalinhava a camada de toque. */
+.rh-line-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
 .rh-chart-grid { stroke: var(--line); stroke-width: 1; }
 .rh-line-main, .rh-line-plan { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .rh-line-main { stroke: var(--indigo); stroke-width: 3; }
@@ -6937,7 +6948,8 @@ button:disabled { cursor: not-allowed; filter: grayscale(.6); opacity: .55; }
 .rh-chart-label { fill: var(--muted); font: 11px var(--sans); }
 .rh-chart-value { fill: var(--text); font: 700 11px var(--mono); }
 .rh-chart-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; color: var(--muted); font-size: 11px; }
-.rh-chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.rh-chart-legend span,
+.rh-chart-legend button { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; }
 .rh-chart-legend i { display: inline-block; width: 20px; height: 3px; border-radius: 99px; }
 .rh-legend-current { background: var(--indigo); }
 .rh-legend-plan { height: 0 !important; border-top: 2px dashed var(--gold); }
@@ -7333,9 +7345,6 @@ button:disabled { cursor: not-allowed; filter: grayscale(.6); opacity: .55; }
   scrollbar-width: thin;
 }
 
-.operation-switcher {
-  padding: 0 8px;
-}
 
 .nav-group {
   gap: 4px;
@@ -7924,4 +7933,700 @@ samp {
 .doc-badge,
 .market-action-badge {
   border-radius: 999px;
+}
+
+/* Busca de usuários (/usuarios): campo de busca do iOS — cápsula preenchida
+   com lupa à esquerda. */
+.user-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 16px;
+}
+
+.user-search > svg {
+  position: absolute;
+  left: 14px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.user-search input[type="search"] {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 14px 0 40px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--field);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+}
+
+.app-shell .user-search input[type="search"] {
+  border-radius: 999px;
+}
+
+.user-search button {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--amber);
+  color: var(--on-gold);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.user-search-clear {
+  color: var(--gold-text);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0 6px;
+}
+
+/* Seletor de operação (operation-switcher.tsx): cápsula preenchida com a
+   operação atual em texto forte + menu flutuante em vidro. Substitui o link
+   "Trocar operação" em ouro claro, ilegível no tema claro. */
+.operation-switcher {
+  position: relative;
+  flex: none;
+}
+
+.operation-switcher > summary,
+.operation-switcher-static {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  background: var(--fill);
+  color: var(--text);
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  transition: background 160ms ease;
+}
+
+.operation-switcher-static {
+  cursor: default;
+}
+
+.operation-switcher > summary::-webkit-details-marker {
+  display: none;
+}
+
+.operation-switcher > summary:hover {
+  background: color-mix(in srgb, var(--fill) 100%, var(--text) 6%);
+}
+
+.operation-pin {
+  flex: none;
+  color: var(--gold-text);
+}
+
+.operation-switcher-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  line-height: 1.2;
+}
+
+.operation-switcher-text small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.operation-switcher-text strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.operation-chevron {
+  flex: none;
+  color: var(--muted);
+  transition: transform 160ms ease;
+}
+
+.operation-switcher[open] .operation-chevron {
+  transform: rotate(180deg);
+}
+
+.operation-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--glass-edge);
+  border-radius: 18px;
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow), var(--shadow-lg);
+}
+
+.operation-menu a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.operation-menu a:hover {
+  background: var(--fill);
+}
+
+.operation-menu a.is-current {
+  font-weight: 600;
+}
+
+.operation-menu a.is-current svg {
+  color: var(--gold-text);
+}
+
+/* Minha conta (/conta): cartão de perfil com foto grande à esquerda,
+   formulários de nome e senha empilhados à direita. */
+.account-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.account-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.account-profile {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.account-avatar-large {
+  width: 112px;
+  height: 112px;
+  border-radius: 999px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--gold), var(--amber-strong));
+  color: var(--on-gold);
+  font-size: 38px;
+  font-weight: 700;
+}
+
+.account-avatar-large img,
+.sidebar-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sidebar-avatar {
+  overflow: hidden;
+}
+
+.account-identity p {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+.account-form {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+}
+
+.account-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.account-form label span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.account-form input:not([type="file"]) {
+  min-height: 42px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 15px;
+}
+
+.account-form input[type="file"] {
+  font: inherit;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.account-form small {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.account-actions button {
+  min-height: 40px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--amber);
+  color: var(--on-gold);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.account-link-danger {
+  border: 0;
+  background: none;
+  color: var(--red);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.account-notice {
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--fill);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.account-notice-ok {
+  background: var(--good-soft);
+  color: var(--green);
+}
+
+.account-notice-error {
+  background: var(--crit-soft);
+  color: var(--red);
+}
+
+@media (max-width: 900px) {
+  .account-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Cartão do usuário na sidebar: foto + nome levam a Minha conta. */
+.sidebar-profile-link {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  border-radius: 999px;
+}
+
+.sidebar-profile-link:hover strong {
+  color: var(--gold-text);
+}
+
+.sidebar-profile-link > .nav-label {
+  flex: 1;
+}
+
+@media (min-width: 1025px) {
+  :root[data-sidebar="collapsed"] .sidebar-profile-link {
+    flex: none;
+    justify-content: center;
+  }
+}
+
+/* Sidebar: nenhum item passa da largura do card. Grid/flex items nascem com
+   min-width:auto e crescem até o conteúdo que não quebra (nome longo com
+   white-space:nowrap, "Preços para colaboradores", nome + operação + Sair):
+   a trilha do grid inchava e o texto saía do card em vez de ganhar
+   reticências. Mesma causa do invariante .workspace > * { min-width: 0 }. */
+.nav-group,
+.nav-sector,
+.nav-sector-links,
+.sidebar-bottom {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sidebar-scroll > *,
+.nav-group > *,
+.nav-sector-links > *,
+.sidebar-bottom > *,
+.nav-group a,
+.nav-sector > summary,
+.sidebar-profile,
+.sidebar-profile-link {
+  min-width: 0;
+}
+
+/* Sair só com ícone (title/aria-label "Sair"): com texto, o botão tomava
+   o espaço do nome e "Juliano Calil" virava "Juliano C…". */
+.sidebar-logout .nav-label {
+  display: none;
+}
+
+.sidebar-logout button {
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  justify-content: center;
+}
+
+/* ======================= Gráficos interativos =======================
+   chart-hits.tsx (servidor) + chart-interactions.tsx (cliente). O plot fica
+   dentro de .chart-plot (position:relative) e a camada .chart-hits cobre o
+   SVG com uma coluna de toque por ponto. */
+.chart-plot {
+  position: relative;
+  display: block;
+}
+
+.chart-hits {
+  position: absolute;
+  inset: 0;
+  outline: none;
+}
+
+.chart-hits:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 4px;
+  border-radius: 10px;
+}
+
+.chart-hit {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  cursor: crosshair;
+}
+
+.chart-guide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 1px dashed var(--line-strong);
+  opacity: 0;
+  transition: opacity 120ms ease;
+  pointer-events: none;
+}
+
+.chart-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 999px;
+  background: var(--dot, var(--gold));
+  box-shadow: 0 0 0 2.5px var(--panel), 0 1px 4px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transform: scale(0.4);
+  transition: opacity 120ms ease, transform 160ms ease;
+  pointer-events: none;
+}
+
+.chart-hit:hover .chart-guide,
+.chart-hit.is-active .chart-guide,
+.chart-hit:hover .chart-dot,
+.chart-hit.is-active .chart-dot {
+  opacity: 1;
+  transform: none;
+}
+
+.chart-hit .chart-dot.is-series-hidden {
+  display: none;
+}
+
+/* Barras e fatias com tooltip: realce no hover. */
+svg [data-tip] {
+  cursor: pointer;
+  transition: opacity 140ms ease, filter 140ms ease, stroke-width 140ms ease;
+}
+
+svg rect[data-tip]:hover,
+svg rect[data-tip].is-active {
+  filter: brightness(1.15);
+}
+
+/* Tooltip global: material de vidro do iOS. */
+.chart-tooltip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  display: grid;
+  gap: 4px;
+  min-width: 150px;
+  max-width: 280px;
+  padding: 10px 12px;
+  border: 1px solid var(--glass-edge);
+  border-radius: 14px;
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow), var(--shadow-lg);
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.chart-tooltip[hidden] {
+  display: none;
+}
+
+.chart-tooltip > strong {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.chart-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.chart-tooltip-row > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.chart-tooltip-row i {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: none;
+}
+
+.chart-tooltip-row b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Série escondida pela legenda. */
+.is-series-hidden {
+  display: none;
+}
+
+/* Legenda clicável (liga/desliga série). */
+[data-toggle-series] {
+  cursor: pointer;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  padding: 2px 6px;
+  margin: -2px -6px;
+  border-radius: 999px;
+  transition: opacity 140ms ease, background 140ms ease;
+}
+
+[data-toggle-series]:hover {
+  background: var(--fill);
+}
+
+[data-toggle-series][aria-pressed="false"] {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+/* Realce ligado: hover numa série esmaece as demais. */
+[data-chart][data-link].is-linking [data-series]:not(.is-linked) {
+  opacity: 0.3;
+}
+
+[data-chart][data-link] [data-series] {
+  transition: opacity 140ms ease;
+}
+
+/* Sparkline: o SVG agora mora num wrapper (.hero-spark / .spark-fill) que
+   carrega a camada de toque; o SVG ocupa o wrapper inteiro. */
+.hero-spark .spark-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.spark-fill {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.metric .hero-spark .chart-dot {
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+}
+
+/* Rosca: fatia em foco engrossa; legenda realça a fatia correspondente. */
+.donut-slice {
+  outline: none;
+}
+
+.donut-slice:hover,
+.donut-slice:focus-visible,
+.donut-slice.is-active,
+.donut-slice.is-linked {
+  stroke-width: 20;
+}
+
+.donut-legend .dl {
+  cursor: default;
+  border-radius: 8px;
+}
+
+.donut-legend .dl.is-linked {
+  background: var(--fill);
+}
+
+/* Medidor com tooltip. */
+.gauge[data-tip] {
+  cursor: help;
+  outline: none;
+  border-radius: 14px;
+}
+
+.gauge[data-tip]:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.chart-tooltip > small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+/* Funil de devoluções: coluna e fita em foco realçadas. */
+.funnel-col,
+.funnel-band {
+  outline: none;
+  cursor: pointer;
+}
+
+.funnel-col:hover rect:not([fill="transparent"]),
+.funnel-col:focus-visible rect:not([fill="transparent"]),
+.funnel-col.is-active rect:not([fill="transparent"]) {
+  filter: brightness(1.25);
+  stroke: var(--text);
+  stroke-width: 1.5;
+}
+
+.funnel-band:hover,
+.funnel-band:focus-visible,
+.funnel-band.is-active {
+  filter: brightness(1.4) saturate(1.3);
+}
+
+.decision-legend li.is-linked {
+  color: var(--text);
+}
+
+.decision-bar svg text {
+  pointer-events: none;
+}
+
+/* RH: barras, estágios e anel com tooltip. */
+.rh-risk-row[data-tip],
+.rh-funnel-stage[data-tip],
+.rh-ring-card[data-tip] {
+  cursor: help;
+  border-radius: 12px;
+  transition: background 140ms ease;
+}
+
+.rh-risk-row[data-tip]:hover,
+.rh-risk-row[data-tip].is-active,
+.rh-funnel-stage[data-tip]:hover,
+.rh-funnel-stage[data-tip].is-active {
+  background: var(--fill);
+}
+
+/* Barras HTML com tooltip (canais, curvas, depósitos, RH): linha em foco
+   ganha fundo e a barra acende. */
+.funnel-row[data-tip],
+.horizontal-curve-row[data-tip],
+.rh-tenure-bars > div[data-tip] {
+  cursor: help;
+  border-radius: 12px;
+  outline: none;
+  transition: background 140ms ease;
+}
+
+.funnel-row[data-tip]:hover,
+.funnel-row[data-tip].is-active,
+.funnel-row[data-tip]:focus-visible,
+.horizontal-curve-row[data-tip]:hover,
+.horizontal-curve-row[data-tip].is-active,
+.horizontal-curve-row[data-tip]:focus-visible,
+.rh-tenure-bars > div[data-tip]:hover,
+.rh-tenure-bars > div[data-tip].is-active {
+  background: var(--fill);
+}
+
+.funnel-row[data-tip]:hover i,
+.horizontal-curve-row[data-tip]:hover i,
+.rh-tenure-bars > div[data-tip]:hover i {
+  filter: brightness(1.2);
+}
+
+/* Barra empilhada da composição: segmento em foco + legenda ligada. */
+.comp-bar > span[data-tip] {
+  cursor: help;
+  transition: opacity 140ms ease, filter 140ms ease;
+}
+
+.comp-bar > span[data-tip]:hover {
+  filter: brightness(1.15);
+}
+
+.comp-legend > div.is-linked strong {
+  color: var(--gold-text);
+}
+
+.rh-split-bar > span[data-tip] {
+  cursor: help;
+}
+
+.rh-month-bars > div[data-tip],
+.market-trend > i[data-tip] {
+  cursor: help;
+  outline: none;
+}
+
+.rh-month-bars > div[data-tip]:hover span,
+.rh-month-bars > div[data-tip].is-active span,
+.market-trend > i[data-tip]:hover,
+.market-trend > i[data-tip].is-active {
+  filter: brightness(1.25);
 }

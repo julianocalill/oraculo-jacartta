@@ -62,6 +62,40 @@ validar cada fonte própria de SP pelo runbook `docs/giracasa-onboarding.md`.
   página ao carregar; skeleton de carregamento força tema escuro; cartões do
   topo de `/pedidos` estouram 54px a 768px.
 
+## Minha conta, busca de usuários e seletor de operação
+
+- `/conta` (todas as pessoas logadas, sem aba): foto, nome e senha. Senha nova
+  exige a atual (conferida com `signInWithPassword`) e 8+ caracteres. Em dev
+  as ações ficam desabilitadas porque o usuário é o mock `local-dev`.
+- Fotos: bucket privado `user-avatars` (2 MB, JPG/PNG/WebP), caminho em
+  `user_metadata.avatar_path`, validado para ficar na pasta do próprio usuário
+  (`lib/auth/avatar.ts`). Rota `/conta/avatar/<userId>` exige sessão e
+  redireciona para URL assinada. Bucket criado em prod em 28/09 ao validar o
+  fluxo (upload, URL assinada, recusa de não-imagem, bloqueio público).
+- `/usuarios?q=`: busca por nome/email no servidor.
+- Sidebar: `operation-switcher.tsx` substitui o link "Trocar operação".
+
+## Gráficos interativos
+
+- Camada `ChartHits` (servidor) sobreposta a cada SVG de série: uma coluna de
+  toque por ponto, com linha-guia e bolinhas por CSS; coordenadas em % da
+  caixa do SVG. Barras, fatias e estágios usam `tipAttrs()` direto.
+- `ChartInteractions` (cliente, no layout): tooltip global (`data-tip`,
+  `data-tip-rows`, `data-tip-note`), teclado nas `.chart-hits`, toque,
+  legenda `data-toggle-series` e realce `[data-chart][data-link]`.
+- Gráficos cobertos: sparkline, barras diárias, rosca, medidor, área de
+  receita (`fiscal-charts.tsx`), previsão, Shopee Ads, Shopee ao vivo, RH
+  (quadro, riscos, funil, anel, tempo de casa, ausências, absenteísmo
+  mensal), funil e barra de decisão de devoluções, composição do resultado,
+  canais (home e /pedidos), curvas de venda e estoque, depósitos, tendência
+  do Inteligência. O mapa de Importações já era interativo (Leaflet).
+- Armadilha: SVG proporcional com `max-height`/`min-height` desalinha a
+  camada (a caixa perde a proporção do viewBox). Limitar a largura do
+  `.chart-plot`, nunca a altura do SVG.
+- Dev: `next build` e `next dev` dividem `apps/web/.next`; depois de um build
+  local, apagar `.next` antes de subir o dev (senão "Cannot find module
+  './3517.js'" e o JS do cliente não carrega).
+
 ## Validação
 
 - `node --test packages/domain/*.test.js`: 85 testes aprovados.

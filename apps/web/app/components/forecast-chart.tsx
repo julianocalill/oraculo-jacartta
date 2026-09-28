@@ -7,6 +7,8 @@
 // o vão entre o último dia com pedido e a segunda-feira alvo aparece como vão
 // mesmo — honestidade > continuidade visual.
 
+import { ChartHits, pct, type ChartHit } from "./chart-hits";
+
 type HistoryPoint = { date: string; units: number };
 type ForecastPoint = { date: string; units: number; low: number; high: number };
 
@@ -100,11 +102,39 @@ export function ForecastChart({
     : 0;
   const forecastTotal = forecast.reduce((sum, p) => sum + p.units, 0);
 
+  const fullUnits = (v: number) => `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(v)} un`;
+  const weekday = (iso: string) =>
+    new Intl.DateTimeFormat("pt-BR", { weekday: "short", timeZone: "UTC" }).format(new Date(`${iso}T12:00:00Z`)).replace(".", "");
+  const hits: ChartHit[] = [
+    ...history.map((p) => {
+      const partial = lastCompleteWeekEnd != null && p.date > lastCompleteWeekEnd;
+      return {
+        x: pct(x(p.date), W),
+        title: `${weekday(p.date)}, ${shortBr(p.date)}${partial ? " · semana em andamento" : ""}`,
+        rows: [
+          { label: "Vendidas", value: fullUnits(p.units), color: "var(--indigo)", series: "historico" },
+          ...(avg > 0 ? [{ label: "Média histórica", value: fullUnits(avg), color: "var(--gold)" }] : [])
+        ],
+        dots: [{ y: pct(y(p.units), H), color: "var(--indigo)", series: "historico" }]
+      };
+    }),
+    ...forecast.map((p) => ({
+      x: pct(x(p.date), W),
+      title: `${weekday(p.date)}, ${shortBr(p.date)} · previsão`,
+      rows: [
+        { label: "Previsão", value: fullUnits(p.units), color: "var(--gold)", series: "previsao" },
+        { label: "Faixa provável", value: `${fullUnits(p.low)} – ${fullUnits(p.high)}`, series: "previsao" }
+      ],
+      dots: [{ y: pct(y(p.units), H), color: "var(--gold)", series: "previsao" }]
+    }))
+  ];
+
   const firstLabel = allDates.length > 0 ? shortBr([...allDates].sort()[0]) : "";
   const lastLabel = allDates.length > 0 ? shortBr([...allDates].sort().at(-1) ?? "") : "";
 
   return (
-    <div className="area-chart">
+    <div className="area-chart" data-chart>
+      <div className="chart-plot">
       <svg
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
@@ -128,7 +158,7 @@ export function ForecastChart({
             strokeWidth="1"
           />
         ))}
-        {areaPath && <path d={areaPath} fill="url(#forecastHistArea)" />}
+        {areaPath && <path d={areaPath} fill="url(#forecastHistArea)" data-series="historico" />}
         {avg > 0 && (
           <line
             x1="0"
@@ -142,9 +172,10 @@ export function ForecastChart({
             vectorEffect="non-scaling-stroke"
           />
         )}
-        {bandPath && <path d={bandPath} fill="var(--gold)" opacity="0.14" />}
+        {bandPath && <path d={bandPath} fill="var(--gold)" opacity="0.14" data-series="previsao" />}
         {consolidatedPath && (
           <path
+            data-series="historico"
             d={consolidatedPath}
             fill="none"
             stroke="var(--indigo)"
@@ -155,6 +186,7 @@ export function ForecastChart({
         )}
         {inProgressPath && (
           <path
+            data-series="historico"
             d={inProgressPath}
             fill="none"
             stroke="var(--indigo)"
@@ -166,6 +198,7 @@ export function ForecastChart({
         )}
         {forecastPath && (
           <path
+            data-series="previsao"
             d={forecastPath}
             fill="none"
             stroke="var(--gold)"
@@ -176,26 +209,28 @@ export function ForecastChart({
           />
         )}
       </svg>
+      <ChartHits hits={hits} label="Unidades por dia, histórico e previsão" />
+      </div>
       <div className="axis-row" aria-hidden="true">
         <span>{firstLabel}</span>
         <span />
         <span>{lastLabel}</span>
       </div>
       <div className="chart-legend">
-        <span className="lg">
+        <button type="button" className="lg" data-toggle-series="historico" aria-pressed="true">
           <span className="sw" style={{ background: "var(--indigo)" }} /> Histórico (semanas completas) ·{" "}
           <b>{compactUnits(avg)}/dia em média</b>
-        </span>
+        </button>
         {inProgress.length > 0 && (
           <span className="lg">
             <span className="sw" style={{ background: "var(--indigo)", opacity: 0.4 }} /> Semana em
             andamento (parcial)
           </span>
         )}
-        <span className="lg">
+        <button type="button" className="lg" data-toggle-series="previsao" aria-pressed="true">
           <span className="sw sw-dash" style={{ borderColor: "var(--gold)" }} /> Previsão ·{" "}
           <b>{compactUnits(forecastTotal)} un na semana</b>
-        </span>
+        </button>
       </div>
     </div>
   );

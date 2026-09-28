@@ -1,4 +1,5 @@
 import { requireTabAccess } from "../../lib/auth/access";
+import { tipAttrs } from "../components/chart-hits";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 import { AppShell } from "../components/app-shell";
 import { MetricCard } from "../components/metric-card";
@@ -59,7 +60,7 @@ function AbsenceChart() {
   return (
     <div className="rh-month-bars" role="img" aria-label="Absenteísmo mensal de janeiro a agosto de 2026">
       {data.absence.monthly.map((item) => (
-        <div key={item.label}><strong>{pct(item.value)}</strong><div><span style={{ height: `${Math.max(7, (item.value / max) * 100)}%` }} /></div><small>{item.label}</small></div>
+        <div key={item.label} tabIndex={0} {...tipAttrs(item.label, [{ label: "Absenteísmo", value: pct(item.value), color: "var(--gold)" }, { label: "vs pico do ano", value: `${Math.round((item.value / max) * 100)}%` }])}><strong>{pct(item.value)}</strong><div><span style={{ height: `${Math.max(7, (item.value / max) * 100)}%` }} /></div><small>{item.label}</small></div>
       ))}
     </div>
   );
@@ -209,12 +210,12 @@ function People({ selectedId }: { selectedId?: string }) {
       <section className="rh-dashboard-grid rh-dashboard-grid-balanced">
         <article className="panel">
           <div className="section-head"><p className="eyebrow">Tempo de casa do quadro atual</p><h2>Distribuição dos 48 CLTs</h2></div>
-          <div className="rh-tenure-bars">{tenure.map(([label, value]) => <div key={label}><span>{label}</span><div><i style={{ width: `${(value / data.workforce.clt) * 100}%` }} /></div><strong>{value}</strong></div>)}</div>
+          <div className="rh-tenure-bars">{tenure.map(([label, value]) => <div key={label} tabIndex={0} {...tipAttrs(label, [{ label: "Pessoas", value: String(value) }, { label: "Do quadro CLT", value: `${Math.round((value / Math.max(data.workforce.clt, 1)) * 100)}%` }])}><span>{label}</span><div><i style={{ width: `${(value / data.workforce.clt) * 100}%` }} /></div><strong>{value}</strong></div>)}</div>
           <p className="rh-reading">Mais da metade do quadro está nos primeiros seis meses, reforçando a necessidade de onboarding e acompanhamento da experiência.</p>
         </article>
         <article className="panel">
           <div className="section-head"><p className="eyebrow">Natureza das ausências</p><h2>Predominantemente justificadas</h2></div>
-          <div className="rh-split-bar"><span style={{ width: `${data.absence.justifiedRate}%` }}>Justificadas · {pct(data.absence.justifiedRate)}</span><span style={{ width: `${data.absence.unjustifiedRate}%` }} aria-label={`Injustificadas ${pct(data.absence.unjustifiedRate)}`} /></div>
+          <div className="rh-split-bar"><span style={{ width: `${data.absence.justifiedRate}%` }} {...tipAttrs("Ausências justificadas", [{ label: "Participação", value: pct(data.absence.justifiedRate) }, { label: "Horas", value: `≈ ${hours(data.absence.justifiedHours)}` }])}>Justificadas · {pct(data.absence.justifiedRate)}</span><span style={{ width: `${data.absence.unjustifiedRate}%` }} aria-label={`Injustificadas ${pct(data.absence.unjustifiedRate)}`} {...tipAttrs("Ausências injustificadas", [{ label: "Participação", value: pct(data.absence.unjustifiedRate) }, { label: "Horas", value: `≈ ${hours(data.absence.unjustifiedHours)}` }])} /></div>
           <div className="rh-fact-grid"><div><span>Horas justificadas</span><strong>≈ {hours(data.absence.justifiedHours)}</strong></div><div><span>Horas injustificadas</span><strong>≈ {hours(data.absence.unjustifiedHours)}</strong></div><div><span>Com alguma ausência</span><strong>{data.absence.peopleWithAbsence} pessoas</strong></div><div><span>Sem ausência classificada</span><strong>{data.absence.peopleWithoutAbsence} pessoas</strong></div></div>
         </article>
       </section>

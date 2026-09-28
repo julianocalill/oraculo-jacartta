@@ -1,4 +1,5 @@
 import { getRequestOperation, type OperationId } from "../../lib/operation-context";
+import { tipAttrs } from "../components/chart-hits";
 import { OperationLink as Link } from "../components/operation-provider";
 import { unstable_cache } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
@@ -351,7 +352,16 @@ export default async function CurvaDeVendaPage({
             const value = chartValue(summary);
             const width = Math.max((value / maxValue) * 100, value > 0 ? 2 : 0);
             return (
-              <div className={`horizontal-curve-row curve-${summary.curve.toLowerCase()}`} key={summary.curve}>
+              <div
+                className={`horizontal-curve-row curve-${summary.curve.toLowerCase()}`}
+                key={summary.curve}
+                tabIndex={0}
+                {...tipAttrs(summary.label, [
+                  { label: "Unidades vendidas", value: count(summary.units) },
+                  { label: "Produtos", value: count(summary.items) },
+                  { label: byVolume ? "Das unidades" : "Dos produtos", value: `${((value) / Math.max(data.summaries.reduce((sum, item) => sum + chartValue(item), 0), 1) * 100).toFixed(1).replace(".", ",")}%` }
+                ], summary.description)}
+              >
                 <div className="horizontal-curve-label">
                   <strong>{summary.label}</strong>
                   <span>{summary.description}</span>

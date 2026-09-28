@@ -1,5 +1,7 @@
-// Gráficos fiscais em SVG puro (server components, sem JS no cliente).
-// Cores vêm dos tokens do tema (var(--indigo) etc.), então acompanham o dark.
+// Gráficos fiscais em SVG puro (server components). Cores vêm dos tokens do
+// tema (var(--indigo) etc.), então acompanham o dark. Interação (tooltip,
+// linha-guia, teclado) vem da camada ChartHits + chart-interactions.tsx.
+import { ChartHits, pct, tipAttrs, type ChartHit, type TipRow } from "./chart-hits";
 
 function compactBRL(value: number): string {
   const abs = Math.abs(value);
@@ -14,6 +16,23 @@ export function compactNumberBR(value: number): string {
   if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(2).replace(".", ",")}M`;
   if (abs >= 1_000) return `${(value / 1_000).toFixed(1).replace(".", ",")}k`;
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(value);
+}
+
+// Valor cheio para o tooltip (o gráfico mostra o compacto; o tooltip, o exato).
+export type ValueFormat = "brl" | "count" | "pct" | "number";
+
+export function formatValue(value: number, format: ValueFormat = "number"): string {
+  if (format === "brl") {
+    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(value);
+  }
+  if (format === "pct") return `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(value)}%`;
+  return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: format === "count" ? 0 : 2 }).format(value);
+}
+
+function compactValue(value: number, format: ValueFormat): string {
+  if (format === "brl") return compactBRL(value);
+  if (format === "pct") return `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(value)}%`;
+  return compactNumberBR(value);
 }
 
 /* ---------------- Curva suavizada (Catmull-Rom → Bézier) ----------------
@@ -53,12 +72,23 @@ function gradId(prefix: string, color: string): string {
 export function Sparkline({
   values,
   color,
-  fill = false
+  fill = false,
+  labels,
+  format = "number",
+  name = "Valor",
+  focusable = true
 }: {
   values: number[];
   color: string;
   /** Preenche a área sob a linha (usado no tile hero). */
   fill?: boolean;
+  /** Rótulo de cada ponto (ex.: "12/09") — título do tooltip. */
+  labels?: string[];
+  format?: ValueFormat;
+  /** Nome da série no tooltip. */
+  name?: string;
+  /** false quando a sparkline está dentro de um link (evita foco aninhado). */
+  focusable?: boolean;
 }) {
   if (values.length < 2) return null;
   const W = 120;
@@ -74,8 +104,16 @@ export function Sparkline({
   const id = gradId("spark", color);
   const area = `${line} L${x(values.length - 1).toFixed(1)},${H} L${x(0).toFixed(1)},${H} Z`;
 
+  const hits: ChartHit[] = values.map((v, i) => ({
+    x: pct(x(i), W),
+    title: labels?.[i] ?? `Ponto ${i + 1} de ${values.length}`,
+    rows: [{ label: name, value: formatValue(v, format), color }],
+    dots: [{ y: pct(y(v), H), color }]
+  }));
+
   return (
-    <svg className="hero-spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+    <span className={`${fill ? "spark-fill" : "hero-spark"} chart-plot`}>
+    <svg className="spark-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
       {fill ? (
         <>
           <defs>
@@ -97,6 +135,8 @@ export function Sparkline({
         vectorEffect="non-scaling-stroke"
       />
     </svg>
+    <ChartHits hits={hits} label={name} focusable={focusable} />
+    </span>
   );
 }
 
@@ -105,14 +145,18 @@ export function Sparkline({
    pico destacado e tooltip nativo por barra (<title>). Mesma gramática
    visual do RevenueArea. */
 
-type BarPoint = { label: string; value: number; title?: string };
+type BarPoint = { label: string; value: number; title?: string; rows?: TipRow[] };
 
 export function DailyBars({
   points,
-  color = "var(--gold)"
+  color = "var(--gold)",
+  name = "Volume",
+  format = "count"
 }: {
   points: BarPoint[];
   color?: string;
+  name?: string;
+  format?: ValueFormat;
 }) {
   const W = 720;
   const H = 210;
@@ -138,6 +182,7 @@ export function DailyBars({
 
   return (
     <div className="area-chart">
+      <div className="chart-plot">
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="Volume por dia">
         <defs>
           <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
@@ -160,9 +205,7 @@ export function DailyBars({
                 rx={Math.min(3, bw / 3)}
                 fill={i === peakIdx ? color : `url(#${id})`}
                 opacity={i === peakIdx ? 1 : 0.92}
-              >
-                <title>{p.title ?? `${p.label}: ${compactNumberBR(p.value)}`}</title>
-              </rect>
+              />
             </g>
           );
         })}
@@ -178,6 +221,19 @@ export function DailyBars({
           vectorEffect="non-scaling-stroke"
         />
       </svg>
+      <ChartHits
+        label={`${name} por dia`}
+        hits={points.map((p, i) => ({
+          x: pct(x(i) + bw / 2, W),
+          title: p.label,
+          rows: p.rows ?? [
+            { label: name, value: formatValue(p.value, format), color },
+            { label: "vs média", value: `${p.value >= avg ? "+" : ""}${formatValue(avg > 0 ? ((p.value - avg) / avg) * 100 : 0, "pct")}` }
+          ],
+          dots: [{ y: pct(y(p.value), H), color }]
+        }))}
+      />
+      </div>
       <div className="axis-row" aria-hidden="true">
         <span>{points[0].label}</span>
         {n > 2 ? <span>{points[midIdx].label}</span> : <span />}
@@ -185,10 +241,10 @@ export function DailyBars({
       </div>
       <div className="chart-legend">
         <span className="lg">
-          <span className="sw" style={{ background: color }} /> Pico {points[peakIdx].label} · <b>{compactNumberBR(values[peakIdx])}</b>
+          <span className="sw" style={{ background: color }} /> Pico {points[peakIdx].label} · <b>{compactValue(values[peakIdx], format)}</b>
         </span>
         <span className="lg">
-          <span className="sw sw-dash" style={{ borderColor: "var(--gold-text)" }} /> Média diária · <b>{compactNumberBR(avg)}</b>
+          <span className="sw sw-dash" style={{ borderColor: "var(--gold-text)" }} /> Média diária · <b>{compactValue(avg, format)}</b>
         </span>
       </div>
     </div>
@@ -201,10 +257,12 @@ type DonutSlice = { label: string; value: number; color: string };
 
 export function TaxDonut({
   slices,
-  centerLabel = "impostos"
+  centerLabel = "impostos",
+  format = "brl"
 }: {
   slices: DonutSlice[];
   centerLabel?: string;
+  format?: ValueFormat;
 }) {
   const total = slices.reduce((sum, s) => sum + Math.max(s.value, 0), 0);
   const r = 52;
@@ -214,13 +272,13 @@ export function TaxDonut({
   const arcs = slices.map((s) => {
     const frac = total > 0 ? Math.max(s.value, 0) / total : 0;
     const len = frac * c;
-    const arc = { color: s.color, len, offset };
+    const arc = { color: s.color, len, offset, label: s.label, value: s.value, frac };
     offset += len;
     return arc;
   });
 
   return (
-    <div className="donut-wrap">
+    <div className="donut-wrap" data-chart data-link>
       <div className="donut-center">
         <svg viewBox="0 0 148 148" role="img" aria-label={`Composição de ${centerLabel}`}>
           <circle cx="74" cy="74" r={r} fill="none" stroke="var(--line)" strokeWidth="16" />
@@ -228,6 +286,7 @@ export function TaxDonut({
             arcs.map((a, i) => (
               <circle
                 key={i}
+                className="donut-slice"
                 cx="74"
                 cy="74"
                 r={r}
@@ -237,27 +296,41 @@ export function TaxDonut({
                 strokeDasharray={`${a.len} ${c - a.len}`}
                 strokeDashoffset={-a.offset}
                 transform="rotate(-90 74 74)"
+                tabIndex={0}
+                data-series={a.label}
+                {...tipAttrs(a.label, [
+                  { label: "Valor", value: formatValue(a.value, format), color: a.color },
+                  { label: "Participação", value: formatValue(a.frac * 100, "pct") }
+                ])}
               />
             ))}
         </svg>
         <div className="mid">
           <div>
-            <b>{compactBRL(total)}</b>
+            <b>{compactValue(total, format)}</b>
             <span>{centerLabel}</span>
           </div>
         </div>
       </div>
       <div className="donut-legend">
         {slices.map((s) => {
-          const pct = total > 0 ? (s.value / total) * 100 : 0;
+          const share = total > 0 ? (s.value / total) * 100 : 0;
           return (
-            <div className="dl" key={s.label}>
+            <div
+              className="dl"
+              key={s.label}
+              data-series={s.label}
+              {...tipAttrs(s.label, [
+                { label: "Valor", value: formatValue(s.value, format), color: s.color },
+                { label: "Participação", value: formatValue(share, "pct") }
+              ])}
+            >
               <span className="name">
                 <span className="sw" style={{ background: s.color }} />
                 {s.label}
               </span>
-              <span className="val">{compactBRL(s.value)}</span>
-              <span className="amt">{pct.toFixed(0)}%</span>
+              <span className="val">{compactValue(s.value, format)}</span>
+              <span className="amt">{share.toFixed(0)}%</span>
             </div>
           );
         })}
@@ -272,12 +345,15 @@ export function MarginGauge({
   fraction,
   display,
   label,
-  color
+  color,
+  hint
 }: {
   fraction: number;
   display: string;
   label: string;
   color: string;
+  /** Explicação curta mostrada no tooltip. */
+  hint?: string;
 }) {
   const f = Math.max(0, Math.min(1, fraction));
   const r = 58;
@@ -288,7 +364,7 @@ export function MarginGauge({
   const len = Math.PI * r;
 
   return (
-    <div className="gauge">
+    <div className="gauge" tabIndex={0} {...tipAttrs(label, [{ label, value: display, color }], hint)}>
       <svg viewBox="0 0 140 84" role="img" aria-label={`${label}: ${display}`}>
         <path d={arc} fill="none" stroke="var(--line)" strokeWidth="12" strokeLinecap="round" />
         <path
@@ -312,7 +388,15 @@ export function MarginGauge({
 
 type AreaPoint = { label: string; value: number };
 
-export function RevenueArea({ points }: { points: AreaPoint[] }) {
+export function RevenueArea({
+  points,
+  format = "brl",
+  name = "Receita"
+}: {
+  points: AreaPoint[];
+  format?: ValueFormat;
+  name?: string;
+}) {
   const W = 720;
   const H = 200;
   const padTop = 16;
@@ -340,7 +424,8 @@ export function RevenueArea({ points }: { points: AreaPoint[] }) {
 
   return (
     <div className="area-chart">
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="Receita fiscal por dia">
+      <div className="chart-plot">
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`${name} por dia`}>
         <defs>
           <linearGradient id="revArea" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="var(--indigo)" stopOpacity="0.40" />
@@ -369,6 +454,19 @@ export function RevenueArea({ points }: { points: AreaPoint[] }) {
           <circle cx={x(lastIdx)} cy={y(values[lastIdx])} r="3.5" fill="var(--panel)" stroke="var(--indigo)" strokeWidth="2" />
         )}
       </svg>
+      <ChartHits
+        label={`${name} por dia`}
+        hits={points.map((p, i) => ({
+          x: pct(x(i), W),
+          title: p.label,
+          rows: [
+            { label: name, value: formatValue(p.value, format), color: "var(--indigo)" },
+            { label: "Média do período", value: formatValue(avg, format), color: "var(--gold)" }
+          ],
+          dots: [{ y: pct(y(p.value), H), color: "var(--indigo)" }]
+        }))}
+      />
+      </div>
       <div className="axis-row" aria-hidden="true">
         <span>{points[0].label}</span>
         {n > 2 ? <span>{points[midIdx].label}</span> : <span />}
@@ -376,13 +474,13 @@ export function RevenueArea({ points }: { points: AreaPoint[] }) {
       </div>
       <div className="chart-legend">
         <span className="lg">
-          <span className="sw" style={{ background: "var(--indigo)" }} /> Pico {points[peakIdx].label} · <b>{compactBRL(values[peakIdx])}</b>
+          <span className="sw" style={{ background: "var(--indigo)" }} /> Pico {points[peakIdx].label} · <b>{compactValue(values[peakIdx], format)}</b>
         </span>
         <span className="lg">
-          <span className="sw sw-dash" style={{ borderColor: "var(--gold)" }} /> Média diária · <b>{compactBRL(avg)}</b>
+          <span className="sw sw-dash" style={{ borderColor: "var(--gold)" }} /> Média diária · <b>{compactValue(avg, format)}</b>
         </span>
         <span className="lg">
-          <span className="sw sw-hollow" style={{ borderColor: "var(--indigo)" }} /> Último dia · <b>{compactBRL(values[lastIdx])}</b>
+          <span className="sw sw-hollow" style={{ borderColor: "var(--indigo)" }} /> Último dia · <b>{compactValue(values[lastIdx], format)}</b>
         </span>
       </div>
     </div>

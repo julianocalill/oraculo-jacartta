@@ -1,4 +1,5 @@
 import { OperationLink as Link } from "../components/operation-provider";
+import { tipAttrs } from "../components/chart-hits";
 import { requireTabAccess } from "../../lib/auth/access";
 import { NoAccess } from "../components/no-access";
 import { AppShell } from "../components/app-shell";
@@ -104,7 +105,17 @@ export default async function LogisticaPage() {
             {data.depositSummaries.map((deposito) => {
               const width = Math.max((deposito.capitalCusto / maxCapital) * 100, deposito.capitalCusto > 0 ? 2 : 0);
               return (
-                <div className="horizontal-curve-row" key={deposito.id}>
+                <div
+                  className="horizontal-curve-row"
+                  key={deposito.id}
+                  tabIndex={0}
+                  {...tipAttrs(deposito.nome, [
+                    { label: "Capital a custo", value: money(deposito.capitalCusto) },
+                    { label: "Unidades disponíveis", value: count(deposito.disponivel) },
+                    { label: "Produtos", value: count(deposito.produtos) },
+                    { label: "Do capital total", value: `${((deposito.capitalCusto / Math.max(data.depositSummaries.reduce((sum, item) => sum + item.capitalCusto, 0), 1)) * 100).toFixed(1).replace(".", ",")}%` }
+                  ], tipoLabel(deposito.tipo))}
+                >
                   <div className="horizontal-curve-label">
                     <strong>{deposito.nome}</strong>
                     <span>{tipoLabel(deposito.tipo)} · {count(deposito.produtos)} produtos</span>

@@ -6,7 +6,7 @@
 // mesma linguagem visual em toda a aplicação.
 
 import { OperationLink as Link } from "./operation-provider";
-import { Sparkline } from "./fiscal-charts";
+import { Sparkline, type ValueFormat } from "./fiscal-charts";
 
 export type MetricDelta = {
   direction: "up" | "down";
@@ -25,6 +25,8 @@ export function MetricCard({
   delta,
   spark,
   sparkColor,
+  sparkLabels,
+  sparkFormat,
   className
 }: {
   accent: string;
@@ -37,6 +39,9 @@ export function MetricCard({
   delta?: MetricDelta;
   spark?: number[];
   sparkColor?: string;
+  /** Rótulo de cada ponto da sparkline (ex.: "12/09"), mostrado no tooltip. */
+  sparkLabels?: string[];
+  sparkFormat?: ValueFormat;
 }) {
   const body = (
     <>
@@ -51,7 +56,14 @@ export function MetricCard({
         </span>
       ) : null}
       <small>{caption}</small>
-      {spark && spark.length >= 2 && sparkColor ? <Sparkline values={spark} color={sparkColor} /> : null}
+      {spark && spark.length >= 2 && sparkColor ? <Sparkline
+          values={spark}
+          color={sparkColor}
+          labels={sparkLabels}
+          format={sparkFormat}
+          name={label}
+          focusable={!href}
+        /> : null}
     </>
   );
 

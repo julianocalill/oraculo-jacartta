@@ -1,4 +1,4 @@
-import { operationById, userOperations } from "@oraculo/domain/operations.js";
+import { operationById, operationHref, projectOperationUser, userOperations } from "@oraculo/domain/operations.js";
 import { getRequestOperation } from "../../lib/operation-context";
 import { OperationLink } from "./operation-provider";
 import type { ReactNode } from "react";
@@ -8,10 +8,12 @@ import { ThemeToggle } from "./theme-toggle";
 import { SidebarCollapse } from "./sidebar-collapse";
 import { DrawerBackdrop, DrawerOpenButton } from "./sidebar-drawer";
 import { logout } from "../../lib/auth/logout-action";
+import { avatarUrl } from "../../lib/auth/avatar";
 import { readTheme } from "../../lib/theme-server";
 import type { Theme } from "../../lib/theme";
 import { getCurrentUser, getLoginEventMarker } from "../../lib/auth/session";
-import { allowedTabs } from "../../lib/auth/access";
+import { allowedTabs, firstAllowedHref } from "../../lib/auth/access";
+import { OperationSwitcher, type OperationChoice } from "./operation-switcher";
 import { loadAgendaPendingCount } from "../../lib/agenda-count";
 import { effectiveUserId } from "../../lib/users";
 import { getActiveReleaseNotes } from "../../lib/release-notes";
@@ -29,7 +31,7 @@ function Frame({
   nav: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
-  profile?: { name: string; detail: string };
+  profile?: { name: string; detail: string; avatar: string | null };
   theme: Theme;
 }) {
   return (
@@ -60,12 +62,17 @@ function Frame({
           </div>
 
           {profile ? (
-            <div className="sidebar-profile" title={`${profile.name} · ${profile.detail}`}>
-              <span className="sidebar-avatar" aria-hidden="true">{initials(profile.name)}</span>
-              <div className="nav-label">
-                <strong>{profile.name}</strong>
-                <small>{profile.detail}</small>
-              </div>
+            <div className="sidebar-profile">
+              {/* Nome e foto abrem Minha conta (foto, nome e senha). */}
+              <OperationLink href="/conta" className="sidebar-profile-link" title={`Minha conta · ${profile.name}`} prefetch={false}>
+                <span className="sidebar-avatar" aria-hidden="true">
+                  {profile.avatar ? <img src={profile.avatar} alt="" /> : initials(profile.name)}
+                </span>
+                <div className="nav-label">
+                  <strong>{profile.name}</strong>
+                  <small>Minha conta</small>
+                </div>
+              </OperationLink>
               <form action={logout} className="sidebar-logout">
                 <button type="submit" aria-label="Sair" title="Sair">
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -117,6 +124,12 @@ export async function AppShell({
   const tabs = allowedTabs(user);
   const operation = operationById(await getRequestOperation())!;
   const operations = userOperations(user);
+  // Cada operação abre na primeira aba liberada ao usuário nela (mesma regra
+  // de /operacoes); operação sem aba liberada não aparece no seletor.
+  const operationChoices: OperationChoice[] = operations.flatMap((option) => {
+    const landing = firstAllowedHref(projectOperationUser(user, option.id));
+    return landing ? [{ id: option.id, label: option.label, href: operationHref(landing, option.id) }] : [];
+  });
 
   // O badge da Agenda é por usuário, então é o próprio shell que o carrega —
   // as páginas continuam passando só o alertCount (global) que já recebiam.
@@ -135,16 +148,17 @@ export async function AppShell({
     <>
       <Frame
         nav={<>
-          <div className="operation-switcher">
-            <strong>{operation.label}</strong>
-            {operations.length > 1 && <OperationLink href="/operacoes?trocar=1">Trocar operação</OperationLink>}
-          </div>
+          <OperationSwitcher
+            current={{ id: operation.id, label: operation.label, href: operationHref("/", operation.id) }}
+            options={operationChoices}
+          />
           <SidebarNav badges={{ "/alertas": alertCount, "/agenda": agendaCount }} tabs={tabs} />
         </>}
         footer={footer}
         profile={user ? {
           name: String(user.user_metadata?.full_name || user.email || "Usuário"),
-          detail: operation.label
+          detail: operation.label,
+          avatar: avatarUrl(user)
         } : undefined}
         theme={theme}
       >

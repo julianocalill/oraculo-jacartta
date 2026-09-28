@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-28.md](docs/project-status-2026-09-28.md) **← start here** (Giracasa: navegação, Análise Comercial e lacunas das fontes)
+1. [docs/project-status-2026-09-28.md](docs/project-status-2026-09-28.md) **← start here** (Giracasa: navegação, Análise Comercial e lacunas das fontes; visual iOS 27, menu em card, Minha conta, busca de usuários, seletor de operação e gráficos interativos)
    — [docs/project-status-2026-09-25.md](docs/project-status-2026-09-25.md) (tarifas da calculadora para Shopee, Mercado Livre e TikTok)
    — [docs/project-status-2026-09-23.md](docs/project-status-2026-09-23.md) (Fechamento oficial da Separação validado)
    — [docs/project-status-2026-09-22.md](docs/project-status-2026-09-22.md) (Separação por produto físico com kits abertos)
@@ -73,6 +73,12 @@ preenchida para 30/07–28/09 e ganhou atualização horária própria em 28/09;
 o ajuste de navegação entre operações está descrito no
 [status de 28/09](docs/project-status-2026-09-28.md). Mercado Livre/SP e parte
 das fontes Shopee/SP ainda aguardam integração e carga.
+
+Interface (28/09/2026): visual iOS/iPadOS 27 com o dourado como destaque,
+menu lateral em card recolhível (gaveta no celular/tablet), seletor de
+operação, tela Minha conta (foto, nome e senha), busca em Usuários, botão Sair
+e todos os gráficos interativos (tooltip, teclado, legenda clicável) — ver o
+mesmo status.
 
 Calculadora atualizada em 25/09/2026: os presets Mercado Livre Clássico e
 Premium descontam R$ 12 de envio em preços abaixo de R$ 79,99, inclusive no

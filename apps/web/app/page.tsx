@@ -1,4 +1,5 @@
 import { OperationAnchor } from "./components/operation-provider";
+import { tipAttrs } from "./components/chart-hits";
 import { createSupabaseAdminClient } from "../lib/supabase/admin";
 import {
   loadFiscalDashboardSnapshot,
@@ -21,6 +22,12 @@ import { MetricCard, type MetricDelta } from "./components/metric-card";
 import { loadActionableAlertCount } from "../lib/alert-count";
 
 export const dynamic = "force-dynamic";
+
+// "2026-09-12" → "12/09" (rótulo dos pontos das sparklines).
+function sparkDay(iso: string) {
+  const [, month, day] = String(iso).slice(0, 10).split("-");
+  return day && month ? `${day}/${month}` : String(iso);
+}
 
 type DailySale = {
   order_date: string;
@@ -1066,6 +1073,7 @@ export default async function HomePage({
   const revenueSpark = data.fiscalDailyChart.map((row) => asMetricNumber(row.billed_revenue));
   const invoicesSpark = data.fiscalDailyChart.map((row) => asMetricNumber(row.invoices_count));
   const ticketSpark = data.fiscalDailyChart.map((row) => asMetricNumber(row.average_invoice_value));
+  const dailySparkLabels = data.dailyChart.map((row) => sparkDay(row.order_date));
   const ordersRevenueSpark = data.dailyChart.map((row) => asNumber(row.effective_revenue));
   const ordersCountSpark = data.dailyChart.map((row) => asNumber(row.orders_count));
   const unitsSpark = data.dailyChart.map((row) => asNumber(row.units));
@@ -1140,7 +1148,14 @@ export default async function HomePage({
             </div>
             <small>Valor total das NFs emitidas/autorizadas · {vsPrev}</small>
             <div className="tile-spark">
-              {revenueSpark.length >= 2 ? <Sparkline values={revenueSpark} color="var(--gold)" fill /> : null}
+              {revenueSpark.length >= 2 ? <Sparkline
+                  values={revenueSpark}
+                  color="var(--gold)"
+                  fill
+                  labels={data.fiscalDailyChart.map((row) => sparkDay(row.issued_date))}
+                  format="brl"
+                  name="Receita faturada"
+                /> : null}
             </div>
             <div className="tile-substats">
               <div>
@@ -1195,12 +1210,14 @@ export default async function HomePage({
                     display={data.fiscalMargin.marginRate == null ? "-" : `${formatDecimal(data.fiscalMargin.marginRate * 100, 1)}%`}
                     label="Margem"
                     color="var(--emerald)"
+                    hint="Lucro fiscal ÷ receita com custo confiável. O arco vai de 0% a 100%."
                   />
                   <MarginGauge
                     fraction={data.fiscalMargin.roi == null ? 0 : Math.min(data.fiscalMargin.roi / 2, 1)}
                     display={data.fiscalMargin.roi == null ? "-" : `${formatDecimal(data.fiscalMargin.roi * 100, 1)}%`}
                     label="ROI"
                     color="var(--violet)"
+                    hint="Lucro fiscal ÷ custo do produto. O arco enche por completo em 200%."
                   />
                 </div>
               </article>
@@ -1263,30 +1280,44 @@ export default async function HomePage({
                   <span className="tile-value">{formatCurrency(fm.revenueWithCost)}</span>
                 </div>
                 <small>Receita com custo confiável</small>
+                <div className="comp-chart" data-chart data-link>
                 <div className="comp-bar" role="img" aria-label={`Despesas consomem ${formatDecimal(fiscalExpenseShare * 100, 1)}% da receita coberta`}>
                   {fiscalDiagnosisItems.map((item) => (
                     <span
                       key={item.label}
+                      data-series={item.label}
                       style={{ width: `${Math.min(fiscalShareOfRevenue(item.value) * 100, 100)}%`, background: item.color }}
+                      {...tipAttrs(item.label, [
+                        { label: "Valor", value: formatCurrency(item.value), color: item.color },
+                        { label: "Da receita coberta", value: `${formatDecimal(fiscalShareOfRevenue(item.value) * 100, 1)}%` }
+                      ])}
                     />
                   ))}
                   {fm.totalProfit > 0 ? (
-                    <span style={{ width: `${Math.min(fiscalShareOfRevenue(fm.totalProfit) * 100, 100)}%`, background: "var(--emerald)" }} />
+                    <span
+                      data-series="Lucro"
+                      style={{ width: `${Math.min(fiscalShareOfRevenue(fm.totalProfit) * 100, 100)}%`, background: "var(--emerald)" }}
+                      {...tipAttrs("Lucro", [
+                        { label: "Valor", value: formatCurrency(fm.totalProfit), color: "var(--emerald)" },
+                        { label: "Da receita coberta", value: `${formatDecimal(fiscalShareOfRevenue(fm.totalProfit) * 100, 1)}%` }
+                      ])}
+                    />
                   ) : null}
                 </div>
                 <div className="comp-legend">
                   {fiscalDiagnosisItems.map((item) => (
-                    <div key={item.label}>
+                    <div key={item.label} data-series={item.label}>
                       <i style={{ background: item.color }} />
                       <span>{item.label}</span>
                       <strong>{formatDecimal(fiscalShareOfRevenue(item.value) * 100, 1)}%</strong>
                     </div>
                   ))}
-                  <div>
+                  <div data-series="Lucro">
                     <i style={{ background: fm.totalProfit >= 0 ? "var(--emerald)" : "var(--rose)" }} />
                     <span>Lucro</span>
                     <strong>{formatDecimal(fiscalShareOfRevenue(fm.totalProfit) * 100, 1)}%</strong>
                   </div>
+                </div>
                 </div>
               </article>
             </>
@@ -1317,6 +1348,8 @@ export default async function HomePage({
               caption="Base fiscal com custo confiável"
               delta={revenueWithCostDelta}
               spark={history.map((point) => point.revenueWithCost)}
+              sparkLabels={history.map((point) => sparkDay(point.day))}
+              sparkFormat="brl"
               sparkColor="var(--indigo)"
             />
             <MetricCard
@@ -1327,6 +1360,8 @@ export default async function HomePage({
               caption="Kits por componente, líquido de créditos"
               delta={costDelta}
               spark={history.map((point) => point.cost)}
+              sparkLabels={history.map((point) => sparkDay(point.day))}
+              sparkFormat="brl"
               sparkColor="var(--cyan)"
             />
             <MetricCard
@@ -1337,6 +1372,8 @@ export default async function HomePage({
               caption="ICMS + PIS/COFINS + DIFAL"
               delta={taxesDelta}
               spark={history.map((point) => point.taxes)}
+              sparkLabels={history.map((point) => sparkDay(point.day))}
+              sparkFormat="brl"
               sparkColor="var(--rose)"
             />
             <MetricCard
@@ -1347,6 +1384,8 @@ export default async function HomePage({
               caption="Inclui frete, ads e embalagem"
               delta={marketplaceFeeDelta}
               spark={history.map((point) => point.marketplaceFee)}
+              sparkLabels={history.map((point) => sparkDay(point.day))}
+              sparkFormat="brl"
               sparkColor="#9aa8c0"
             />
             <MetricCard
@@ -1357,6 +1396,8 @@ export default async function HomePage({
               caption="Lucro / receita coberta"
               delta={marginDelta}
               spark={history.map((point) => (point.marginRate ?? 0) * 100)}
+              sparkLabels={history.map((point) => sparkDay(point.day))}
+              sparkFormat="pct"
               sparkColor="var(--gold)"
             />
             <MetricCard
@@ -1367,6 +1408,8 @@ export default async function HomePage({
               caption="Lucro / custo"
               delta={roiDelta}
               spark={history.map((point) => point.roi ?? 0)}
+              sparkLabels={history.map((point) => sparkDay(point.day))}
+              sparkFormat="number"
               sparkColor="var(--violet)"
             />
           </section>
@@ -1509,7 +1552,15 @@ export default async function HomePage({
                   const max = Math.max(...data.fiscalChannels.map((item) => asMetricNumber(item.billed_revenue)), 1);
                   const width = Math.max((asMetricNumber(channel.billed_revenue) / max) * 100, 2);
                   return (
-                    <div className="funnel-row" key={channel.channel_label ?? "Sem canal"}>
+                    <div
+                      className="funnel-row"
+                      key={channel.channel_label ?? "Sem canal"}
+                      {...tipAttrs(channel.channel_label ?? "Sem canal", [
+                        { label: "Receita faturada", value: formatCurrency(asMetricNumber(channel.billed_revenue)) },
+                        { label: "NFs", value: formatCount(asMetricNumber(channel.invoices_count)) },
+                        { label: "Participação", value: `${formatDecimal((asMetricNumber(channel.billed_revenue) / Math.max(data.fiscalChannels.reduce((sum, item) => sum + asMetricNumber(item.billed_revenue), 0), 1)) * 100, 1)}%` }
+                      ])}
+                    >
                       <span>{channel.channel_label ?? "Sem canal"}</span>
                       <div><i style={{ width: `${width}%` }} /></div>
                       <strong>{formatCount(asMetricNumber(channel.invoices_count))}</strong>
@@ -1536,6 +1587,8 @@ export default async function HomePage({
               value={formatCurrency(data.nfMetrics.confirmedRevenue)}
               caption="Auxiliar, não é a receita oficial"
               spark={ordersRevenueSpark}
+              sparkLabels={dailySparkLabels}
+              sparkFormat="brl"
               sparkColor="var(--gold)"
             />
             <MetricCard
@@ -1546,6 +1599,8 @@ export default async function HomePage({
               value={formatCount(data.nfMetrics.emittedCount)}
               caption="Status não pendente/cancelado"
               spark={ordersCountSpark}
+              sparkLabels={dailySparkLabels}
+              sparkFormat="count"
               sparkColor="var(--indigo)"
             />
             <MetricCard
@@ -1556,6 +1611,8 @@ export default async function HomePage({
               value={formatCount(data.monthUnits)}
               caption={`${formatCount(data.itemCount)} linhas de item na base`}
               spark={unitsSpark}
+              sparkLabels={dailySparkLabels}
+              sparkFormat="count"
               sparkColor="var(--cyan)"
             />
             <MetricCard
@@ -1566,6 +1623,8 @@ export default async function HomePage({
               value={data.nfMetrics.emittedCount <= 0 ? "-" : formatCurrency(data.nfMetrics.confirmedRevenue / data.nfMetrics.emittedCount)}
               caption="Auxiliar, não fiscal"
               spark={ordersTicketSpark}
+              sparkLabels={dailySparkLabels}
+              sparkFormat="brl"
               sparkColor="var(--violet)"
             />
             <MetricCard

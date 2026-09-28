@@ -7,6 +7,7 @@ import { AppShell } from "../components/app-shell";
 import { NoAccess } from "../components/no-access";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 import { TabCheckboxes } from "./tab-checkboxes";
+import { OperationLink } from "../components/operation-provider";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,18 @@ function date(value: string | null | undefined) {
 
 function displayName(user: AuthUser) {
   return String(user.user_metadata?.full_name || user.email || "Sem nome");
+}
+
+// Busca por nome ou email, sem acento e sem diferenciar maiúsculas:
+// "joao" encontra "João Silva" e "JOAO@empresa.com".
+function normalize(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+function matchesSearch(user: AuthUser, query: string) {
+  if (!query) return true;
+  const haystack = normalize(`${displayName(user)} ${user.email ?? ""}`);
+  return normalize(query).split(/\s+/).every((term) => haystack.includes(term));
 }
 
 function tabsOf(user: AuthUser, operation = "uberlandia"): TabKey[] {
@@ -148,7 +161,11 @@ async function updateUser(formData: FormData) {
   await revalidatePath("/usuarios");
 }
 
-export default async function UsuariosPage() {
+export default async function UsuariosPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ q?: string }>;
+}) {
   const [{ allowed }, alertCount] = await Promise.all([
     requireMaster(),
     loadActionableAlertCount()
@@ -156,7 +173,9 @@ export default async function UsuariosPage() {
   if (!allowed) return <NoAccess tab="usuarios" />;
 
   // loadUsers usa a auth admin API — fica atrás do gate de master de propósito.
-  const users = await loadUsers();
+  const allUsers = await loadUsers();
+  const query = String((await searchParams)?.q ?? "").trim();
+  const users = allUsers.filter((user) => matchesSearch(user, query));
 
   return (
     <AppShell alertCount={alertCount}>
@@ -197,11 +216,35 @@ export default async function UsuariosPage() {
             <h2>Usuários cadastrados</h2>
           </div>
           <div className="sku-actions">
-            <strong>{users.length} usuários</strong>
-            <span>Auth</span>
-            <span>Abas</span>
+            <strong>
+              {query ? `${users.length} de ${allUsers.length} usuários` : `${allUsers.length} usuários`}
+            </strong>
           </div>
         </div>
+
+        {/* GET simples: a busca vira ?q= na URL (dá para compartilhar o link) e
+            o filtro roda no servidor, sem JS no cliente. */}
+        <form className="user-search" role="search" method="get">
+          <label className="sr-only" htmlFor="user-search-q">Buscar usuário</label>
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
+          <input
+            id="user-search-q"
+            name="q"
+            type="search"
+            defaultValue={query}
+            placeholder="Buscar por nome ou email"
+            autoComplete="off"
+          />
+          <button type="submit">Buscar</button>
+          {query ? <OperationLink href="/usuarios" className="user-search-clear">Limpar</OperationLink> : null}
+        </form>
+
+        {query && users.length === 0 ? (
+          <p className="empty-state">Nenhum usuário encontrado para “{query}”.</p>
+        ) : null}
 
         <div className="user-list">
           {users.map((user) => {

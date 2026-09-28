@@ -535,7 +535,7 @@ export default async function DevolucoesPage({
             <p className="eyebrow">Ritmo</p>
             <h2>Devoluções abertas por dia</h2>
           </div>
-          <RevenueArea points={areaPoints} />
+          <RevenueArea points={areaPoints} format="count" name="Devoluções abertas" />
         </article>
 
         <article className="panel">
@@ -545,7 +545,7 @@ export default async function DevolucoesPage({
           </div>
           {donutSlices.length > 0 ? (
             <>
-              <TaxDonut slices={donutSlices} centerLabel="devoluções" />
+              <TaxDonut slices={donutSlices} centerLabel="devoluções" format="count" />
               <div className="table-wrap">
                 <table className="data-table dense-table">
                   <thead>

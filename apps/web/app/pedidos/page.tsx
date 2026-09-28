@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
+import { tipAttrs } from "../components/chart-hits";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
 import { requireTabAccess } from "../../lib/auth/access";
 import { NoAccess } from "../components/no-access";
@@ -326,8 +327,12 @@ export default async function PedidosPage({
             points={chart.map((row) => ({
               label: shortDate(row.order_date),
               value: n(row.orders_count),
-              title: `${shortDate(row.order_date)}: ${count(n(row.orders_count))} pedidos · ${money(row.net_revenue)}`
+              rows: [
+                { label: "Pedidos", value: count(n(row.orders_count)), color: "var(--gold)" },
+                { label: "Receita líquida", value: money(row.net_revenue) }
+              ]
             }))}
+            name="Pedidos"
           />
         </article>
 
@@ -338,7 +343,16 @@ export default async function PedidosPage({
           </div>
           <div className="funnel-list">
             {data.channels.slice(0, 12).map((channel) => (
-              <div className="funnel-row" key={`${channel.source}-${channel.channel_name}`}>
+              <div
+                className="funnel-row"
+                key={`${channel.source}-${channel.channel_name}`}
+                tabIndex={0}
+                {...tipAttrs(channel.channel_name ?? "Sem canal", [
+                  { label: "Pedidos", value: count(channel.orders_count) },
+                  { label: "Receita líquida", value: money(channel.net_revenue) },
+                  { label: "Participação na receita", value: `${((n(channel.net_revenue) / Math.max(data.channels.reduce((sum, item) => sum + n(item.net_revenue), 0), 1)) * 100).toFixed(1).replace(".", ",")}%` }
+                ])}
+              >
                 <span>{channel.channel_name}</span>
                 <div><i style={{ width: `${Math.max((n(channel.net_revenue) / Math.max(...data.channels.map((item) => n(item.net_revenue)), 1)) * 100, 2)}%` }} /></div>
                 <strong>{count(channel.orders_count)}</strong>

@@ -2,6 +2,43 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-28] — Gráficos interativos e correção da sidebar
+
+- **Todos os gráficos ficaram interativos**: tooltip com o valor exato ao
+  passar o mouse (ou tocar, no celular), linha-guia e marcador no ponto,
+  setas ←/→ percorrem os pontos pelo teclado. Legendas de gráficos com mais de
+  uma série (Previsão, Shopee Ads, Shopee ao vivo, quadro do RH) ligam e
+  desligam a série com um clique. Rosca, barra de decisão e barra de
+  composição realçam a fatia e o item de legenda juntos. Sparklines dos cards
+  mostram o dia e o valor. Funil de devoluções mostra conversão por passo e
+  quantos não avançaram. Barras em HTML (canais, curvas, depósitos, RH) têm
+  tooltip com a participação no total.
+- Gráficos seguem SVG server-rendered: a interação vem de uma camada HTML
+  (`components/chart-hits.tsx`) + um único listener global
+  (`components/chart-interactions.tsx`, montado no layout).
+- Correções achadas no caminho: Devoluções mostrava contagens como dinheiro
+  ("R$ 12") na área diária e na rosca; rótulos do funil de devoluções eram
+  brancos fixos (sumiam no tema claro); `max-height`/`min-height` em SVGs
+  proporcionais (Ads, Shopee ao vivo, RH) deixavam faixas vazias.
+- **Sidebar**: itens e cartão do usuário não passam mais da largura do card
+  (trilhas de grid com `minmax(0, 1fr)`); textos longos ganham reticências.
+  "Sair" virou botão só com ícone para o nome caber.
+
+## [2026-09-28] — Minha conta, busca de usuários e seletor de operação
+
+- **Minha conta** (`/conta`): cada usuário troca a própria foto, o nome e a
+  senha (a atual é conferida antes). Aberta pelo cartão do usuário na sidebar;
+  não é aba, vale para todo usuário logado. Fotos no bucket **privado**
+  `user-avatars` (criado sob demanda, como o `full-documents`), servidas por
+  `/conta/avatar/<userId>` com sessão + URL assinada de 1h.
+- **Usuários**: busca por nome ou email (`?q=`, sem acento e sem diferenciar
+  maiúsculas), filtrada no servidor, com contagem "N de M".
+- **Seletor de operação** na sidebar: cápsula com a operação atual e lista
+  suspensa das operações liberadas (abre na primeira aba permitida de cada
+  uma). Substitui o link "Trocar operação", ilegível no tema claro.
+- Saudação "Bem-vindo(a), <nome>!" na escolha de operação; links e cartões
+  dessa tela com as cores do tema.
+
 ## [2026-09-28] — Visual iOS / iPadOS 27
 
 - O Oráculo inteiro passa a seguir o kit "iOS and iPadOS 27" da Apple

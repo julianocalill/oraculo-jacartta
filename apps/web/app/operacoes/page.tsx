@@ -7,6 +7,15 @@ import { BrandMark } from "../components/brand-mark";
 
 export const dynamic = "force-dynamic";
 
+// Primeiro nome para a saudação: full_name do cadastro; sem ele, a parte do
+// email antes do @ (ex.: "juliano.calil@..." → "Juliano").
+function firstName(user: { email?: string | null; user_metadata?: Record<string, unknown> | null }) {
+  const full = String(user.user_metadata?.full_name ?? "").trim();
+  const base = full || String(user.email ?? "").split("@")[0].split(/[._-]/)[0];
+  const first = base.split(/\s+/)[0] ?? "";
+  return first ? first.charAt(0).toUpperCase() + first.slice(1) : "";
+}
+
 export default async function OperationsPage({ searchParams }: {
   searchParams?: Promise<{ trocar?: string }>;
 }) {
@@ -21,6 +30,7 @@ export default async function OperationsPage({ searchParams }: {
   return <main className="login-shell">
     <section className="login-card operation-picker">
       <BrandMark size={48} />
+      <p className="operation-welcome">{firstName(user) ? `Bem-vindo(a), ${firstName(user)}!` : "Bem-vindo(a)!"}</p>
       <h1>Onde você quer entrar?</h1>
       <p>Escolha a operação para consultar os dados e trabalhar.</p>
       <div className="operation-options">
@@ -30,7 +40,7 @@ export default async function OperationsPage({ searchParams }: {
         </OperationLink>)}
       </div>
       {!operations.length && <p>Nenhuma operação com abas liberadas. Solicite acesso ao administrador.</p>}
-      <OperationLink href="/login">Gerenciar sessão</OperationLink>
+      <OperationLink href="/login" className="operation-session-link">Gerenciar sessão</OperationLink>
     </section>
   </main>;
 }
