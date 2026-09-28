@@ -2,6 +2,41 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-28] — Visual iOS / iPadOS 27
+
+- O Oráculo inteiro passa a seguir o kit "iOS and iPadOS 27" da Apple
+  (Figma), com o dourado mantido como cor de destaque (tint).
+- Fonte do sistema Apple (SF Pro via `-apple-system`, sem embutir o arquivo;
+  Inter como fallback fora de Apple). IBM Plex saiu. Números tabulares.
+- Cores de sistema do iOS nos dois temas: fundo agrupado (`#000` / `#F2F2F7`),
+  cartões `#1C1C1E` / branco sem borda, separadores e rótulos do iOS; verde,
+  vermelho e laranja do iOS (no claro, as variantes de alto contraste).
+- Título grande (34 bold) em cada página; botões, filtros, abas e selos em
+  cápsula; campos preenchidos sem borda; Escuro/Claro como controle
+  segmentado; cabeçalho de tabela sem caixa-alta.
+- Liquid Glass na navegação: sidebar, botão de recolher, barra do topo e
+  gaveta do celular em material translúcido. Setores da sidebar no estilo
+  iPadOS (título em destaque, chevron à direita), seleção em cápsula dourada.
+- Botão **Sair** no cartão do usuário (rodapé da sidebar e da gaveta; no menu
+  recolhido vira só o ícone). A Server Action saiu de `/login` para
+  `lib/auth/logout-action.ts` e é usada pelos dois lugares.
+- Camada em `globals.css` ("Camada iOS / iPadOS 27", fim do arquivo) +
+  tokens `--glass*`, `--fill`, `--segment-thumb`, `--tint-soft`.
+
+## [2026-09-28] — Menu lateral em card recolhível
+
+- Sidebar redesenhada a partir do Figma "Animated Sidebar for Web Dashboards":
+  card flutuante com cantos arredondados, botão redondo de recolher na borda,
+  item ativo em pílula de tom suave, divisória antes do grupo Admin e cartão
+  do usuário no rodapé.
+- Recolhida vira trilho só de ícones (rótulo no `title`); a coluna anima e o
+  estado fica no cookie `oraculo-sidebar`, lido no layout como `<html
+  data-sidebar>` — sem salto no carregamento.
+- Celular e tablet (≤1024 px): a faixa de chips no topo foi removida. Agora há
+  uma barra fixa com marca, operação e botão ☰, que abre o mesmo card como
+  gaveta lateral sobre fundo escurecido; fecha no fundo, no Esc, no botão do
+  card e ao trocar de página (`sidebar-drawer.tsx`).
+
 ## [2026-09-28] — Exportação da Análise Comercial
 
 - Botão **Exportar CSV** baixa o ranking do período selecionado, com filtro de

@@ -50,9 +50,11 @@ export function SidebarNav({ badges, tabs }: { badges?: Record<string, number | 
         prefetch={false}
         className={active ? "nav-active" : undefined}
         aria-current={active ? "page" : undefined}
+        // Com a sidebar recolhida só o ícone aparece; o title vira a dica.
+        title={tab.label}
       >
         <NavIcon tab={tab.key} />
-        {tab.label}
+        <span className="nav-label">{tab.label}</span>
         {badge != null && badge > 0 ? <b>{badge}</b> : null}
       </Link>
     );
@@ -72,8 +74,8 @@ export function SidebarNav({ badges, tabs }: { badges?: Record<string, number | 
                 name="oraculo-setor"
                 open={active}
               >
-                <summary>
-                  {sector.label}
+                <summary title={sector.label}>
+                  <span className="nav-label">{sector.label}</span>
                   {badgeSum > 0 ? <b>{badgeSum}</b> : null}
                 </summary>
                 <div className="nav-sector-links">{sector.links.map(renderLink)}</div>
@@ -86,7 +88,7 @@ export function SidebarNav({ badges, tabs }: { badges?: Record<string, number | 
 
       {adminLinks.length > 0 ? (
         <nav className="nav-group nav-admin" aria-label="Admin">
-          <span>Admin</span>
+          <span className="nav-label">Admin</span>
           {adminLinks.map(renderLink)}
         </nav>
       ) : null}

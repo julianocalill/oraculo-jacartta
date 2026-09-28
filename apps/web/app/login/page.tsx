@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import {
-  clearAuthCookies,
   createSupabaseAuthClient,
   getCurrentUser,
   setAuthCookies
 } from "../../lib/auth/session";
 import { firstAllowedHref, isAllowedPath } from "../../lib/auth/access";
 import { ALL_TAB_KEYS } from "../../lib/auth/tabs";
+import { logout } from "../../lib/auth/logout-action";
 
 import { BrandMark } from "../components/brand-mark";
 import { PasswordField } from "./password-field";
@@ -69,12 +69,6 @@ async function createFirstAdmin(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent(error.message)}`);
   }
 
-  redirect("/login");
-}
-
-async function logout() {
-  "use server";
-  await clearAuthCookies();
   redirect("/login");
 }
 

@@ -5,6 +5,9 @@ import type { ReactNode } from "react";
 import { SidebarNav } from "./sidebar-nav";
 import { BrandMark } from "./brand-mark";
 import { ThemeToggle } from "./theme-toggle";
+import { SidebarCollapse } from "./sidebar-collapse";
+import { DrawerBackdrop, DrawerOpenButton } from "./sidebar-drawer";
+import { logout } from "../../lib/auth/logout-action";
 import { readTheme } from "../../lib/theme-server";
 import type { Theme } from "../../lib/theme";
 import { getCurrentUser, getLoginEventMarker } from "../../lib/auth/session";
@@ -20,42 +23,82 @@ function Frame({
   nav,
   children,
   footer,
+  profile,
   theme
 }: {
   nav: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
+  profile?: { name: string; detail: string };
   theme: Theme;
 }) {
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <aside className="sidebar" id="oraculo-menu">
         <div className="brand">
           <BrandMark />
-          <div>
+          <div className="nav-label">
             <strong>Oráculo</strong>
             <small>BI multicanal</small>
           </div>
+          <SidebarCollapse />
         </div>
 
-        {nav}
+        <div className="sidebar-scroll">{nav}</div>
 
-        <ThemeToggle initial={theme} />
+        <div className="sidebar-bottom">
+          <ThemeToggle initial={theme} />
 
-        <div className="sidebar-footer">
-          {footer ?? (
-            <>
-              <span className="sync-dot">•••••</span>
-              <small>Grupo Jacartta</small>
-              <strong>BI multicanal</strong>
-            </>
-          )}
+          <div className="sidebar-footer">
+            {footer ?? (
+              <>
+                <span className="sync-dot">•••••</span>
+                <small>Grupo Jacartta</small>
+                <strong>BI multicanal</strong>
+              </>
+            )}
+          </div>
+
+          {profile ? (
+            <div className="sidebar-profile" title={`${profile.name} · ${profile.detail}`}>
+              <span className="sidebar-avatar" aria-hidden="true">{initials(profile.name)}</span>
+              <div className="nav-label">
+                <strong>{profile.name}</strong>
+                <small>{profile.detail}</small>
+              </div>
+              <form action={logout} className="sidebar-logout">
+                <button type="submit" aria-label="Sair" title="Sair">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+                  </svg>
+                  <span className="nav-label">Sair</span>
+                </button>
+              </form>
+            </div>
+          ) : null}
         </div>
       </aside>
+      <DrawerBackdrop />
+      {/* Só aparece até 1024px: barra do topo que abre o menu em gaveta. Vem
+          depois da sidebar no DOM de propósito: o BrandMark usa um id fixo de
+          gradiente e a cópia visível precisa ser a primeira; o grid a põe no topo. */}
+      <header className="mobile-topbar">
+        <BrandMark size={34} />
+        <div className="brand-text">
+          <strong>Oráculo</strong>
+          <small>{profile?.detail ?? "BI multicanal"}</small>
+        </div>
+        <DrawerOpenButton />
+      </header>
 
       <main className="workspace">{children}</main>
     </div>
   );
+}
+
+function initials(name: string) {
+  const parts = name.replace(/@.*/, "").split(/[\s._-]+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "?") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
 }
 
 // Shell padrão das páginas autenticadas: sidebar fixa + área de trabalho.
@@ -99,6 +142,10 @@ export async function AppShell({
           <SidebarNav badges={{ "/alertas": alertCount, "/agenda": agendaCount }} tabs={tabs} />
         </>}
         footer={footer}
+        profile={user ? {
+          name: String(user.user_metadata?.full_name || user.email || "Usuário"),
+          detail: operation.label
+        } : undefined}
         theme={theme}
       >
         {children}

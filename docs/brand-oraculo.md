@@ -38,8 +38,8 @@ Fonte única da geometria: todos derivam do mesmo desenho. Para regerar rasters:
 
 ## Tipografia
 
-- **Interface e wordmark:** IBM Plex Sans (self-hosted via `next/font`), peso 700 no wordmark.
-- **Números (readouts):** IBM Plex Mono, tabular — dá o ar de "console de dados".
+- **Interface e wordmark:** fonte do sistema Apple (SF Pro via `-apple-system`), peso 700 no wordmark; fora de Apple, Inter (`next/font`). Desde 2026-09-28, visual iOS/iPadOS 27 — IBM Plex saiu.
+- **Números (readouts):** mesma fonte do sistema com algarismos tabulares (padrão dos apps Ações/Saúde do iOS).
 - Pareamento "Financial Trust"; detalhes em `docs/design-system.md`.
 
 ## Uso

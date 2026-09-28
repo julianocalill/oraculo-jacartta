@@ -1,22 +1,24 @@
 :root {
   color-scheme: dark;
-  /* Tema dark — console de dados do Oráculo.
+  /* Visual iOS/iPadOS 27 (kit da Apple no Figma, 2026-09-28): cores de
+     sistema do iOS no escuro, fundo preto agrupado, dourado como tint.
+     Tema dark — console de dados do Oráculo.
      Tinta fria quase-preta + ouro como assinatura de marca (mantém o nome
      --amber por compatibilidade) + paleta joia para data-viz. */
-  --bg: #0b0e15;
-  --bg-grad: radial-gradient(900px 480px at 100% -8%, rgba(109, 139, 255, 0.10), transparent 60%), radial-gradient(760px 420px at -6% -4%, rgba(246, 196, 83, 0.06), transparent 55%);
-  --sidebar: #0e131c;
-  --panel: #141a26;
-  --panel-soft: #1a2130;
-  --field: #10151f;
-  --line: #232c3d;
-  --line-strong: #33405a;
-  --text: #eef1f8;
-  --muted: #93a0b7;
+  --bg: #000000;
+  --bg-grad: linear-gradient(transparent, transparent);
+  --sidebar: #1c1c1e;
+  --panel: #1c1c1e;
+  --panel-soft: #2c2c2e;
+  --field: rgba(118, 118, 128, 0.24);
+  --line: #38383a;
+  --line-strong: #48484a;
+  --text: #ffffff;
+  --muted: #98989f;
   /* Rótulos secundários (th de tabela, labels de card, eyebrows). #5d6980
      dava ~3.3:1 de contraste sobre --panel — abaixo do mínimo legível de
      4.5:1 — e forçava o usuário a decorar a ordem das colunas. */
-  --faint: #8593ab;
+  --faint: #8e8e93;
 
   /* Assinatura (ouro) — usada com parcimônia. --amber = alias histórico.
      --gold-text é o ouro como cor de texto: no dark é o mesmo valor; no claro
@@ -29,39 +31,39 @@
   --shopee: #ee4d2d;
 
   /* Superfícies auxiliares que variam por tema. */
-  --tooltip-bg: #172033;
+  --tooltip-bg: #2c2c2e;
   --tooltip-text: #ffffff;
-  --zebra: rgba(255, 255, 255, 0.015);
-  --chip-soft: rgba(255, 255, 255, 0.07);
-  --link-indigo: #a8bcff;
-  --link-violet: #c9a9ff;
+  --zebra: rgba(255, 255, 255, 0.02);
+  --chip-soft: rgba(118, 118, 128, 0.24);
+  --link-indigo: #7d8aff;
+  --link-violet: #d27dff;
 
   /* Paleta joia — data-viz e acentos por métrica. */
-  --indigo: #6d8bff;
-  --violet: #a97bff;
-  --cyan: #3ecfd6;
-  --emerald: #34d399;
-  --rose: #fb6f84;
-  --blue: #6d8bff;
-  --green: #34d399;
-  --red: #fb6f84;
+  --indigo: #6d7cff;
+  --violet: #bf5af2;
+  --cyan: #3cd3fe;
+  --emerald: #30d158;
+  --rose: #ff4245;
+  --blue: #0091ff;
+  --green: #30d158;
+  --red: #ff4245;
 
   /* Status semântico — tints suaves para fundo no dark. */
-  --warn-text: #f0a93b;
-  --good-soft: rgba(52, 211, 153, 0.12);
-  --good-line: rgba(52, 211, 153, 0.30);
-  --warn-soft: rgba(240, 169, 59, 0.12);
-  --warn-line: rgba(240, 169, 59, 0.32);
-  --crit-soft: rgba(251, 111, 132, 0.12);
-  --crit-line: rgba(251, 111, 132, 0.32);
-  --info-soft: rgba(109, 139, 255, 0.12);
-  --neutral-soft: #1a2130;
+  --warn-text: #ff9230;
+  --good-soft: rgba(48, 209, 88, 0.16);
+  --good-line: rgba(48, 209, 88, 0.34);
+  --warn-soft: rgba(255, 146, 48, 0.16);
+  --warn-line: rgba(255, 146, 48, 0.36);
+  --crit-soft: rgba(255, 66, 69, 0.16);
+  --crit-line: rgba(255, 66, 69, 0.36);
+  --info-soft: rgba(0, 145, 255, 0.16);
+  --neutral-soft: #2c2c2e;
 
   /* Tipografia — pareamento "Financial Trust" (IBM Plex). As variáveis
      --font-sans/--font-mono vêm do next/font no layout.tsx; o fallback cobre
      o intervalo entre o primeiro paint e a fonte carregar. */
-  --sans: var(--font-sans, "IBM Plex Sans"), "Segoe UI", system-ui, sans-serif;
-  --mono: var(--font-mono, "IBM Plex Mono"), ui-monospace, "SF Mono", "Cascadia Code", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", system-ui, var(--font-sans, "Inter"), "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --mono: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", system-ui, var(--font-sans, "Inter"), "Segoe UI", Roboto, sans-serif;
 
   /* Escala de espaçamento densa (perfil dashboard): 4 · 8 · 12 · 16 · 24 · 32.
      Cards e grids usam --space-3; seções usam --space-5. */
@@ -74,16 +76,25 @@
 
   /* Anel de foco único para teclado — 2px + offset, contraste ≥ 3:1 sobre
      qualquer superfície do tema. */
-  --ring: var(--indigo);
+  --ring: var(--gold);
 
   /* Reflexo de 1px no topo das superfícies (profundidade "glass" discreta). */
-  --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --surface-highlight: 0 0 #0000;
 
-  --radius: 14px;
-  --radius-sm: 10px;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.30), 0 2px 8px rgba(0, 0, 0, 0.25);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.30), 0 12px 30px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.35), 0 22px 48px rgba(0, 0, 0, 0.50);
+  --radius: 22px;
+  --radius-sm: 14px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.30);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.55);
+
+  /* Liquid Glass (iOS 27): material translúcido com borda especular. */
+  --glass: rgba(30, 30, 32, 0.72);
+  --glass-edge: rgba(255, 255, 255, 0.10);
+  --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 40px rgba(0, 0, 0, 0.45);
+  --glass-blur: blur(30px) saturate(180%);
+  --fill: rgba(118, 118, 128, 0.24);
+  --segment-thumb: #636366;
+  --tint-soft: rgba(246, 196, 83, 0.20);
 }
 
 
@@ -92,17 +103,17 @@
    (data-theme="light" no <html>). Paleta joia de data-viz é compartilhada. */
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg: #f3f5f9;
-  --bg-grad: radial-gradient(900px 480px at 100% -8%, rgba(109, 139, 255, 0.10), transparent 60%), radial-gradient(760px 420px at -6% -4%, rgba(246, 196, 83, 0.12), transparent 55%);
+  --bg: #f2f2f7;
+  --bg-grad: linear-gradient(transparent, transparent);
   --sidebar: #ffffff;
   --panel: #ffffff;
-  --panel-soft: #f2f4f9;
-  --field: #ffffff;
-  --line: #e2e6ef;
-  --line-strong: #c6cdda;
-  --text: #101626;
-  --muted: #56617a;
-  --faint: #66718a;
+  --panel-soft: #f2f2f7;
+  --field: rgba(118, 118, 128, 0.12);
+  --line: #e5e5ea;
+  --line-strong: #c7c7cc;
+  --text: #000000;
+  --muted: #6c6c70;
+  --faint: #6c6c70;
 
   --gold: #f2bb3f;
   --amber: #f2bb3f;
@@ -110,37 +121,49 @@
   --gold-text: #8a6100;
   --on-gold: #1a1200;
 
-  --indigo: #4d6cf0;
-  --violet: #8b5cf6;
-  --cyan: #0fa9b3;
-  --emerald: #15a36f;
-  --rose: #e0506a;
-  --blue: #4d6cf0;
-  --green: #15a36f;
-  --red: #e0506a;
+  --indigo: #6155f5;
+  --violet: #af52de;
+  --cyan: #00c0e8;
+  --emerald: #34c759;
+  --rose: #ff383c;
+  --blue: #0088ff;
+  --green: #248a3d;
+  --red: #d70015;
 
-  --warn-text: #b46a00;
-  --good-soft: rgba(21, 163, 111, 0.12);
-  --good-line: rgba(21, 163, 111, 0.35);
-  --warn-soft: rgba(240, 169, 59, 0.16);
-  --warn-line: rgba(200, 130, 20, 0.40);
-  --crit-soft: rgba(224, 80, 106, 0.10);
-  --crit-line: rgba(224, 80, 106, 0.35);
-  --info-soft: rgba(77, 108, 240, 0.10);
-  --neutral-soft: #eef1f7;
+  --warn-text: #c93400;
+  --good-soft: rgba(52, 199, 89, 0.14);
+  --good-line: rgba(36, 138, 61, 0.34);
+  --warn-soft: rgba(255, 141, 40, 0.16);
+  --warn-line: rgba(201, 52, 0, 0.32);
+  --crit-soft: rgba(255, 56, 60, 0.12);
+  --crit-line: rgba(215, 0, 21, 0.30);
+  --info-soft: rgba(0, 136, 255, 0.12);
+  --neutral-soft: #f2f2f7;
 
-  --tooltip-bg: #101626;
+  --tooltip-bg: #1c1c1e;
   --tooltip-text: #ffffff;
-  --zebra: rgba(16, 22, 38, 0.025);
-  --chip-soft: rgba(16, 22, 38, 0.07);
-  --link-indigo: #3b57d6;
-  --link-violet: #7344e0;
+  --zebra: rgba(0, 0, 0, 0.02);
+  --chip-soft: rgba(118, 118, 128, 0.12);
+  --link-indigo: #0066cc;
+  --link-violet: #8944ab;
 
-  --ring: #4d6cf0;
-  --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --ring: var(--gold);
+  --surface-highlight: 0 0 #0000;
   --shadow-sm: 0 1px 2px rgba(16, 22, 38, 0.05), 0 2px 8px rgba(16, 22, 38, 0.05);
   --shadow: 0 1px 2px rgba(16, 22, 38, 0.05), 0 10px 28px rgba(16, 22, 38, 0.08);
   --shadow-lg: 0 2px 4px rgba(16, 22, 38, 0.06), 0 20px 44px rgba(16, 22, 38, 0.14);
+
+  /* iOS agrupado claro: cartões brancos sobre cinza, sombra quase ausente. */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.14);
+
+  --glass: rgba(255, 255, 255, 0.72);
+  --glass-edge: rgba(255, 255, 255, 0.75);
+  --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 0 0 0.5px rgba(0, 0, 0, 0.06), 0 10px 40px rgba(0, 0, 0, 0.08);
+  --fill: rgba(118, 118, 128, 0.12);
+  --segment-thumb: #ffffff;
+  --tint-soft: rgba(242, 187, 63, 0.24);
 }
 
 * {
@@ -157,6 +180,7 @@ body {
   font-family: var(--sans);
   font-size: 15px;
   line-height: 1.5;
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -632,14 +656,14 @@ p {
   min-height: 34px;
   border: 0;
   border-radius: 9px;
-  background: linear-gradient(180deg, var(--amber), var(--amber-strong));
+  background: var(--amber);
   color: var(--on-gold);
   cursor: pointer;
   font: inherit;
   font-size: 13px;
   font-weight: 800;
   padding: 0 16px;
-  box-shadow: 0 4px 12px rgba(231, 156, 18, 0.28);
+  box-shadow: none;
   transition: filter 160ms ease, transform 160ms ease;
 }
 
@@ -1385,7 +1409,7 @@ h2 {
 .bar-track span {
   display: block;
   width: 100%;
-  background: linear-gradient(180deg, var(--amber), var(--amber-strong));
+  background: var(--amber);
   border-radius: 7px 7px 0 0;
   box-shadow: 0 0 0 1px rgba(231, 156, 18, 0.18);
   transition: filter 160ms ease;
@@ -2150,87 +2174,6 @@ h2 {
 }
 
 @media (max-width: 1180px) {
-  .app-shell {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .sidebar {
-    position: static;
-    height: auto;
-    gap: 10px;
-    padding: 12px;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .sidebar > .nav-admin,
-  .sidebar > .nav-group:not(.nav-admin) + .sidebar-footer {
-    margin-top: 0;
-  }
-
-  .sidebar-footer {
-    display: none;
-  }
-
-  .brand {
-    padding: 4px 4px 8px;
-  }
-
-  .nav-group {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 2px;
-    scrollbar-width: none;
-  }
-
-  .nav-group::-webkit-scrollbar {
-    display: none;
-  }
-
-  .nav-group > span {
-    display: none;
-  }
-
-  /* No mobile o menu é uma faixa horizontal: cada setor vira uma pill que,
-     aberta, expõe seus links em linha. */
-  .nav-sector {
-    display: flex;
-    flex: none;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .nav-sector > summary {
-    min-height: 38px;
-    white-space: nowrap;
-  }
-
-  .nav-sector-links {
-    display: flex;
-    gap: 8px;
-  }
-
-  .nav-sector-links a {
-    padding-left: 12px;
-    white-space: nowrap;
-  }
-
-  /* Alvo de toque ≥ 44px (WCAG 2.5.8 / HIG) nos chips da nav. */
-  .nav-group a,
-  .nav-sector > summary {
-    flex: 0 0 auto;
-    min-height: 44px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 0 12px;
-    white-space: nowrap;
-  }
-
-  .nav-group em,
-  .nav-group b {
-    display: none;
-  }
 
   .control-grid,
   .detail-grid,
@@ -2468,17 +2411,6 @@ h2 {
 }
 
 @media (max-width: 430px) {
-  .sidebar {
-    padding: 10px;
-  }
-
-  .brand strong {
-    font-size: 14px;
-  }
-
-  .brand small {
-    letter-spacing: 0;
-  }
 
   .workspace {
     padding: 10px;
@@ -3421,7 +3353,7 @@ h2 {
 }
 
 .pill-gold {
-  background: linear-gradient(180deg, var(--amber), var(--amber-strong));
+  background: var(--amber);
   border-color: transparent;
   color: var(--on-gold);
   font-weight: 800;
@@ -3464,7 +3396,7 @@ h2 {
 }
 
 .pill-row .pill-gold {
-  background: linear-gradient(180deg, var(--amber), var(--amber-strong));
+  background: var(--amber);
   border-color: transparent;
   color: var(--on-gold);
 }
@@ -5327,15 +5259,6 @@ a.tile:hover {
   color: var(--gold-text);
 }
 
-@media (max-width: 1180px) {
-  .theme-toggle {
-    width: max-content;
-  }
-
-  .theme-toggle button {
-    min-height: 44px;
-  }
-}
 
 
 /* Links de linha de tabela: área de toque expandida sem mudar o layout
@@ -6296,7 +6219,7 @@ a.pill-gold:hover,
 
 .cost-audit-filter button {
   border-color: transparent;
-  background: linear-gradient(180deg, var(--amber), var(--amber-strong));
+  background: var(--amber);
   color: var(--on-gold);
 }
 
@@ -6650,7 +6573,7 @@ a.pill-gold:hover,
   min-height: 40px;
   border: 0;
   border-radius: 10px;
-  background: linear-gradient(180deg, var(--amber), var(--amber-strong));
+  background: var(--amber);
   color: var(--on-gold);
   cursor: pointer;
   font: inherit;
@@ -6787,7 +6710,7 @@ a.pill-gold:hover,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, var(--amber), var(--amber-strong));
+  background: var(--amber);
   color: var(--on-gold);
   cursor: pointer;
   font: inherit;
@@ -7317,4 +7240,688 @@ button:disabled { cursor: not-allowed; filter: grayscale(.6); opacity: .55; }
 @media (max-width: 430px) {
   .rh-fact-grid, .rh-workforce-bridge { grid-template-columns: minmax(0, 1fr); }
   .rh-tenure-bars > div { grid-template-columns: 90px minmax(0, 1fr) 24px; }
+}
+
+/* ============== Sidebar em card (Figma "Animated Sidebar") ==============
+   Card flutuante com marca + botão redondo de recolher na borda, itens com
+   ícone e rótulo, ativo em pílula de tom suave, divisória antes do grupo de
+   baixo e cartão do usuário no rodapé. Recolhida = trilho só de ícones; o
+   estado vem de <html data-sidebar> (cookie, ver sidebar-collapse.tsx) e a
+   coluna do grid anima. Até 1024px (celular e tablet) o mesmo card vira
+   gaveta — bloco "Gaveta" logo abaixo. */
+:root {
+  --sidebar-w: 264px;
+  --sidebar-w-collapsed: 84px;
+  --sidebar-ease: 260ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+.sidebar {
+  top: 12px;
+  height: calc(100vh - 24px);
+  margin: 12px 0 12px 12px;
+  padding: 20px 14px 14px;
+  gap: 14px;
+  border: 1px solid var(--glass-edge);
+  border-radius: 26px;
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
+  transition: padding var(--sidebar-ease);
+}
+
+.brand {
+  position: relative;
+  padding: 2px 6px 6px;
+  gap: 12px;
+}
+
+.brand strong {
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+
+.sidebar .nav-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-collapse {
+  position: absolute;
+  top: 50%;
+  right: -28px;
+  width: 28px;
+  height: 28px;
+  margin-top: -16px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--glass-edge);
+  border-radius: 999px;
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  color: var(--muted);
+  box-shadow: var(--glass-shadow);
+  cursor: pointer;
+  z-index: 2;
+  transition: color 160ms ease, transform var(--sidebar-ease);
+}
+
+.sidebar-collapse:hover {
+  color: var(--text);
+}
+
+.sidebar-collapse:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.sidebar-scroll {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin: 0 -6px;
+  padding: 0 6px;
+  scrollbar-width: thin;
+}
+
+.operation-switcher {
+  padding: 0 8px;
+}
+
+.nav-group {
+  gap: 4px;
+}
+
+.nav-group a {
+  position: relative;
+  min-height: 40px;
+  border-radius: 999px;
+  padding: 0 14px;
+  gap: 12px;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text);
+}
+
+.nav-group a:hover {
+  background: var(--fill);
+  color: var(--text);
+}
+
+/* iPadOS 27: seleção em cápsula com o tint do app (dourado). */
+.nav-group .nav-active {
+  background: var(--tint-soft);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.nav-icon,
+.nav-group a:hover .nav-icon,
+.nav-group .nav-active .nav-icon {
+  color: var(--gold-text);
+}
+
+.nav-sector-links a {
+  padding-left: 14px;
+}
+
+/* Cabeçalho de seção da sidebar do iPadOS: texto em destaque, chevron à
+   direita (aponta para a direita fechado, para baixo aberto). */
+.nav-sector > summary {
+  position: relative;
+  min-height: 36px;
+  padding: 0 14px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.nav-sector > summary .nav-label {
+  flex: 1;
+}
+
+.nav-sector > summary b {
+  order: 1;
+}
+
+.nav-sector > summary::before {
+  order: 2;
+  margin: 0 2px 0 4px;
+  color: var(--gold-text);
+}
+
+.nav-sector-active > summary {
+  color: var(--text);
+}
+
+.nav-group.nav-admin > span {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.nav-group.nav-admin {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.nav-group.nav-admin > span {
+  margin: 0 14px 6px;
+}
+
+.sidebar-bottom {
+  display: grid;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.sidebar-footer {
+  border-radius: 12px;
+}
+
+.sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 999px;
+  background: var(--fill);
+}
+
+.sidebar-profile > .nav-label {
+  flex: 1;
+}
+
+/* Sair: cápsula compacta à direita do cartão do usuário. */
+.sidebar-logout {
+  flex: none;
+  margin: 0;
+}
+
+.sidebar-logout button {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--red);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+
+.sidebar-logout button:hover {
+  background: var(--crit-soft);
+}
+
+.sidebar-avatar {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--gold), var(--amber-strong));
+  color: var(--on-gold);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sidebar-profile strong,
+.sidebar-profile small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-profile strong {
+  font-size: 13px;
+}
+
+.sidebar-profile small {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+@media (min-width: 1025px) {
+  .app-shell {
+    grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+    transition: grid-template-columns var(--sidebar-ease);
+  }
+
+  .mobile-topbar,
+  .sidebar-backdrop {
+    display: none;
+  }
+
+  /* ---------- Recolhida: trilho só de ícones ---------- */
+  :root[data-sidebar="collapsed"] .app-shell {
+    grid-template-columns: var(--sidebar-w-collapsed) minmax(0, 1fr);
+  }
+
+  :root[data-sidebar="collapsed"] .sidebar {
+    padding-inline: 10px;
+  }
+
+  :root[data-sidebar="collapsed"] .sidebar .nav-label,
+  :root[data-sidebar="collapsed"] .operation-switcher,
+  :root[data-sidebar="collapsed"] .sidebar-footer {
+    display: none;
+  }
+
+  :root[data-sidebar="collapsed"] .brand {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  :root[data-sidebar="collapsed"] .sidebar-collapse {
+    right: -24px;
+    transform: rotate(180deg);
+  }
+
+  :root[data-sidebar="collapsed"] .nav-group a,
+  :root[data-sidebar="collapsed"] .nav-sector > summary {
+    justify-content: center;
+    padding: 0;
+    gap: 0;
+  }
+
+  :root[data-sidebar="collapsed"] .nav-sector > summary {
+    min-height: 22px;
+  }
+
+  :root[data-sidebar="collapsed"] .nav-sector > summary::before {
+    margin: 0;
+  }
+
+  :root[data-sidebar="collapsed"] .nav-group b {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    margin: 0;
+    padding: 1px 5px;
+    font-size: 9px;
+  }
+
+  /* Soma do setor vira só um ponto ao lado do chevron. */
+  :root[data-sidebar="collapsed"] .nav-sector > summary b {
+    top: 50%;
+    right: 12px;
+    width: 7px;
+    height: 7px;
+    margin-top: -3.5px;
+    padding: 0;
+    font-size: 0;
+    background: var(--red);
+  }
+
+  :root[data-sidebar="collapsed"] .theme-toggle {
+    grid-template-columns: 1fr;
+  }
+
+  :root[data-sidebar="collapsed"] .theme-toggle button {
+    font-size: 0;
+    gap: 0;
+  }
+
+  :root[data-sidebar="collapsed"] .sidebar-profile {
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 0;
+    background: transparent;
+  }
+
+  :root[data-sidebar="collapsed"] .sidebar-logout button {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    justify-content: center;
+    background: var(--fill);
+  }
+}
+
+/* ================= Gaveta (celular e tablet, ≤1024px) =================
+   Barra superior fixa com marca + botão ☰; o card da sidebar entra pela
+   esquerda sobre um fundo escurecido. Fecha no fundo, no Esc, no botão do
+   card e ao navegar (sidebar-drawer.tsx). */
+@media (max-width: 1024px) {
+  .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+
+  .app-shell > .workspace {
+    grid-row: 2;
+  }
+
+  .mobile-topbar {
+    grid-row: 1;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 0.5px solid var(--line);
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+  }
+
+  .mobile-topbar .brand-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .mobile-topbar strong,
+  .mobile-topbar small {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobile-topbar strong {
+    font-size: 16px;
+  }
+
+  .mobile-topbar small {
+    color: var(--muted);
+    font-size: 11.5px;
+  }
+
+  .drawer-open {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--glass-edge);
+    border-radius: 999px;
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    color: var(--text);
+    box-shadow: var(--glass-shadow);
+    cursor: pointer;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 12px;
+    bottom: 12px;
+    left: 12px;
+    z-index: 50;
+    width: min(300px, calc(100vw - 56px));
+    height: auto;
+    margin: 0;
+    padding: 20px 14px 14px;
+    transform: translateX(calc(-100% - 24px));
+    visibility: hidden;
+    transition: transform var(--sidebar-ease), visibility 0s linear 260ms;
+  }
+
+  :root[data-drawer="open"] .sidebar {
+    transform: none;
+    visibility: visible;
+    transition: transform var(--sidebar-ease), visibility 0s;
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    border: 0;
+    padding: 0;
+    background: rgba(6, 8, 14, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--sidebar-ease);
+  }
+
+  :root[data-drawer="open"] .sidebar-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  :root[data-drawer="open"] body {
+    overflow: hidden;
+  }
+
+  /* Cartão de período/grupo cede a altura para os links na gaveta. */
+  .sidebar-footer {
+    display: none;
+  }
+
+  /* Dentro da gaveta o botão redondo fecha (seta para a esquerda). */
+  .sidebar-collapse {
+    right: -14px;
+  }
+}
+
+@media (max-width: 1024px) and (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .sidebar-backdrop {
+    transition: none !important;
+  }
+}
+
+/* ===================== Camada iOS / iPadOS 27 =====================
+   Kit "iOS and iPadOS 27" da Apple (Figma), aplicado em 2026-09-28 com o
+   dourado do Oráculo como tint. Fica no fim do arquivo de propósito: vence
+   as regras de componente espalhadas acima sem reescrevê-las uma a uma.
+   Princípios do kit reproduzidos aqui:
+   - conteúdo em cartões agrupados, sem borda, sobre fundo agrupado;
+   - título grande (Large Title 34 bold) no topo de cada página;
+   - botões e filtros em cápsula; campos preenchidos (fill), sem borda;
+   - controles segmentados (trilho fill + polegar elevado);
+   - materiais Liquid Glass só na navegação (sidebar, barra, gaveta). */
+
+:root {
+  accent-color: var(--gold);
+}
+
+/* Texto: escala do iOS (Body 17 é grande demais para BI denso; o corpo
+   fica em Subheadline 15 e as tabelas em Footnote 13). */
+.topbar h1 {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+
+.topbar p {
+  font-size: 15px;
+}
+
+h2 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.25;
+}
+
+h3 {
+  font-weight: 600;
+}
+
+.eyebrow {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* Cartões agrupados: sem borda, cantos contínuos grandes. */
+.panel,
+.metric,
+.tile {
+  border-color: transparent;
+}
+
+.panel {
+  box-shadow: var(--shadow);
+}
+
+.metric {
+  box-shadow: var(--shadow-sm);
+}
+
+/* Botões primários: cápsula dourada chapada. */
+.filter-form button,
+.button-primary,
+.button-secondary,
+.button-danger,
+.full-builder button,
+.stack-form button,
+.full-inline-form button,
+.upload-form button,
+.manual-form button,
+.button-link {
+  border-radius: 999px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.filter-form button:hover,
+.button-primary:hover {
+  transform: none;
+  filter: brightness(1.06);
+}
+
+/* Secundários: cápsula cinza (fill) com texto no tint. */
+.button-secondary,
+.full-builder .button-secondary,
+.stack-form .button-secondary,
+.button-link {
+  border-color: transparent;
+  background: var(--fill);
+  color: var(--gold-text);
+}
+
+.button-secondary:hover,
+.button-link:hover {
+  background: color-mix(in srgb, var(--fill) 100%, var(--text) 6%);
+}
+
+/* Pílulas e chips (filtros, abas de seção) em cápsula. */
+.pill,
+.filter-row span,
+.filter-row strong {
+  border-radius: 999px;
+}
+
+.pill-row .pill:not(.pill-gold) {
+  border-color: transparent;
+  background: var(--fill);
+  color: var(--text);
+}
+
+/* Campos de texto preenchidos, sem borda (UITextField em lista agrupada). */
+.app-shell :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]), select, textarea) {
+  border-color: transparent;
+  border-radius: 12px;
+  background-color: var(--field);
+  color: var(--text);
+}
+
+.app-shell :is(input, select, textarea):focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+  border-radius: 12px;
+}
+
+/* Controle segmentado: trilho fill + polegar elevado (Escuro/Claro). */
+.theme-toggle {
+  border: 0;
+  border-radius: 999px;
+  background: var(--fill);
+  padding: 2px;
+}
+
+.theme-toggle button {
+  border-radius: 999px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.theme-toggle button.is-active {
+  background: var(--segment-thumb);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+}
+
+/* Tabelas: cabeçalho em Footnote sem caixa-alta, separadores finos. */
+.data-table th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.data-table th,
+.data-table td {
+  border-bottom-color: var(--line);
+}
+
+.data-table tbody tr:hover td {
+  background: var(--zebra);
+}
+
+/* Listas de avisos e estados vazios seguem o cartão agrupado. */
+.empty-state,
+.status-alert {
+  border-radius: var(--radius-sm);
+}
+
+/* Foco de teclado com o tint. */
+:where(a, button, summary, [tabindex]):focus-visible {
+  outline-color: var(--gold);
+}
+
+/* Selos de status em cápsula (OK / Rodando / Falhou, doc-badge etc.). */
+.signal-good,
+.signal-warning,
+.signal-danger,
+.status-pill,
+.kind-badge,
+.doc-badge,
+.market-action-badge {
+  border-radius: 999px;
 }

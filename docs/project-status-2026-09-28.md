@@ -42,6 +42,26 @@ também estavam em zero. As telas dependentes dessas fontes não devem mostrar
 números de Uberlândia nem ser preenchidas com valores fictícios: conectar e
 validar cada fonte própria de SP pelo runbook `docs/giracasa-onboarding.md`.
 
+## Interface: visual iOS/iPadOS 27, menu em card e botão Sair
+
+- **Menu lateral**: card flutuante (Figma "Animated Sidebar") que recolhe para
+  trilho de ícones; estado em `<html data-sidebar>` via cookie
+  `oraculo-sidebar`. Até 1024px (celular e tablet) vira gaveta aberta por ☰
+  numa barra fixa (`sidebar-drawer.tsx`); a antiga faixa de chips saiu.
+- **Visual iOS/iPadOS 27** (kit da Apple no Figma) no app inteiro, dourado
+  mantido como tint: fonte do sistema Apple (SF Pro via `-apple-system`, Inter
+  como fallback; IBM Plex removida), cores de sistema do iOS, cartões sem
+  borda, botões/filtros/selos em cápsula, campos preenchidos, título grande,
+  Liquid Glass só na navegação. Bloco "Camada iOS / iPadOS 27" no fim do
+  `globals.css`.
+- **Sair**: botão no cartão do usuário (sidebar e gaveta). Server Action em
+  `lib/auth/logout-action.ts`, compartilhada com `/login`. Em dev não há login
+  (usuário mock), então o clique só volta ao painel.
+- Pendências conhecidas, anteriores a esta mudança: hydration mismatch dos
+  títulos de coluna com dica (`TableColumnHints`), que faz o React refazer a
+  página ao carregar; skeleton de carregamento força tema escuro; cartões do
+  topo de `/pedidos` estouram 54px a 768px.
+
 ## Validação
 
 - `node --test packages/domain/*.test.js`: 85 testes aprovados.
