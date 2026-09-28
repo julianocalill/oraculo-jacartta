@@ -110,3 +110,14 @@ Commit `561ac0f` enviado a `origin/main` e `personal/main`. Deploy Vercel
 alias `https://oraculo.oliverhome.com.br`. O build Next.js de produção concluiu
 sem erro. O job e o backfill foram verificados no banco de produção; a execução
 manual de `giracasa.oraculo_commercial_tick()` terminou em 6,5 s.
+
+Interface (mesmo dia): commit `23ad690` (visual iOS/iPadOS 27, menu em card,
+gaveta no celular/tablet, botão Sair) publicado no deploy
+`dpl_74CZTrYg5A7P8m6LbzCR2DAPs7Ts`; commit `17d6214` (Minha conta, busca de
+usuários, seletor de operação, correção da largura da sidebar e gráficos
+interativos) publicado no deploy `dpl_CYEiV4Hmkra5Scij2A8KKKF84GjY`, `Ready`
+e associado a `https://oraculo.oliverhome.com.br`. Build de produção local e
+typecheck sem erro antes do envio; CSS servido em produção conferido
+(tooltip dos gráficos, seletor de operação, Minha conta, busca de usuários);
+`/conta` sem sessão redireciona para o login. Pendente de teste com conta
+real: troca de senha e envio de foto (em dev o usuário é o mock `local-dev`).
