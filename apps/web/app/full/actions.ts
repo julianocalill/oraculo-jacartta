@@ -10,7 +10,8 @@ import { assertTabAccess, isFullManager } from "../../lib/auth/access";
 import { getSaoPauloToday } from "../../lib/date";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { effectiveUserId, listOraculoUsersForTab } from "../../lib/users";
-import { loadFullCreationCatalog, type FullChannel, type FullWorkflowStatus } from "./data";
+import { loadFullCreationCatalog, type CommercialCatalogItem, type FullChannel, type FullWorkflowStatus } from "./data";
+import { usesCommercialListing } from "./labels";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
@@ -69,10 +70,10 @@ function parseItems(value: FormDataEntryValue | null): DraftInput[] {
   return parsed.map((entry) => {
     const row = entry as Partial<DraftInput>;
     const quantity = Number(row.quantity);
-    if (!row.commercialKey || !row.physicalProductId || !Number.isInteger(quantity) || quantity <= 0 || quantity > 1_000_000) {
-      throw new Error("Cada item precisa de anúncio, produto físico e quantidade inteira positiva.");
+    if (!row.physicalProductId || !Number.isInteger(quantity) || quantity <= 0 || quantity > 1_000_000) {
+      throw new Error("Cada item precisa de produto físico e quantidade inteira positiva.");
     }
-    return { commercialKey: String(row.commercialKey), physicalProductId: String(row.physicalProductId), quantity };
+    return { commercialKey: String(row.commercialKey ?? ""), physicalProductId: String(row.physicalProductId), quantity };
   });
 }
 
@@ -216,12 +217,26 @@ async function buildValidatedItems(channel: FullChannel, storeKey: string, input
       .map((item) => [item.key, item])
   );
   const physical = new Map(catalog.physicalProducts.map((product) => [product.id, product]));
+  const byListing = usesCommercialListing(channel);
+  // Sem anúncio (Mercado Livre, Amazon), o próprio produto Olist identifica o item.
+  const itemFor = (input: DraftInput): CommercialCatalogItem => {
+    if (byListing) return commercial.get(input.commercialKey)!;
+    const product = physical.get(input.physicalProductId)!;
+    return {
+      channel, storeKey, key: `olist:${product.id}`, itemId: product.sku, modelId: null,
+      sku: product.sku, title: product.title, variation: null,
+      suggestedOlistProductId: product.id, mappingStatus: null
+    };
+  };
   const seen = new Set<string>();
   for (const input of inputs) {
-    if (seen.has(input.commercialKey)) throw new Error("O mesmo anúncio/variação não pode aparecer duas vezes.");
-    seen.add(input.commercialKey);
-    if (!commercial.has(input.commercialKey)) throw new Error(`Item comercial indisponível: ${input.commercialKey}.`);
     if (!physical.has(input.physicalProductId)) throw new Error("Produto físico não encontrado no Olist.");
+    if (byListing && !commercial.has(input.commercialKey)) {
+      throw new Error(input.commercialKey ? `Item comercial indisponível: ${input.commercialKey}.` : "Cada item precisa de anúncio/variação.");
+    }
+    const key = itemFor(input).key;
+    if (seen.has(key)) throw new Error(byListing ? "O mesmo anúncio/variação não pode aparecer duas vezes." : "O mesmo produto não pode aparecer duas vezes.");
+    seen.add(key);
   }
 
   const admin = createSupabaseAdminClient();
@@ -249,7 +264,7 @@ async function buildValidatedItems(channel: FullChannel, storeKey: string, input
   const componentsById = new Map((components ?? []).map((product) => [String(product.id), product]));
 
   return inputs.map((input, index) => {
-    const item = commercial.get(input.commercialKey)!;
+    const item = itemFor(input);
     const product = selectedById.get(input.physicalProductId);
     if (!product?.sku) throw new Error(`Produto físico sem SKU: ${input.physicalProductId}.`);
     const expanded = product.tipo === "K"

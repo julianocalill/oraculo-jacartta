@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { createFull, reviseFull } from "./actions";
 import type { CommercialCatalogItem, FullChannel, FullStoreConfig, PhysicalProductOption } from "./data";
+import { usesCommercialListing } from "./labels";
 import { SearchSelect } from "./search-select";
 
 type UserOption = { id: string; name: string; email: string };
@@ -62,8 +63,9 @@ export function FullBuilder({
     })),
     [physicalProducts]
   );
+  const byListing = usesCommercialListing(channel);
   const containsKit = rows.some((row) => productById.get(row.physicalProductId)?.type === "K");
-  const serializedRows = JSON.stringify(rows.map(({ commercialKey, physicalProductId, quantity }) => ({ commercialKey, physicalProductId, quantity })));
+  const serializedRows = JSON.stringify(rows.map(({ commercialKey, physicalProductId, quantity }) => ({ commercialKey: byListing ? commercialKey : "", physicalProductId, quantity })));
 
   function changeChannel(next: FullChannel) {
     const store = stores.find((entry) => entry.channel === next);
@@ -152,13 +154,15 @@ export function FullBuilder({
         {rows.map((row, index) => {
           const commercial = itemByKey.get(row.commercialKey);
           return (
-            <div className="full-builder-row" key={row.id}>
+            <div className={byListing ? "full-builder-row" : "full-builder-row full-builder-row-physical"} key={row.id}>
               <strong>{index + 1}</strong>
-              <label>
-                <span>Anúncio / variação</span>
-                <SearchSelect options={commercialOptions} value={row.commercialKey} onChange={(key) => chooseCommercial(row.id, key)} placeholder="Digite SKU, título ou variação" required />
-                {commercial ? <small>{commercial.mappingStatus ? `De-para: ${commercial.mappingStatus}` : "Sem sugestão automática; confirme o produto Olist."}</small> : null}
-              </label>
+              {byListing ? (
+                <label>
+                  <span>Anúncio / variação</span>
+                  <SearchSelect options={commercialOptions} value={row.commercialKey} onChange={(key) => chooseCommercial(row.id, key)} placeholder="Digite SKU, título ou variação" required />
+                  {commercial ? <small>{commercial.mappingStatus ? `De-para: ${commercial.mappingStatus}` : "Sem sugestão automática; confirme o produto Olist."}</small> : null}
+                </label>
+              ) : null}
               <label>
                 <span>Produto físico Olist</span>
                 <SearchSelect options={physicalOptions} value={row.physicalProductId} onChange={(id) => patchRow(row.id, { physicalProductId: id })} placeholder="Digite SKU ou nome do produto" required />

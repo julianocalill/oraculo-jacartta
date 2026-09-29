@@ -6,6 +6,12 @@ export const CHANNEL_LABEL: Record<FullChannel, string> = {
   amazon: "Amazon Onsite"
 };
 
+// Só a Shopee tem o catálogo de anúncios/variações carregado para o Full. No Mercado
+// Livre e na Amazon o item da remessa é o próprio produto físico do Olist.
+export function usesCommercialListing(channel: FullChannel) {
+  return channel === "shopee";
+}
+
 export const WORKFLOW_LABEL: Record<FullWorkflowStatus, string> = {
   rascunho: "Rascunho",
   aguardando_logistica: "Aguardando logística",

@@ -2,6 +2,16 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-29] — Full: Mercado Livre e Amazon sem anúncio/variação
+
+- No Mercado Livre Full e na Amazon Onsite o item da remessa é só o **produto
+  físico Olist** + quantidade; o campo "Anúncio / variação" aparece apenas na
+  Shopee (`usesCommercialListing` em `app/full/labels.ts`). O servidor sintetiza
+  o item a partir do produto (`channel_item_key = olist:<id>`, SKU e nome do
+  Olist) e bloqueia o mesmo produto duas vezes. Sem migration.
+- Se a coleta automática do ML Full for habilitada, o anúncio (MLB) precisa
+  voltar para esse canal.
+
 ## [2026-09-29] — Full: busca digitável nos itens da remessa
 
 - **Novo Full / revisão**: os campos "Anúncio / variação" e "Produto físico
