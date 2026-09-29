@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { createFull, reviseFull } from "./actions";
 import type { CommercialCatalogItem, FullChannel, FullStoreConfig, PhysicalProductOption } from "./data";
+import { SearchSelect } from "./search-select";
 
 type UserOption = { id: string; name: string; email: string };
 type BuilderRow = { id: string; commercialKey: string; physicalProductId: string; quantity: number };
@@ -47,6 +48,20 @@ export function FullBuilder({
   );
   const itemByKey = useMemo(() => new Map(availableItems.map((item) => [item.key, item])), [availableItems]);
   const productById = useMemo(() => new Map(physicalProducts.map((product) => [product.id, product])), [physicalProducts]);
+  const commercialOptions = useMemo(
+    () => availableItems.map((item) => ({
+      value: item.key,
+      label: `${item.sku ? `${item.sku} · ` : ""}${item.title}${item.variation ? ` · ${item.variation}` : ""}`
+    })),
+    [availableItems]
+  );
+  const physicalOptions = useMemo(
+    () => physicalProducts.map((product) => ({
+      value: product.id,
+      label: `${product.sku} · ${product.title}${product.type === "K" ? " · KIT" : ""}`
+    })),
+    [physicalProducts]
+  );
   const containsKit = rows.some((row) => productById.get(row.physicalProductId)?.type === "K");
   const serializedRows = JSON.stringify(rows.map(({ commercialKey, physicalProductId, quantity }) => ({ commercialKey, physicalProductId, quantity })));
 
@@ -141,20 +156,12 @@ export function FullBuilder({
               <strong>{index + 1}</strong>
               <label>
                 <span>Anúncio / variação</span>
-                <select value={row.commercialKey} onChange={(event) => chooseCommercial(row.id, event.target.value)} required>
-                  <option value="">Selecione o item</option>
-                  {availableItems.map((item) => (
-                    <option key={item.key} value={item.key}>{item.sku ? `${item.sku} · ` : ""}{item.title}{item.variation ? ` · ${item.variation}` : ""}</option>
-                  ))}
-                </select>
+                <SearchSelect options={commercialOptions} value={row.commercialKey} onChange={(key) => chooseCommercial(row.id, key)} placeholder="Digite SKU, título ou variação" required />
                 {commercial ? <small>{commercial.mappingStatus ? `De-para: ${commercial.mappingStatus}` : "Sem sugestão automática; confirme o produto Olist."}</small> : null}
               </label>
               <label>
                 <span>Produto físico Olist</span>
-                <select value={row.physicalProductId} onChange={(event) => patchRow(row.id, { physicalProductId: event.target.value })} required>
-                  <option value="">Selecione e confirme</option>
-                  {physicalProducts.map((product) => <option key={product.id} value={product.id}>{product.sku} · {product.title}{product.type === "K" ? " · KIT" : ""}</option>)}
-                </select>
+                <SearchSelect options={physicalOptions} value={row.physicalProductId} onChange={(id) => patchRow(row.id, { physicalProductId: id })} placeholder="Digite SKU ou nome do produto" required />
               </label>
               <label>
                 <span>Quantidade</span>

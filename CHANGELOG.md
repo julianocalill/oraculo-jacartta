@@ -2,6 +2,17 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-29] — Full: busca digitável nos itens da remessa
+
+- **Novo Full / revisão**: os campos "Anúncio / variação" e "Produto físico
+  Olist" viraram campos de busca (`app/full/search-select.tsx`). Palavras em
+  qualquer ordem, sem acento/caixa; palavra inteira ranqueia antes de trecho
+  ("gg" traz o tamanho GG antes de "leGGing"); setas + Enter escolhem, Esc
+  fecha; lista limitada a 60 resultados com aviso para refinar.
+- Texto livre nunca é gravado: só uma opção da lista vira valor, e o campo sem
+  escolha bloqueia o envio. O de-para continua preenchendo o produto Olist ao
+  escolher o anúncio.
+
 ## [2026-09-28] — Gráficos interativos e correção da sidebar
 
 - **Todos os gráficos ficaram interativos**: tooltip com o valor exato ao
