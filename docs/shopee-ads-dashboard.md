@@ -10,7 +10,8 @@ Giracasa exibe integração ainda não configurada e nunca consulta dados MG.
 Shopee Ads, inclusive em operações sem a integração API de Ads. O usuário
 anexa PNG/JPEG da tela Performance; Tesseract.js 7 lê o print **no navegador**
 com worker, WASM e idioma português servidos pelo próprio Oráculo em
-`/ads-ocr/`. Nenhuma imagem é enviada ao servidor ou salva. O usuário confere
+`/ads-ocr/`. Esses arquivos estáticos são públicos; a página exige permissão
+`ads`. Nenhuma imagem é enviada ao servidor ou salva. O usuário confere
 e corrige investimento, vendas, ROAS, CTR, cliques, impressões e itens vendidos.
 
 As sugestões são calculadas em `packages/domain/ads-print.js`, independente do

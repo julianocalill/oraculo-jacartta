@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-30.md](docs/project-status-2026-09-30.md) **← start here** (análise de prints integrada à Shopee Ads; produção ainda não publicada)
+1. [docs/project-status-2026-09-30.md](docs/project-status-2026-09-30.md) **← start here** (análise de prints integrada à Shopee Ads em produção)
    — [docs/project-status-2026-09-28.md](docs/project-status-2026-09-28.md) (Giracasa: navegação, Análise Comercial e lacunas das fontes; visual iOS 27, menu em card, Minha conta, busca de usuários, seletor de operação e gráficos interativos)
    — [docs/project-status-2026-09-25.md](docs/project-status-2026-09-25.md) (tarifas da calculadora para Shopee, Mercado Livre e TikTok)
    — [docs/project-status-2026-09-23.md](docs/project-status-2026-09-23.md) (Fechamento oficial da Separação validado)
@@ -107,7 +107,7 @@ Shopee Ads publicado em produção em 11/09/2026: [status de 11/09](docs/project
 
 Correção de taxas TikTok publicada em 11/09/2026: [status](docs/project-status-2026-09-10.md).
 
-**Last update**: `2026-09-30` (print analyzer in Shopee Ads; see `docs/project-status-2026-09-30.md`). Latest production update: `2026-09-28` (see `docs/project-status-2026-09-28.md`) —
+**Last update**: `2026-09-30` (print analyzer in Shopee Ads in production; see `docs/project-status-2026-09-30.md`). Previous production update: `2026-09-28` (see `docs/project-status-2026-09-28.md`) —
 Giracasa/SP com histórico comercial e job horário próprios; o menu acompanha a
 operação da URL durante a navegação cliente. Atualização anterior da
 calculadora em `2026-09-25` —
@@ -185,8 +185,9 @@ terceiros em escala e primeira geração de PDF por biblioteca).
 - Production URL: `https://oraculo.oliverhome.com.br`
 - Previous documented feature deploy: `dpl_AU7EmzD1oHZBMU68oKMZsACsmUqq`
   (2026-09-25, novas tarifas da calculadora, `Ready` em produção)
-- Latest deployment: `dpl_7Db5xgcCceVUJk5qWU6t3YuVFLTc`
-  (2026-09-28, navegação Giracasa, `Ready` no domínio público)
+- Latest deployment: `dpl_7dDZ8b4TzM1TBLZQUC6ZgRRp4SDi`
+  (2026-09-30, análise de prints Shopee Ads, `Ready` no domínio público;
+  ajuste de arquivos OCR estáticos em publicação)
 - **Dois remotes**: `origin` = `Grupo-Jacartta/oraculo`, `personal` = `julianocalill/oraculo-jacartta`.
   A Vercel escuta o **`personal`** — push só no `origin` não publica.
 - Business-data reads run under RLS via an authenticated client (anon key + user

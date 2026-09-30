@@ -22,6 +22,7 @@ async function authenticate(request: NextRequest) {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/brand/") || // ícones/logo e imagem social (preview de link)
+    pathname.startsWith("/ads-ocr/") || // worker, WASM e idioma públicos; o print fica no navegador
     pathname === "/icon.svg" ||
     pathname === "/apple-icon.png" ||
     pathname === "/robots.txt" ||

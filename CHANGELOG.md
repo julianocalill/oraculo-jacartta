@@ -10,6 +10,8 @@ Histórico de entregas e mudanças significativas.
 - Métricas conferíveis, contexto da campanha, quatro cenários da Aula 09,
   cálculo condicional de ROAS de equilíbrio, pendências explícitas e cópia do
   relatório. Sem alteração de campanha nem migration.
+- Publicada em produção em 30/09; arquivos estáticos do OCR públicos para
+  carregamento sem depender da sessão. A página segue protegida pela aba `ads`.
 
 ## [2026-09-30] — Analisador local de prints Shopee Ads
 

@@ -25,8 +25,7 @@ prints anteriores do usuário, incluindo valores de R$ 2.437,69/8,73× e
 R$ 7.702,47/6,48×. Execução e limites em
 `tools/ads-print-analyzer/README.md`.
 
-Estado de produção permanece o documentado em
-`docs/project-status-2026-09-28.md`.
+Este protótipo permanece local; a integração web publicada é descrita abaixo.
 
 ## Integração à aba Shopee Ads
 
@@ -41,6 +40,7 @@ dados para confirmar cenário. Nenhuma mudança de banco ou integração Shopee.
 Validação local: página autenticada abriu em
 `/o/uberlandia/ads/analisar-print`; o print de 21/09–28/09 foi lido com os
 sete indicadores corretos e o Cenário 2 foi confirmado após informar meta,
-limite, consumo e última otimização. A publicação em produção ainda depende do
-fluxo de deploy do repositório. O horário de `publishedAt` da novidade está
-previsto para 30/09 16:00 BRT e deve ser ajustado se o deploy mudar.
+limite, consumo e última otimização. Publicada em produção no deploy
+`dpl_7dDZ8b4TzM1TBLZQUC6ZgRRp4SDi` em 30/09, a partir do commit `0f75899`.
+Os arquivos estáticos do OCR são públicos para carregamento pelo navegador; a
+rota de análise continua autenticada e sujeita à permissão `ads`.
