@@ -40,7 +40,8 @@ dados para confirmar cenário. Nenhuma mudança de banco ou integração Shopee.
 Validação local: página autenticada abriu em
 `/o/uberlandia/ads/analisar-print`; o print de 21/09–28/09 foi lido com os
 sete indicadores corretos e o Cenário 2 foi confirmado após informar meta,
-limite, consumo e última otimização. Publicada em produção no deploy
-`dpl_7dDZ8b4TzM1TBLZQUC6ZgRRp4SDi` em 30/09, a partir do commit `0f75899`.
-Os arquivos estáticos do OCR são públicos para carregamento pelo navegador; a
-rota de análise continua autenticada e sujeita à permissão `ads`.
+limite, consumo e última otimização. Publicada em produção a partir do commit
+`0f75899`; o ajuste de arquivos OCR do commit `1616d9f` ficou `Ready` no deploy
+`dpl_AbmiN6PimYMgnYPrHqcMixZm5e22` em 30/09. No domínio público,
+worker, modelo português e núcleo WASM respondem HTTP 200; a rota de análise
+redireciona visitantes sem sessão ao login e exige a permissão `ads`.

@@ -185,9 +185,9 @@ terceiros em escala e primeira geração de PDF por biblioteca).
 - Production URL: `https://oraculo.oliverhome.com.br`
 - Previous documented feature deploy: `dpl_AU7EmzD1oHZBMU68oKMZsACsmUqq`
   (2026-09-25, novas tarifas da calculadora, `Ready` em produção)
-- Latest deployment: `dpl_7dDZ8b4TzM1TBLZQUC6ZgRRp4SDi`
-  (2026-09-30, análise de prints Shopee Ads, `Ready` no domínio público;
-  ajuste de arquivos OCR estáticos em publicação)
+- Verified feature deployment: `dpl_AbmiN6PimYMgnYPrHqcMixZm5e22`
+  (2026-09-30, análise de prints Shopee Ads e arquivos OCR estáticos,
+  `Ready` no domínio público)
 - **Dois remotes**: `origin` = `Grupo-Jacartta/oraculo`, `personal` = `julianocalill/oraculo-jacartta`.
   A Vercel escuta o **`personal`** — push só no `origin` não publica.
 - Business-data reads run under RLS via an authenticated client (anon key + user
