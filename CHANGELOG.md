@@ -2,6 +2,25 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-09-30] — Prints dentro da aba Shopee Ads
+
+- Nova rota `/ads/analisar-print` sob a permissão existente `ads`, com botão na
+  aba Shopee Ads. OCR em português executado no navegador com arquivos
+  hospedados no Oráculo; a imagem não é enviada ao servidor.
+- Métricas conferíveis, contexto da campanha, quatro cenários da Aula 09,
+  cálculo condicional de ROAS de equilíbrio, pendências explícitas e cópia do
+  relatório. Sem alteração de campanha nem migration.
+
+## [2026-09-30] — Analisador local de prints Shopee Ads
+
+- Aplicação em `localhost:8765` para anexar um print de Performance, ler cards
+  pelo OCR nativo do macOS, corrigir os valores e receber recomendações da
+  matriz de quatro cenários do treinamento. A imagem é apagada após leitura;
+  não há chamada externa nem mudança de campanhas.
+- Classificação exige meta, orçamento limitado, consumo do limite e dias
+  completos posteriores à última otimização. Verba ilimitada e contexto
+  incompleto ficam sem cenário confirmado. Ferramenta local, sem deploy.
+
 ## [2026-09-29] — Full: Mercado Livre e Amazon sem anúncio/variação
 
 - No Mercado Livre Full e na Amazon Onsite o item da remessa é só o **produto

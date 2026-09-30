@@ -8641,3 +8641,57 @@ svg rect[data-tip].is-active {
 .market-trend > i[data-tip].is-active {
   filter: brightness(1.25);
 }
+
+/* Shopee Ads · análise de print no navegador. */
+.ads-top-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.ads-print { display: grid; gap: 20px; }
+.ads-print-panel[hidden] { display: none; }
+.ads-print-upload-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.ads-print-drop, .ads-print-preview { min-height: 240px; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center; overflow: hidden; }
+.ads-print-drop { border: 1px dashed var(--line-strong); background: var(--panel-soft); padding: 24px; cursor: pointer; gap: 11px; }
+.ads-print-drop:hover, .ads-print-drop:focus-within { border-color: var(--gold); background: var(--tint-soft); }
+.ads-print-drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.ads-print-drop-icon { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 17px; background: var(--tint-soft); color: var(--gold-text); font-size: 30px; }
+.ads-print-drop strong { color: var(--text); font-size: 16px; }
+.ads-print-drop small { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.ads-print-preview { background: var(--panel-soft); color: var(--muted); border: 1px solid var(--line); }
+.ads-print-preview img { width: 100%; max-height: 300px; object-fit: contain; }
+.ads-print-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 18px; color: var(--muted); font-size: 13px; }
+.ads-print-toolbar > span { overflow-wrap: anywhere; }
+.ads-print-toolbar button, .ads-print-copy { border: 0; border-radius: 999px; background: var(--gold); color: var(--on-gold); padding: 11px 17px; font-weight: 700; cursor: pointer; flex: none; }
+.ads-print-copy { background: var(--tint-soft); color: var(--gold-text); }
+.ads-print-toolbar button:disabled { opacity: .55; cursor: not-allowed; }
+.ads-print-error { color: var(--red); margin: 12px 0 0; }
+.ads-print-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 19px; }
+.ads-print-fields.ads-print-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ads-print-fields label { min-width: 0; display: grid; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 700; }
+.ads-print-fields label small { font-weight: 400; }
+.ads-print-fields :is(input,select) { width: 100%; min-height: 44px; border: 1px solid transparent; border-radius: 13px; background: var(--fill); color: var(--text); padding: 10px 12px; outline: none; }
+.ads-print-fields :is(input,select):focus-visible { border-color: var(--gold); }
+.ads-print-ocr { margin-top: 18px; color: var(--muted); font-size: 13px; }
+.ads-print-ocr summary { cursor: pointer; }
+.ads-print-ocr pre { white-space: pre-wrap; overflow: auto; max-height: 170px; padding: 14px; background: var(--panel-soft); border-radius: 13px; font-size: 11px; }
+.ads-print-checks { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 18px; color: var(--muted); font-size: 13px; }
+.ads-print-checks label { display: flex; gap: 8px; align-items: center; }
+.ads-print-checks input { accent-color: var(--gold); }
+.ads-print-scenario { border-radius: 17px; padding: 18px; background: var(--tint-soft); color: var(--text); font-size: 20px; font-weight: 750; margin: 16px 0; }
+.ads-print-scenario.pending { background: var(--fill); }
+.ads-print-report-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
+.ads-print-report-grid article, .ads-print-notes { border: 1px solid var(--line); background: var(--panel-soft); border-radius: 17px; padding: 17px; }
+.ads-print-report-grid article > small { color: var(--gold-text); letter-spacing: .08em; font-weight: 800; }
+.ads-print-report-grid h3, .ads-print-notes h3 { margin: 9px 0; font-size: 17px; }
+.ads-print-report-grid :is(ul,ol), .ads-print-notes ul { margin: 0; padding-left: 20px; color: var(--muted); line-height: 1.55; font-size: 13px; }
+.ads-print-report-grid li, .ads-print-notes li { margin: 8px 0; }
+.ads-print-notes { margin-top: 15px; }
+.ads-print-notes.warning { background: var(--warn-soft); border-color: var(--warn-line); }
+.ads-print-notes.warning h3 { color: var(--warn-text); }
+@media (max-width: 900px) {
+  .ads-print-fields.ads-print-metrics, .ads-print-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ads-print-upload-grid, .ads-print-report-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .ads-print-fields.ads-print-metrics, .ads-print-fields { grid-template-columns: 1fr; }
+  .ads-print-toolbar { align-items: stretch; flex-direction: column; }
+  .ads-print-toolbar button { align-self: flex-start; }
+  .ads-top-actions { justify-content: flex-start; }
+}

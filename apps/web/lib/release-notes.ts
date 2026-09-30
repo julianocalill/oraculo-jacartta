@@ -24,6 +24,18 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-09-30-shopee-ads-print",
+    title: "Analise prints de anúncios na Shopee Ads",
+    summary: "Envie uma captura de Performance e confira sugestões de ROAS e orçamento dentro do Oráculo.",
+    publishedAt: "2026-09-30T16:00:00-03:00",
+    changes: [{
+      title: "Do print à decisão",
+      description: "A imagem é lida no navegador; você confere os números e informa meta, limite e última otimização para identificar o cenário da campanha. A ferramenta não altera anúncios.",
+      href: "/ads/analisar-print",
+      linkLabel: "Analisar print"
+    }]
+  },
+  {
     id: "2026-09-28-analise-comercial-csv",
     title: "Exporte a Análise Comercial",
     summary: "Baixe em CSV os produtos vendidos no período que você selecionou.",

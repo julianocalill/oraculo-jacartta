@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Analisador de prints · Shopee Ads</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div class="brand"><span class="brand-mark">◎</span> ORÁCULO <span class="brand-separator">/</span> SHOPEE ADS</div>
+      <div class="hero-grid">
+        <div><p class="eyebrow">ANÁLISE LOCAL DE CAMPANHAS</p><h1>Do print à<br><em>próxima decisão.</em></h1><p class="lead">Envie uma captura da tela de performance. Confira os números lidos e receba sugestões baseadas em ROAS, orçamento e na metodologia dos quatro cenários.</p></div>
+        <div class="privacy"><span class="privacy-icon">⌁</span><strong>Seu print fica neste computador</strong><span>O reconhecimento de texto usa o macOS. Nenhuma imagem é enviada a um serviço externo ou armazenada pelo aplicativo.</span></div>
+      </div>
+    </header>
+
+    <section class="workspace">
+      <div class="section-title"><span class="step">01</span><div><p class="eyebrow">CAPTURA</p><h2>Envie o print do anúncio</h2></div></div>
+      <div class="upload-grid">
+        <label class="drop" id="drop-zone"><input id="image" type="file" accept="image/png,image/jpeg" aria-label="Selecionar print PNG ou JPEG"><span class="drop-icon">↑</span><strong>Arraste o print aqui ou clique para escolher</strong><small>PNG ou JPEG · até 10 MB · tela de Performance Shopee Ads</small></label>
+        <div class="preview" id="preview-wrap"><div class="preview-empty" id="preview-empty">Prévia do print</div><img id="preview" alt="Prévia do print enviado" hidden></div>
+      </div>
+      <div class="toolbar"><span id="file-name" class="muted">Nenhum arquivo selecionado</span><button id="read" class="primary" type="button" disabled>Ler print e gerar análise <span>↗</span></button></div>
+      <p id="status" class="status" role="status" aria-live="polite">Os números extraídos podem ser corrigidos antes da decisão.</p>
+    </section>
+
+    <section class="workspace" id="review" hidden>
+      <div class="section-title"><span class="step">02</span><div><p class="eyebrow">CONFERÊNCIA</p><h2>Valide os dados lidos</h2></div><span id="read-count" class="tag"></span></div>
+      <p class="intro">Valores abreviados, como “2,9k”, são aproximados. Corrija qualquer leitura antes de usar a recomendação.</p>
+      <div class="field-grid metrics">
+        <label>Impressões<input id="impressions" inputmode="decimal" placeholder="Ex.: 212000"></label>
+        <label>Cliques<input id="clicks" inputmode="decimal" placeholder="Ex.: 2900"></label>
+        <label>CTR (%)<input id="ctr" inputmode="decimal" placeholder="Ex.: 1,35"></label>
+        <label>Itens vendidos<input id="items_sold" inputmode="decimal" placeholder="Ex.: 233"></label>
+        <label>Vendas atribuídas (R$)<input id="sales" inputmode="decimal" placeholder="Ex.: 21278,11"></label>
+        <label>Investimento (R$)<input id="spend" inputmode="decimal" placeholder="Ex.: 2437,69"></label>
+        <label>ROAS exibido (×)<input id="roas" inputmode="decimal" placeholder="Ex.: 8,73"></label>
+      </div>
+      <details class="ocr-detail"><summary>Ver texto reconhecido no print</summary><pre id="ocr-lines"></pre></details>
+    </section>
+
+    <section class="workspace" id="context" hidden>
+      <div class="section-title"><span class="step">03</span><div><p class="eyebrow">CONTEXTO DA CAMPANHA</p><h2>Complete o que o print não mostra</h2></div></div>
+      <p class="intro">A classificação nos quatro cenários só é possível com meta, limite, consumo e datas da última otimização.</p>
+      <div class="field-grid">
+        <label>Loja <span class="optional">opcional</span><input id="store" placeholder="Ex.: Donacor"></label>
+        <label>Produto ou ID <span class="optional">opcional</span><input id="item" placeholder="Ex.: 43766973738"></label>
+        <label>Início do print<input id="period_start" type="date"></label>
+        <label>Fim do print<input id="period_end" type="date"></label>
+        <label>Meta de ROAS vigente (×)<input id="target_roas" inputmode="decimal" placeholder="Ex.: 12"></label>
+        <label>Última otimização<input id="last_optimization" type="date"></label>
+        <label>Orçamento da campanha<select id="budget_mode"><option value="unknown">Ainda não sei</option><option value="limited">Limite diário</option><option value="unlimited">Ilimitado</option></select></label>
+        <label id="budget-field">Limite diário (R$)<input id="daily_budget" inputmode="decimal" placeholder="Ex.: 100"></label>
+        <label>Consumiu o limite nos dias analisados?<select id="budget_consumed"><option value="unknown">Ainda não sei</option><option value="yes">Sim</option><option value="no">Não</option></select></label>
+        <label>Margem de contribuição antes de Ads (%) <span class="optional">opcional</span><input id="contribution_margin_pct" inputmode="decimal" placeholder="Ex.: 18"></label>
+      </div>
+      <div class="checks"><label><input id="recent_price_change" type="checkbox"> Preço ou frete mudou recentemente</label><label><input id="low_stock" type="checkbox"> Estoque baixo</label></div>
+      <div class="toolbar"><span class="muted">Use somente dias completos após a última otimização.</span><button id="analyze" class="primary" type="button">Atualizar recomendações <span>↗</span></button></div>
+    </section>
+
+    <section class="workspace report" id="report" hidden>
+      <div class="section-title"><span class="step">04</span><div><p class="eyebrow">LEITURA E AÇÃO</p><h2>O que fazer com este anúncio</h2></div><button id="copy" class="secondary" type="button">Copiar análise</button></div>
+      <div id="scenario" class="scenario"></div>
+      <div class="report-grid"><div class="report-card"><span class="card-index">01 / LEITURA</span><h3>O que os dados dizem</h3><ul id="findings"></ul></div><div class="report-card accent"><span class="card-index">02 / PRÓXIMOS PASSOS</span><h3>Sugestões</h3><ol id="actions"></ol></div></div>
+      <div id="warnings-wrap" class="notes warning" hidden><h3>Atenção antes de alterar</h3><ul id="warnings"></ul></div>
+      <div id="missing-wrap" class="notes" hidden><h3>Falta confirmar</h3><ul id="missing"></ul></div>
+      <p id="basis" class="footnote"></p>
+    </section>
+    <footer>ORÁCULO · ANÁLISE LOCAL · AS CAMPANHAS NÃO SÃO ALTERADAS POR ESTA FERRAMENTA</footer>
+  </main>
+</body>
+</html>

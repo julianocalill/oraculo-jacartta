@@ -33,7 +33,8 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-28.md](docs/project-status-2026-09-28.md) **← start here** (Giracasa: navegação, Análise Comercial e lacunas das fontes; visual iOS 27, menu em card, Minha conta, busca de usuários, seletor de operação e gráficos interativos)
+1. [docs/project-status-2026-09-30.md](docs/project-status-2026-09-30.md) **← start here** (análise de prints integrada à Shopee Ads; produção ainda não publicada)
+   — [docs/project-status-2026-09-28.md](docs/project-status-2026-09-28.md) (Giracasa: navegação, Análise Comercial e lacunas das fontes; visual iOS 27, menu em card, Minha conta, busca de usuários, seletor de operação e gráficos interativos)
    — [docs/project-status-2026-09-25.md](docs/project-status-2026-09-25.md) (tarifas da calculadora para Shopee, Mercado Livre e TikTok)
    — [docs/project-status-2026-09-23.md](docs/project-status-2026-09-23.md) (Fechamento oficial da Separação validado)
    — [docs/project-status-2026-09-22.md](docs/project-status-2026-09-22.md) (Separação por produto físico com kits abertos)
@@ -68,6 +69,12 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 ## Current production state
 
+Análise de prints Shopee Ads integrada à aba `/ads` em
+`/ads/analisar-print`. O protótipo local permanece em
+`tools/ads-print-analyzer`. Ver
+[status de 30/09](docs/project-status-2026-09-30.md) e
+[instruções de uso](tools/ads-print-analyzer/README.md).
+
 Giracasa/SP está ativa desde 22/09/2026. A Análise Comercial paulista foi
 preenchida para 30/07–28/09 e ganhou atualização horária própria em 28/09;
 o ajuste de navegação entre operações está descrito no
@@ -100,7 +107,7 @@ Shopee Ads publicado em produção em 11/09/2026: [status de 11/09](docs/project
 
 Correção de taxas TikTok publicada em 11/09/2026: [status](docs/project-status-2026-09-10.md).
 
-**Last update**: `2026-09-28` (see `docs/project-status-2026-09-28.md`) —
+**Last update**: `2026-09-30` (print analyzer in Shopee Ads; see `docs/project-status-2026-09-30.md`). Latest production update: `2026-09-28` (see `docs/project-status-2026-09-28.md`) —
 Giracasa/SP com histórico comercial e job horário próprios; o menu acompanha a
 operação da URL durante a navegação cliente. Atualização anterior da
 calculadora em `2026-09-25` —

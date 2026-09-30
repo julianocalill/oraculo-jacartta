@@ -23,7 +23,7 @@ export default async function AdsPage({searchParams}: {searchParams?: Promise<Pa
   const {allowed} = await requireTabAccess('ads');
   if (!allowed) return <NoAccess tab="ads" />;
   const alertCount = await loadActionableAlertCount();
-  if (await getRequestOperation() !== 'uberlandia') return <AppShell alertCount={alertCount}><section className="panel"><h1>Shopee Ads</h1><p>A integração de Ads ainda não foi configurada para esta operação.</p></section></AppShell>;
+  if (await getRequestOperation() !== 'uberlandia') return <AppShell alertCount={alertCount}><section className="panel"><h1>Shopee Ads</h1><p>A integração de Ads ainda não foi configurada para esta operação.</p><Link className="pill" href="/ads/analisar-print">Analisar um print →</Link></section></AppShell>;
   const raw = await searchParams ?? {};
   const today = getSaoPauloToday();
   const yesterday = adsShift(today,-1);
@@ -65,7 +65,7 @@ export default async function AdsPage({searchParams}: {searchParams?: Promise<Pa
   const campaigns = (data?.campaigns ?? []).filter(c=>(c.current.expense>0 || c.current.impressions>0 || c.current.direct_gmv>0) && `${c.ad_name} ${c.campaign_id}`.toLocaleLowerCase('pt-BR').includes(q.toLocaleLowerCase('pt-BR')));
   const presets=[{label:'Ontem',start:yesterday,end:yesterday},{label:'7 dias',start:adsShift(yesterday,-6),end:yesterday},{label:'30 dias',start:adsShift(yesterday,-29),end:yesterday}];
   return <AppShell alertCount={alertCount}>
-    <header className="topbar"><div><p className="eyebrow">Comercial · mídia paga</p><h1>Shopee Ads</h1><p>Quanto investimos, qual retorno os anúncios geram e onde agir hoje.</p></div><span className="pill">Dias encerrados · ROAS direto</span></header>
+    <header className="topbar"><div><p className="eyebrow">Comercial · mídia paga</p><h1>Shopee Ads</h1><p>Quanto investimos, qual retorno os anúncios geram e onde agir hoje.</p></div><div className="ads-top-actions"><Link className="pill pill-gold" href="/ads/analisar-print">Analisar print →</Link><span className="pill">Dias encerrados · ROAS direto</span></div></header>
     <section className="panel commercial-filters"><nav className="commercial-presets" aria-label="Períodos de Ads">{presets.map(p=><Link key={p.label} className={start===p.start&&end===p.end?'pill pill-gold':'pill'} href={`/ads?${new URLSearchParams({start:p.start,end:p.end,...(shop?{loja:shop}:{})})}`}>{p.label}</Link>)}</nav>
       <OperationForm key={`${start}:${end}:${shop}:${q}`} className="filter-form commercial-form" action="/ads">
         <label><span>Data inicial</span><input type="date" name="start" defaultValue={start} max={yesterday} required /></label>

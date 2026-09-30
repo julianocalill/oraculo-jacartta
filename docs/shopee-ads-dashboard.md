@@ -4,6 +4,29 @@ Implementado em 11/09/2026 em `/ads` (URL com operação: `/o/uberlandia/ads`).
 Permissão própria `ads`, liberada por administrador em Usuários. O acesso de
 Giracasa exibe integração ainda não configurada e nunca consulta dados MG.
 
+## Análise de print
+
+`/ads/analisar-print` herda a permissão `ads` e é acessível pelo botão da aba
+Shopee Ads, inclusive em operações sem a integração API de Ads. O usuário
+anexa PNG/JPEG da tela Performance; Tesseract.js 7 lê o print **no navegador**
+com worker, WASM e idioma português servidos pelo próprio Oráculo em
+`/ads-ocr/`. Nenhuma imagem é enviada ao servidor ou salva. O usuário confere
+e corrige investimento, vendas, ROAS, CTR, cliques, impressões e itens vendidos.
+
+As sugestões são calculadas em `packages/domain/ads-print.js`, independente do
+OCR. A matriz da Aula 09 do treinamento exige: meta vigente na janela,
+orçamento diário limitado, informação de consumo, período de dias completos
+posterior à última otimização. Orçamento ilimitado fica fora da matriz. ROAS
+de equilíbrio só aparece quando a margem de contribuição antes de Ads é
+informada; ROAS não é lucro, e “itens vendidos” não são pedidos. Dados ausentes
+geram pendências em vez de uma classificação inventada. Esta análise de print
+não consulta a API Shopee e não altera campanhas.
+
+`scripts/copy-ads-ocr-assets.mjs` copia os arquivos do OCR das dependências
+durante `dev` e `build`; o diretório gerado é ignorado pelo Git. O pacote de
+idioma fica fixado no lockfile. Os testes de domínio cobrem a extração dos
+cards, os quatro cenários e as travas de período, verba ilimitada e margem.
+
 ## Leitura
 
 - Padrão: últimos 30 dias encerrados em America/Sao_Paulo; presets ontem, 7 e

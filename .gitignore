@@ -17,6 +17,7 @@ tmp/
 # graphify (grafo gerado localmente)
 graphify-out/
 .pnpm-store/
+apps/web/public/ads-ocr/
 
 # Dumps de dados e artefatos locais — nunca versionar (repo público)
 output/
