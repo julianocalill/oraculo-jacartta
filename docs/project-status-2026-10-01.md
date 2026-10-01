@@ -47,7 +47,15 @@ duplicados, ausência, imutabilidade e permissões); oito testes de
 consolidação/CSV/WhatsApp, 93 de domínio, TypeScript e build Next.js passaram.
 RPC executada pelo service_role em ~140 ms na janela da manhã. Advisors
 consultados sem alteração das políticas/grants existentes. Frontend validado
-localmente, publicação em andamento para os dois remotes e Vercel.
+localmente. Commit `05618045a335387df7ae8e26d5c97cb064e16cdc` enviado a
+`origin/main` e `personal/main`. Deploy Vercel
+`dpl_DcjpYhUwU483BTKF4a46ijqDA6bN` confirmado **READY**, com o alias
+`oraculo.oliverhome.com.br`. Os formatadores do workflow publicado foram
+executados em memória com a lista da tarde: CSV com Grupo e três partes de
+mensagem abaixo de 3.400 caracteres, sem executar envios. A conferência
+visual da página autenticada no navegador não foi realizada nesta sessão
+(a aba de teste abriu o login); rotas constam no build e dados/grants foram
+validados no banco.
 
 ## Shopee Ads: cenários para orçamento ilimitado
 

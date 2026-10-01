@@ -16,6 +16,8 @@ Histórico de entregas e mudanças significativas.
   formatadores no CSV/WhatsApp. Nenhum envio disparado durante a implantação.
 - Duas regressões SQL, oito testes da consolidação, 93 de domínio, TypeScript
   e build passaram. A conciliação com o lote de etiquetas permanece pendente.
+- Commit `0561804` enviado aos dois remotes; deploy
+  `dpl_DcjpYhUwU483BTKF4a46ijqDA6bN` confirmado Ready no domínio de produção.
 
 ## [2026-10-01] — Cenários Shopee Ads com orçamento ilimitado
 

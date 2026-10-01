@@ -72,7 +72,8 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 Separação local: Full excluído em produção em 01/10 antes das contagens e
 expansão de kits. Recálculo da janela das 7h retirou 210 pedidos / 804 unidades;
-coluna Grupo congelada por SKU físico e total de unidades na tela.
+coluna Grupo congelada por SKU físico, impressão/CSV e total de unidades na
+tela publicados (commit `0561804`, Vercel Ready).
 Conciliação com as etiquetas ainda pendente. Ver
 [status de 01/10](docs/project-status-2026-10-01.md).
 
