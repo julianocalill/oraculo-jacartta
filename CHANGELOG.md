@@ -9,16 +9,18 @@ Histórico de entregas e mudanças significativas.
   lista geral. Período e canal são preservados.
 - Migration `20261001123201` aplicada nas duas operações: filtro antes da
   agregação/top 25, mesma regra de perdas e custos, consulta legada preservada.
-- Consulta e interface validadas; frontend ainda local, sem deploy.
+- Consulta e interface validadas; publicadas no commit `dc6d7fd`, Vercel
+  `dpl_4wTnX7DZz9YzgiLyNbnDHn118DtA` (`Ready`) em 01/10.
 
-## [2026-10-01] — Correção local do upload de devoluções TikTok
+## [2026-10-01] — Correção do upload de devoluções TikTok
 
 - Exportações com um elemento XML de linha por célula passam por normalização
   antes do ExcelJS, sem alterar IDs, datas, quantidades ou valores.
 - Seleção de loja para abas genéricas como “0”; abas identificadas continuam
   usando seu nome. O formulário mostra resultado, falha e avisos do importador.
 - Arquivo Donacor de 01/10 validado: 499 linhas válidas, zero erros e duplicatas.
-  Sem gravação no banco nem deploy. Evidências e recuperação da versão atual:
+  O diagnóstico não importou devoluções no banco. Correção publicada em 01/10;
+  arquivo original pode ser enviado com a loja Donacor selecionada. Evidências:
   `docs/project-status-2026-10-01.md`.
 
 ## [2026-09-30] — Prints dentro da aba Shopee Ads

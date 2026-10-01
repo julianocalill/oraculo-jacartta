@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-10-01.md](docs/project-status-2026-10-01.md) **← start here** (Devoluções: upload corrigido e filtro de SKUs por motivo; consulta aplicada, interface ainda local)
+1. [docs/project-status-2026-10-01.md](docs/project-status-2026-10-01.md) **← start here** (Devoluções: upload corrigido e filtro de SKUs por motivo; consulta e interface em produção)
    — [docs/project-status-2026-09-30.md](docs/project-status-2026-09-30.md) (análise de prints integrada à Shopee Ads em produção)
    — [docs/project-status-2026-09-28.md](docs/project-status-2026-09-28.md) (Giracasa: navegação, Análise Comercial e lacunas das fontes; visual iOS 27, menu em card, Minha conta, busca de usuários, seletor de operação e gráficos interativos)
    — [docs/project-status-2026-09-25.md](docs/project-status-2026-09-25.md) (tarifas da calculadora para Shopee, Mercado Livre e TikTok)
@@ -70,10 +70,9 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 ## Current production state
 
-Devoluções: correção do upload TikTok e filtro de SKUs por motivo validados
-localmente em 01/10. A consulta por motivo foi aplicada ao banco; a interface
-ainda não foi publicada. Ver [status de 01/10](docs/project-status-2026-10-01.md).
-O último deploy de interface verificado continua sendo o de 30/09 abaixo.
+Devoluções: correção do upload TikTok e filtro de SKUs por motivo publicados
+em 01/10. Migration aplicada nas duas operações e frontend `Ready` no domínio
+de produção. Ver [status de 01/10](docs/project-status-2026-10-01.md).
 
 Análise de prints Shopee Ads integrada à aba `/ads` em
 `/ads/analisar-print`. O protótipo local permanece em
@@ -113,7 +112,7 @@ Shopee Ads publicado em produção em 11/09/2026: [status de 11/09](docs/project
 
 Correção de taxas TikTok publicada em 11/09/2026: [status](docs/project-status-2026-09-10.md).
 
-**Last update**: `2026-09-30` (print analyzer in Shopee Ads in production; see `docs/project-status-2026-09-30.md`). Previous production update: `2026-09-28` (see `docs/project-status-2026-09-28.md`) —
+**Last update**: `2026-10-01` (TikTok returns upload and SKU reason filter in production; see `docs/project-status-2026-10-01.md`). Previous production updates: `2026-09-30` (see `docs/project-status-2026-09-30.md`) and `2026-09-28` (see `docs/project-status-2026-09-28.md`) —
 Giracasa/SP com histórico comercial e job horário próprios; o menu acompanha a
 operação da URL durante a navegação cliente. Atualização anterior da
 calculadora em `2026-09-25` —
@@ -189,10 +188,10 @@ terceiros em escala e primeira geração de PDF por biblioteca).
 ### Deployment & auth
 - **Multioperação**: URLs `/o/uberlandia/*` e `/o/giracasa/*`; permissões são por operação + aba. Giracasa está ativa desde 22/09, com carga parcial por fonte; ver `docs/giracasa-onboarding.md`.
 - Production URL: `https://oraculo.oliverhome.com.br`
-- Previous documented feature deploy: `dpl_AU7EmzD1oHZBMU68oKMZsACsmUqq`
-  (2026-09-25, novas tarifas da calculadora, `Ready` em produção)
-- Verified feature deployment: `dpl_AbmiN6PimYMgnYPrHqcMixZm5e22`
-  (2026-09-30, análise de prints Shopee Ads e arquivos OCR estáticos,
+- Previous documented feature deploy: `dpl_AbmiN6PimYMgnYPrHqcMixZm5e22`
+  (2026-09-30, análise de prints Shopee Ads, `Ready` em produção)
+- Verified feature deployment: `dpl_4wTnX7DZz9YzgiLyNbnDHn118DtA`
+  (2026-10-01, upload TikTok corrigido e SKUs por motivo, commit `dc6d7fd`,
   `Ready` no domínio público)
 - **Dois remotes**: `origin` = `Grupo-Jacartta/oraculo`, `personal` = `julianocalill/oraculo-jacartta`.
   A Vercel escuta o **`personal`** — push só no `origin` não publica.

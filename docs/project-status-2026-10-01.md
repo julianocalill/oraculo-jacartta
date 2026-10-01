@@ -1,10 +1,13 @@
 # Estado do projeto — 01/10/2026
 
-## Upload de devoluções TikTok: correção validada localmente
+## Upload de devoluções TikTok: correção em produção
 
-A interface de produção permanece no último deploy verificado em
-`docs/project-status-2026-09-30.md`. A correção de upload ainda não foi publicada.
-Não houve gravação de devoluções no banco durante o diagnóstico.
+Upload TikTok corrigido e filtro de SKUs por motivo publicados em 01/10.
+Commit `dc6d7fda3b636102ea48a4131eb92584ea65e861` enviado ao `main` dos
+remotes `origin` e `personal`. Deploy Vercel `dpl_4wTnX7DZz9YzgiLyNbnDHn118DtA`
+confirmado `Ready`, com o alias `oraculo.oliverhome.com.br` e a rota
+`devolucoes` no build. Não houve gravação de devoluções no banco durante
+o diagnóstico; a migration do filtro foi aplicada nas duas operações.
 
 ### Causa medida no arquivo real
 
@@ -54,22 +57,19 @@ e compatibilidade com arquivo normal e loja nomeada. TypeScript, os 91 testes
 de domínio e o build de produção passaram. A validação não exerceu gravação
 no Supabase nem o formulário em uma sessão de navegador autenticada.
 
-### Recuperação na versão atualmente publicada
+### Uso da versão publicada
 
-Abrir a exportação no Excel, renomear a aba `0` para `Donacor` e salvar como
-um novo `.xlsx` faz o editor reescrever a estrutura de linhas. Reenviar pela
-aba Devoluções. Depois da publicação da correção, o arquivo original poderá
-ser enviado diretamente, escolhendo Donacor no formulário.
-
-Antes de publicar, ajustar `publishedAt` da novidade correspondente ao horário
-real de publicação e seguir os dois remotes documentados no deployment map.
+Enviar o arquivo original pela aba Devoluções, escolhendo **Donacor** no
+formulário. Não é necessário renomear a aba nem salvar uma cópia no Excel.
+O manifesto de novidades foi atualizado para a publicação de 01/10 às 09h50
+(São Paulo).
 
 ## Filtro de SKUs pelo motivo da devolução
 
 Solicitação: clicar em “Avaria no transporte” na seção Motivos deve filtrar
 “Onde a devolução se concentra”; sem motivo escolhido, a lista continua geral.
 
-Implementado localmente em `/devolucoes`:
+Publicado em `/devolucoes`:
 
 - Motivo na tabela, legenda e fatia da rosca são links. `?motivo=` guarda a
   seleção, junto das datas e canal; troca de datas/canal mantém o motivo.
@@ -109,5 +109,7 @@ cabeçalhos de tabela enriquecidos pelo `TableColumnHints` global. A navegação
 e os filtros foram verificados após a recuperação; o enriquecimento global
 não foi alterado nesta entrega.
 
-O frontend continua sem deploy. Publicar após aplicar a migration já presente
-e ajustar o horário previsto do manifesto de novidades.
+O frontend foi publicado pela integração GitHub/Vercel a partir do `personal`.
+Build de produção concluído e domínio confirmado no deploy acima. A validação
+funcional do filtro foi feita localmente com dados reais; o upload foi validado
+no parser, sem inserir o lote Donacor em produção.
