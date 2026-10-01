@@ -18,9 +18,11 @@ dados, a ação é revisar a economia e o anúncio; não se inventa gasto máxim
 O protótipo macOS chama `packages/domain/ads-print.js` pelo Node.js, evitando
 duas regras distintas. Contrato: `docs/shopee-ads-dashboard.md`.
 
-Validação: testes de domínio para os quatro quadrantes, janelas inválidas e
-trava de margem; seis testes do protótipo macOS e TypeScript passaram.
-Publicação em produção pendente de validação visual e build.
+Validação: oito testes de domínio para os quatro quadrantes, janelas inválidas
+e trava de margem; seis testes do protótipo macOS, TypeScript e build Next.js
+passaram. Interface conferida visualmente. Commit `2d10dd9` enviado a `origin`
+e `personal`; deploy Vercel `dpl_4HJ3aX2spfodNYmjgX4eRAqN9C5d` ficou
+`Ready` com alias `oraculo.oliverhome.com.br` em 01/10.
 
 ## Upload de devoluções TikTok: correção em produção
 
