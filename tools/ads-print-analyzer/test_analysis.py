@@ -4,17 +4,19 @@ from unittest import TestCase, main
 from analysis import analyze, extract_metrics, number
 
 
-TODAY = date(2026, 9, 30)
+TODAY = date(2026, 10, 1)
 BASE = {
     "metrics": {"impressions": 212000, "clicks": 2900, "ctr": 1.35, "items_sold": 233,
                 "sales": 21278.11, "spend": 2437.69, "roas": 8.73},
     "target_roas": 8,
-    "budget_mode": "limited",
-    "daily_budget": 400,
-    "budget_consumed": "yes",
     "period_start": "2026-09-21",
     "period_end": "2026-09-28",
+    "previous_period_start": "2026-09-13",
+    "previous_period_end": "2026-09-20",
+    "previous_impressions": 180000,
+    "previous_clicks": 2500,
     "last_optimization": "2026-09-20",
+    "contribution_margin_pct": 20,
 }
 
 
@@ -38,28 +40,25 @@ class AdsAnalysisTests(TestCase):
         self.assertEqual(number("2.9k"), 2900)
         self.assertEqual(number("891.313"), 891313)
 
-    def test_four_scenarios_require_budget_and_recent_window(self):
-        for consumed, target, expected in [("no", 8, 1), ("no", 10, 2),
-                                           ("yes", 10, 3), ("yes", 8, 4)]:
-            report = analyze({**BASE, "budget_consumed": consumed, "target_roas": target}, TODAY)
+    def test_four_scenarios_use_roas_and_impression_growth(self):
+        for previous, target, expected in [(180000, 8, 1), (200000, 8, 2),
+                                           (180000, 10, 3), (200000, 10, 4)]:
+            report = analyze({**BASE, "previous_impressions": previous, "target_roas": target}, TODAY)
             self.assertEqual(report["scenario"], expected)
-
-    def test_unlimited_budget_cannot_be_classified_as_consumed(self):
-        report = analyze({**BASE, "budget_mode": "unlimited"}, TODAY)
-        self.assertIsNone(report["scenario"])
-        self.assertIn("ilimitado", report["scenario_name"].lower())
+            self.assertFalse(any("orçamento" in action for action in report["actions"]))
 
     def test_old_or_incomplete_window_is_not_confirmed(self):
-        for changed in [{"last_optimization": "2026-09-25"}, {"period_end": "2026-09-30"}]:
+        for changed in [{"last_optimization": "2026-09-25"}, {"period_end": "2026-10-01"},
+                        {"period_start": "2026-09-27"}, {"previous_impressions": 0}]:
             report = analyze({**BASE, **changed}, TODAY)
             self.assertIsNone(report["scenario"])
 
     def test_below_break_even_blocks_lowering_target(self):
-        report = analyze({**BASE, "budget_consumed": "no", "target_roas": 10,
+        report = analyze({**BASE, "previous_impressions": 200000, "target_roas": 10,
                           "contribution_margin_pct": 10}, TODAY)
-        self.assertEqual(report["scenario"], 2)
+        self.assertEqual(report["scenario"], 4)
         self.assertTrue(any("equilíbrio" in text for text in report["warnings"]))
-        self.assertFalse(any("teste meta de roas" in text.lower() for text in report["actions"]))
+        self.assertFalse(any("teste reduzir" in text.lower() for text in report["actions"]))
 
     def test_no_spend_is_not_a_scenario(self):
         report = analyze({**BASE, "metrics": {"sales": 0, "spend": 0, "roas": 0}}, TODAY)

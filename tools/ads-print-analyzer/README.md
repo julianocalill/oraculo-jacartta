@@ -2,8 +2,9 @@
 
 Aplicação para `localhost` que recebe um print da tela **Performance** de uma
 campanha Shopee Ads, lê os cards com o OCR nativo do macOS e apresenta sugestões
-revisáveis conforme a Aula 09 do `Software-Shopee-ADS-2.0.html` fornecido pelo
-usuário. O arquivo enviado é gravado só em um temporário durante a leitura e
+revisáveis para campanhas de orçamento ilimitado. A matriz original da Aula 09
+do `Software-Shopee-ADS-2.0.html` foi adaptada para comparar ROAS e crescimento
+de impressões. O arquivo enviado é gravado só em um temporário durante a leitura e
 apagado imediatamente. Não há chamada à API Shopee, IA externa, banco ou
 alteração de campanha.
 
@@ -21,24 +22,27 @@ Abrir `http://127.0.0.1:8765`. Para trocar a porta:
 ADS_PRINT_PORT=8766 python3 tools/ads-print-analyzer/server.py
 ```
 
-Requer macOS com Command Line Tools (`swiftc`) e Python 3. Na primeira leitura,
+Requer macOS com Command Line Tools (`swiftc`), Python 3 e Node.js. Na primeira leitura,
 o servidor compila `ocr.swift` em `/tmp`; as seguintes usam o binário em cache.
-O app escuta somente em `127.0.0.1`.
+O app escuta somente em `127.0.0.1`. As sugestões usam a mesma regra JS da
+versão web (`packages/domain/ads-print.js`), sem duplicar a matriz em Python.
 
 ## Fluxo
 
 1. Anexar PNG ou JPEG da tela de desempenho e conferir as métricas lidas.
-2. Informar meta de ROAS, tipo de orçamento, consumo do limite, datas do print
-   e data da última otimização. A margem de contribuição **antes de Ads** é
-   opcional, mas necessária para estimar o ROAS de equilíbrio.
-3. Atualizar recomendações. O cenário 1–4 só é confirmado se o período é
-   inteiramente posterior à otimização e termina antes do dia atual.
+2. Informar meta de ROAS, data da última mudança, margem antes de Ads e
+   impressões do mesmo anúncio em um período anterior de igual duração. Os
+   cliques anteriores completam o diagnóstico de CTR.
+3. Atualizar recomendações. O cenário 1–4 exige ao menos sete dias completos
+   após a última mudança e uma comparação anterior com a mesma quantidade de
+   dias. O critério operacional de crescimento de impressões é +10%.
 
-O print sozinho **não** prova qual meta valia no período, se o orçamento era
-ilimitado ou se o limite diário foi consumido. Valor 0 em configuração não
-prova orçamento ilimitado. Se o orçamento é ilimitado, a matriz de consumo da
-Aula 09 não se aplica. `Itens vendidos` são unidades, não pedidos. ROAS não é
-lucro. A estimativa de equilíbrio usa `100 / margem de contribuição (%)`.
+O print sozinho **não** prova qual meta valia no período nem a tendência de
+entrega. A matriz assume a regra operacional informada pelo usuário:
+orçamento sempre ilimitado. O limiar de +10% é do Oráculo, não da Shopee.
+`Itens vendidos` são unidades, não pedidos. ROAS não é lucro. A estimativa de
+equilíbrio usa `100 / margem de contribuição (%)` e bloqueia sugestões de
+redução de meta quando o novo alvo ficaria nesse equilíbrio ou abaixo dele.
 
 ## Verificação
 

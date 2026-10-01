@@ -8714,6 +8714,7 @@ svg rect[data-tip].is-active {
 .ads-print-report-grid article, .ads-print-notes { border: 1px solid var(--line); background: var(--panel-soft); border-radius: 17px; padding: 17px; }
 .ads-print-report-grid article > small { color: var(--gold-text); letter-spacing: .08em; font-weight: 800; }
 .ads-print-report-grid h3, .ads-print-notes h3 { margin: 9px 0; font-size: 17px; }
+.ads-print-report-grid article p { margin: 0; color: var(--muted); line-height: 1.55; font-size: 13px; }
 .ads-print-report-grid :is(ul,ol), .ads-print-notes ul { margin: 0; padding-left: 20px; color: var(--muted); line-height: 1.55; font-size: 13px; }
 .ads-print-report-grid li, .ads-print-notes li { margin: 8px 0; }
 .ads-print-notes { margin-top: 15px; }

@@ -1,5 +1,27 @@
 # Estado do projeto — 01/10/2026
 
+## Shopee Ads: cenários para orçamento ilimitado
+
+O usuário confirmou que todas as campanhas usam orçamento ilimitado. A aba
+`/ads/analisar-print` passa a cruzar ROAS realizado versus meta com crescimento
+de impressões do mesmo anúncio em períodos equivalentes. São quatro cenários:
+meta atingida/abaixo × entrega crescendo/sem crescimento. Crescimento significa
+ao menos +10% de impressões; é um critério operacional do Oráculo, não da
+Shopee. Cliques e CTR diagnosticam se a exposição trouxe tráfego.
+
+A classificação pede meta, impressões anteriores, dois períodos iguais de ao
+menos sete dias completos, e janela atual após a última mudança de meta ou
+oferta. Cliques anteriores completam a leitura, mas não bloqueiam cenário.
+Redução de meta de 10% só é sugerida com margem informada e tanto ROAS
+realizado quanto nova meta acima do equilíbrio (`100 / margem %`). Sem esses
+dados, a ação é revisar a economia e o anúncio; não se inventa gasto máximo.
+O protótipo macOS chama `packages/domain/ads-print.js` pelo Node.js, evitando
+duas regras distintas. Contrato: `docs/shopee-ads-dashboard.md`.
+
+Validação: testes de domínio para os quatro quadrantes, janelas inválidas e
+trava de margem; seis testes do protótipo macOS e TypeScript passaram.
+Publicação em produção pendente de validação visual e build.
+
 ## Upload de devoluções TikTok: correção em produção
 
 Upload TikTok corrigido e filtro de SKUs por motivo publicados em 01/10.

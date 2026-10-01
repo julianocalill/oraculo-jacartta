@@ -44,8 +44,15 @@ export function adsPrintExtract(words) {
 }
 
 const br = (value, decimals = 2) => value.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-const isoDate = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
-  && !Number.isNaN(Date.parse(`${value}T12:00:00Z`)) ? value : null;
+const isoDate = (value) => {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T12:00:00Z`);
+  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? null : value;
+};
+const daysInclusive = (start, end) => start && end && start <= end
+  ? Math.round((Date.parse(`${end}T12:00:00Z`) - Date.parse(`${start}T12:00:00Z`)) / 86400000) + 1 : null;
+const pctChange = (current, previous) => current !== null && previous > 0 ? (current / previous - 1) * 100 : null;
+const growthThreshold = 10; // critério operacional da matriz, não limiar oficial da Shopee
 const unique = (items) => [...new Set(items)];
 
 /** @param {Record<string,any>} data Dados conferidos pelo usuário. @param {string} today Dia civil de São Paulo. */
@@ -58,15 +65,20 @@ export function adsPrintAnalyze(data, today) {
   const actualRoas = spend > 0 ? calculatedRoas ?? displayedRoas : null;
   const targetRaw = adsPrintNumber(data.target_roas);
   const target = targetRaw > 0 ? targetRaw : null;
-  const budget = adsPrintNumber(data.daily_budget);
   const contributionRaw = adsPrintNumber(data.contribution_margin_pct);
   const contribution = contributionRaw > 0 && contributionRaw <= 100 ? contributionRaw : null;
   const breakEven = contribution ? 100 / contribution : null;
-  const budgetMode = ['limited', 'unlimited'].includes(data.budget_mode) ? data.budget_mode : 'unknown';
-  const consumed = ['yes', 'no'].includes(data.budget_consumed) ? data.budget_consumed : 'unknown';
   const start = isoDate(data.period_start);
   const end = isoDate(data.period_end);
   const optimized = isoDate(data.last_optimization);
+  const previousStart = isoDate(data.previous_period_start);
+  const previousEnd = isoDate(data.previous_period_end);
+  const previousImpressions = adsPrintNumber(data.previous_impressions);
+  const previousClicks = adsPrintNumber(data.previous_clicks);
+  const days = daysInclusive(start, end);
+  const previousDays = daysInclusive(previousStart, previousEnd);
+  const impressionChange = pctChange(metrics.impressions, previousImpressions);
+  const clickChange = pctChange(metrics.clicks, previousClicks);
   const findings = [], actions = [], missing = [], warnings = [];
   let scenario = null;
   let scenario_name = 'Cenário ainda não confirmado';
@@ -91,55 +103,68 @@ export function adsPrintAnalyze(data, today) {
     if (actualRoas >= target) findings.push(`O ROAS do print atinge a meta informada de ${br(target)}×.`);
     else {
       findings.push(`O ROAS do print está abaixo da meta informada de ${br(target)}×.`);
-      actions.push('Não aumente a verba apenas pelo volume de vendas. Confira preço, frete, foto principal, avaliações e margem de contribuição.');
+      actions.push('Antes de buscar mais entrega, confira preço, frete, foto principal, avaliações e margem de contribuição.');
     }
   } else if (!target) missing.push('Informe a meta de ROAS que valia no período do print.');
   if (breakEven && actualRoas !== null) {
     findings.push(`Com margem de contribuição de ${br(contribution, 1)}% antes de Ads, o ROAS de equilíbrio estimado é ${br(breakEven)}×.`);
-    if (actualRoas < breakEven) warnings.push('O ROAS está abaixo do equilíbrio estimado. Evite reduzir a meta ou elevar verba antes de corrigir a economia do produto.');
+    if (actualRoas <= breakEven) warnings.push('O ROAS está no equilíbrio estimado ou abaixo dele. Evite reduzir a meta ou buscar mais alcance antes de corrigir a economia do produto.');
     else findings.push('O ROAS supera o equilíbrio estimado; confirme custos, devoluções e atribuição antes de tratar isso como lucro líquido.');
+    if (target && target < breakEven) warnings.push('A meta de ROAS informada está abaixo do equilíbrio estimado; ela pode permitir gasto sem margem suficiente.');
   } else missing.push('Informe a margem de contribuição antes de Ads para avaliar a rentabilidade; ROAS sozinho não mede lucro.');
-
-  if (budgetMode === 'unlimited') {
-    scenario_name = 'Orçamento ilimitado: matriz de consumo não se aplica';
-    findings.push('Com verba ilimitada não existe teto diário a ser consumido; classifique por retorno e margem, não por “gastou tudo”.');
-  } else if (budgetMode === 'unknown') missing.push('Informe se a campanha tinha orçamento diário limitado ou ilimitado. Um valor 0 na API não prova que era ilimitado.');
-  else if (!budget) missing.push('Informe o limite diário positivo da campanha.');
-  else if (consumed === 'unknown') missing.push('Confirme se a campanha consumiu todo o limite diário nos dias analisados.');
 
   if (!start || !end || start > end) missing.push('Informe as datas inicial e final do print.');
   else if (end >= today) missing.push('Use somente dias completos; retire o dia atual da análise de cenário.');
-  if (!optimized) missing.push('Informe a data da última otimização da campanha.');
-  else if (start && start <= optimized) missing.push('O print inclui dias anteriores ou iguais à última otimização. Gere outro começando no dia seguinte.');
+  else if (days < 7) missing.push('Use ao menos sete dias completos para classificar a tendência de entrega.');
+  if (!optimized) missing.push('Informe a data da última mudança de meta ou oferta.');
+  else if (start && start <= optimized) missing.push('O print inclui dias anteriores ou iguais à última mudança. Gere outro começando no dia seguinte.');
+  if (!previousStart || !previousEnd || previousStart > previousEnd) missing.push('Informe as datas do período anterior de comparação.');
+  else if (start && (previousEnd >= start || previousDays !== days)) missing.push('O período anterior precisa terminar antes do atual e ter a mesma quantidade de dias.');
+  if (!(previousImpressions > 0)) missing.push('Informe as impressões do mesmo produto no período anterior.');
+  if (previousClicks === null) missing.push('Informe os cliques anteriores para conferir se mais exposição virou mais tráfego.');
+  if (!(metrics.impressions > 0)) missing.push('Confirme as impressões do print para medir a entrega.');
 
-  const comparable = spend > 0 && actualRoas !== null && target && budgetMode === 'limited' && budget > 0
-    && consumed !== 'unknown' && start && end && start <= end && end < today && optimized && start > optimized;
+  if (impressionChange !== null && days && previousDays === days && previousEnd < start) {
+    findings.push(`Impressões ${impressionChange >= 0 ? '+' : ''}${br(impressionChange, 1)}% frente a ${previousImpressions.toLocaleString('pt-BR')} no período anterior de ${days} dias.`);
+    if (clickChange !== null) findings.push(`Cliques ${clickChange >= 0 ? '+' : ''}${br(clickChange, 1)}% no mesmo comparativo.`);
+    if (impressionChange > 0 && clickChange !== null && clickChange <= 0)
+      warnings.push('A exposição cresceu, mas os cliques não acompanharam. Compare CTR, foto principal, preço e frete.');
+  }
+
+  const comparable = spend > 0 && sales !== null && actualRoas !== null && target && metrics.impressions > 0 && previousImpressions > 0
+    && start && end && days >= 7 && end < today && optimized && start > optimized
+    && previousStart && previousEnd && previousDays === days && previousEnd < start;
   if (comparable) {
     const reached = actualRoas >= target;
-    scenario = consumed === 'no' ? reached ? 1 : 2 : reached ? 4 : 3;
+    const growing = impressionChange >= growthThreshold;
+    scenario = reached ? growing ? 1 : 2 : growing ? 3 : 4;
     scenario_name = {
-      1: 'Cenário 1 · não consome e atinge a meta',
-      2: 'Cenário 2 · não consome e não atinge a meta',
-      3: 'Cenário 3 · consome e não atinge a meta',
-      4: 'Cenário 4 · consome e atinge a meta'
+      1: 'Cenário 1 · meta atingida e impressões crescendo',
+      2: 'Cenário 2 · meta atingida e impressões sem crescimento',
+      3: 'Cenário 3 · abaixo da meta e impressões crescendo',
+      4: 'Cenário 4 · abaixo da meta e impressões sem crescimento'
     }[scenario];
-    if (scenario === 1) actions.push(`Teste reduzir a meta de ROAS de ${br(target)}× para ${br(target * .8)}× e o teto diário de R$ ${br(budget)} para R$ ${br(budget * .8)} (−20% cada).`);
-    else if (scenario === 2) {
-      actions.push('Primeiro compare preço, frete e foto principal com concorrentes; corrija a oferta se necessário.');
-      if (breakEven && actualRoas < breakEven) warnings.push('O treinamento sugere meta e orçamento −20% neste cenário, mas baixar a meta agora pode ampliar gasto abaixo do equilíbrio. Corrija a margem primeiro.');
-      else actions.push(`Depois, teste meta de ROAS ${br(target * .8)}× e teto diário R$ ${br(budget * .8)} (−20% cada).`);
-    } else if (scenario === 3) actions.push(`Revise preço e foto; teste elevar a meta de ROAS de ${br(target)}× para ${br(target * 1.2)}× (+20%) e mantenha o teto de R$ ${br(budget)}.`);
-    else if (breakEven && actualRoas < breakEven) warnings.push('Embora a meta tenha sido atingida, o ROAS está abaixo do equilíbrio informado. Não escale antes de rever a meta e a margem.');
-    else actions.push(`Se houver estoque e margem, teste ampliar o teto diário de R$ ${br(budget)} para R$ ${br(budget * 1.2)} (+20%) mantendo a meta; acompanhe dias completos após a mudança.`);
+    if (scenario === 1) actions.push('Mantenha a meta enquanto retorno e alcance avançam. Observe se os cliques acompanham as impressões e se há estoque para a demanda.');
+    if (scenario === 2 || scenario === 4) {
+      if (scenario === 4) actions.push('Revise preço, frete, foto principal, avaliações e conversão; uma meta ambiciosa também pode restringir a entrega.');
+      if (breakEven && actualRoas > breakEven && target * .9 > breakEven) {
+        actions.push(`Se o objetivo for ganhar alcance, teste reduzir somente a meta de ROAS de ${br(target)}× para ${br(target * .9)}×; compare outros sete dias completos e interrompa se o retorno cair abaixo do equilíbrio.`);
+      } else if (!breakEven) actions.push('Calcule a margem antes de testar uma meta de ROAS menor; com verba ilimitada, mais entrega pode elevar o gasto.');
+      else actions.push('Não aplique a redução padrão de 10%: o ROAS realizado ou a nova meta ficaria no equilíbrio estimado ou abaixo dele. Revise a margem e a oferta primeiro.');
+    }
+    if (scenario === 3) actions.push('Há mais exposição, mas o retorno não acompanha a meta. Verifique CTR, conversão, preço, frete e avaliações antes de tentar ampliar o tráfego.');
+    if (scenario === 1 || scenario === 2) actions.push('Se as impressões aumentarem sem cliques proporcionais, teste uma melhoria por vez na foto principal e na oferta; acompanhe a taxa de cliques.');
   }
-  if (!scenario) actions.push('Reúna os dados pendentes antes de aplicar a regra dos quatro cenários. Enquanto isso, acompanhe o ROAS e limite perdas conforme a margem do produto.');
-  if (data.recent_price_change) findings.push('Preço ou frete mudou recentemente: compare somente dias completos depois da alteração antes de atribuir a mudança de ROAS a ela.');
+  if (!scenario) actions.push('Complete o período anterior equivalente e os dados pendentes antes de classificar o cenário. Enquanto isso, acompanhe ROAS, impressões, cliques e margem sem alterar a meta por um dia isolado.');
+  if (data.recent_price_change) findings.push('Preço ou frete mudou recentemente: confira se a data da última mudança informada inclui essa alteração e compare somente dias posteriores a ela.');
   if (data.low_stock) actions.push('Cheque o estoque disponível antes de escalar a entrega do anúncio.');
-  if (!(metrics.impressions > 0) || metrics.clicks === null) missing.push('Confira impressões e cliques para diagnosticar entrega e atração do anúncio.');
+  if (metrics.clicks === null) missing.push('Confira os cliques do print para diagnosticar atração do anúncio.');
   return {
     scenario, scenario_name, roas_used: actualRoas === null ? null : Number(actualRoas.toFixed(4)),
     break_even_roas: breakEven === null ? null : Number(breakEven.toFixed(4)),
+    impression_change_pct: impressionChange === null ? null : Number(impressionChange.toFixed(2)),
+    click_change_pct: clickChange === null ? null : Number(clickChange.toFixed(2)),
     findings, actions: unique(actions), missing: unique(missing), warnings: unique(warnings),
-    basis: 'Print conferido pelo usuário e Aula 09 do treinamento Shopee Ads. A imagem é lida no navegador; esta análise não consulta a API nem altera campanhas.'
+    basis: 'Matriz adaptada para orçamento ilimitado: ROAS versus meta × crescimento de impressões de pelo menos 10% entre períodos iguais de sete dias ou mais. O limiar de 10% é critério operacional, não regra da Shopee. O print é lido no navegador; esta análise não consulta a API nem altera campanhas.'
   };
 }

@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-10-01.md](docs/project-status-2026-10-01.md) **← start here** (Devoluções: upload corrigido e filtro de SKUs por motivo; consulta e interface em produção)
+1. [docs/project-status-2026-10-01.md](docs/project-status-2026-10-01.md) **← start here** (Devoluções em produção; nova matriz Shopee Ads para orçamento ilimitado)
    — [docs/project-status-2026-09-30.md](docs/project-status-2026-09-30.md) (análise de prints integrada à Shopee Ads em produção)
    — [docs/project-status-2026-09-28.md](docs/project-status-2026-09-28.md) (Giracasa: navegação, Análise Comercial e lacunas das fontes; visual iOS 27, menu em card, Minha conta, busca de usuários, seletor de operação e gráficos interativos)
    — [docs/project-status-2026-09-25.md](docs/project-status-2026-09-25.md) (tarifas da calculadora para Shopee, Mercado Livre e TikTok)

@@ -1,6 +1,6 @@
 const $ = (id) => document.getElementById(id);
 const metricIds = ["impressions", "clicks", "ctr", "items_sold", "sales", "spend", "roas"];
-const inputIds = ["target_roas", "daily_budget", "contribution_margin_pct", "period_start", "period_end", "last_optimization", "budget_mode", "budget_consumed", "store", "item"];
+const inputIds = ["target_roas", "contribution_margin_pct", "period_start", "period_end", "last_optimization", "previous_period_start", "previous_period_end", "previous_impressions", "previous_clicks", "store", "item"];
 let file = null;
 let report = null;
 let previewUrl = null;
@@ -27,6 +27,7 @@ function selectFile(selected) {
   $("review").hidden = true;
   $("context").hidden = true;
   $("report").hidden = true;
+  for (const id of ["period_start", "period_end", "previous_period_start", "previous_period_end", "previous_impressions", "previous_clicks"]) $(id).value = "";
   setStatus("Print pronto para leitura.");
 }
 
@@ -59,6 +60,15 @@ function inferPeriod(period) {
   const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   if (start) $("period_start").value = iso(start);
   $("period_end").value = iso(end);
+  if (start) {
+    const days = Math.round((end - start) / 86400000) + 1;
+    const previousEnd = new Date(start);
+    previousEnd.setDate(previousEnd.getDate() - 1);
+    const previousStart = new Date(previousEnd);
+    previousStart.setDate(previousStart.getDate() - days + 1);
+    $("previous_period_start").value = iso(previousStart);
+    $("previous_period_end").value = iso(previousEnd);
+  }
 }
 
 async function post(path, data) {
@@ -145,12 +155,6 @@ async function analyzePrint() {
   }
 }
 $("analyze").addEventListener("click", analyzePrint);
-$("budget_mode").addEventListener("change", () => {
-  $("budget-field").hidden = $("budget_mode").value !== "limited";
-  $("budget_consumed").disabled = $("budget_mode").value !== "limited";
-});
-$("budget_mode").dispatchEvent(new Event("change"));
-
 $("copy").addEventListener("click", async () => {
   if (!report) return;
   const lines = [

@@ -24,6 +24,18 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-01-shopee-ads-verba-ilimitada",
+    title: "Cenários de Ads para verba ilimitada",
+    summary: "Compare ROAS e alcance entre períodos equivalentes para decidir o próximo ajuste.",
+    publishedAt: "2026-10-01T10:10:00-03:00",
+    changes: [{
+      title: "Quatro cenários de entrega e retorno",
+      description: "A análise de prints agora considera orçamento sempre ilimitado. Informe a meta e as impressões de um período anterior igual; as sugestões respeitam a margem antes de propor uma meta menor.",
+      href: "/ads/analisar-print",
+      linkLabel: "Analisar anúncio"
+    }]
+  },
+  {
     id: "2026-10-01-tiktok-devolucoes-upload",
     title: "Devoluções por motivo e upload TikTok",
     summary: "Clique em um motivo para identificar os produtos afetados e confira o resultado dos uploads.",
@@ -43,11 +55,11 @@ const RELEASE_NOTES: ReleaseNote[] = [
   {
     id: "2026-09-30-shopee-ads-print",
     title: "Analise prints de anúncios na Shopee Ads",
-    summary: "Envie uma captura de Performance e confira sugestões de ROAS e orçamento dentro do Oráculo.",
+    summary: "Envie uma captura de Performance e confira sugestões de ROAS dentro do Oráculo.",
     publishedAt: "2026-09-30T16:00:00-03:00",
     changes: [{
       title: "Do print à decisão",
-      description: "A imagem é lida no navegador; você confere os números e informa meta, limite e última otimização para identificar o cenário da campanha. A ferramenta não altera anúncios.",
+      description: "A imagem é lida no navegador; você confere os números e informa o contexto para identificar o cenário da campanha. A ferramenta não altera anúncios.",
       href: "/ads/analisar-print",
       linkLabel: "Analisar print"
     }]

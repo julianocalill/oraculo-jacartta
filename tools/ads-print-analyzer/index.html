@@ -12,7 +12,7 @@
     <header class="hero">
       <div class="brand"><span class="brand-mark">◎</span> ORÁCULO <span class="brand-separator">/</span> SHOPEE ADS</div>
       <div class="hero-grid">
-        <div><p class="eyebrow">ANÁLISE LOCAL DE CAMPANHAS</p><h1>Do print à<br><em>próxima decisão.</em></h1><p class="lead">Envie uma captura da tela de performance. Confira os números lidos e receba sugestões baseadas em ROAS, orçamento e na metodologia dos quatro cenários.</p></div>
+        <div><p class="eyebrow">ANÁLISE LOCAL DE CAMPANHAS</p><h1>Do print à<br><em>próxima decisão.</em></h1><p class="lead">Envie uma captura da tela de performance. Confira os números lidos e receba sugestões para campanhas com orçamento ilimitado.</p></div>
         <div class="privacy"><span class="privacy-icon">⌁</span><strong>Seu print fica neste computador</strong><span>O reconhecimento de texto usa o macOS. Nenhuma imagem é enviada a um serviço externo ou armazenada pelo aplicativo.</span></div>
       </div>
     </header>
@@ -25,6 +25,17 @@
       </div>
       <div class="toolbar"><span id="file-name" class="muted">Nenhum arquivo selecionado</span><button id="read" class="primary" type="button" disabled>Ler print e gerar análise <span>↗</span></button></div>
       <p id="status" class="status" role="status" aria-live="polite">Os números extraídos podem ser corrigidos antes da decisão.</p>
+    </section>
+
+    <section class="workspace">
+      <div class="section-title"><div><p class="eyebrow">MATRIZ · VERBA ILIMITADA</p><h2>Os quatro cenários</h2></div></div>
+      <p class="intro">Entrega cresce quando as impressões aumentam pelo menos 10% frente a um período anterior igual. Esse corte é um critério do Oráculo, não uma regra oficial da Shopee.</p>
+      <div class="report-grid">
+        <div class="report-card"><span class="card-index">01 / ROAS NA META · ENTREGA CRESCE</span><h3>Manter e acompanhar</h3><p>Veja se cliques e margem acompanham o alcance.</p></div>
+        <div class="report-card"><span class="card-index">02 / ROAS NA META · ENTREGA NÃO CRESCE</span><h3>Testar mais alcance</h3><p>Se a margem permitir, teste reduzir somente a meta de ROAS em até 10%.</p></div>
+        <div class="report-card"><span class="card-index">03 / ROAS ABAIXO · ENTREGA CRESCE</span><h3>Corrigir retorno</h3><p>Revise CTR, conversão e oferta antes de ampliar a exposição.</p></div>
+        <div class="report-card"><span class="card-index">04 / ROAS ABAIXO · ENTREGA NÃO CRESCE</span><h3>Investigar restrições</h3><p>Compare meta, histórico e margem; corrija a oferta antes de abrir a entrega.</p></div>
+      </div>
     </section>
 
     <section class="workspace" id="review" hidden>
@@ -44,21 +55,26 @@
 
     <section class="workspace" id="context" hidden>
       <div class="section-title"><span class="step">03</span><div><p class="eyebrow">CONTEXTO DA CAMPANHA</p><h2>Complete o que o print não mostra</h2></div></div>
-      <p class="intro">A classificação nos quatro cenários só é possível com meta, limite, consumo e datas da última otimização.</p>
+      <p class="intro">Os quatro cenários cruzam ROAS versus meta com o crescimento de impressões em relação a um período anterior equivalente. O orçamento é sempre ilimitado.</p>
       <div class="field-grid">
         <label>Loja <span class="optional">opcional</span><input id="store" placeholder="Ex.: Donacor"></label>
         <label>Produto ou ID <span class="optional">opcional</span><input id="item" placeholder="Ex.: 43766973738"></label>
         <label>Início do print<input id="period_start" type="date"></label>
         <label>Fim do print<input id="period_end" type="date"></label>
         <label>Meta de ROAS vigente (×)<input id="target_roas" inputmode="decimal" placeholder="Ex.: 12"></label>
-        <label>Última otimização<input id="last_optimization" type="date"></label>
-        <label>Orçamento da campanha<select id="budget_mode"><option value="unknown">Ainda não sei</option><option value="limited">Limite diário</option><option value="unlimited">Ilimitado</option></select></label>
-        <label id="budget-field">Limite diário (R$)<input id="daily_budget" inputmode="decimal" placeholder="Ex.: 100"></label>
-        <label>Consumiu o limite nos dias analisados?<select id="budget_consumed"><option value="unknown">Ainda não sei</option><option value="yes">Sim</option><option value="no">Não</option></select></label>
-        <label>Margem de contribuição antes de Ads (%) <span class="optional">opcional</span><input id="contribution_margin_pct" inputmode="decimal" placeholder="Ex.: 18"></label>
+        <label>Última mudança de meta ou oferta<input id="last_optimization" type="date"></label>
+        <label>Margem de contribuição antes de Ads (%) <span class="optional">recomendada</span><input id="contribution_margin_pct" inputmode="decimal" placeholder="Ex.: 18"></label>
+      </div>
+      <h3>Comparação anterior do mesmo anúncio</h3>
+      <p class="intro">Use ao menos sete dias completos após a última mudança e outro período de igual duração. As datas anteriores são sugeridas pelo print; confira antes de analisar.</p>
+      <div class="field-grid">
+        <label>Início anterior<input id="previous_period_start" type="date"></label>
+        <label>Fim anterior<input id="previous_period_end" type="date"></label>
+        <label>Impressões anteriores<input id="previous_impressions" inputmode="numeric" placeholder="Ex.: 180000"></label>
+        <label>Cliques anteriores <span class="optional">recomendado</span><input id="previous_clicks" inputmode="numeric" placeholder="Ex.: 2500"></label>
       </div>
       <div class="checks"><label><input id="recent_price_change" type="checkbox"> Preço ou frete mudou recentemente</label><label><input id="low_stock" type="checkbox"> Estoque baixo</label></div>
-      <div class="toolbar"><span class="muted">Use somente dias completos após a última otimização.</span><button id="analyze" class="primary" type="button">Atualizar recomendações <span>↗</span></button></div>
+      <div class="toolbar"><span class="muted">Classificação exige períodos comparáveis; nenhum ajuste altera a campanha automaticamente.</span><button id="analyze" class="primary" type="button">Atualizar recomendações <span>↗</span></button></div>
     </section>
 
     <section class="workspace report" id="report" hidden>

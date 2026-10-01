@@ -2,6 +2,16 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-10-01] — Cenários Shopee Ads com orçamento ilimitado
+
+- A análise de prints substitui a matriz de consumo do limite diário por
+  ROAS versus meta × crescimento de impressões do mesmo produto em períodos
+  equivalentes. Cliques e CTR mostram se o alcance virou tráfego.
+- Exige sete dias completos após a última mudança, comparação anterior da
+  mesma duração e margem para sugerir qualquer redução numérica da meta.
+  Nenhum teto ou ajuste de orçamento é solicitado. O protótipo macOS reutiliza
+  a mesma regra do domínio JS para evitar divergência.
+
 ## [2026-10-01] — SKUs de devoluções filtrados por motivo
 
 - Clicar no motivo, na legenda ou na fatia da rosca filtra “Onde a devolução

@@ -36,6 +36,14 @@ function periodFromPrint(period: Reading['period'], today: string) {
   return { start: start ?? '', end };
 }
 
+function precedingPeriod(start: string, end: string) {
+  if (!start || !end || start > end) return { start:'', end:'' };
+  const days = Math.round((Date.parse(`${end}T12:00:00Z`) - Date.parse(`${start}T12:00:00Z`)) / 86400000) + 1;
+  const previousEnd = new Date(Date.parse(`${start}T12:00:00Z`) - 86400000);
+  const previousStart = new Date(previousEnd.getTime() - (days - 1) * 86400000);
+  return { start:previousStart.toISOString().slice(0,10), end:previousEnd.toISOString().slice(0,10) };
+}
+
 async function imageDimensions(file: File) {
   const url = URL.createObjectURL(file);
   try {
@@ -62,9 +70,10 @@ export function AdsPrintAnalyzer({ today }: { today: string }) {
   const [periodEnd, setPeriodEnd] = useState('');
   const [target, setTarget] = useState('');
   const [optimized, setOptimized] = useState('');
-  const [budgetMode, setBudgetMode] = useState('unknown');
-  const [budget, setBudget] = useState('');
-  const [consumed, setConsumed] = useState('unknown');
+  const [previousStart, setPreviousStart] = useState('');
+  const [previousEnd, setPreviousEnd] = useState('');
+  const [previousImpressions, setPreviousImpressions] = useState('');
+  const [previousClicks, setPreviousClicks] = useState('');
   const [contribution, setContribution] = useState('');
   const [store, setStore] = useState('');
   const [item, setItem] = useState('');
@@ -87,6 +96,7 @@ export function AdsPrintAnalyzer({ today }: { today: string }) {
     setError(''); setFile(selected); setPreview(URL.createObjectURL(selected));
     setReading(null); setReport(null); setOcrText(''); setMetrics(emptyMetrics());
     setPeriodStart(''); setPeriodEnd('');
+    setPreviousStart(''); setPreviousEnd(''); setPreviousImpressions(''); setPreviousClicks('');
   }
 
   function drop(event: DragEvent<HTMLLabelElement>) {
@@ -94,9 +104,11 @@ export function AdsPrintAnalyzer({ today }: { today: string }) {
     choose(event.dataTransfer.files.item(0));
   }
 
-  function currentInput(nextMetrics = metrics, nextStart = periodStart, nextEnd = periodEnd) {
-    return { metrics: nextMetrics, target_roas: target, budget_mode: budgetMode, daily_budget: budget,
-      budget_consumed: consumed, period_start: nextStart, period_end: nextEnd,
+  function currentInput(nextMetrics = metrics, nextStart = periodStart, nextEnd = periodEnd,
+    nextPreviousStart = previousStart, nextPreviousEnd = previousEnd) {
+    return { metrics: nextMetrics, target_roas: target, period_start: nextStart, period_end: nextEnd,
+      previous_period_start: nextPreviousStart, previous_period_end: nextPreviousEnd,
+      previous_impressions: previousImpressions, previous_clicks: previousClicks,
       last_optimization: optimized, contribution_margin_pct: contribution,
       recent_price_change: priceChanged, low_stock: lowStock };
   }
@@ -119,10 +131,14 @@ export function AdsPrintAnalyzer({ today }: { today: string }) {
       const parsed = adsPrintExtract(words);
       const nextMetrics = Object.fromEntries(keys.map(key=>[key, parsed.metrics[key] == null ? '' : String(parsed.metrics[key]).replace('.', ',')])) as Metrics;
       const period = periodFromPrint(parsed.period, today);
+      const previous = precedingPeriod(period.start, period.end);
       setMetrics(nextMetrics); setReading(parsed); setOcrText(result.data.text);
       if (period.start) setPeriodStart(period.start);
       if (period.end) setPeriodEnd(period.end);
-      setReport(adsPrintAnalyze(currentInput(nextMetrics, period.start || periodStart, period.end || periodEnd), today));
+      if (previous.start) setPreviousStart(previous.start);
+      if (previous.end) setPreviousEnd(previous.end);
+      setReport(adsPrintAnalyze(currentInput(nextMetrics, period.start || periodStart, period.end || periodEnd,
+        previous.start || previousStart, previous.end || previousEnd), today));
       setProgress('Leitura concluída. Confira os valores antes de usar as sugestões.');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível reconhecer o print. Tente outro arquivo ou navegador.');
@@ -163,6 +179,17 @@ export function AdsPrintAnalyzer({ today }: { today: string }) {
       {error?<p className="ads-print-error" role="alert">{error}</p>:null}
     </section>
 
+    <section className="panel ads-print-panel">
+      <div className="section-head"><div><p className="eyebrow">Matriz · verba ilimitada</p><h2>Os quatro cenários</h2></div></div>
+      <p className="commercial-muted">Entrega significa crescimento de pelo menos 10% nas impressões frente a um período anterior de igual duração. Esse corte é um critério de análise do Oráculo, não uma regra da Shopee.</p>
+      <div className="ads-print-report-grid">
+        <article><small>01 / ROAS NA META · ENTREGA CRESCE</small><h3>Manter e acompanhar</h3><p>Confira se cliques e margem acompanham o alcance. Evite mudar uma campanha que está avançando.</p></article>
+        <article><small>02 / ROAS NA META · ENTREGA NÃO CRESCE</small><h3>Testar mais alcance</h3><p>Se a margem permitir, teste reduzir apenas a meta de ROAS em até 10% e compare a próxima janela.</p></article>
+        <article><small>03 / ROAS ABAIXO · ENTREGA CRESCE</small><h3>Corrigir retorno</h3><p>Revise CTR, conversão e oferta antes de buscar mais exposição.</p></article>
+        <article><small>04 / ROAS ABAIXO · ENTREGA NÃO CRESCE</small><h3>Investigar restrições</h3><p>Compare meta, histórico e margem. Ajuste a oferta antes de abrir a entrega quando o retorno não sustenta o gasto.</p></article>
+      </div>
+    </section>
+
     <section className="panel ads-print-panel" hidden={!reading}>
       <div className="section-head"><div><p className="eyebrow">02 · Conferência</p><h2>Valide os dados lidos</h2></div><span className="pill">{reading?.recognized_words ?? 0} palavras lidas</span></div>
       <p className="commercial-muted">Valores abreviados, como “2,9k”, são aproximados. Corrija o que o OCR tiver lido errado.</p>
@@ -172,21 +199,26 @@ export function AdsPrintAnalyzer({ today }: { today: string }) {
 
     <section className="panel ads-print-panel" hidden={!reading}>
       <div className="section-head"><div><p className="eyebrow">03 · Contexto</p><h2>Complete o que o print não mostra</h2></div></div>
-      <p className="commercial-muted">A matriz dos quatro cenários exige meta, orçamento, consumo e dias completos desde a última otimização.</p>
+      <p className="commercial-muted">Orçamento ilimitado em todas as campanhas. Os quatro cenários cruzam ROAS versus meta com o crescimento das impressões em relação a um período anterior equivalente.</p>
       <div className="ads-print-fields">
         <label><span>Loja <small>opcional</small></span><input value={store} onChange={event=>setStore(event.target.value)} placeholder="Ex.: Donacor" /></label>
         <label><span>Produto ou ID <small>opcional</small></span><input value={item} onChange={event=>setItem(event.target.value)} placeholder="Ex.: 43766973738" /></label>
         <label><span>Início do print</span><input type="date" value={periodStart} max={today} onChange={event=>setPeriodStart(event.target.value)} /></label>
         <label><span>Fim do print</span><input type="date" value={periodEnd} max={today} onChange={event=>setPeriodEnd(event.target.value)} /></label>
         <label><span>Meta de ROAS vigente (×)</span><input inputMode="decimal" value={target} onChange={event=>setTarget(event.target.value)} placeholder="Ex.: 12" /></label>
-        <label><span>Última otimização</span><input type="date" value={optimized} max={today} onChange={event=>setOptimized(event.target.value)} /></label>
-        <label><span>Orçamento da campanha</span><select value={budgetMode} onChange={event=>setBudgetMode(event.target.value)}><option value="unknown">Ainda não sei</option><option value="limited">Limite diário</option><option value="unlimited">Ilimitado</option></select></label>
-        {budgetMode==='limited'?<label><span>Limite diário (R$)</span><input inputMode="decimal" value={budget} onChange={event=>setBudget(event.target.value)} placeholder="Ex.: 100" /></label>:null}
-        {budgetMode==='limited'?<label><span>Consumiu o limite nos dias analisados?</span><select value={consumed} onChange={event=>setConsumed(event.target.value)}><option value="unknown">Ainda não sei</option><option value="yes">Sim</option><option value="no">Não</option></select></label>:null}
-        <label><span>Margem de contribuição antes de Ads (%) <small>opcional</small></span><input inputMode="decimal" value={contribution} onChange={event=>setContribution(event.target.value)} placeholder="Ex.: 18" /></label>
+        <label><span>Última mudança de meta ou oferta</span><input type="date" value={optimized} max={today} onChange={event=>setOptimized(event.target.value)} /></label>
+        <label><span>Margem de contribuição antes de Ads (%) <small>recomendada</small></span><input inputMode="decimal" value={contribution} onChange={event=>setContribution(event.target.value)} placeholder="Ex.: 18" /></label>
+      </div>
+      <h3>Comparação anterior do mesmo anúncio</h3>
+      <p className="commercial-muted">Use ao menos sete dias completos após a última otimização e compare com outro período de igual duração. As datas anteriores são sugeridas pelo print; confira antes de analisar.</p>
+      <div className="ads-print-fields">
+        <label><span>Início anterior</span><input type="date" value={previousStart} max={today} onChange={event=>setPreviousStart(event.target.value)} /></label>
+        <label><span>Fim anterior</span><input type="date" value={previousEnd} max={today} onChange={event=>setPreviousEnd(event.target.value)} /></label>
+        <label><span>Impressões anteriores</span><input inputMode="numeric" value={previousImpressions} onChange={event=>setPreviousImpressions(event.target.value)} placeholder="Ex.: 180000" /></label>
+        <label><span>Cliques anteriores <small>recomendado</small></span><input inputMode="numeric" value={previousClicks} onChange={event=>setPreviousClicks(event.target.value)} placeholder="Ex.: 2500" /></label>
       </div>
       <div className="ads-print-checks"><label><input type="checkbox" checked={priceChanged} onChange={event=>setPriceChanged(event.target.checked)} /> Preço ou frete mudou recentemente</label><label><input type="checkbox" checked={lowStock} onChange={event=>setLowStock(event.target.checked)} /> Estoque baixo</label></div>
-      <div className="ads-print-toolbar"><span>Use apenas dias completos posteriores à última mudança.</span><button type="button" onClick={updateReport}>Atualizar recomendações</button></div>
+      <div className="ads-print-toolbar"><span>Classificação exige períodos comparáveis; nenhum ajuste altera a campanha automaticamente.</span><button type="button" onClick={updateReport}>Atualizar recomendações</button></div>
     </section>
 
     <section className="panel ads-print-panel" hidden={!report}>

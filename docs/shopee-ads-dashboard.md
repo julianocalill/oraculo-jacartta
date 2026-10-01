@@ -15,18 +15,37 @@ com worker, WASM e idioma português servidos pelo próprio Oráculo em
 e corrige investimento, vendas, ROAS, CTR, cliques, impressões e itens vendidos.
 
 As sugestões são calculadas em `packages/domain/ads-print.js`, independente do
-OCR. A matriz da Aula 09 do treinamento exige: meta vigente na janela,
-orçamento diário limitado, informação de consumo, período de dias completos
-posterior à última otimização. Orçamento ilimitado fica fora da matriz. ROAS
-de equilíbrio só aparece quando a margem de contribuição antes de Ads é
-informada; ROAS não é lucro, e “itens vendidos” não são pedidos. Dados ausentes
-geram pendências em vez de uma classificação inventada. Esta análise de print
-não consulta a API Shopee e não altera campanhas.
+OCR. Desde 01/10/2026, o orçamento é tratado como **sempre ilimitado**, conforme
+a regra operacional informada pelo usuário. A matriz original da Aula 09,
+baseada em consumir o teto diário, foi substituída por ROAS realizado versus
+meta × crescimento de impressões do mesmo anúncio em dois períodos de igual
+duração. O crescimento mínimo de **10%** é um critério operacional do Oráculo,
+não uma regra oficial da Shopee:
+
+| Cenário | ROAS | Impressões | Ação inicial |
+| --- | --- | --- | --- |
+| 1 | Atinge a meta | Crescem ≥10% | Manter meta; conferir se cliques, margem e estoque acompanham. |
+| 2 | Atinge a meta | Crescem <10% | Se houver margem, testar só a meta de ROAS −10%; acompanhar a próxima janela. |
+| 3 | Abaixo da meta | Crescem ≥10% | Corrigir atração/conversão e oferta antes de buscar mais alcance. |
+| 4 | Abaixo da meta | Crescem <10% | Investigar meta restritiva e oferta; só testar meta menor se a economia suportar. |
+
+Exigem-se ao menos sete dias completos após a última mudança de meta/oferta e
+um período anterior sem sobreposição, com igual número de dias e impressões
+positivas. Cliques anteriores são recomendados para verificar se exposição
+virou tráfego; não participam da classificação. Uma redução de 10% só é
+sugerida com margem informada, ROAS realizado acima do equilíbrio estimado e
+nova meta **acima** dele. ROAS de equilíbrio = `100 / margem de contribuição
+antes de Ads (%)`; ROAS não é lucro, e “itens vendidos” não são pedidos. Dados
+ausentes geram pendências. Esta análise não consulta a API Shopee nem altera
+campanhas. A Shopee confirma que meta de ROAS alta pode restringir a entrega,
+mas não fornece esse corte de 10%: https://ads.shopee.com.br/learn/faq/473/1667.
 
 `scripts/copy-ads-ocr-assets.mjs` copia os arquivos do OCR das dependências
 durante `dev` e `build`; o diretório gerado é ignorado pelo Git. O pacote de
 idioma fica fixado no lockfile. Os testes de domínio cobrem a extração dos
-cards, os quatro cenários e as travas de período, verba ilimitada e margem.
+cards, os quatro cenários e as travas de período, comparação e margem. O
+protótipo macOS em `tools/ads-print-analyzer` chama o mesmo módulo JS para
+calcular cenários, mantendo a regra em um único lugar.
 
 ## Leitura
 
