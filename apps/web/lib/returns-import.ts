@@ -27,6 +27,53 @@
 //     desde 2019 — sem horário de verão).
 
 import ExcelJS from "exceljs";
+import { unzipSync, zipSync, strFromU8, strToU8 } from "fflate";
+
+/** Algumas exportações TikTok repetem <row r="N"> uma vez por célula.
+ * ExcelJS substitui as linhas anteriores e só mantém a última coluna.
+ * Agrupa os fragmentos pelo número original, preservando células e IDs texto.
+ * Planilhas normais passam sem serem recompactadas.
+ */
+function normalizeWorksheetRows(buffer: ArrayBuffer | Buffer): Uint8Array {
+  const original = new Uint8Array(buffer);
+  const files = unzipSync(original);
+  let changed = false;
+  for (const path of Object.keys(files)) {
+    if (!/^xl\/worksheets\/sheet\d+\.xml$/.test(path)) continue;
+    const xml = strFromU8(files[path]);
+    const pattern = /(<row\b[^>]*\br="(\d+)"[^>]*>)([\s\S]*?)<\/row>/g;
+    const groups = new Map<string, { opening: string; cells: string }>();
+    let repeated = false;
+    for (const match of xml.matchAll(pattern)) {
+      const [, opening, number, cells] = match;
+      const group = groups.get(number);
+      if (group) {
+        group.cells += cells;
+        repeated = true;
+      } else {
+        groups.set(number, { opening, cells });
+      }
+    }
+    if (!repeated) continue;
+    const emitted = new Set<string>();
+    const normalized = xml.replace(pattern, (_match, _opening, number: string) => {
+      if (emitted.has(number)) return "";
+      emitted.add(number);
+      const group = groups.get(number)!;
+      return `${group.opening}${group.cells}</row>`;
+    });
+    files[path] = strToU8(normalized);
+    changed = true;
+  }
+  return changed ? zipSync(files) : original;
+}
+
+export const TIKTOK_ACCOUNTS = ["Donacor", "Aliver", "Jacartta"] as const;
+export type TikTokAccount = (typeof TIKTOK_ACCOUNTS)[number];
+
+function isGenericSheetName(name: string): boolean {
+  return /^(?:\d+|sheet\s*\d*|planilha\s*\d*)$/i.test(name.trim());
+}
 
 export type ReturnRow = {
   channel: "tiktok";
@@ -154,10 +201,12 @@ const REQUIRED_HEADERS = ["return order id", "order id", "return status", "retur
 
 export async function parseTikTokReturnsWorkbook(
   buffer: ArrayBuffer | Buffer,
-  reasonMap: Map<string, string>
+  reasonMap: Map<string, string>,
+  accountForUnnamedSheet?: TikTokAccount
 ): Promise<ParseResult> {
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer as ArrayBuffer);
+  const normalized = normalizeWorksheetRows(buffer);
+  await workbook.xlsx.load(Buffer.from(normalized));
 
   const rows: ReturnRow[] = [];
   const errors: ReturnRowError[] = [];
@@ -183,8 +232,19 @@ export async function parseTikTokReturnsWorkbook(
       return;
     }
 
+    if (isGenericSheetName(sheet.name) && !accountForUnnamedSheet) {
+      errors.push({
+        sheet: sheet.name,
+        row: 1,
+        field: "Loja",
+        message: `a aba “${sheet.name}” não identifica a loja; selecione a loja no upload ou renomeie a aba`
+      });
+      return;
+    }
     sheets.push(sheet.name);
-    const account = accountFromSheetName(sheet.name);
+    const account = isGenericSheetName(sheet.name)
+      ? accountForUnnamedSheet!
+      : accountFromSheetName(sheet.name);
     const cell = (values: unknown[], header: string) => {
       const position = columns.get(header);
       return position == null ? null : values[position] ?? null;

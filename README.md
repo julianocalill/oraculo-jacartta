@@ -33,7 +33,8 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-09-30.md](docs/project-status-2026-09-30.md) **← start here** (análise de prints integrada à Shopee Ads em produção)
+1. [docs/project-status-2026-10-01.md](docs/project-status-2026-10-01.md) **← start here** (Devoluções: upload corrigido e filtro de SKUs por motivo; consulta aplicada, interface ainda local)
+   — [docs/project-status-2026-09-30.md](docs/project-status-2026-09-30.md) (análise de prints integrada à Shopee Ads em produção)
    — [docs/project-status-2026-09-28.md](docs/project-status-2026-09-28.md) (Giracasa: navegação, Análise Comercial e lacunas das fontes; visual iOS 27, menu em card, Minha conta, busca de usuários, seletor de operação e gráficos interativos)
    — [docs/project-status-2026-09-25.md](docs/project-status-2026-09-25.md) (tarifas da calculadora para Shopee, Mercado Livre e TikTok)
    — [docs/project-status-2026-09-23.md](docs/project-status-2026-09-23.md) (Fechamento oficial da Separação validado)
@@ -68,6 +69,11 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 - `Obsidian` vault inside the repository for portable project memory
 
 ## Current production state
+
+Devoluções: correção do upload TikTok e filtro de SKUs por motivo validados
+localmente em 01/10. A consulta por motivo foi aplicada ao banco; a interface
+ainda não foi publicada. Ver [status de 01/10](docs/project-status-2026-10-01.md).
+O último deploy de interface verificado continua sendo o de 30/09 abaixo.
 
 Análise de prints Shopee Ads integrada à aba `/ads` em
 `/ads/analisar-print`. O protótipo local permanece em

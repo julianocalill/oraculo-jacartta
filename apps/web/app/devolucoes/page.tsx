@@ -1,4 +1,4 @@
-import { OperationAnchor } from "../components/operation-provider";
+import { OperationAnchor, OperationLink } from "../components/operation-provider";
 // Aba Devoluções — funil horizontal por canal, com a mesma linguagem de
 // analytics do dashboard principal (cards com sparkline e variação, área
 // diária, donut de motivos).
@@ -9,9 +9,8 @@ import { OperationAnchor } from "../components/operation-provider";
 //
 // Plano e decisões: docs/plano-devolucoes.md e docs/plano-devolucoes-funil.md
 
-import { revalidatePath } from "../../lib/operation-navigation";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
-import { assertTabAccess, requireTabAccess } from "../../lib/auth/access";
+import { requireTabAccess } from "../../lib/auth/access";
 import { NoAccess } from "../components/no-access";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 import { AppShell } from "../components/app-shell";
@@ -19,7 +18,7 @@ import { MetricCard, type MetricDelta } from "../components/metric-card";
 import { TaxDonut, RevenueArea } from "../components/fiscal-charts";
 import { ReturnsFunnel, DecisionBar, type FunnelStep, type DecisionSlice } from "../components/returns-funnel";
 import { DevolucoesTabs } from "./tabs";
-import { importTikTokReturns } from "../../lib/returns-upload";
+import { ReturnsUploadForm } from "./upload-form";
 import { fetchAllPages } from "../mercado-livre/data";
 
 export const dynamic = "force-dynamic";
@@ -95,15 +94,6 @@ type Batch = {
   rows_rejected: number;
   notes: string | null;
 };
-
-async function uploadReturns(formData: FormData) {
-  "use server";
-  const user = await assertTabAccess("devolucoes");
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return;
-  await importTikTokReturns(file, user.id ?? null);
-  await revalidatePath("/devolucoes");
-}
 
 const nf = new Intl.NumberFormat("pt-BR");
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -214,11 +204,11 @@ function delta(current: number, previous: number, invert = true): MetricDelta {
   };
 }
 
-async function loadData(win: PeriodWindow, channel: string | null) {
+async function loadData(win: PeriodWindow, channel: string | null, reason: string | null) {
   const supabase = createSupabaseAdminClient();
   const args = { p_from: win.from, p_to: win.to, p_channel: channel };
 
-  const [funnel, summary, reasons, skus, disputes, daily, channels, prevSummary, batches, orderRows] =
+  const [funnel, summary, reasons, skus, disputes, daily, channels, prevSummary, batches, orderRows, filteredSkus] =
     await Promise.all([
       supabase.rpc("oraculo_returns_funnel", args),
       supabase.rpc("oraculo_returns_summary", args),
@@ -250,7 +240,8 @@ async function loadData(win: PeriodWindow, channel: string | null) {
           .lte("order_date", win.end)
           .order("order_date")
           .range(from, to)
-      )
+      ),
+      reason ? supabase.rpc("oraculo_returns_by_sku", { ...args, p_limit: 25, p_reason_group: reason }) : Promise.resolve(null)
     ]);
 
   // Pedido cancelado não chega a ser entregue, então não pode virar devolução:
@@ -269,6 +260,8 @@ async function loadData(win: PeriodWindow, channel: string | null) {
     summary: (summary.data ?? []) as SummaryRow[],
     reasons: (reasons.data ?? []) as ReasonRow[],
     skus: (skus.data ?? []) as SkuRow[],
+    concentrationSkus: ((filteredSkus ?? skus).data ?? []) as SkuRow[],
+    concentrationError: (filteredSkus ?? skus).error != null,
     disputes: (disputes.data ?? []) as DisputeRow[],
     daily: (daily.data ?? []) as DailyRow[],
     channels: (channels.data ?? []) as ChannelRow[],
@@ -332,19 +325,23 @@ function buildDecision(rows: FunnelRow[]): { slices: DecisionSlice[]; total: num
 export default async function DevolucoesPage({
   searchParams
 }: {
-  searchParams: Promise<{ inicio?: string; fim?: string; mes?: string; canal?: string }>;
+  searchParams: Promise<{ inicio?: string; fim?: string; mes?: string; canal?: string; motivo?: string }>;
 }) {
   const params = await searchParams;
   const win = periodWindow(params);
   const activeTab = params.canal ?? "todos";
   const channel = activeTab !== "todos" ? activeTab : null;
+  const reason = params.motivo && Object.hasOwn(REASON_LABEL, params.motivo) ? params.motivo : null;
+  const reasonQuery = reason ? `&motivo=${encodeURIComponent(reason)}` : "";
+  const reasonHref = (key: string | null) =>
+    `/devolucoes?${win.query}&canal=${encodeURIComponent(activeTab)}${key ? `&motivo=${encodeURIComponent(key)}` : ""}#devolucoes-skus`;
 
-  const [{ allowed }, alertCount, data] = await Promise.all([
-    requireTabAccess("devolucoes"),
-    loadActionableAlertCount(),
-    loadData(win, channel)
-  ]);
+  const { allowed } = await requireTabAccess("devolucoes");
   if (!allowed) return <NoAccess tab="devolucoes" />;
+  const [alertCount, data] = await Promise.all([
+    loadActionableAlertCount(),
+    loadData(win, channel, reason)
+  ]);
 
   const steps = buildSteps(data.funnel);
   const decision = buildDecision(data.funnel);
@@ -373,7 +370,9 @@ export default async function DevolucoesPage({
     .map((r) => ({
       label: REASON_LABEL[r.reason_group] ?? r.reason_group,
       value: Number(r.returns_count ?? 0),
-      color: REASON_COLOR[r.reason_group] ?? "#5d6980"
+      color: REASON_COLOR[r.reason_group] ?? "#5d6980",
+      href: reasonHref(reason === r.reason_group ? null : r.reason_group),
+      selected: reason === r.reason_group
     }));
 
   // Atalhos de mês: só preenchem Início/Fim, a janela continua livre.
@@ -429,6 +428,7 @@ export default async function DevolucoesPage({
         <div className="filter-stack">
           <form className="filter-row filter-form" method="get">
             <input type="hidden" name="canal" value={activeTab} />
+            {reason && <input type="hidden" name="motivo" value={reason} />}
             <label>
               <span>Início</span>
               <input type="date" name="inicio" defaultValue={win.start} max={today} />
@@ -443,7 +443,7 @@ export default async function DevolucoesPage({
             {months.map((m) => (
               <OperationAnchor
                 key={m.query}
-                href={`/devolucoes?${m.query}&canal=${activeTab}`}
+                href={`/devolucoes?${m.query}&canal=${activeTab}${reasonQuery}`}
                 className={m.start === win.start && m.end === win.end ? "chip chip-active" : "chip"}
               >
                 {m.name}
@@ -453,7 +453,7 @@ export default async function DevolucoesPage({
         </div>
       </header>
 
-      <DevolucoesTabs active={activeTab} query={win.query} channels={tabChannels} />
+      <DevolucoesTabs active={activeTab} query={`${win.query}${reasonQuery}`} channels={tabChannels} />
 
       {win.isCurrent ? (
         <section className="status-alerts">
@@ -543,6 +543,7 @@ export default async function DevolucoesPage({
             <p className="eyebrow">Motivos</p>
             <h2>Por que devolveram</h2>
           </div>
+          <p className="muted">Clique em um motivo para filtrar os SKUs abaixo. Clique novamente para limpar.</p>
           {donutSlices.length > 0 ? (
             <>
               <TaxDonut slices={donutSlices} centerLabel="devoluções" format="count" />
@@ -557,8 +558,11 @@ export default async function DevolucoesPage({
                   </thead>
                   <tbody>
                     {data.reasons.map((r) => (
-                      <tr key={r.reason_group}>
-                        <td>{REASON_LABEL[r.reason_group] ?? r.reason_group}</td>
+                      <tr key={r.reason_group} className={reason === r.reason_group ? "returns-reason-selected" : undefined}>
+                        <td><OperationLink
+                          href={reasonHref(reason === r.reason_group ? null : r.reason_group)}
+                          aria-current={reason === r.reason_group ? "true" : undefined}
+                        >{REASON_LABEL[r.reason_group] ?? r.reason_group}</OperationLink></td>
                         <td className="numeric">{count(r.returns_count)}</td>
                         <td className="numeric">{money(r.refund_amount)}</td>
                       </tr>
@@ -637,11 +641,15 @@ export default async function DevolucoesPage({
         </section>
       ) : null}
 
-      <section className="panel">
+      <section className="panel" id="devolucoes-skus">
         <div className="section-head">
           <p className="eyebrow">SKUs</p>
           <h2>Onde a devolução se concentra</h2>
         </div>
+        {reason && <div className="filter-row returns-reason-filter">
+          <span>Motivo: <strong>{REASON_LABEL[reason]}</strong></span>
+          <OperationLink href={reasonHref(null)} className="chip">Limpar motivo</OperationLink>
+        </div>}
         <div className="table-wrap">
           <table className="data-table">
             <thead>
@@ -657,12 +665,14 @@ export default async function DevolucoesPage({
               </tr>
             </thead>
             <tbody>
-              {data.skus.length === 0 ? (
+              {data.concentrationError ? (
+                <tr><td colSpan={8} role="alert">Não foi possível carregar os SKUs. Tente novamente.</td></tr>
+              ) : data.concentrationSkus.length === 0 ? (
                 <tr>
-                  <td colSpan={8}>Sem dados no período.</td>
+                  <td colSpan={8}>{reason ? `Nenhuma devolução por “${REASON_LABEL[reason]}” no período e canal selecionados.` : "Sem dados no período."}</td>
                 </tr>
               ) : (
-                data.skus.map((row, i) => (
+                data.concentrationSkus.map((row, i) => (
                   <tr key={`${row.sku ?? "sem-sku"}-${i}`}>
                     <td>{row.sku ?? "—"}</td>
                     <td>{row.product_name ?? "—"}</td>
@@ -723,17 +733,12 @@ export default async function DevolucoesPage({
           </div>
           <p className="muted">
             Shopee e Mercado Livre entram sozinhos por API. O TikTok é por upload: exportação de
-            <em> Pedidos de devolução/reembolso</em> (.xlsx), uma aba por loja. As colunas são lidas
+            <em> Pedidos de devolução/reembolso</em> (.xlsx), uma aba por loja. Se a aba vier com
+            nome genérico (como “0”), selecione a loja abaixo. As colunas são lidas
             pelo nome do cabeçalho, então abas com layouts diferentes funcionam. Subir o mesmo
             arquivo de novo <strong>atualiza</strong>, não duplica.
           </p>
-          <form action={uploadReturns} className="upload-form">
-            <label>
-              <span>Arquivo .xlsx</span>
-              <input type="file" name="file" accept=".xlsx" required />
-            </label>
-            <button type="submit">Importar</button>
-          </form>
+          <ReturnsUploadForm />
           {data.batch ? (
             <p className="muted">
               Último lote: <strong>{data.batch.file_name}</strong> · {dateTime(data.batch.uploaded_at)} ·{" "}

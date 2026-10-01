@@ -24,6 +24,23 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-01-tiktok-devolucoes-upload",
+    title: "Devoluções por motivo e upload TikTok",
+    summary: "Clique em um motivo para identificar os produtos afetados e confira o resultado dos uploads.",
+    publishedAt: "2026-10-01T09:50:00-03:00",
+    changes: [{
+      title: "Do motivo aos produtos",
+      description: "Clique no motivo, na legenda ou na fatia do gráfico para filtrar os SKUs de devoluções. Limpe o motivo para voltar à visão geral; as datas e o canal selecionados são mantidos.",
+      href: "/devolucoes",
+      linkLabel: "Ver devoluções"
+    }, {
+      title: "Escolha a loja quando a aba vier sem identificação",
+      description: "Arquivos com aba chamada “0” agora permitem selecionar Donacor, Aliver ou Jacartta. O resultado informa quantas linhas foram gravadas e mostra os avisos quando houver problemas.",
+      href: "/devolucoes",
+      linkLabel: "Abrir Devoluções"
+    }]
+  },
+  {
     id: "2026-09-30-shopee-ads-print",
     title: "Analise prints de anúncios na Shopee Ads",
     summary: "Envie uma captura de Performance e confira sugestões de ROAS e orçamento dentro do Oráculo.",

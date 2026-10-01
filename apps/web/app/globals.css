@@ -2771,6 +2771,7 @@ h2 {
 .donut-center .mid {
   position: absolute;
   inset: 0;
+  pointer-events: none;
   display: grid;
   place-items: center;
   text-align: center;
@@ -8517,6 +8518,39 @@ svg rect[data-tip].is-active {
 
 .donut-legend .dl.is-linked {
   background: var(--fill);
+}
+
+.donut-slice.is-selected,
+.donut-center a:focus-visible .donut-slice {
+  stroke-width: 20;
+}
+
+.donut-center a,
+.donut-legend a.dl {
+  cursor: pointer;
+}
+
+.donut-legend a.dl {
+  color: inherit;
+  text-decoration: none;
+}
+
+.donut-legend .dl.is-selected,
+.returns-reason-selected {
+  background: var(--tint-soft);
+}
+
+.donut-legend a.dl:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.returns-reason-filter {
+  margin-bottom: 16px;
+}
+
+#devolucoes-skus {
+  scroll-margin-top: 80px;
 }
 
 /* Medidor com tooltip. */

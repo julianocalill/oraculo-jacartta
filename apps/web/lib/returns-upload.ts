@@ -9,7 +9,7 @@
 // entra pela metade nem falha o arquivo inteiro.
 
 import { createSupabaseAdminClient } from "./supabase/admin";
-import { parseTikTokReturnsWorkbook, type ReturnRow } from "./returns-import";
+import { parseTikTokReturnsWorkbook, type ReturnRow, type TikTokAccount } from "./returns-import";
 
 const CHUNK_SIZE = 500; // PostgREST não gosta de payloads gigantes num único POST
 
@@ -43,12 +43,13 @@ async function loadReasonMap(
 
 export async function importTikTokReturns(
   file: File,
-  userId: string | null
+  userId: string | null,
+  accountForUnnamedSheet?: TikTokAccount
 ): Promise<UploadReport> {
   const supabase = createSupabaseAdminClient();
   const reasonMap = await loadReasonMap(supabase, "tiktok");
   const buffer = await file.arrayBuffer();
-  const parsed = await parseTikTokReturnsWorkbook(buffer, reasonMap);
+  const parsed = await parseTikTokReturnsWorkbook(buffer, reasonMap, accountForUnnamedSheet);
 
   const report: UploadReport = {
     batchId: null,

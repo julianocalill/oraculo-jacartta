@@ -2,6 +2,7 @@
 // tema (var(--indigo) etc.), então acompanham o dark. Interação (tooltip,
 // linha-guia, teclado) vem da camada ChartHits + chart-interactions.tsx.
 import { ChartHits, pct, tipAttrs, type ChartHit, type TipRow } from "./chart-hits";
+import { OperationLink } from "./operation-provider";
 
 function compactBRL(value: number): string {
   const abs = Math.abs(value);
@@ -253,7 +254,7 @@ export function DailyBars({
 
 /* ---------------- Donut de composição tributária ---------------- */
 
-type DonutSlice = { label: string; value: number; color: string };
+type DonutSlice = { label: string; value: number; color: string; href?: string; selected?: boolean };
 
 export function TaxDonut({
   slices,
@@ -272,7 +273,7 @@ export function TaxDonut({
   const arcs = slices.map((s) => {
     const frac = total > 0 ? Math.max(s.value, 0) / total : 0;
     const len = frac * c;
-    const arc = { color: s.color, len, offset, label: s.label, value: s.value, frac };
+    const arc = { color: s.color, len, offset, label: s.label, value: s.value, frac, href: s.href, selected: s.selected };
     offset += len;
     return arc;
   });
@@ -280,13 +281,14 @@ export function TaxDonut({
   return (
     <div className="donut-wrap" data-chart data-link>
       <div className="donut-center">
-        <svg viewBox="0 0 148 148" role="img" aria-label={`Composição de ${centerLabel}`}>
+        <svg viewBox="0 0 148 148" role={slices.some((s) => s.href) ? "group" : "img"} aria-label={`Composição de ${centerLabel}`}>
           <circle cx="74" cy="74" r={r} fill="none" stroke="var(--line)" strokeWidth="16" />
           {total > 0 &&
-            arcs.map((a, i) => (
+            arcs.map((a, i) => {
+              const circle = (
               <circle
                 key={i}
-                className="donut-slice"
+                className={`donut-slice${a.selected ? " is-selected" : ""}`}
                 cx="74"
                 cy="74"
                 r={r}
@@ -296,14 +298,16 @@ export function TaxDonut({
                 strokeDasharray={`${a.len} ${c - a.len}`}
                 strokeDashoffset={-a.offset}
                 transform="rotate(-90 74 74)"
-                tabIndex={0}
+                tabIndex={a.href ? undefined : 0}
                 data-series={a.label}
                 {...tipAttrs(a.label, [
                   { label: "Valor", value: formatValue(a.value, format), color: a.color },
                   { label: "Participação", value: formatValue(a.frac * 100, "pct") }
                 ])}
               />
-            ))}
+              );
+              return a.href ? <OperationLink key={i} href={a.href} aria-label={`${a.selected ? "Limpar" : "Filtrar por"} ${a.label}`} aria-current={a.selected ? "true" : undefined}>{circle}</OperationLink> : circle;
+            })}
         </svg>
         <div className="mid">
           <div>
@@ -315,22 +319,32 @@ export function TaxDonut({
       <div className="donut-legend">
         {slices.map((s) => {
           const share = total > 0 ? (s.value / total) * 100 : 0;
-          return (
-            <div
-              className="dl"
-              key={s.label}
-              data-series={s.label}
-              {...tipAttrs(s.label, [
-                { label: "Valor", value: formatValue(s.value, format), color: s.color },
-                { label: "Participação", value: formatValue(share, "pct") }
-              ])}
-            >
+          const content = (
+            <>
               <span className="name">
                 <span className="sw" style={{ background: s.color }} />
                 {s.label}
               </span>
               <span className="val">{compactValue(s.value, format)}</span>
               <span className="amt">{share.toFixed(0)}%</span>
+            </>
+          );
+          const attrs = tipAttrs(s.label, [
+            { label: "Valor", value: formatValue(s.value, format), color: s.color },
+            { label: "Participação", value: formatValue(share, "pct") }
+          ]);
+          return s.href ? <OperationLink
+            className={`dl${s.selected ? " is-selected" : ""}`}
+            key={s.label} href={s.href} data-series={s.label}
+            aria-current={s.selected ? "true" : undefined} {...attrs}
+          >{content}</OperationLink> : (
+            <div
+              className="dl"
+              key={s.label}
+              data-series={s.label}
+              {...attrs}
+            >
+              {content}
             </div>
           );
         })}
