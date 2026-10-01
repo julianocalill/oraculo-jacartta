@@ -24,6 +24,18 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-01-separacao-sem-full",
+    title: "Separação com Grupo e sem Full",
+    summary: "Confira o grupo dos produtos e as unidades que precisam de separação local.",
+    publishedAt: "2026-10-01T15:10:00-03:00",
+    changes: [{
+      title: "Grupo na impressão e no CSV",
+      description: "A impressão e o CSV mostram a categoria do produto gravada na geração da lista. O total de unidades a separar fica visível na tela, e pedidos com expedição Full ficam fora das novas listas.",
+      href: "/logistica/separacao",
+      linkLabel: "Abrir Separação"
+    }]
+  },
+  {
     id: "2026-10-01-shopee-ads-verba-ilimitada",
     title: "Cenários de Ads para verba ilimitada",
     summary: "Compare ROAS e alcance entre períodos equivalentes para decidir o próximo ajuste.",

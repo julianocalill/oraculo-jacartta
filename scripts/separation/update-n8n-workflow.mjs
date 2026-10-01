@@ -33,6 +33,18 @@ const library = (await readFile(new URL('./olist-multichannel-separation.mjs', i
 compose.parameters.jsCode = `${library}\n${compose.parameters.jsCode.slice(tailAt)}`;
 new Function(compose.parameters.jsCode);
 
+const documentLoader = workflow.nodes.find((node) => node.name === 'Carregar lista persistida para WhatsApp');
+if (!documentLoader?.parameters?.url?.includes('logistica_picking_itens(')) {
+  throw new Error('Carregamento do documento persistido não encontrado.');
+}
+if (!documentLoader.parameters.url.includes('product_group')) {
+  documentLoader.parameters.url = documentLoader.parameters.url.replace(
+    'description,sold_quantity', 'description,product_group,sold_quantity',
+  );
+}
+if (!documentLoader.parameters.url.includes('product_group')) {
+  throw new Error('Grupo não incluído na consulta das linhas congeladas.');
+}
 const oldPersisted = persisted.parameters.jsCode;
 let updatedPersisted = oldPersisted.replaceAll('Itens vendidos', 'Unidades a separar');
 updatedPersisted = updatedPersisted.replaceAll(
@@ -62,12 +74,34 @@ if (updatedPersisted.includes('Descritivo') || !updatedPersisted.includes('displ
 if (updatedPersisted === oldPersisted && !oldPersisted.includes('Unidades a separar')) {
   throw new Error('Contrato do nó de reenvio mudou; atualização cancelada.');
 }
+// Reutiliza os formatadores atuais também no reenvio do documento congelado.
+const csvStart = library.indexOf('function buildOlistMultichannelCsv(');
+const messageStart = library.indexOf('function buildOlistMultichannelMessages(');
+const oldCsvStart = updatedPersisted.indexOf('function buildOlistMultichannelCsv(');
+const oldMessageStart = updatedPersisted.indexOf('function buildOlistMultichannelMessages(');
+const documentStart = updatedPersisted.indexOf('const raw = $input.first()');
+if ([csvStart, messageStart, oldCsvStart, oldMessageStart, documentStart].some((index) => index < 0)) {
+  throw new Error('Formatadores/entrada do documento persistido não encontrados.');
+}
+updatedPersisted = updatedPersisted.slice(0, oldCsvStart)
+  + library.slice(csvStart, messageStart)
+  + library.slice(messageStart)
+  + '\n' + updatedPersisted.slice(documentStart);
+if (!updatedPersisted.includes('product_group: item.product_group')) {
+  updatedPersisted = updatedPersisted.replace(
+    "    sku: item.sku || '',",
+    "    sku: item.sku || '',\n    product_group: item.product_group || null,",
+  );
+}
+if (!updatedPersisted.includes('product_group: item.product_group')) {
+  throw new Error('Grupo congelado ausente no mapeamento do documento persistido.');
+}
 persisted.parameters.jsCode = updatedPersisted;
 new Function(persisted.parameters.jsCode);
 
 const apply = process.argv.includes('--apply');
 console.log(JSON.stringify({ workflowId, active: workflow.active, nodes: workflow.nodes.length,
-  apply, changed: ['Montar consolidado multicanal', 'Montar WhatsApp da lista persistida'] }));
+  apply, changed: ['Montar consolidado multicanal', 'Montar WhatsApp da lista persistida', 'Carregar lista persistida para WhatsApp'] }));
 if (!apply) process.exit(0);
 
 const backupDir = resolve('tmp/n8n-backups');
@@ -81,7 +115,9 @@ const payload = { name: workflow.name, nodes: workflow.nodes,
 await request(`workflows/${workflowId}`, { method: 'PUT', body: JSON.stringify(payload) });
 const verified = await request(`workflows/${workflowId}`);
 const current = verified.nodes.find((node) => node.name === 'Montar consolidado multicanal');
-if (!verified.active || current?.parameters?.jsCode !== compose.parameters.jsCode) {
+if (!verified.active || current?.parameters?.jsCode !== compose.parameters.jsCode
+    || verified.nodes.find((node) => node.name === persisted.name)?.parameters?.jsCode !== persisted.parameters.jsCode
+    || verified.nodes.find((node) => node.name === documentLoader.name)?.parameters?.url !== documentLoader.parameters.url) {
   throw new Error('Workflow atualizado, mas verificação de leitura divergiu. Consulte o backup.');
 }
 console.log('Workflow ativo atualizado e verificado.');

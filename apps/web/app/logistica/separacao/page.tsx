@@ -179,6 +179,7 @@ export default async function SeparationPage({
           </div>
           <div className="metric-grid metric-grid-eight">
             <article className="metric accent-blue"><span className="label">Pedidos</span><strong>{count(data.latestReady.orders_count)}</strong></article>
+            <article className="metric accent-emerald"><span className="label">Unidades a separar</span><strong>{count(data.latestReady.units_sold)}</strong></article>
             <article className="metric accent-emerald"><span className="label">Linhas para separar</span><strong>{count(data.latestReady.rows_count)}</strong></article>
             <article className="metric accent-yellow"><span className="label">Caixas</span><strong>{count(data.latestReady.boxes_total)}</strong></article>
             <article className="metric accent-blue"><span className="label">Unidades avulsas</span><strong>{count(data.latestReady.loose_units_total)}</strong></article>

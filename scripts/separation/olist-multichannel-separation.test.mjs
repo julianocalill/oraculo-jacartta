@@ -104,5 +104,22 @@ test('kit sem composição mantém aviso e cálculo legado', () => {
   assert.match(message, /KIT X · KIT SEM COMPOSIÇÃO NO OLIST/);
   assert.doesNotMatch(csv, /Descritivo/);
   assert.doesNotMatch(message, /Descritivo/);
-  assert.equal(csv.trim().split('\n')[0].split(';').length, 5);
+  assert.equal(csv.trim().split('\n')[0].split(';').length, 6);
+});
+
+
+test('CSV e mensagem preservam o grupo congelado e diferenciam legado de ausência no cadastro', () => {
+  const report = { operational_period_start: context.period_start, operational_period_end: context.period_end, rows: [
+    { sku: 'FISICO', product: 'Componente', product_group: 'VIDROS / CASA', sold_quantity: 3, boxes: 0, loose_units: 3 },
+    { sku: 'SEM', product: 'Sem categoria', product_group: 'Sem grupo no cadastro', sold_quantity: 1, boxes: 0, loose_units: 1 },
+    { sku: 'ANTIGO', product: 'Histórico', product_group: null, sold_quantity: 1, boxes: 0, loose_units: 1 },
+  ] };
+  const csv = buildOlistMultichannelCsv(report);
+  const text = buildOlistMultichannelMessages(report, context).map((p) => p.message_text).join('\n');
+  assert.match(csv, /"SKU";"Grupo";"Produto"/);
+  assert.match(csv, /"FISICO";"VIDROS \/ CASA"/);
+  assert.match(text, /Grupo: VIDROS \/ CASA/);
+  assert.match(csv, /Sem grupo no cadastro/);
+  assert.match(csv, /Grupo não registrado/);
+  assert.match(text, /Grupo não registrado/);
 });

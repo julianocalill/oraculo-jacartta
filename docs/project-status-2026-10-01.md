@@ -1,5 +1,54 @@
 # Estado do projeto — 01/10/2026
 
+## Separação local: Full excluído e Grupo congelado
+
+Migration `20261001170138_logistica_separacao_excluir_full.sql` aplicada via
+CLI `db query --linked --file` em 01/10, após regressão em transação com
+rollback. A seleção pública de Uberlândia exclui pedidos Full antes de
+contar pedidos, consolidar SKUs e expandir kits. O mesmo classificador filtra
+`logistica_picking_missing_order_ids`, impedindo hidratação/bloqueio por um
+pedido Full sem itens. A identificação usa depósito/canal do pedido Olist ou
+ID/tipo/nome do depósito cadastrado na mesma operação. Não exclui a loja
+Shopee inteira nem SKUs compartilhados com vendas locais; Amazon Onsite
+continua separado de Full Amazon. APIs/fiscal/Giracasa não foram alterados.
+
+Validação na janela original das 07h, com fonte atual consultada às 14:31:53
+BRT: **1.147 → 937 pedidos; 3.381 → 2.577 unidades físicas; 80 → 75 SKUs**.
+Foram retirados **210 pedidos / 804 unidades Full** (724 Shopee + 80 ML),
+sem Full escapando quando comparado à logística Shopee/canal ML de forma
+independente. Pistola 110V: 13 → 1; panela 220V: 4 → 0; tapete 50×60/50un:
+72 → 29 pacotes. Chaleiras branca 110V/220V seguem 103/55; Full não explica
+as divergências relatadas nessas chaleiras.
+
+A lista pronta `bc487592-ad7f-44e1-b629-43b5543c45b9` continua com seus
+1.141 pedidos / 3.372 unidades. Nenhum documento, cursor ou WhatsApp foi
+reescrito/reprocessado. Novas gerações usam a regra corrigida. O recálculo
+não representa exatamente o estado da fonte às 07h e ainda não está
+conciliado com o lote de etiquetas entregue. O erro do enum de cancelamento
+Olist e a definição do lote impresso continuam pendentes de correção separada.
+
+A coluna **Grupo** agora é persistida em `logistica_picking_itens.product_group`
+na finalização: categoria Olist por SKU físico + operação, agregada sem
+multiplicar linhas. Migration `20261001175828` aplicada em 01/10. Documentos
+anteriores ficam com NULL ("Grupo não registrado"); novas linhas sem categoria
+ficam "Sem grupo no cadastro". Finalizar um documento `ready` retorna a mesma
+fotografia, preservando também Grupo. Impressão/CSV leem o mesmo campo, e a
+tela mostra o card "Unidades a separar". O workflow n8n ativo foi atualizado
+com backup e conferência dos três nós (consolidado, consulta do documento e
+formatadores de CSV/WhatsApp); nenhum envio foi disparado na implantação.
+
+A lista personalizada desta tarde `46ddb552-791a-4b50-a7e3-a6c11784f115` mantém
+537 pedidos / 1.518 unidades / 57 linhas / 29 caixas / 960 avulsas. Suas 57
+linhas receberam exatamente os grupos do PDF já entregue, sem recalcular
+quantidades. [Registro da tarde](analyses/separacao-2026-10-01-1330/README.md).
+
+Testes: duas regressões SQL em transação revertida (exclusão Full e grupos,
+duplicados, ausência, imutabilidade e permissões); oito testes de
+consolidação/CSV/WhatsApp, 93 de domínio, TypeScript e build Next.js passaram.
+RPC executada pelo service_role em ~140 ms na janela da manhã. Advisors
+consultados sem alteração das políticas/grants existentes. Frontend validado
+localmente, publicação em andamento para os dois remotes e Vercel.
+
 ## Shopee Ads: cenários para orçamento ilimitado
 
 O usuário confirmou que todas as campanhas usam orçamento ilimitado. A aba

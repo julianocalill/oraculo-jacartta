@@ -2,6 +2,21 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-10-01] — Separação com Grupo e sem Full
+
+- RPC e hidratação de pedidos sem itens excluem expedição Full antes das
+  contagens e expansão de kits, pelo depósito/canal Olist e cadastro local.
+- Migration `20261001170138` aplicada em produção (Uberlândia). Recálculo da
+  janela das 7h retirou 210 pedidos / 804 unidades Full; vendas locais dos
+  mesmos SKUs continuam elegíveis. Documentos prontos/cursor preservados.
+- Grupo congelado na finalização por SKU físico/operacão, sem multiplicar
+  linhas por duplicados de catálogo. Impressão e CSV mostram o mesmo campo;
+  card de unidades a separar na tela. Migration `20261001175828` aplicada.
+- Workflow n8n ativo atualizado para carregar Grupo e usar os mesmos
+  formatadores no CSV/WhatsApp. Nenhum envio disparado durante a implantação.
+- Duas regressões SQL, oito testes da consolidação, 93 de domínio, TypeScript
+  e build passaram. A conciliação com o lote de etiquetas permanece pendente.
+
 ## [2026-10-01] — Cenários Shopee Ads com orçamento ilimitado
 
 - A análise de prints substitui a matriz de consumo do limite diário por

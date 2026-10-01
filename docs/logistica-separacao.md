@@ -2,6 +2,16 @@
 
 ## Objetivo
 
+**Auditoria em 01/10/2026:** a igualdade entre as saídas congeladas não garante
+igualdade com o lote de etiquetas entregue ao depósito. Foram encontrados
+pedidos Full e erro no enum de cancelamento Olist v3 (2 = cancelada;
+8 = dados incompletos). A geração atual usa entrada na base, não impressão.
+Evidências, prévia da coluna Grupo aprovada e pendências de conciliação:
+[auditoria de 01/10 às 07h](analyses/separacao-2026-10-01-0700/README.md).
+Após a auditoria, a exclusão de Full foi aplicada em produção pela migration
+`20261001170138`; as listas prontas foram preservadas. O enum de cancelamento
+e a conciliação com o lote de etiquetas continuam pendentes.
+
 `/logistica/separacao` é o ponto de impressão da lista multicanal que já era
 enviada pelo n8n. O Oráculo passa a persistir cada resultado antes de qualquer
 envio, permitindo alerta de atraso, recuperação manual, histórico, CSV e
@@ -59,11 +69,29 @@ O UUID da lista é a correlação auditável entre a interface e o n8n; a coluna
 ## Contrato do documento
 
 Impressão A4, CSV e WhatsApp derivam do mesmo relatório congelado. As colunas
-são SKU, produto, unidades a separar, caixas e unidades avulsas. A descrição
+são SKU, Grupo, produto, unidades a separar, caixas e unidades avulsas. A descrição
 continua guardada na lista para auditoria e cubagem, mas não ocupa uma coluna.
+Grupo vem da categoria do SKU físico no cadastro Olist, dentro da mesma
+operação, e é congelado em `product_group` ao finalizar. Duplicados do catálogo
+não multiplicam itens; categorias distintas são reunidas. Documentos anteriores
+sem fotografia de grupo mostram "Grupo não registrado"; ausência no cadastro
+na nova geração mostra "Sem grupo no cadastro". A reimpressão não consulta
+categorias atuais. A lista personalizada de 01/10 à tarde recebeu os mesmos
+grupos do PDF aprovado, sem alterar quantidades. Finalizar uma lista `ready`
+retorna o documento existente, preservando todos os valores congelados.
+
 Se um kit não tem composição, o aviso aparece junto ao nome do produto.
 Entram todos os SKUs com unidades vendidas, inclusive com zero caixas fechadas.
 As linhas são ordenadas por caixas em ordem decrescente, depois por avulsos e SKU.
+**Full não entra na separação local.** A RPC filtra o pedido antes de contar,
+abrir kits e consolidar SKUs: depósito/canal com Full/Fulfillment, ou depósito
+resolvido por ID no cadastro da mesma operação (`tipo=full_*` ou nome Full).
+O mesmo predicado é usado na hidratação. Vendas locais da mesma loja ou SKU
+continuam elegíveis. `excluded_full_orders_count` registra a exclusão no JSON
+fonte; não é subtração manual de unidades na lista pronta. Amazon Onsite
+não é classificado automaticamente como Full. Regra publicada para
+Uberlândia (`public`); Giracasa não usa essa implementação.
+
 Pedidos candidatos com `itens = []`
 bloqueiam a publicação e o avanço do cursor.
 

@@ -116,6 +116,7 @@ export function buildOlistMultichannelReport(source, catalog, context) {
       product,
       description,
       product_type: String(raw.product_type || '').trim(),
+      product_group: String(raw.product_group || '').trim() || null,
       primary_quantity: -1,
       orders_count: 0,
       sold_quantity: 0,
@@ -198,6 +199,7 @@ export function buildOlistMultichannelReport(source, catalog, context) {
       product: item.product,
       description: item.description,
       product_type: item.product_type,
+      product_group: item.product_group,
       orders_count: item.orders_count,
       sold_quantity: item.sold_quantity,
       physical_quantity: itemRows.reduce((sum, row) => sum + row.physical_quantity, 0),
@@ -250,7 +252,7 @@ export function displaySeparationProduct(row) {
 }
 
 export function buildOlistMultichannelCsv(report) {
-  const headers = ['SKU', 'Produto', 'Unidades a separar', 'Caixas', 'Unidades avulsas'];
+  const headers = ['SKU', 'Grupo', 'Produto', 'Unidades a separar', 'Caixas', 'Unidades avulsas'];
   const lines = [headers.map(csvEscape).join(';')];
   const rows = (report?.rows || [])
     .filter((row) => asNumber(row.sold_quantity) > 0)
@@ -258,6 +260,7 @@ export function buildOlistMultichannelCsv(report) {
   for (const row of rows) {
     lines.push([
       row.sku,
+      row.product_group || 'Grupo não registrado',
       displaySeparationProduct(row),
       row.sold_quantity,
       row.boxes,
@@ -290,7 +293,7 @@ export function buildOlistMultichannelMessages(report, context, maxChars = 3400)
     ? '_Mensagem de teste — cursor oficial não alterado._\n_Fonte: Olist ERP via Oráculo/Supabase_'
     : '_Fonte: Olist ERP via Oráculo/Supabase_';
   const lines = rows.length ? rows.map((row, index) => {
-    return `${index + 1}. SKU: *${row.sku || '-'}* | Produto: ${displaySeparationProduct(row)} | Unidades a separar: *${row.sold_quantity.toLocaleString('pt-BR')}* | Caixas: *${row.boxes.toLocaleString('pt-BR')}* | Unidades avulsas: *${row.loose_units.toLocaleString('pt-BR')}*`;
+    return `${index + 1}. SKU: *${row.sku || '-'}* | Grupo: ${row.product_group || 'Grupo não registrado'} | Produto: ${displaySeparationProduct(row)} | Unidades a separar: *${row.sold_quantity.toLocaleString('pt-BR')}* | Caixas: *${row.boxes.toLocaleString('pt-BR')}* | Unidades avulsas: *${row.loose_units.toLocaleString('pt-BR')}*`;
   }) : ['Nenhum SKU vendido neste fechamento.'];
 
   const groups = [];

@@ -33,7 +33,7 @@ oraculo/
 
 ## First files to read
 
-1. [docs/project-status-2026-10-01.md](docs/project-status-2026-10-01.md) **← start here** (Devoluções em produção; nova matriz Shopee Ads para orçamento ilimitado)
+1. [docs/project-status-2026-10-01.md](docs/project-status-2026-10-01.md) **← start here** (Separação com Grupo e sem Full; Devoluções e cenários Shopee Ads em produção)
    — [docs/project-status-2026-09-30.md](docs/project-status-2026-09-30.md) (análise de prints integrada à Shopee Ads em produção)
    — [docs/project-status-2026-09-28.md](docs/project-status-2026-09-28.md) (Giracasa: navegação, Análise Comercial e lacunas das fontes; visual iOS 27, menu em card, Minha conta, busca de usuários, seletor de operação e gráficos interativos)
    — [docs/project-status-2026-09-25.md](docs/project-status-2026-09-25.md) (tarifas da calculadora para Shopee, Mercado Livre e TikTok)
@@ -69,6 +69,12 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 - `Obsidian` vault inside the repository for portable project memory
 
 ## Current production state
+
+Separação local: Full excluído em produção em 01/10 antes das contagens e
+expansão de kits. Recálculo da janela das 7h retirou 210 pedidos / 804 unidades;
+coluna Grupo congelada por SKU físico e total de unidades na tela.
+Conciliação com as etiquetas ainda pendente. Ver
+[status de 01/10](docs/project-status-2026-10-01.md).
 
 Devoluções: correção do upload TikTok e filtro de SKUs por motivo publicados
 em 01/10. Migration aplicada nas duas operações e frontend `Ready` no domínio
@@ -112,7 +118,7 @@ Shopee Ads publicado em produção em 11/09/2026: [status de 11/09](docs/project
 
 Correção de taxas TikTok publicada em 11/09/2026: [status](docs/project-status-2026-09-10.md).
 
-**Last update**: `2026-10-01` (TikTok returns upload and SKU reason filter in production; see `docs/project-status-2026-10-01.md`). Previous production updates: `2026-09-30` (see `docs/project-status-2026-09-30.md`) and `2026-09-28` (see `docs/project-status-2026-09-28.md`) —
+**Last update**: `2026-10-01` (Full excluded from local picking; TikTok returns upload and SKU reason filter in production; see `docs/project-status-2026-10-01.md`). Previous production updates: `2026-09-30` (see `docs/project-status-2026-09-30.md`) and `2026-09-28` (see `docs/project-status-2026-09-28.md`) —
 Giracasa/SP com histórico comercial e job horário próprios; o menu acompanha a
 operação da URL durante a navegação cliente. Atualização anterior da
 calculadora em `2026-09-25` —

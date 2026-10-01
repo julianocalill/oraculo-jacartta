@@ -41,6 +41,7 @@ export type PickingItem = {
   sku: string | null;
   product: string;
   description: string;
+  product_group: string | null;
   sold_quantity: number;
   boxes: number;
   loose_units: number;
@@ -164,7 +165,7 @@ export async function loadPickingList(id: string) {
     supabase.from("logistica_picking_listas").select(LIST_COLUMNS).eq("operation_id", operation).eq("id", id).maybeSingle(),
     supabase
       .from("logistica_picking_itens")
-      .select("position,sku,product,description,sold_quantity,boxes,loose_units")
+      .select("position,sku,product,description,product_group,sold_quantity,boxes,loose_units")
       .eq("operation_id", operation)
       .eq("lista_id", id)
       .order("position", { ascending: true })
@@ -179,6 +180,7 @@ export async function loadPickingList(id: string) {
       sku: item.sku ? String(item.sku) : null,
       product: String(item.product),
       description: String(item.description),
+      product_group: item.product_group ? String(item.product_group) : null,
       sold_quantity: numberValue(item.sold_quantity),
       boxes: numberValue(item.boxes),
       loose_units: numberValue(item.loose_units)
