@@ -4,7 +4,8 @@ Publicada em 02/10/2026, commit `caa4bcc` nos dois remotes.
 Vercel confirmou **Ready**: [deploy](https://oraculo-jacartta-iwq1vth1z-grupo-jacartta.vercel.app),
 domínio [Oráculo](https://oraculo.oliverhome.com.br).
 Login, personagem e bloqueio sem sessão conferidos por HTTP; consulta pela
-interface de produção aguarda login do usuário.
+interface de produção da entrega inicial aguardava login do usuário.
+A revisão abaixo já foi conferida em produção com sessão real.
 Evidência: [bia-deploy-2026-10-02.json](analyses/bia-deploy-2026-10-02.json).
 Decisão: [ADR-008](adr/ADR-008-bia-read-only.md).
 Etapas para publicação e evolução: [bia-producao.md](bia-producao.md).
@@ -39,8 +40,13 @@ Esse falso positivo foi observado na consulta de unidades por SKU em
 produção e ganhou regressão própria.
 
 131 testes passaram; TypeScript e build conferidos. Sem mudança de banco,
-permissões ou retenção. Publicação/validação visual em andamento, registrada
-no status de 02/10.
+permissões ou retenção. Publicada nos commits `b5775e2` e `7f1c1f3`, nos dois remotes.
+[Vercel Ready](https://oraculo-jacartta-bifgpl0sv-grupo-jacartta.vercel.app).
+Sessão real em produção confirmou devoluções, repetição após vendas e
+valores por SKU alinhados à linha da tela comercial, com IA e filtros
+visíveis. Layout 390 × 844 conferido. Sessão localhost expirou; a validação
+visual final ocorreu em produção.
+[Evidência](analyses/bia-respostas-validacao-2026-10-02.json).
 
 ## Uso e cobertura
 
@@ -153,10 +159,10 @@ do plano de produção continuam pendentes.
 
 Publicação: novidade ajustada para 11:30 BRT; 118 testes, TypeScript/build
 passaram, commit enviado a origin e personal, Vercel Ready confirmado.
-Próxima verificação, com usuário autorizado: conferir
+Próxima verificação ampliada, com usuário autorizado: conferir
 resposta de setembro contra a tela da mesma operação/canal, testar
-seguimento, recusa de alteração e Giracasa; confirmar classificação pelo
-Ollama no endpoint protegido. Não abrir o endpoint nem alterar autenticação.
+seguimento e Giracasa. O caminho Vercel → Ollama foi confirmado na
+consulta real por SKU da correção de respostas. Não abrir o endpoint nem alterar autenticação.
 
 Diagnóstico: “IA indisponível” pode significar configuração local ausente;
 timeout/malformed JSON fazem fallback. Erro de sessão exige login real.
@@ -191,8 +197,9 @@ deve ser tratado pela Análise Comercial existente, não por um refresh no chat.
   Análise Comercial; não foi alterada a consulta da Analytics.
 - Deploy Ready e domínio/asset conferidos em 02/10; GET `/bia` e POST da
   resposta sem sessão redirecionam ao login, sem expor dados.
-- Homologação completa com dados reais e caminho Vercel → endpoint público
-  autenticado ainda pendentes. Endpoint sem credencial confirmou 401.
+- Homologação ampliada com dados reais ainda pendente. O caminho
+  Vercel → endpoint público autenticado respondeu na consulta real por SKU
+  da correção de respostas, com rótulo de IA. Endpoint sem credencial confirmou 401.
   Metadados das três variáveis confirmados na Vercel como sensitive, sem ler valores.
   O download amplo de todas as variáveis de produção foi rejeitado pela
   revisão automática por exposição desnecessária de credenciais; não executado.

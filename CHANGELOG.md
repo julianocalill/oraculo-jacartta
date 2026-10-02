@@ -13,7 +13,10 @@ Histórico de entregas e mudanças significativas.
 - Falso positivo `write` do modelo não recusa uma leitura validada; pedidos
   reais de alteração continuam bloqueados antes do modelo e do banco.
 - 131 testes passaram; TypeScript/build conferidos. Sem escrita, migration
-  ou armazenamento de histórico. Ver `docs/bia.md` e status de 02/10.
+  ou armazenamento de histórico. Publicada nos commits `b5775e2`/`7f1c1f3`,
+  dois remotes, Vercel Ready. Sessão real em produção conferiu repetição de
+  devoluções e métricas por SKU contra a tela comercial, com IA.
+  Ver `docs/bia.md` e status de 02/10.
 
 ## [2026-10-02] — B.ia — publicada em produção
 

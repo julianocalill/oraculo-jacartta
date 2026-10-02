@@ -74,14 +74,16 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 ## Current production state
 
-B.ia em produção, com correção de respostas e filtros em 02/10: chat flutuante à direita,
-aberto pelo personagem, sem item no menu lateral; conversa em memória entre
-páginas da mesma operação. Usa o Ollama existente e consultas de
-faturamento/produtos/margem estritamente de
-leitura. Commit `caa4bcc` nos dois remotes; Vercel **Ready** confirmado. Ollama validado por SSH, e localhost
-com login real conferiu a consulta de hoje com a tela comercial.
-Domínio/login/personagem e proteção sem sessão conferidos. Consulta pela
-interface de produção da primeira entrega estava pendente. Correção atual: devoluções recebem limite explícito e link, perguntas ambíguas pedem esclarecimento, SKU é exato e valores por produto respeitam o filtro. Ver [contrato da B.ia](docs/bia.md) e
+B.ia em produção, com correção de respostas e filtros em 02/10. Chat
+flutuante à direita, fora do menu; usa Ollama existente e consultas de
+faturamento/produtos/margem somente leitura. Perguntas de devoluções recebem
+limite explícito e link para a tela; ambiguidades pedem esclarecimento.
+SKU exato e valores por produto respeitam o filtro, mostrado na resposta.
+Commits `b5775e2` e `7f1c1f3` nos dois remotes, Vercel **Ready**.
+131 testes, TypeScript e build passaram. Sessão real em produção confirmou
+respostas de devoluções, repetição após vendas e métricas por SKU alinhadas
+à linha da Análise Comercial, com IA. Layout móvel conferido.
+Ver [contrato da B.ia](docs/bia.md) e
 [status de 02/10](docs/project-status-2026-10-02.md).
 
 Separação local: Full excluído em produção em 01/10 antes das contagens e

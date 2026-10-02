@@ -1,0 +1,52 @@
+{
+  "verified_at": "2026-10-02T15:09:37.754499+00:00",
+  "runtime_commit": "7f1c1f3e710dcfa339c8df861eea61684c2235bc",
+  "deployment": {
+    "id": "dpl_5hobP3SgqQipRb2u6hGwFSSagq78",
+    "url": "https://oraculo-jacartta-bifgpl0sv-grupo-jacartta.vercel.app",
+    "status": "Ready",
+    "alias": "https://oraculo.oliverhome.com.br"
+  },
+  "first_fix_commit": "b5775e2dcd1df964a425d40e354c77a8e028f032",
+  "remotes": [
+    "origin",
+    "personal"
+  ],
+  "reported_failure": "Quantidade de devoluções respondeu apresentação e depois vendas; texto original indisponível nas duas abas inicialmente observadas.",
+  "later_visible_question": "Olá, me traga um relatório de devoluções de ontem",
+  "tests": {
+    "passed": 131,
+    "failed": 0,
+    "typescript": "passed",
+    "production_build": "passed",
+    "returns_first_repeated_after_sales": "passed",
+    "returns_calls_model": 0,
+    "returns_calls_commercial_rpc": 0,
+    "model_write_false_positive": "passed"
+  },
+  "production_ui": {
+    "real_authenticated_session": true,
+    "operation": "uberlandia",
+    "visible_returns_question_specific_reply": true,
+    "singular_returns_after_real_sales_query": true,
+    "sku_units_question": "Quantas unidades do SKU 215780 vendemos hoje?",
+    "model_label": "Leitura com IA · dados verificados",
+    "sku_metrics_match_commercial_page_row": true,
+    "scope_visible": true,
+    "mobile_viewport": [
+      390,
+      844
+    ],
+    "mobile_document_width": 375,
+    "mobile_panel_width": 355,
+    "original_user_tab_preserved": true
+  },
+  "limitations": [
+    "B.ia ainda não consulta devoluções; oferece a tela Devoluções.",
+    "Sem recuperação de histórico apagado ou nova persistência.",
+    "Sessão localhost expirou; validação visual final ocorreu em produção.",
+    "Homologação ampliada de períodos/lojas e piloto permanecem pendentes."
+  ],
+  "database_changes": false,
+  "permissions_changes": false
+}

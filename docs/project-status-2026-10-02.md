@@ -31,7 +31,15 @@ modelo foi retirado; pedidos reais de alteração continuam barrados pelo
 código antes da inferência. Regressão própria cobre esse caso.
 
 Validação: 131 testes de domínio/contrato passaram; TypeScript e build
-passaram. Publicação e validação visual desta correção em andamento.
+passaram. Publicada: commits `b5775e2` e `7f1c1f3` nos dois remotes, Vercel
+[Ready](https://oraculo-jacartta-bifgpl0sv-grupo-jacartta.vercel.app), domínio
+oficial confirmado. Sessão real em produção: resposta específica de
+devoluções, singular e repetição após consulta comercial conferidos.
+Unidades/receita/margem/resultado do SKU 215780 de hoje conferiram com a
+linha da Análise Comercial; fonte, filtros e rótulo de IA visíveis.
+Viewport 390 × 844: documento e painel dentro da largura.
+A sessão localhost expirou; a validação visual final ocorreu na produção.
+[Evidência](analyses/bia-respostas-validacao-2026-10-02.json).
 Sem migration, novas ferramentas de banco ou retenção de conversa.
 Contrato atualizado: [bia.md](bia.md).
 
@@ -64,10 +72,12 @@ com IA alinhada à tela comercial (receita, NFs, unidades, margem e resultado),
 recusa de alteração, histórico/rascunho entre páginas, abrir/minimizar e
 reset na troca Uberlândia/Giracasa. Layout móvel e foco/rolagem conferidos.
 Produção: login/PNG com HTTP 200; rota B.ia e resposta sem sessão
-redirecionam ao login (307), sem expor dados. Interface de produção aguarda
-login do usuário para consultar com JWT real e confirmar Vercel → Ollama.
+redirecionam ao login (307), sem expor dados. Na entrega inicial, a interface de produção aguardava
+login do usuário para consultar com JWT real e confirmar Vercel → Ollama;
+a correção descrita acima já confirmou esse caminho com consulta por SKU.
 [Evidência de deploy](analyses/bia-deploy-2026-10-02.json).
-Homologação ampliada e caminho público autenticado continuam pendentes. Revisão automática havia bloqueado baixar todas as variáveis de
+Homologação ampliada continua pendente; caminho público autenticado
+confirmado na correção acima. Revisão automática havia bloqueado baixar todas as variáveis de
 produção por exposição excessiva; nenhuma credencial foi extraída.
 
 Contrato, configuração e validação antes/depois da publicação:
