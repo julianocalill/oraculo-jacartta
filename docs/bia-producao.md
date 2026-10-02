@@ -2,7 +2,9 @@
 
 Plano registrado em 02/10/2026 a pedido do usuário. A B.ia está implementada
 e validada em localhost. Publicação em produção autorizada pelo usuário em
-02/10; registro do commit/deploy após confirmação da Vercel. Contrato completo:
+02/10 e concluída: commit `caa4bcc`, [Vercel Ready](https://oraculo-jacartta-iwq1vth1z-grupo-jacartta.vercel.app).
+Domínio/asset e proteção sem login conferidos; teste autenticado na
+interface publicada ainda aguarda login do usuário. Contrato completo:
 [bia.md](bia.md). Decisão: [ADR-008](adr/ADR-008-bia-read-only.md).
 
 Ordem ajustada pelo usuário: validar IA no servidor → login/dados reais em
@@ -99,13 +101,17 @@ Definir os usuários do piloto e as permissões por operação. O novo chat não
 deve conceder automaticamente acesso à fonte. Não há migration nem carga
 de dados prevista para esta versão.
 
-## 4. Implementar em produção — em andamento
+## 4. Implementar em produção — deploy concluído; conferência autenticada pendente
 
-Enviar a entrega para origin e personal; Vercel acompanha personal.
-Confirmar deploy Ready e domínio de produção. Conferir login, navegação,
+Entrega enviada para origin e personal; Vercel acompanha personal.
+Commit `caa4bcc`, deploy Ready e domínio oficial confirmados.
+HTTP 200 no login e PNG; rotas B.ia sem sessão redirecionam ao login.
+[Evidência](analyses/bia-deploy-2026-10-02.json).
+Após o usuário entrar na aba de produção, conferir navegação,
 personagem, consulta real, fonte e recusa de mudança no ambiente publicado.
-Registrar commit/deploy e atualizar README, CHANGELOG e status com a
-evidência; só então marcar a B.ia como publicada.
+Commit/deploy e evidência já registrados em README, CHANGELOG e status.
+Publicada; a consulta autenticada na interface continua pendente e não
+foi substituída por JWT administrativo ou transferência de cookies locais.
 
 Se houver regressão, restaurar o frontend anterior pelo fluxo normal de
 rollback Vercel. A B.ia não cria tabelas nem escreve dados comerciais,

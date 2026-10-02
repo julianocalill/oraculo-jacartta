@@ -198,7 +198,7 @@
   - Versões anteriores de `olist-sync-orders`/`olist-sync-stock` (deployadas com `verify_jwt: true`). Nenhum job em `cron.job` as chama mais. Candidatas a `supabase functions delete`, a menos que algo externo ainda invoque diretamente.
 - **Ollama (VPS `129.121.53.71`, stack `ollama`)** — `qwen2.5-coder:7b`, sem GPU.
   - B.ia (chat flutuante à direita; `/bia` abre o painel por redirect;
-    publicação autorizada em 02/10, em andamento)
+    publicada em 02/10, commit `caa4bcc`, Vercel Ready)
     reutiliza `OLLAMA_URL`, `OLLAMA_MODEL` e `OLLAMA_TOKEN` do backend web.
     Uma classificação curta por pergunta; receitas determinísticas fazem
     fallback. Dados são lidos por JWT em RPC comercial STABLE, sem escrita,

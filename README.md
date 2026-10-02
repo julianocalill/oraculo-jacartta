@@ -34,7 +34,7 @@ oraculo/
 ## First files to read
 
 Estado mais recente: [docs/project-status-2026-10-02.md](docs/project-status-2026-10-02.md)
-(B.ia com publicação autorizada).
+(B.ia publicada em produção).
 
 1. [docs/project-status-2026-10-02.md](docs/project-status-2026-10-02.md) **← start here** (B.ia)
    — [docs/project-status-2026-10-01.md](docs/project-status-2026-10-01.md) (Separação com Grupo e sem Full; Devoluções e cenários Shopee Ads em produção)
@@ -74,13 +74,14 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 ## Current production state
 
-B.ia validada em localhost, publicação autorizada em 02/10: chat flutuante à direita,
+B.ia publicada em produção em 02/10: chat flutuante à direita,
 aberto pelo personagem, sem item no menu lateral; conversa em memória entre
 páginas da mesma operação. Usa o Ollama existente e consultas de
 faturamento/produtos/margem estritamente de
-leitura. Publicação em andamento; commit/deploy serão registrados ao concluir. Ollama validado por SSH, e localhost
+leitura. Commit `caa4bcc` nos dois remotes; Vercel **Ready** confirmado. Ollama validado por SSH, e localhost
 com login real conferiu a consulta de hoje com a tela comercial.
-Homologação completa e caminho público autenticado ainda pendentes. Ver [contrato da B.ia](docs/bia.md) e
+Domínio/login/personagem e proteção sem sessão conferidos. Consulta pela
+interface de produção e caminho público autenticado aguardam login do usuário. Ver [contrato da B.ia](docs/bia.md) e
 [status de 02/10](docs/project-status-2026-10-02.md).
 
 Separação local: Full excluído em produção em 01/10 antes das contagens e
@@ -132,7 +133,7 @@ Shopee Ads publicado em produção em 11/09/2026: [status de 11/09](docs/project
 
 Correção de taxas TikTok publicada em 11/09/2026: [status](docs/project-status-2026-09-10.md).
 
-**Last update**: `2026-10-02` (B.ia publication in progress; see `docs/project-status-2026-10-02.md`). Previous frontend update: `2026-10-01` (Full excluded from local picking; TikTok returns upload and SKU reason filter in production; see `docs/project-status-2026-10-01.md`). Previous production updates: `2026-09-30` (see `docs/project-status-2026-09-30.md`) and `2026-09-28` (see `docs/project-status-2026-09-28.md`) —
+**Last update**: `2026-10-02` (B.ia published, Vercel Ready; see `docs/project-status-2026-10-02.md`). Previous frontend update: `2026-10-01` (Full excluded from local picking; TikTok returns upload and SKU reason filter in production; see `docs/project-status-2026-10-01.md`). Previous production updates: `2026-09-30` (see `docs/project-status-2026-09-30.md`) and `2026-09-28` (see `docs/project-status-2026-09-28.md`) —
 Giracasa/SP com histórico comercial e job horário próprios; o menu acompanha a
 operação da URL durante a navegação cliente. Atualização anterior da
 calculadora em `2026-09-25` —

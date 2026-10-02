@@ -1,6 +1,6 @@
 # Estado do projeto — 02/10/2026
 
-## B.ia — publicação em andamento
+## B.ia — publicada em produção
 
 Chat flutuante à direita: B.ia, assistente com personagem original, Ollama
 qwen2.5-coder:7b existente e respostas de faturamento NF, produtos/margem e
@@ -11,8 +11,10 @@ armazenamento de conversa. O personagem abre/minimiza o painel lateral,
 sem item no menu. Conversa e rascunho ficam em memória entre páginas da mesma
 operação; recarregar, logout ou troca de operação/usuário limpa o contexto.
 Permissão `bia` preservada em Usuários e `/bia` abre o painel por redirect.
-Publicação autorizada pelo usuário em 02/10. Commit e deploy em preparação;
-não há migration ou alteração de dados nesta entrega.
+Publicação autorizada pelo usuário em 02/10 e concluída: commit `caa4bcc`
+enviado a origin e personal, deploy [Vercel](https://oraculo-jacartta-iwq1vth1z-grupo-jacartta.vercel.app)
+**Ready**, domínio `https://oraculo.oliverhome.com.br`. Novidade: 11:30 BRT.
+Não há migration ou alteração de dados nesta entrega.
 
 Fontes e cálculos reutilizados da tela comercial, com datas, canais,
 atualização e cobertura explícitos. Personagem PNG transparente e interface
@@ -26,7 +28,11 @@ Painel lateral conferido com sessão real em localhost: consulta de hoje
 com IA alinhada à tela comercial (receita, NFs, unidades, margem e resultado),
 recusa de alteração, histórico/rascunho entre páginas, abrir/minimizar e
 reset na troca Uberlândia/Giracasa. Layout móvel e foco/rolagem conferidos.
-Homologação completa e caminho público autenticado continuam pendentes. Revisão automática havia bloqueado baixar todas as variáveis de
+Produção: login/PNG com HTTP 200; rota B.ia e resposta sem sessão
+redirecionam ao login (307), sem expor dados. Interface de produção aguarda
+login do usuário para consultar com JWT real e confirmar Vercel → Ollama.
+[Evidência de deploy](analyses/bia-deploy-2026-10-02.json).
+Homologação ampliada e caminho público autenticado continuam pendentes. Revisão automática havia bloqueado baixar todas as variáveis de
 produção por exposição excessiva; nenhuma credencial foi extraída.
 
 Contrato, configuração e validação antes/depois da publicação:
@@ -35,13 +41,13 @@ Plano de publicação registrado a pedido do usuário:
 [`docs/bia-producao.md`](bia-producao.md), começando pela conexão real com
 Ollama e homologação com sessão real. Localhost agora roda next start com
 login obrigatório e proxy SSH local. Sessão real e consulta de hoje conferidas;
-restam os demais cenários de homologação antes da publicação.
+demais cenários de homologação permanecem na homologação ampliada do piloto.
 Ordem confirmada: IA → login/dados em localhost → preparar → produção →
-piloto → ampliar assuntos. Publicação autorizada após a validação local;
-estado Ready e verificação do domínio serão registrados ao concluir.
+piloto → ampliar assuntos. Publicação autorizada após a validação local,
+Ready e domínio confirmados; piloto/expansão ainda não iniciados.
 
 ## Estado anterior de produção
 
-O frontend permanece no estado de `docs/project-status-2026-10-01.md`, com
+Antes desta entrega, o frontend estava no estado de `docs/project-status-2026-10-01.md`, com
 Separação sem Full e Grupo congelado, cenários Shopee Ads e correções de
-Devoluções. A publicação da B.ia está em andamento; não há migration nesta entrega. A conciliação de Separação com o lote de etiquetas segue pendente.
+Devoluções. B.ia acrescentada em produção; não há migration nesta entrega. A conciliação de Separação com o lote de etiquetas segue pendente.

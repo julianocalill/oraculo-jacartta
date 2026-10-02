@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — 02/10/2026. Publicação autorizada e em andamento.
+Accepted — 02/10/2026. Publicada em produção; commit `caa4bcc`, Vercel Ready confirmado.
 
 ## Contexto
 

@@ -2,7 +2,7 @@
 
 Histórico de entregas e mudanças significativas.
 
-## [2026-10-02] — B.ia — publicação em andamento
+## [2026-10-02] — B.ia — publicada em produção
 
 - Chat flutuante à direita, aberto pelo personagem e fora do menu lateral.
   Conversa em memória preservada ao minimizar e navegar na mesma operação.
@@ -13,8 +13,9 @@ Histórico de entregas e mudanças significativas.
 - Sem escrita, SQL livre ou credencial administrativa: JWT real, acesso à
   fonte revalidado e cliente restrito à RPC STABLE comercial auditada.
 - Personagem transparente e interface desktop/celular; testes de domínio,
-  contratos, TypeScript e build: 118 testes passaram. Publicação autorizada
-  e em andamento; sem migration ou alteração de dados.
+  contratos, TypeScript e build: 118 testes passaram. Commit `caa4bcc` nos
+  dois remotes; Vercel Ready e domínio oficial conferidos. Sem migration
+  ou alteração de dados. Consulta na interface de produção aguarda login.
 - Ollama posteriormente validado por SSH (6/6 intenções); classificador real
   também passou pelo proxy local. Localhost preparado com login real via
   next start. Consulta de hoje conferiu com a tela comercial; navegação e

@@ -1,0 +1,41 @@
+{
+  "checked_at": "2026-10-02T14:32:36.446865+00:00",
+  "commit": "caa4bccab393d6db372c8a814fc3b622db6362d7",
+  "deployment_id": "dpl_6ja8pr59EkbKtpHiXkmsP9S6JcCn",
+  "deployment_url": "https://oraculo-jacartta-iwq1vth1z-grupo-jacartta.vercel.app",
+  "domain": "https://oraculo.oliverhome.com.br",
+  "vercel_status": "Ready",
+  "http_checks": [
+    {
+      "path": "/login",
+      "method": "GET",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "redirect_to_login": false
+    },
+    {
+      "path": "/brand/bia/personagem.png",
+      "method": "GET",
+      "status": 200,
+      "content_type": "image/png",
+      "redirect_to_login": false
+    },
+    {
+      "path": "/o/uberlandia/bia",
+      "method": "GET",
+      "status": 307,
+      "content_type": "text/plain",
+      "redirect_to_login": true
+    },
+    {
+      "path": "/o/uberlandia/bia/responder",
+      "method": "POST",
+      "status": 307,
+      "content_type": "text/plain",
+      "redirect_to_login": true
+    }
+  ],
+  "authenticated_browser_check": "awaiting user login",
+  "ollama_public_authenticated_path": "awaiting authenticated app query",
+  "previous_deployment": "https://oraculo-jacartta-qdcxnx5xm-grupo-jacartta.vercel.app"
+}
