@@ -1,5 +1,31 @@
 # Estado do projeto — 02/10/2026
 
+## B.ia — fontes de todos os setores e permissões por usuário
+
+Ampliação implementada, validação local em andamento. Todas as abas têm
+fonte fixa, sem SQL livre ou ferramenta de escrita. A consulta usa somente
+os dados da tela autorizada na mesma sessão/operação. Receita comercial
+mantém sua RPC JWT; demais fontes usam GET sem executar ações/scripts.
+
+Permissões são lidas da identidade atual e verificadas antes de qualquer
+leitura, inclusive em perguntas com duas áreas. Aba não liberada produz
+negativa explícita e orientação para Usuários, sem consultar dados/modelo.
+Administradores, abas restritas e Agenda preservam as regras existentes.
+Nome vem do cadastro da sessão; cada resposta contém informação principal,
+explicação didática, fonte/filtros e avisos de cobertura.
+
+Ollama só seleciona IDs conhecidos de fatos. Não pode gerar valores/URLs;
+seleção inválida ou indisponível usa fallback. CPF/e-mail são mascarados antes
+da inferência. Limites: três fontes, seis fatos e recorte de linhas por tabela.
+Telas de detalhe/client-only, filtros livres e cálculos novos não estão
+automaticamente cobertos. Não somar rankings para inventar totais.
+Devoluções agora consulta sua fonte e falha de RPC não aparece como zero.
+Sem migration, novas concessões ou armazenamento de conversas.
+
+150 testes passaram; TypeScript e build passaram. Contrato: [bia.md](bia.md).
+Decisão: [ADR-009](adr/ADR-009-bia-fontes-autorizadas.md). Nenhum deploy desta
+ampliação realizado ainda; publicação anterior permanece abaixo.
+
 ## B.ia — correção de respostas fora do assunto
 
 O usuário relatou que uma pergunta sobre quantidade de devoluções recebeu

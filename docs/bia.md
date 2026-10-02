@@ -10,7 +10,41 @@ Evidência: [bia-deploy-2026-10-02.json](analyses/bia-deploy-2026-10-02.json).
 Decisão: [ADR-008](adr/ADR-008-bia-read-only.md).
 Etapas para publicação e evolução: [bia-producao.md](bia-producao.md).
 
-## Correção de respostas — 02/10/2026
+## Ampliação dos assuntos — 02/10/2026
+
+Registro de fontes para todas as abas e subfontes principais do Oráculo.
+Respostas com nome da sessão, informação principal, explicação didática,
+filtros e links para a tela de origem. A B.ia segue somente leitura.
+A permissão `bia` permite abrir o chat; cada assunto exige a permissão
+própria da aba na operação atual. Pergunta composta valida todas as fontes
+antes de ler qualquer uma; negativa informa que o dado não está liberado.
+Não alteramos acessos ou permissões no banco.
+
+Devoluções agora tem fonte de leitura, incluindo período e canal suportados.
+Não usa vendas para responder devoluções. Consulta com erro na tela não
+pode mais aparecer como zero. Outros assuntos reutilizam cards, tabelas e
+notas renderizadas pelas páginas autorizadas, com a mesma sessão.
+Ver [ADR-009](adr/ADR-009-bia-fontes-autorizadas.md) para limites e segurança.
+
+O Ollama seleciona apenas IDs de fatos existentes; números e links não são
+gerados pelo modelo. O backend mascara CPF/e-mail antes da inferência,
+preserva o fato de maior relevância e usa seleção determinística se a IA
+falhar. Até três fontes, seis fatos, 30 linhas por tabela. Fontes paginadas,
+previsões e dados estimados permanecem identificados. Ausência de linha não
+comprova zero; filtros ou janelas não suportados não são ignorados.
+Cobertura de todos os setores não significa consulta arbitrária de todo o
+banco: telas de detalhe, dados client-only e cálculos novos precisam de
+ferramentas específicas.
+
+Seleção real de IDs no Ollama, com exemplo fictício: 2,327 s após
+carregamento. Primeiro uso excedeu 12 s e confirmou fallback seguro.
+[Evidência](analyses/bia-setores-validacao-2026-10-02.json).
+
+150 testes passaram; TypeScript e build passaram. Validação da interface
+com dados reais desta ampliação em andamento. A versão publicada anterior
+continua registrada abaixo como histórico.
+
+## Correção anterior de respostas — 02/10/2026
 
 Relato recebido: quantidade de devoluções respondeu apresentação e depois
 vendas. Não havia histórico nas duas abas observadas; as perguntas originais
@@ -53,7 +87,9 @@ visual final ocorreu em produção.
 A **B.ia** abre pelo personagem no canto inferior direito, em um painel de
 chat lateral nas páginas autorizadas do Oráculo. Ela acompanha a operação
 selecionada e não ocupa um item no menu lateral.
-O usuário precisa das permissões `bia` e `analise-comercial` nessa operação.
+O usuário precisa de `bia` e da permissão da fonte consultada nessa operação.
+A Análise Comercial exige `analise-comercial`; Devoluções exige `devolucoes`,
+e assim por diante, sem obrigar acesso comercial para consultar outro setor.
 Administradores seguem o comportamento existente; usuários comuns precisam
 da liberação da permissão B.ia em Usuários. Esta entrega não modifica concessões.
 
@@ -75,10 +111,10 @@ padrão é mês atual até hoje na primeira pergunta; continuações conservam o
 Uma família de canais soma as lojas correspondentes do catálogo real.
 Os links da fonte permitem conferir cada parcela na Análise Comercial.
 
-Estoque, reposição, devoluções, Ads, pedidos, carteira, dados pessoais,
-causas de mudanças, comparação entre operações, filtros de exclusão e
-custos pendentes ainda não têm ferramentas no chat. A B.ia informa esse
-limite. Não inventa resposta nem substitui um canal ausente por todas as lojas.
+Estoque, reposição, devoluções, Ads, pedidos, carteira, RH, Agenda,
+Logística, Importações, Full, RPA, configurações e demais abas agora usam
+as telas autorizadas como fontes. Comparação entre operações, causas
+comprovadas, filtros livres e cálculos sem ferramenta continuam limitados. Não inventa resposta nem substitui um canal ausente por todas as lojas.
 
 ## Arquitetura e modelo
 
@@ -92,8 +128,10 @@ Não há nova infraestrutura, tabela, migration ou cron.
 
 O modelo faz uma classificação curta de intenção/ordenação (uma chamada,
 JSON limitado, até 64 tokens de saída, contexto 2048, timeout 12 s).
-Recebe somente a pergunta atual, sem resultados comerciais, schema,
-credenciais ou histórico de respostas. O código resolve datas, canais,
+Na receita comercial recebe somente a pergunta atual, sem resultados.
+Nas demais fontes recebe a pergunta e um recorte de fatos, com CPF/e-mail
+mascarados, para selecionar IDs. Não recebe schema, credenciais ou histórico
+de respostas. O código resolve datas, canais,
 filtros, cálculos e redação dos números; o modelo não gera SQL.
 Receitas reconhecidas continuam funcionando quando o Ollama falha ou não
 está configurado, com o rótulo “Consulta verificada”.
@@ -117,14 +155,18 @@ redireciona para uma página permitida com `?bia=1`, abrindo o mesmo chat.
 - Recusa de pedidos de mudança antes do modelo e do banco.
 - Sem ferramentas de escrita, SQL livre, execução de comandos, envio de
   mensagens ou acesso às APIs dos marketplaces.
-- Cliente próprio com chave anon + JWT real, sem `service_role`, inclusive
+- Receita comercial: cliente próprio com chave anon + JWT real, sem `service_role`, inclusive
   em desenvolvimento. O mock local de login não pode consultar dados.
-- Allowlist de saída: apenas GET/POST para
+- Allowlist da receita comercial: apenas GET/POST para
   `/rest/v1/rpc/oraculo_commercial_analysis` no Supabase configurado.
   POST é a chamada da função de leitura, não uma escrita. Outras RPCs,
   tabelas, métodos e destinos são bloqueados; redirects são rejeitados.
-- Middleware fixa operação/schema, e a rota revalida acesso à B.ia e à
-  Análise Comercial em cada turno. A operação nunca vem do corpo.
+- Demais fontes: GET fixo autenticado na própria aplicação, sem ações ou
+  scripts, reaproveitando a autorização e os loaders da tela. A B.ia não
+  recebe cliente administrativo; páginas com loaders admin mantêm sua
+  autorização existente. Ver ADR-009.
+- Middleware fixa operação/schema, e a rota revalida acesso à B.ia e a cada
+  aba consultada em cada turno. A operação nunca vem do corpo.
 - Wrappers do banco auditados em 02/10: função STABLE SECURITY DEFINER,
   search_path vazio e verificação explícita de associação à operação via
   `can_access_operation`; implementações internas STABLE SECURITY INVOKER

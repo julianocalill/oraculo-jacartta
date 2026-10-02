@@ -1,0 +1,39 @@
+{
+  "date": "2026-10-02",
+  "scope": "B.ia: fontes autorizadas de todos os setores",
+  "tests": {
+    "count": 150,
+    "failures": 0,
+    "command": "node --test tests/bia-readonly.test.cjs tests/bia-sources.test.cjs packages/domain/*.test.js"
+  },
+  "typecheck": "passed",
+  "build": "passed",
+  "security": [
+    "all source permissions checked before any read",
+    "restricted_tabs and operation rules preserved",
+    "Users requires master independently of historical tab grant",
+    "source transport fixed GET, same session, same operation, trusted origin, no redirects",
+    "model only selects known fact IDs; extra fields rejected",
+    "personal identifiers masked before inference",
+    "write requests refused before reading"
+  ],
+  "modelSyntheticCheck": {
+    "synthetic": true,
+    "realOllama": false,
+    "ids": [
+      "teste:0",
+      "teste:1"
+    ],
+    "durationMs": 12009
+  },
+  "realSessionValidation": "pending user login at localhost; no session or credential transferred",
+  "deployment": "not published for this expansion; previous release unchanged",
+  "modelSyntheticWarmCheck": {
+    "synthetic": true,
+    "realOllama": true,
+    "ids": [
+      "teste:0"
+    ],
+    "durationMs": 2327
+  }
+}

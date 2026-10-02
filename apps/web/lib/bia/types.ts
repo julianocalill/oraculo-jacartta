@@ -5,6 +5,8 @@ export type { BiaPlan };
 export type BiaReply = {
   text: string;
   mode: 'local' | 'verified';
+  findings?: { label: string; text: string }[];
+  explanations?: { label: string; text: string }[];
   scope?: { measure: string; product?: string };
   actions?: { label: string; href: string }[];
   metrics?: { label: string; value: string; caption?: string }[];

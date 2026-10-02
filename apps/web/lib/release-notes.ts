@@ -24,13 +24,25 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-02-bia-setores",
+    title: "B.ia acompanha os seus setores",
+    summary: "Consulte as áreas liberadas para você, com explicações e fontes dos dados.",
+    publishedAt: "2026-10-02T17:50:00-03:00",
+    changes: [{
+      title: "Informação com contexto e acesso respeitado",
+      description: "A B.ia trata você pelo nome, explica os indicadores e mostra onde conferir os dados. Cada assunto respeita o acesso configurado em Usuários. Ela apenas consulta e informa quando um dado não está disponível para você.",
+      href: "/bia",
+      linkLabel: "Conversar com a B.ia"
+    }]
+  },
+  {
     id: "2026-10-02-bia-respostas",
     title: "Respostas mais claras da B.ia",
     summary: "Confira a medida, o período e o produto usados em cada resposta.",
     publishedAt: "2026-10-02T12:10:00-03:00",
     changes: [{
       title: "Perguntas e filtros respeitados",
-      description: "A B.ia pede esclarecimento quando não entende um filtro e mostra quais dados consultou. Perguntas de devoluções indicam a tela correta, enquanto esse assunto ainda não está disponível no chat.",
+      description: "A B.ia pede esclarecimento quando não entende um filtro e mostra quais dados consultou. As respostas indicam a fonte para conferir a informação.",
       href: "/bia",
       linkLabel: "Conversar com a B.ia"
     }]

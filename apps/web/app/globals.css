@@ -8878,3 +8878,9 @@ svg rect[data-tip].is-active {
   .bia-workspace-compact .bia-composer textarea { font-size: 16px; }
   .bia-workspace-compact .bia-metrics { grid-template-columns: 1fr; }
 }
+
+/* Evidências da B.ia: textos da fonte e interpretação executiva. */
+.bia-findings, .bia-explanations { display: grid; gap: 10px; margin: 14px 0; }
+.bia-findings > div, .bia-explanations > div { padding: 12px; border-radius: 12px; background: var(--fill); overflow-wrap: anywhere; }
+.bia-findings strong, .bia-explanations strong { font-size: 12px; color: var(--gold-text); }
+.bia-findings p, .bia-explanations p { margin: 6px 0 0; font-size: 12px; line-height: 1.65; }

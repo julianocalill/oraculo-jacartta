@@ -10,7 +10,7 @@ type Message = { id: number; question: string; reply?: BiaReply; error?: string 
 const STARTERS = [
   { title: 'Acompanhar faturamento', question: 'Quanto faturamos este mês?' },
   { title: 'Encontrar os destaques', question: 'Top 10 produtos mais vendidos da Shopee no mês passado' },
-  { title: 'Conferir a margem', question: 'Quais produtos têm margem abaixo de 15% este mês?' }
+  { title: 'Conferir devoluções', question: 'Qual a quantidade de devoluções neste mês?' }
 ];
 const timestamp = (value: string | null) => value
   ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' }).format(new Date(value))
@@ -31,6 +31,8 @@ function Reply({ reply }: { reply: BiaReply }) {
     {reply.table ? <section className="bia-result-table"><h3>{reply.table.title}</h3>
       <SortableTable columns={reply.table.columns} rows={reply.table.rows} initialSort={reply.table.initialSort} initialDir="desc" />
     </section> : null}
+    {reply.findings?.length ? <div className="bia-findings">{reply.findings.map((finding,index)=><div key={index}><strong>{finding.label}</strong><p>{finding.text}</p></div>)}</div> : null}
+    {reply.explanations?.length ? <div className="bia-explanations" aria-label="Como interpretar os dados">{reply.explanations.map(item=><div key={item.label}><strong>{item.label}</strong><p>{item.text}</p></div>)}</div> : null}
     {reply.notices?.length ? <div className="bia-notices" aria-label="Critérios e cobertura dos dados">
       {reply.notices.map((notice) => <p key={notice}>{notice}</p>)}
     </div> : null}
@@ -42,7 +44,7 @@ function Reply({ reply }: { reply: BiaReply }) {
   </div>;
 }
 
-export function BiaChat({ operation, dataAllowed, aiConfigured, compact = false }: { operation: string; dataAllowed: boolean; aiConfigured: boolean; compact?: boolean }) {
+export function BiaChat({ operation, userName, dataAllowed, aiConfigured, compact = false }: { operation: string; userName: string; dataAllowed: boolean; aiConfigured: boolean; compact?: boolean }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [pending, setPending] = useState(false);
@@ -85,8 +87,9 @@ export function BiaChat({ operation, dataAllowed, aiConfigured, compact = false 
       setMessages((previous) => previous.map((message) => message.id === id ? { ...message, reply: payload } : message));
     } catch (error) {
       if (abort.signal.aborted && abort.signal.reason !== 'timeout') return;
-      setMessages((previous) => previous.map((message) => message.id === id ? { ...message,
-        error: abort.signal.aborted ? 'A consulta demorou mais que o esperado. Tente novamente em instantes.' : error instanceof Error ? error.message : 'Não consegui concluir a consulta.' } : message));
+      const detail = abort.signal.aborted ? 'a consulta demorou mais que o esperado. Tente novamente em instantes.' : error instanceof Error ? error.message : 'não consegui concluir a consulta.';
+      const friendly = detail.startsWith(`${userName},`) ? detail : `${userName}, ${detail}`;
+      setMessages((previous) => previous.map((message) => message.id === id ? { ...message, error: friendly } : message));
     } finally {
       clearTimeout(progress); clearTimeout(timeout);
       if (controller.current === abort) { setPending(false); busy.current = false; if (textarea.current?.getClientRects().length) textarea.current.focus(); }
@@ -107,12 +110,12 @@ export function BiaChat({ operation, dataAllowed, aiConfigured, compact = false 
       <button type="button" className="bia-reset" onClick={reset} disabled={!messages.length}>Nova conversa <span aria-hidden="true">↺</span></button>
     </div>
     <div className="bia-thread" ref={thread}>
-    {!dataAllowed ? <section className="panel bia-access" role="status"><h2>Seu acesso aos dados precisa ser liberado</h2>
-      <p>Para consultar faturamento, produtos e margem, peça ao administrador acesso à Análise Comercial nesta operação.</p>
+    {!dataAllowed ? <section className="panel bia-access" role="status"><h2>{userName}, seu acesso à B.ia precisa ser liberado</h2>
+      <p>Peça ao administrador a liberação da B.ia em Usuários. Cada setor continuará seguindo sua própria permissão.</p>
     </section> : null}
     {messages.length === 0 ? <section className="panel bia-welcome">
-      <div className="bia-welcome-copy"><p className="eyebrow">Prazer, sou a B.ia</p><h2>{compact ? 'Como posso ajudar?' : <>O que você quer<br />descobrir hoje?</>}</h2>
-        <p>{compact ? 'Pergunte sobre faturamento, produtos e margem. Eu consulto os dados para você.' : 'Pergunte sobre faturamento, produtos e margem. Eu consulto os dados e mostro o caminho para você conferir.'}</p>
+      <div className="bia-welcome-copy"><p className="eyebrow">Prazer, sou a B.ia</p><h2>{userName}, como posso ajudar?</h2>
+        <p>Pergunte sobre os setores do Oráculo liberados para você. Eu explico os dados e indico onde conferi-los.</p>
         <span className="bia-promise">Seus dados continuam como estão. Eu apenas respondo.</span>
       </div>
       <img className="bia-character" src="/brand/bia/personagem.png" alt="B.ia, uma assistente robótica com detalhes dourados e olhos em ciano" width="1280" height="1280" />
@@ -121,7 +124,7 @@ export function BiaChat({ operation, dataAllowed, aiConfigured, compact = false 
       </button>)}</div>
     </section> : <section className="bia-conversation" aria-label="Conversa com a B.ia" aria-busy={pending}>
       {messages.map((message) => <article key={message.id} className="bia-turn">
-        <div className="bia-question"><span>Você</span><p>{message.question}</p></div>
+        <div className="bia-question"><span>{userName}</span><p>{message.question}</p></div>
         <div className="bia-reply-row"><img src="/brand/bia/personagem.png" width="48" height="48" alt="" />
           <div className="bia-reply-body"><div className="bia-reply-label"><strong>B.ia</strong>
             {message.reply?.source ? <span>{message.reply.mode === 'local' ? 'Leitura com IA · dados verificados' : 'Consulta verificada'}</span> : null}

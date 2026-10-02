@@ -6,7 +6,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { parseOperationPath } from '@oraculo/domain/operations.js';
 import { tabForPath } from '../../lib/auth/path-tabs';
 
-type BiaConfig = { operation: string; userId: string; allowed: boolean; dataAllowed: boolean; aiConfigured: boolean };
+type BiaConfig = { operation: string; userId: string; userName: string; permissions: string; allowed: boolean; dataAllowed: boolean; aiConfigured: boolean };
 const AccessContext = createContext<((config: BiaConfig) => void) | null>(null);
 const Chat = dynamic(() => import('../bia/chat').then((module) => module.BiaChat), {
   ssr: false, loading: () => <p className="bia-dock-loading" role="status">Abrindo sua conversa…</p>
@@ -26,7 +26,7 @@ export function BiaProvider({ children }: { children: ReactNode }) {
   return <AccessContext.Provider value={register}>
     {children}
     {visible && config ? <Suspense fallback={null}>
-      <BiaDock key={`${config.operation}:${config.userId}:${config.dataAllowed}`} config={config} />
+      <BiaDock key={`${config.operation}:${config.userId}:${config.permissions}`} config={config} />
     </Suspense> : null}
   </AccessContext.Provider>;
 }
@@ -35,7 +35,7 @@ export function BiaProvider({ children }: { children: ReactNode }) {
 // page replacement, which would discard the chat between pages of one scope.
 export function BiaAccess(config: BiaConfig) {
   const register = useContext(AccessContext);
-  useEffect(() => { register?.(config); }, [register, config.operation, config.userId, config.allowed, config.dataAllowed, config.aiConfigured]);
+  useEffect(() => { register?.(config); }, [register, config.operation, config.userId, config.userName, config.permissions, config.allowed, config.dataAllowed, config.aiConfigured]);
   return null;
 }
 
@@ -91,7 +91,7 @@ function BiaDock({ config }: { config: BiaConfig }) {
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
       </header>
-      {started ? <Chat operation={config.operation} dataAllowed={config.dataAllowed} aiConfigured={config.aiConfigured} compact /> : null}
+      {started ? <Chat userName={config.userName} operation={config.operation} dataAllowed={config.dataAllowed} aiConfigured={config.aiConfigured} compact /> : null}
     </aside>
     <button ref={launcher} className="bia-launcher" type="button" onClick={() => open ? close() : show()} aria-label={open ? 'Minimizar conversa com a B.ia' : 'Conversar com a B.ia'} aria-expanded={open} aria-controls="bia-chat-panel">
       <img src="/brand/bia/personagem.png" width="60" height="60" alt="" />

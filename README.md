@@ -34,7 +34,7 @@ oraculo/
 ## First files to read
 
 Estado mais recente: [docs/project-status-2026-10-02.md](docs/project-status-2026-10-02.md)
-(B.ia: correção de respostas e filtros).
+(B.ia: fontes por setor em homologação; correção anterior publicada).
 
 1. [docs/project-status-2026-10-02.md](docs/project-status-2026-10-02.md) **← start here** (B.ia)
    — [docs/project-status-2026-10-01.md](docs/project-status-2026-10-01.md) (Separação com Grupo e sem Full; Devoluções e cenários Shopee Ads em produção)
@@ -73,6 +73,12 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 - `Obsidian` vault inside the repository for portable project memory
 
 ## Current production state
+
+B.ia ampliada para consultar fontes de todos os setores, com autorização da
+aba na operação atual, nome do usuário e explicação/fonte dos dados. 150
+testes, TypeScript e build passaram; validação local desta ampliação em
+andamento, ainda sem publicação. Contrato e limites: [bia.md](docs/bia.md) e
+[ADR-009](docs/adr/ADR-009-bia-fontes-autorizadas.md).
 
 B.ia em produção, com correção de respostas e filtros em 02/10. Chat
 flutuante à direita, fora do menu; usa Ollama existente e consultas de

@@ -32,7 +32,7 @@ function monthRange(year, month, today) {
 }
 
 /** Periods are resolved by code, never by model-generated dates. */
-function extractPeriods(text, today) {
+export function extractBiaPeriods(text, today) {
   const iso = [...text.matchAll(/\b\d{4}-\d{2}-\d{2}\b/g)].map((match) => match[0]);
   const br = [...text.matchAll(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/g)].map((match) => `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}`);
   const dates = iso.length ? iso : br;
@@ -100,7 +100,7 @@ export function resolveBiaPlan(question, today, previous = /** @type {BiaPlan|nu
   if (!ranking && !margin && !comparing && !revenue && !(previous && continuation)) return message(BIA_CLARIFY);
   if (comparing && (margin || /\b(unidades?|quantidade|quantas|qtd)\b/.test(text) || (previous?.measure && previous.measure !== 'revenue' && !revenue))) return message('Nesta versão comparo faturamento por NF entre períodos. Para comparar outra medida, preciso de uma ferramenta específica.');
 
-  const periods = extractPeriods(text, today);
+  const periods = extractBiaPeriods(text, today);
   if (periods.error) return message(periods.error);
   const ranges = periods.ranges ?? [];
   if (ranges.length > 1 && !comparing) return message('Você citou dois meses. Quer compará-los? Escreva, por exemplo, “Compare setembro com agosto”.');

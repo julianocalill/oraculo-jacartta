@@ -10,6 +10,13 @@ interface publicada ainda aguarda login do usuário. Contrato completo:
 Ordem ajustada pelo usuário: validar IA no servidor → login/dados reais em
 localhost → preparar → implementar em produção → piloto → ampliar assuntos.
 
+Ampliação solicitada em 02/10: todas as abas possuem fonte registrada, com
+autorização própria e tratamento pelo nome. Contrato e limites em
+[ADR-009](adr/ADR-009-bia-fontes-autorizadas.md). 150 testes, TypeScript e
+build passaram; validação local desta ampliação em andamento. As etapas
+abaixo mantêm o histórico da primeira publicação; piloto amplo permanece
+pendente.
+
 ## Base funcional já pronta
 
 Chat lateral flutuante e personagem, fora do menu; faturamento NF, produtos, margem e comparação de

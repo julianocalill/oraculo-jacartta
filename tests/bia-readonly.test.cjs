@@ -56,11 +56,22 @@ async function builder() {
   }).buildBiaAnswer;
 }
 async function route(options = {}) {
-  const calls = { query: 0, model: 0, plan: null };
+  const calls = { query: 0, model: 0, page: 0, plan: null };
+  const canAccessRequest = async (_, tab) => tab === 'bia' ? options.chat !== false : options.allowedTabs ? options.allowedTabs.includes(tab) : options.data !== false;
+  const sources = await import('../packages/domain/bia-sources.js');
+  const across = load('apps/web/lib/bia/oraculo.ts', {
+    'server-only': {}, '@oraculo/domain/bia-sources.js': sources, '@oraculo/domain/bia.js': await domain, '@oraculo/domain/commercial-analysis.js': await commercial,
+    '../auth/access': { canAccessRequest, isMaster: () => false }, '../auth/tabs': { isTabKey: () => true },
+    '../operation-context': { getRequestOperation: async () => 'uberlandia' },
+    './page-source': { readBiaPage: async (_, sourceId, __, params) => { calls.page++; return {sourceId,label:sources.biaSourceById(sourceId).label,href:'/devolucoes?'+params,filters:[],notices:[],facts:[{id:'returns:0',kind:'metric',label:'Devoluções abertas',value:'42'}]}; } },
+    './evidence-selection': {rankSourceFacts: (_, facts) => facts, selectBiaEvidence: async (_, facts) => ({facts,local:false})}
+  });
   const implementation = load('apps/web/app/bia/responder/route.ts', {
     '@oraculo/domain/bia.js': await domain,
-    '../../../lib/auth/session': { getCurrentUser: async () => options.anonymous ? null : { id: 'test-user' } },
-    '../../../lib/auth/access': { canAccessRequest: async (_, tab) => tab === 'bia' ? options.chat !== false : options.data !== false },
+    '@oraculo/domain/bia-sources.js': sources,
+    '../../../lib/bia/oraculo': across,
+    '../../../lib/auth/session': { getCurrentUser: async () => options.anonymous ? null : { id: 'test-user', user_metadata: {full_name:'Juliano Calil'} } },
+    '../../../lib/auth/access': { canAccessRequest },
     '../../../lib/date': { getSaoPauloToday: () => '2026-10-02' },
     '../../../lib/bia/answer': { buildBiaAnswer: await builder() },
     '../../../lib/bia/ollama': { interpretBia: async () => { calls.model++; return options.hint ?? null; } },
@@ -171,28 +182,26 @@ test('pedido de alteração é recusado antes da IA e do banco', async () => {
   const api = await route();
   const response = await api.post({ questions: ['Altere o custo para R$ 20'] });
   assert.equal(response.status, 200);
-  assert.equal((await response.json()).text, (await domain).BIA_READ_ONLY);
+  assert.equal((await response.json()).text, 'Juliano Calil, eu'+(await domain).BIA_READ_ONLY.slice(2));
   assert.equal(api.calls.model, 0);
   assert.equal(api.calls.query, 0);
 });
-test('regressão relatada: devolução nunca responde apresentação nem relatório de vendas', async () => {
-  const api = await route({ hint: { intent: 'summary', order: 'revenue' } });
-  const variants = ['Olá, me traga um relatório de devoluções de ontem', 'Qual a quantidade de devolução?', 'Qual a quantidade de devoluções?', 'Quantas devoluçoes tivemos em setembro?', 'qtd de devoluçaões', 'Total de reembolsos hoje?', 'Quantidade de estornos'];
-  for (const question of variants) {
-    for (const questions of [[question], [question, question], ['Quanto faturamos em setembro?', question]]) {
-      const reply = await (await api.post({ questions })).json();
-      assert.equal(reply.text, (await domain).BIA_RETURNS_UNAVAILABLE);
-      assert.equal(reply.metrics, undefined);
-      assert.equal(reply.source, undefined);
-      assert.equal(reply.actions[0].href, '/devolucoes');
-    }
+test('devolução consulta sua fonte mesmo repetida ou depois de vendas; nunca mostra receita comercial', async () => {
+  const variants = ['Olá, me traga um relatório de devoluções de ontem', 'Qual a quantidade de devolução?', 'Qual a quantidade de devoluções?', 'Quantas devoluções tivemos em setembro?', 'Total de reembolsos hoje?', 'Quantidade de estornos'];
+  for (const question of variants) for (const questions of [[question], [question, question], ['Quanto faturamos em setembro?', question]]) {
+    const api=await route({hint:{intent:'summary',order:'revenue'}});
+    const reply=await (await api.post({questions})).json();
+    assert.ok(reply.text.startsWith('Juliano Calil,'));
+    assert.equal(reply.metrics[0].label,'Devoluções abertas');
+    assert.equal(reply.metrics[0].value,'42');
+    assert.ok(reply.source.href.startsWith('/devolucoes'));
+    assert.equal(api.calls.query,0);
+    assert.equal(api.calls.page,1);
   }
-  assert.equal(api.calls.query, 0);
-  assert.equal(api.calls.model, 0);
 });
 test('escopo não resolvido continua sem consultas quando o modelo sugeriria faturamento', async () => {
   const api = await route({ hint: { intent: 'summary', order: 'revenue' } });
-  for (const question of ['Qual foi nosso desempenho?', 'Vendas da loja Acme em setembro', 'Qual o ticket médio?']) {
+  for (const question of ['Qual foi nosso desempenho?', 'Vendas da loja Acme em setembro', 'Qual indicador desconhecido?']) {
     const reply = await (await api.post({ questions: [question, question] })).json();
     assert.equal(reply.metrics, undefined);
     assert.equal(reply.source, undefined);
@@ -252,7 +261,7 @@ test('cliente de leitura exige JWT real mesmo em desenvolvimento e bloqueia outr
 test('contexto que dependeu de interpretação desconhecida pede pergunta completa', async () => {
   const api = await route({ hint: { intent: 'summary', order: 'revenue' } });
   const response = await api.post({ questions: ['Qual foi nosso desempenho?', 'E a margem?'] });
-  assert.ok((await response.json()).text.includes('Repita a pergunta completa'));
+  assert.match((await response.json()).text, /repita a pergunta completa/i);
   assert.equal(api.calls.query, 0);
   assert.equal(api.calls.model, 0);
 });

@@ -18,6 +18,7 @@ import { loadAgendaPendingCount } from "../../lib/agenda-count";
 import { effectiveUserId } from "../../lib/users";
 import { getActiveReleaseNotes } from "../../lib/release-notes";
 import { ReleaseNotesPopup } from "./release-notes-popup";
+import { biaUserName } from '@oraculo/domain/bia-sources.js';
 import { BiaAccess } from "./bia-provider";
 import { ollamaConfig } from "../documentacao/ask";
 
@@ -166,7 +167,7 @@ export async function AppShell({
       >
         {children}
       </Frame>
-      <BiaAccess operation={operation.id} userId={user?.id ?? ''} allowed={Boolean(user && tabs.includes('bia'))} dataAllowed={tabs.includes('analise-comercial')} aiConfigured={ollamaConfig().enabled} />
+      <BiaAccess operation={operation.id} userId={user?.id ?? ''} userName={biaUserName(user)} permissions={tabs.join(',')} allowed={Boolean(user && tabs.includes('bia'))} dataAllowed={tabs.includes('bia')} aiConfigured={ollamaConfig().enabled} />
       {loginMarker && activeReleases.length > 0 && (
         <ReleaseNotesPopup releases={activeReleases} loginMarker={loginMarker} />
       )}

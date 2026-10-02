@@ -2,6 +2,19 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-10-02] — B.ia — fontes autorizadas por setor
+
+- Fontes fixas para todas as abas e principais subpáginas, com nome da
+  sessão, explicação didática, filtros e links para conferir a informação.
+- Acesso a cada setor/operação validado pelas permissões de Usuários antes
+  da leitura; pergunta composta bloqueia todas as fontes se uma é negada.
+- Modelo seleciona fatos existentes por IDs; valores/links vêm da fonte.
+  Filtros sem suporte e dados insuficientes mantêm limite explícito.
+- Devoluções passa a ter leitura específica; erro de RPC não vira zero.
+- 150 testes, TypeScript e build passaram. Sem escrita, migration ou novos
+  acessos. Validação local e publicação desta ampliação em andamento.
+  Contrato: `docs/bia.md`; decisão: ADR-009.
+
 ## [2026-10-02] — B.ia — respostas e filtros coerentes
 
 - Devoluções, reembolsos e estornos recebem limite explícito e link para

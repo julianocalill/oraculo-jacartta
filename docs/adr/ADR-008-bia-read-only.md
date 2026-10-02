@@ -4,6 +4,10 @@
 
 Accepted — 02/10/2026. Publicada em produção; commit `caa4bcc`, Vercel Ready confirmado.
 
+Ampliação de assuntos: [ADR-009](ADR-009-bia-fontes-autorizadas.md) qualifica
+a receita inicial abaixo com GETs fixos de telas autorizadas e seleção de
+fatos por IDs. As decisões desta ADR descrevem a primeira ferramenta.
+
 ## Contexto
 
 O usuário quer perguntar sobre os dados do Oráculo por chat, com uma IA

@@ -42,15 +42,21 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(403, {'error': 'Consulta não permitida'})
         try:
             length = int(self.headers.get('Content-Length', '0'))
-            if not 0 < length <= 8000:
+            if not 0 < length <= 22000:
                 return self.reply(413, {'error': 'Payload inválido'})
             value = json.loads(self.rfile.read(length))
             options = value.get('options', {})
+            classification = options.get('num_predict') == 64 and options.get('num_ctx') == 2048 and len(value.get('prompt', '')) <= 2000
+            properties = value.get('format', {}).get('properties', {}) if isinstance(value.get('format'), dict) else {}
+            ids = properties.get('ids', {})
+            evidence = (options.get('num_predict') == 160 and options.get('num_ctx') == 4096
+                        and len(value.get('prompt', '')) <= 15000 and ids.get('maxItems') == 6
+                        and isinstance(ids.get('items', {}).get('enum'), list)
+                        and 0 < len(ids['items']['enum']) <= 18)
             if (value.get('model') != 'qwen2.5-coder:7b' or value.get('stream') is not False
                     or 'tools' in value or not isinstance(value.get('prompt'), str)
-                    or len(value['prompt']) > 2000 or options.get('num_predict') != 64
-                    or options.get('num_ctx') != 2048):
-                return self.reply(400, {'error': 'Somente classificação B.ia'})
+                    or not (classification or evidence)):
+                return self.reply(400, {'error': 'Somente classificação ou seleção de fatos B.ia'})
             if set(value) - {'model', 'stream', 'prompt', 'format', 'options'}:
                 return self.reply(400, {'error': 'Campos não permitidos'})
             remote = subprocess.run(['ssh', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes',

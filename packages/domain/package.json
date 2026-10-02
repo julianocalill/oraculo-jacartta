@@ -17,6 +17,7 @@
     "./full-workflow.js": "./full-workflow.js",
     "./separation.js": "./separation.js",
     "./operations.js": "./operations.js",
-    "./operation-fiscal.js": "./operation-fiscal.js"
+    "./operation-fiscal.js": "./operation-fiscal.js",
+    "./bia-sources.js": "./bia-sources.js"
   }
 }

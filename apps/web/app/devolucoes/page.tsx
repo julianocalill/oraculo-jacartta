@@ -244,6 +244,11 @@ async function loadData(win: PeriodWindow, channel: string | null, reason: strin
       reason ? supabase.rpc("oraculo_returns_by_sku", { ...args, p_limit: 25, p_reason_group: reason }) : Promise.resolve(null)
     ]);
 
+  // A failed aggregate must not render as zero in the page or in B.ia.
+  for (const result of [funnel, summary, reasons, skus, disputes, daily, channels, prevSummary]) {
+    if (result.error) throw new Error("Não foi possível confirmar os dados de devoluções.");
+  }
+
   // Pedido cancelado não chega a ser entregue, então não pode virar devolução:
   // fica fora do denominador.
   const orders = { current: new Map<string, number>(), previous: new Map<string, number>() };
