@@ -9,6 +9,34 @@ Evidência: [bia-deploy-2026-10-02.json](analyses/bia-deploy-2026-10-02.json).
 Decisão: [ADR-008](adr/ADR-008-bia-read-only.md).
 Etapas para publicação e evolução: [bia-producao.md](bia-producao.md).
 
+## Correção de respostas — 02/10/2026
+
+Relato recebido: quantidade de devoluções respondeu apresentação e depois
+vendas. Não havia histórico nas duas abas observadas; as perguntas originais
+não foram recuperadas. Testes reproduzem variantes desse relato. Posteriormente apareceu na aba de produção “Olá, me traga um relatório de devoluções de ontem”, com resposta genérica de cobertura; essa frase exata também entrou na regressão.
+
+Devolução (singular/plural e variações), reembolso e estorno agora recebem
+uma resposta específica: ferramenta ainda indisponível na B.ia, com link
+para Devoluções. Repetição não muda o assunto. Não consulta a RPC comercial
+nem o modelo nesse caminho. A classificação da IA nunca autoriza uma
+consulta que o planejador não reconheça como suportada.
+
+SKU é exato; busca por nome pesquisa somente o nome do produto. Valores e
+comparações de produto somam os itens correspondentes antes do top N.
+A contagem de NFs distintas por produto não é fornecida. Os cards da tela
+comercial continuam globais; a resposta explica essa diferença e aponta
+as linhas para conferência. Filtro vazio não apresenta valores de outros
+produtos. Medida, período, canal e produto aparecem antes da resposta.
+
+Continuação conserva período/canal/produto/medida mesmo sem começar com “E”.
+Comparação de quantidade/margem não é convertida para faturamento.
+Filtro, loja, medida ou dia parcial não reconhecido pede esclarecimento.
+Dados incompletos e margem pendente mantêm seus avisos e valores pendentes.
+
+130 testes passaram; TypeScript e build conferidos. Sem mudança de banco,
+permissões ou retenção. Publicação/validação visual em andamento, registrada
+no status de 02/10.
+
 ## Uso e cobertura
 
 A **B.ia** abre pelo personagem no canto inferior direito, em um painel de
@@ -32,7 +60,7 @@ por produto/SKU e comparação de faturamento entre períodos. Exemplos:
 Datas: hoje, ontem, anteontem, este mês, mês passado, últimos N dias,
 meses por nome/AAAA-MM e datas completas DD/MM/AAAA ou AAAA-MM-DD.
 Máximo 366 dias, até 20 produtos por resposta. Sem período explícito, o
-padrão é mês atual até hoje; a fonte mostra as datas efetivamente usadas.
+padrão é mês atual até hoje na primeira pergunta; continuações conservam o período anterior. A fonte mostra as datas efetivamente usadas.
 Uma família de canais soma as lojas correspondentes do catálogo real.
 Os links da fonte permitem conferir cada parcela na Análise Comercial.
 

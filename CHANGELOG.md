@@ -2,6 +2,17 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-10-02] — B.ia — respostas e filtros coerentes
+
+- Devoluções, reembolsos e estornos recebem limite explícito e link para
+  Devoluções, inclusive quando a pergunta é repetida ou segue vendas.
+- Pergunta ambígua não pode virar consulta comercial pelo palpite da IA.
+  Filtros, medidas e datas não suportados pedem esclarecimento.
+- SKU exato, cards/comparação por produto sem totais globais, unidades
+  respondidas como unidades e contexto preservado com filtros visíveis.
+- 130 testes passaram; TypeScript/build conferidos. Sem escrita, migration
+  ou armazenamento de histórico. Ver `docs/bia.md` e status de 02/10.
+
 ## [2026-10-02] — B.ia — publicada em produção
 
 - Chat flutuante à direita, aberto pelo personagem e fora do menu lateral.

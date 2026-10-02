@@ -74,12 +74,12 @@ async function route(options = {}) {
 
 test('B.ia preserva receita sem itens e margem parcial ponderada', async () => {
   const build = await builder();
-  const plan = (await domain).resolveBiaPlan('Quais produtos têm margem abaixo de 15% em setembro?', '2026-10-02').plan;
+  const plan = (await domain).resolveBiaPlan('Quais produtos têm margem em setembro?', '2026-10-02').plan;
   const result = build(plan, fixture(), null, '2026-10-02');
   assert.equal(result.metrics[0].value, 'R$ 1.100,00');
   assert.equal(result.metrics[2].value, '8,3%');
-  assert.equal(result.table.rows.length, 1);
-  assert.equal(result.table.rows[0][1].text, '3');
+  assert.equal(result.table.rows.length, 3);
+  assert.ok(result.table.rows.some(row => row[1].text === '3'));
   assert.ok(result.notices.some((notice) => notice.includes('80,00') && notice.includes('sem itens')));
   assert.ok(result.notices.some((notice) => notice.includes('pendente')));
 });
@@ -91,6 +91,53 @@ test('ranking mantém vendas sem custo, com margem pendente', async () => {
   assert.equal(pending[4].text, 'Pendente');
   assert.equal(pending[5].text, 'Pendente');
   assert.equal(result.table.initialSort, 3);
+});
+test('SKU é exato e a resposta de um produto não apresenta a receita global como sendo dele', async () => {
+  const build = await builder();
+  const data = fixture();
+  data.products.push({ ...data.products[0], sku: '10', product_name: 'Outro produto', revenue: 5000, units: 40 });
+  const plan = (await domain).resolveBiaPlan('Faturamento do SKU 1 em setembro', '2026-10-02').plan;
+  const result = build(plan, data, null, '2026-10-02');
+  assert.equal(result.metrics[0].value, 'R$ 100,00');
+  assert.equal(result.metrics[1].value, '2');
+  assert.equal(result.table.rows.length, 1);
+  assert.equal(result.table.rows[0][1].text, '1');
+  assert.ok(result.text.includes('SKU 1'));
+  assert.ok(!result.text.includes('1.100'));
+  assert.ok(result.notices.some(n => n.includes('NFs') && n.includes('produto')));
+});
+test('produto ausente não ganha cards com números de outros produtos', async () => {
+  const build = await builder();
+  const plan = (await domain).resolveBiaPlan('Margem do SKU 999 em setembro', '2026-10-02').plan;
+  const result = build(plan, fixture(), null, '2026-10-02');
+  assert.equal(result.metrics.length, 0);
+  assert.ok(result.text.includes('999'));
+});
+test('SKU sem custo mantém margem e resultado pendentes, com receita própria', async () => {
+  const build = await builder();
+  const plan = (await domain).resolveBiaPlan('Margem do SKU 2 em setembro', '2026-10-02').plan;
+  const result = build(plan, fixture(), null, '2026-10-02');
+  assert.equal(result.metrics[0].value, 'R$ 900,00');
+  assert.equal(result.metrics[2].value, 'Pendente');
+  assert.equal(result.metrics[3].value, 'Pendente');
+});
+test('comparação de SKU usa somente o mesmo SKU nos dois períodos', async () => {
+  const build = await builder();
+  const plan = (await domain).resolveBiaPlan('Compare faturamento do SKU 1 em setembro com agosto', '2026-10-02').plan;
+  const previous = fixture();
+  previous.processed_days = 31;
+  previous.products[0].revenue = 50;
+  previous.daily[0].revenue = 9999;
+  const result = build(plan, fixture(), previous, '2026-10-02');
+  assert.equal(result.metrics[0].value, 'R$ 100,00');
+  assert.equal(result.metrics[1].value, 'R$ 50,00');
+  assert.equal(result.metrics[2].value, 'R$ 50,00');
+});
+test('pergunta de quantidade responde unidades, sem chamar receita de quantidade', async () => {
+  const build = await builder();
+  const plan = (await domain).resolveBiaPlan('Quantas unidades vendemos em setembro?', '2026-10-02').plan;
+  const result = build(plan, fixture(), null, '2026-10-02');
+  assert.ok(result.text.includes('12 unidades'));
 });
 test('período ausente não produz faturamento zero nem comparação inventada', async () => {
   const build = await builder();
@@ -127,6 +174,31 @@ test('pedido de alteração é recusado antes da IA e do banco', async () => {
   assert.equal((await response.json()).text, (await domain).BIA_READ_ONLY);
   assert.equal(api.calls.model, 0);
   assert.equal(api.calls.query, 0);
+});
+test('regressão relatada: devolução nunca responde apresentação nem relatório de vendas', async () => {
+  const api = await route({ hint: { intent: 'summary', order: 'revenue' } });
+  const variants = ['Olá, me traga um relatório de devoluções de ontem', 'Qual a quantidade de devolução?', 'Qual a quantidade de devoluções?', 'Quantas devoluçoes tivemos em setembro?', 'qtd de devoluçaões', 'Total de reembolsos hoje?', 'Quantidade de estornos'];
+  for (const question of variants) {
+    for (const questions of [[question], [question, question], ['Quanto faturamos em setembro?', question]]) {
+      const reply = await (await api.post({ questions })).json();
+      assert.equal(reply.text, (await domain).BIA_RETURNS_UNAVAILABLE);
+      assert.equal(reply.metrics, undefined);
+      assert.equal(reply.source, undefined);
+      assert.equal(reply.actions[0].href, '/devolucoes');
+    }
+  }
+  assert.equal(api.calls.query, 0);
+  assert.equal(api.calls.model, 0);
+});
+test('escopo não resolvido continua sem consultas quando o modelo sugeriria faturamento', async () => {
+  const api = await route({ hint: { intent: 'summary', order: 'revenue' } });
+  for (const question of ['Qual foi nosso desempenho?', 'Vendas da loja Acme em setembro', 'Qual o ticket médio?']) {
+    const reply = await (await api.post({ questions: [question, question] })).json();
+    assert.equal(reply.metrics, undefined);
+    assert.equal(reply.source, undefined);
+  }
+  assert.equal(api.calls.query, 0);
+  assert.equal(api.calls.model, 0);
 });
 test('endpoint rejeita SQL, operação, plano forjado e origem externa', async () => {
   const api = await route();

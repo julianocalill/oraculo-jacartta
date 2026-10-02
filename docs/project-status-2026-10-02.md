@@ -1,5 +1,35 @@
 # Estado do projeto — 02/10/2026
 
+## B.ia — correção de respostas fora do assunto
+
+O usuário relatou que uma pergunta sobre quantidade de devoluções recebeu
+apresentação pessoal e, ao repetir, um relatório de vendas. As duas abas
+observadas estavam sem perguntas: não foi possível recuperar o histórico
+original, pois o chat guarda somente memória React. O relato gerou testes
+com perguntas representativas, sem atribuir a eles texto histórico recuperado.
+Posteriormente a aba de produção mostrou “Olá, me traga um relatório de
+devoluções de ontem”, com resposta genérica de cobertura. Essa frase exata
+também entrou na regressão; a conversa aberta foi preservada.
+
+O planejador agora reconhece devolução no singular/plural, variações de
+escrita, reembolso e estorno antes da IA. Responde que essa consulta ainda
+não está disponível no chat e oferece a tela Devoluções. Repetir a pergunta
+ou fazê-la após vendas produz o mesmo limite; nenhuma consulta comercial
+ou inferência é feita para essas perguntas. Assuntos ambíguos pedem
+esclarecimento; a classificação do modelo não pode autorizar vendas.
+
+SKU corresponde exatamente. Cards e comparações de produto somam apenas
+os itens desse filtro, antes do limite do ranking. Quantidade responde
+unidades; margem pendente não vira zero; filtro vazio não mostra totais de
+outros produtos. Continuação mantém período, canal, produto e medida; a
+resposta exibe esses filtros. Medidas/filtros/datas não suportados não são
+silenciosamente descartados. Permissões e contrato de leitura permanecem.
+
+Validação: 130 testes de domínio/contrato passaram; TypeScript e build
+passaram. Publicação e validação visual desta correção em andamento.
+Sem migration, novas ferramentas de banco ou retenção de conversa.
+Contrato atualizado: [bia.md](bia.md).
+
 ## B.ia — publicada em produção
 
 Chat flutuante à direita: B.ia, assistente com personagem original, Ollama

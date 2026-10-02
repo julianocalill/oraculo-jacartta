@@ -1,4 +1,4 @@
-import { biaRequestsWrite, BIA_HELP, BIA_READ_ONLY, resolveBiaPlan } from '@oraculo/domain/bia.js';
+import { biaRequestsWrite, BIA_READ_ONLY, BIA_RETURNS_UNAVAILABLE, resolveBiaPlan } from '@oraculo/domain/bia.js';
 import { canAccessRequest } from '../../../lib/auth/access';
 import { getCurrentUser } from '../../../lib/auth/session';
 import { getSaoPauloToday } from '../../../lib/date';
@@ -13,7 +13,7 @@ export const maxDuration = 60;
 const active = new Set<string>();
 const requests = new Map<string, { start: number; count: number }>();
 const json = (value: unknown, status = 200) => Response.json(value, { status, headers: { 'Cache-Control': 'private, no-store', 'Vary': 'Cookie' } });
-const message = (text: string): BiaReply => ({ text, mode: 'verified' });
+const message = (text: string): BiaReply => ({ text, mode: 'verified', ...(text === BIA_RETURNS_UNAVAILABLE ? { actions: [{ label: 'Conferir na tela Devoluções', href: '/devolucoes' }] } : {}) });
 
 export async function POST(request: Request) {
   // Scoped route (/o/<operation>/bia/responder), covered by the middleware.
@@ -44,12 +44,13 @@ export async function POST(request: Request) {
   for (const old of questions.slice(0, -1)) {
     const resolved = resolveBiaPlan(String(old), today, previous);
     if (resolved.kind === 'query') { previous = resolved.plan; unresolvedContext = false; }
-    else if (resolved.message === BIA_HELP && !/^(oi|ol[aá]|bom dia|boa tarde|boa noite|ajuda)[!?.\s]*$/i.test(String(old).trim())) { previous = null; unresolvedContext = true; }
+    else if (!/^(oi|ol[aá]|bom dia|boa tarde|boa noite|ajuda)[!?.\s]*$/i.test(String(old).trim())) { previous = null; unresolvedContext = true; }
   }
-  if (unresolvedContext && /^(e\b|compare\b|comparar\b|agora\b|ness[ea]\b|dest[ea]\b|deles\b|delas\b|somente\b|apenas\b|na\b|no\b|em\b)/i.test(question)) return json(message('Repita a pergunta completa com o período e a loja. Não consegui recuperar com segurança os filtros da pergunta anterior.'));
   let resolved = resolveBiaPlan(question, today, previous);
-  // Requests already identified as unsafe/outside scope never reach the LLM.
-  if (resolved.kind === 'message' && resolved.message !== BIA_HELP) return json(message(resolved.message));
+  // No ambiguous/out-of-scope question can become a global sales query through
+  // a model guess. The model only classifies an already validated query.
+  if (resolved.kind === 'message') return json(message(resolved.message));
+  if (unresolvedContext && /^(e\b|compare\b|comparar\b|agora\b|ness[ea]\b|dest[ea]\b|deles\b|delas\b|somente\b|apenas\b|na\b|no\b|em\b)/i.test(question)) return json(message('Repita a pergunta completa com o período e a loja. Não consegui recuperar com segurança os filtros da pergunta anterior.'));
   const operation = await getRequestOperation();
   const key = `${user.id}:${operation}`;
   const now = Date.now();

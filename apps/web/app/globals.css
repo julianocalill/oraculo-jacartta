@@ -8767,6 +8767,9 @@ svg rect[data-tip].is-active {
 .bia-reply-label strong { font-size: 14px; }
 .bia-reply-label > span { font-size: 11px; color: var(--muted); }
 .bia-answer { min-width: 0; }
+.bia-scope { display: grid; gap: 5px; padding: 12px; margin: 0 0 14px; border-radius: 12px; background: var(--fill); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.bia-scope span { color: var(--muted); }
+.bia-answer > .bia-source-links a { color: var(--gold-text); font-size: 12px; text-decoration: none; }
 .bia-answer-text { margin: 0 0 18px; font-size: 15px; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
 .bia-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 20px 0; }
 .bia-metrics > div { display: grid; gap: 8px; padding: 18px; border-radius: 17px; background: var(--panel); min-width: 0; }

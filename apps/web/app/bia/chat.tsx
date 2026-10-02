@@ -18,7 +18,13 @@ const timestamp = (value: string | null) => value
 
 function Reply({ reply }: { reply: BiaReply }) {
   return <div className="bia-answer">
+    {reply.scope && reply.source ? <div className="bia-scope" aria-label="Filtros da resposta">
+      <strong>{reply.scope.measure}</strong>
+      <span>{reply.source.period} · {reply.source.channel}</span>
+      {reply.scope.product ? <span>{reply.scope.product}</span> : null}
+    </div> : null}
     <p className="bia-answer-text">{reply.text}</p>
+    {reply.actions?.length ? <nav className="bia-source-links" aria-label="Onde conferir">{reply.actions.map(action => <Link key={action.href} href={action.href} prefetch={false}>{action.label} ↗</Link>)}</nav> : null}
     {reply.metrics ? <div className="bia-metrics">{reply.metrics.map((metric) => <div key={metric.label}>
       <span>{metric.label}</span><strong>{metric.value}</strong>{metric.caption ? <small>{metric.caption}</small> : null}
     </div>)}</div> : null}

@@ -17,8 +17,11 @@ consulta/cálculos compartilhados e isolamento operacional.
 - B.ia é um chat flutuante à direita, autorizado por operação, fora do menu
   lateral. Mantém a permissão `bia`, sem ampliar as permissões da fonte.
   A primeira ferramenta cobre a Análise Comercial.
-- Ollama classifica a pergunta em um vocabulário fechado. Código determina
-  filtros e cálculos e constrói a resposta verificável.
+- Ollama classifica apenas perguntas já validadas em um vocabulário fechado.
+  Sua classificação não autoriza nem amplia a consulta. Código determina
+  cobertura, filtros e cálculos e constrói a resposta verificável.
+  Assuntos fora da cobertura recebem limite específico; ambiguidades pedem
+  esclarecimento antes do modelo e do banco (revisão de 02/10/2026).
 - Não há SQL livre, tool calling de escrita ou cliente administrativo.
   Um cliente JWT próprio só pode invocar a RPC comercial STABLE auditada.
 - Conversas ficam em memória do provider no layout raiz, preservadas ao

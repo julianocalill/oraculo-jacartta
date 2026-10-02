@@ -1,11 +1,13 @@
 import { commercialPeriod, validCommercialDate } from './commercial-analysis.js';
 
 /** @typedef {'summary'|'ranking'|'margin'|'comparison'} BiaIntent */
-/** @typedef {{intent:BiaIntent,start:string,end:string,channel:string,search:string,limit:number,order:'revenue'|'units'|'margin',below:number|null,compareStart:string|null,compareEnd:string|null}} BiaPlan */
+/** @typedef {{intent:BiaIntent,start:string,end:string,channel:string,search:string,searchKind:'sku'|'product',measure:'revenue'|'units'|'margin'|'profit',limit:number,order:'revenue'|'units'|'margin',below:number|null,compareStart:string|null,compareEnd:string|null}} BiaPlan */
 /** @typedef {{kind:'query',plan:BiaPlan}|{kind:'message',message:string}} BiaResolution */
 
 export const BIA_HELP = 'Sou a B.ia. Posso consultar faturamento por NF, produtos vendidos, margem e comparações de períodos da operação selecionada. Experimente: “Quanto faturamos este mês?”, “Top 10 produtos da Shopee em setembro” ou “Quais produtos têm margem abaixo de 15%?”. Apenas consulto dados; não faço alterações.';
 export const BIA_READ_ONLY = 'Eu apenas consulto e explico os dados do Oráculo. Não altero preços, custos, estoque, cadastros, tarefas ou configurações, nem envio mensagens. Posso mostrar os dados para você conferir.';
+export const BIA_CLARIFY = 'Não consegui interpretar sua pergunta com segurança. Diga a medida (faturamento por NF, unidades vendidas ou margem), o período e, se houver, o SKU ou a loja. Prefiro pedir esclarecimento a apresentar números de outra consulta.';
+export const BIA_RETURNS_UNAVAILABLE = 'Ainda não tenho uma consulta de devoluções na B.ia. Para conferir a quantidade e o período, use a tela Devoluções. Não vou usar vendas para responder essa pergunta.';
 export const BIA_INTENTS = ['summary', 'ranking', 'margin', 'comparison'];
 
 export function normalizeBia(value) {
@@ -34,10 +36,13 @@ function extractPeriods(text, today) {
   const iso = [...text.matchAll(/\b\d{4}-\d{2}-\d{2}\b/g)].map((match) => match[0]);
   const br = [...text.matchAll(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/g)].map((match) => `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}`);
   const dates = iso.length ? iso : br;
+  if (iso.length && br.length) return { error: 'Use o mesmo formato para as duas datas: DD/MM/AAAA ou AAAA-MM-DD.' };
   if (dates.length) {
     if (dates.length > 2 || dates.some((day) => !validCommercialDate(day))) return { error: 'Informe um dia válido ou um intervalo com duas datas, por exemplo 01/09/2026 a 30/09/2026.' };
     return { ranges: [{ start: dates[0], end: dates[1] ?? dates[0] }] };
   }
+  if (/\b(?:dia\s+\d|de\s+\d{1,2}\s+(?:a|ate)\s+\d{1,2}|\d{1,2}\s+de\s+(?:janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro))\b/.test(text)) return { error: 'Para esse intervalo, informe as duas datas completas, por exemplo 01/09/2026 a 15/09/2026. Não vou substituir dias específicos pelo mês inteiro.' };
+  if ([...text.matchAll(/\b(?:anteontem|ontem|hoje)\b/g)].length > 1) return { error: 'Para comparar esses dias, informe as duas datas completas.' };
   if (/\b(desde|ate)\b/.test(text)) return { error: 'Informe as duas datas completas para esse intervalo, por exemplo 01/09/2026 a 02/10/2026.' };
   const named = [...text.matchAll(new RegExp(`\\b(${MONTHS.join('|')})(?:\\s+(?:de\\s+)?(\\d{4}))?\\b`, 'g'))];
   if (named.length) {
@@ -73,7 +78,8 @@ export function resolveBiaPlan(question, today, previous = /** @type {BiaPlan|nu
   const message = (value) => /** @type {BiaResolution} */ ({ kind: 'message', message: value });
   if (biaRequestsWrite(text)) return message(BIA_READ_ONLY);
   if (/^(oi|ola|bom dia|boa tarde|boa noite|ajuda|quem e voce|o que voce faz|como funciona)[!?.\s]*$/.test(text)) return message(BIA_HELP);
-  if (/\b(estoque|ruptura|reposicao|devolucoes?|devolvidos?|devolvemos|devolveu|ads|roas|campanhas?|cpf|enderecos?|clientes?|salarios?|afiliados?|agenda|pedidos?|pagamentos?|carteira|reconciliacao|conciliacao|impostos?|fretes?)\b/.test(text)) {
+  if (/\b(devolu[a-z]*|devolv[a-z]*|reembols[a-z]*|estornos?|retornos?)\b/.test(text)) return message(BIA_RETURNS_UNAVAILABLE);
+  if (/\b(estoque|ruptura|reposicao|ads|roas|campanhas?|cpf|enderecos?|clientes?|salarios?|afiliados?|agenda|pedidos?|pagamentos?|carteira|reconciliacao|conciliacao|impostos?|fretes?|visitas?|cliques?|conversao|previsao|previst[oa]s?|projecao|meta|precos?|barat[oa]s?|car[oa]s?|ticket|medio|media)\b/.test(text)) {
     return message('Nesta primeira versão consulto faturamento por NF, produtos vendidos e margem da Análise Comercial. Esse assunto precisa de uma ferramenta específica e ainda não está disponível na B.ia.');
   }
   if (/\b(uberlandia|giracasa|operacoes?|sp|mg)\b/.test(text)) return message('Uso somente a operação selecionada no menu. Troque a operação pelo seletor e faça a pergunta sem combinar operações.');
@@ -82,23 +88,26 @@ export function resolveBiaPlan(question, today, previous = /** @type {BiaPlan|nu
   if (/\b(exceto|excluindo|fora|menos|sem)\s+(?:(?:o|a|os|as|loja|canal)\s+)*(shopee|mercado livre|tiktok|amazon|kwai|shein|donacor|jacartta|oliver|full)/.test(text)) return message('Ainda não tenho filtros de exclusão no chat. Escolha o canal ou a loja que deseja incluir, ou consulte todas as lojas.');
   if (/\bpor (canal|loja|marketplace)\b/.test(text)) return message('Nesta versão respondo um canal ou uma loja por pergunta. Para comparar lojas lado a lado, use a Análise Comercial.');
 
+  if (/\b(exceto|excluindo|excluir|sem)\b/.test(text) || /\bmenos\b(?! de\s+-?\d+(?:[.,]\d+)?\s*%)/.test(text)) return message('Ainda não tenho esse filtro de exclusão no chat. Informe o produto, SKU ou loja que deseja incluir.');
+  if (/\b(acima de|maior que|superior a|pelo menos|entre \d)\b/.test(text)) return message('Esse filtro ainda não está disponível no chat. Entendo margem negativa ou abaixo de um percentual explícito.');
+
   const ranking = /\b(top|ranking|mais vendid[oa]s?|mais fatur|maior receita|produtos?|skus?)\b/.test(text);
   const margin = /\b(margem|margens|lucro|resultado|rentabilidade|prejuizo|custos? pendentes?)\b/.test(text);
   const comparing = /\b(compar[ae]|comparar|comparacao|versus|vs|crescimento|variacao|diferenca)\b/.test(text);
-  const revenue = /\b(faturamento|faturamos|faturei|faturou|faturado|receita|vendas|vendemos|vendeu|vendi|ticket|notas|nfs)\b/.test(text);
+  const revenue = /\b(faturamento|faturamos|faturei|faturou|faturado|receita|vendas|vendemos|vendeu|vendi|notas|nfs|unidades?|quantidade|quantas|qtd)\b/.test(text);
   const continuation = /^(e\b|compare\b|comparar\b|agora\b|ness[ea]\b|dest[ea]\b|deles\b|delas\b|somente\b|apenas\b|na\b|no\b|em\b)/.test(text);
-  const hinted = !ranking && !margin && !comparing && !revenue && !(previous && continuation)
-    && hint && BIA_INTENTS.includes(hint.intent ?? '') ? hint.intent : null;
-  if (!ranking && !margin && !comparing && !revenue && !(previous && continuation) && !hinted) return message(BIA_HELP);
+  // A model classification alone is never evidence of a supported measure/filter.
+  if (!ranking && !margin && !comparing && !revenue && !(previous && continuation)) return message(BIA_CLARIFY);
+  if (comparing && (margin || /\b(unidades?|quantidade|quantas|qtd)\b/.test(text) || (previous?.measure && previous.measure !== 'revenue' && !revenue))) return message('Nesta versão comparo faturamento por NF entre períodos. Para comparar outra medida, preciso de uma ferramenta específica.');
 
   const periods = extractPeriods(text, today);
   if (periods.error) return message(periods.error);
   const ranges = periods.ranges ?? [];
   if (ranges.length > 1 && !comparing) return message('Você citou dois meses. Quer compará-los? Escreva, por exemplo, “Compare setembro com agosto”.');
-  const retain = Boolean(previous && continuation);
+  const retain = Boolean(previous && !/\b(nova consulta|nova pergunta|sem filtros?)\b/.test(text));
   let primary = ranges[0] ?? (retain && previous ? { start: previous.start, end: previous.end } : { start: `${today.slice(0, 7)}-01`, end: today });
   let comparison = null;
-  if (comparing || hinted === 'comparison') {
+  if (comparing) {
     if (ranges.length === 1 && retain && previous && /\bcom\b/.test(text)) {
       primary = { start: previous.start, end: previous.end };
       comparison = ranges[0];
@@ -129,10 +138,20 @@ export function resolveBiaPlan(question, today, previous = /** @type {BiaPlan|nu
   const retainedFamily = retain && shops.length && !families.length ? ['shopee', 'mercado livre', 'tiktok', 'amazon', 'kwai', 'shein'].find((family) => previous?.channel.includes(family)) : '';
   const explicitChannel = [...families, retainedFamily, ...shops, qualifier].filter(Boolean).join(' ');
   const channel = /\b(tod[oa]s? (?:as )?(lojas|canais)|geral|consolidado)\b/.test(text) ? '' : explicitChannel || (retain ? previous?.channel ?? '' : '');
-  const sku = text.match(/\bsku\s+([a-z0-9_-]*\d[a-z0-9_-]*)\b/);
+  const sku = text.match(/\bsku\s*[:#]?\s*([a-z0-9_-]*\d[a-z0-9_-]*)\b/);
   const product = text.match(/\bproduto\s+["“]?(.+?)(?:["”]|\s+(?:em|no|na|este|esse|neste|ontem|hoje|com|da shopee|do mercado)\b|$)/);
-  const productName = product?.[1]?.trim();
-  const search = sku?.[1] ?? (productName && !/^(que|mais|com|tem|teve|vendeu|vai|e\b)/.test(productName) ? productName : undefined) ?? (retain ? previous?.search ?? '' : '');
+  const naturalProduct = text.match(/\b(?:faturamento|receita|vendas?|unidades?|quantidade|margem|margens|lucro|resultado)\s+(?:do|da|de|dos|das)\s+(.+?)(?=\s+(?:vendemos|vendeu|venderam|faturamos|em|no|na|este|esse|neste|ontem|hoje|da shopee|do mercado)\b|[?!.,]|$)/)
+    ?? text.match(/\b(?:faturamos|vendemos|vendeu|vendi)\s+(?:com|do|da|de)\s+(.+?)(?=\s+(?:em|no|na|este|esse|neste|ontem|hoje|da shopee|do mercado)\b|[?!.,]|$)/);
+  const productName = (product?.[1] ?? naturalProduct?.[1])?.trim();
+  const namedProduct = productName && !/^(que|mais|com|tem|teve|vendeu|vai|e\b|sku\b|lojas?\b|canais?\b|shopee\b|mercado livre\b|tiktok\b|amazon\b|kwai\b|todos?\b|notas?\b|nfs?\b)/.test(productName) ? productName : '';
+  const search = sku?.[1] ?? (namedProduct || (retain ? previous?.search ?? '' : ''));
+  const searchKind = sku ? 'sku' : namedProduct ? 'product' : previous?.searchKind ?? 'product';
+  if (/\b(todos? (?:os )?produtos|todos? (?:os )?skus)\b/.test(text) && retain && previous?.search) return message('Para consultar todos os produtos, comece uma nova conversa ou informe uma pergunta completa sem o produto anterior.');
+  // Unknown store labels may not quietly widen to the marketplace family.
+  const store = text.match(/\b(?:loja|canal|marketplace)\s+(?!por\b)(.+?)(?=\s+(?:em|no|na|este|esse|neste|ontem|hoje|com)\b|[?!.,]|$)/)?.[1];
+  if (store && !explicitChannel && !/^(todas?|todos?|selecionad[oa]|atual)\b/.test(store)) return message(`Não reconheci a loja ou canal “${store}”. Informe o nome do canal/loja como aparece na Análise Comercial; não vou consultar todas as lojas no lugar desse filtro.`);
+  const unknownShop = text.match(/\b(?:shopee|mercado livre|tiktok|amazon|kwai|shein)\s+(?!(?:em|no|na|este|esse|neste|ontem|hoje|com|de)\b)([a-z][a-z ]*?)(?=\s+(?:em|no|na|este|esse|neste|ontem|hoje)\b|[?!.,]|$)/)?.[1]?.trim();
+  if (unknownShop && !shops.length && !['shop','full','fulfillment','lojas','canal'].includes(unknownShop)) return message(`Não reconheci a loja “${unknownShop}”. Informe o nome da loja na Análise Comercial; não vou ampliar o filtro para o canal inteiro.`);
   const threshold = text.match(/(?:abaixo de|menor que|inferior a|menos de)\s*(-?\d+(?:[.,]\d+)?)\s*%/);
   const below = /\b(negativa|negativas|prejuizo)\b/.test(text) ? 0 : threshold ? Number(threshold[1].replace(',', '.')) / 100 : retain ? previous?.below ?? null : null;
   if (below !== null && (below < -10 || below > 1)) return message('Informe um limite de margem entre −1000% e 100%.');
@@ -140,11 +159,23 @@ export function resolveBiaPlan(question, today, previous = /** @type {BiaPlan|nu
   const top = text.match(/\btop\s+(\d+)\b/);
   const limit = top ? Number(top[1]) : retain ? previous?.limit ?? 10 : 10;
   if (limit < 1 || limit > 20) return message('Posso mostrar de 1 a 20 produtos por resposta. Use a Análise Comercial para o ranking completo.');
-  const order = /\b(unidades|quantidade|mais vendidos|vendeu mais|venderam mais)\b/.test(text) ? 'units' : /\b(maior margem|melhor margem|mais rentaveis)\b/.test(text) ? 'margin' : /\b(faturamento|receita|mais fatur)/.test(text) ? 'revenue' : retain ? previous?.order ?? 'revenue' : hinted && (hint?.order === 'units' || hint?.order === 'margin') ? hint.order : 'revenue';
-  let intent = /** @type {BiaIntent} */ (comparing || comparison ? 'comparison' : margin ? 'margin' : ranking ? 'ranking' : revenue ? 'summary' : hinted ?? previous?.intent ?? 'summary');
+  const order = /\b(unidades|quantidade|mais vendidos|vendeu mais|venderam mais)\b/.test(text) ? 'units' : /\b(maior margem|melhor margem|mais rentaveis)\b/.test(text) ? 'margin' : /\b(faturamento|receita|mais fatur)/.test(text) ? 'revenue' : retain ? previous?.order ?? 'revenue' : 'revenue';
+  let remainder = text;
+  if (sku) remainder = remainder.replace(sku[0], ' ');
+  if (namedProduct) remainder = remainder.replace(namedProduct, ' ');
+  remainder = remainder.replace(/\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\/\d{1,2}\/\d{4}\b|\b20\d{2}-(?:0[1-9]|1[0-2])\b/g, ' ');
+  remainder = remainder.replace(/\btop\s+\d+\b|\bultimos?\s+\d+\s+dias?\b|(?:abaixo de|menor que|inferior a|menos de)\s*-?\d+(?:[.,]\d+)?\s*%/g, ' ');
+  if (new RegExp(`\\b(${MONTHS.join('|')})(?:\\s+de)?\\s+\\d{4}\\b`).test(remainder)) remainder = remainder.replace(/\b\d{4}\b/g, ' ');
+  if (/\d/.test(remainder)) return message('Não consegui interpretar esse número como SKU, limite ou período. Informe SKU explicitamente ou use datas completas para o período.');
+  const vocabulary = new Set(('a o as os de da do das dos em no na nos nas por para com e ou um uma uns umas eu me meu minha nosso nossa nossos nossas voce quero gostaria favor pode poderia saber diga informe mostre mostrar ver consultar consulta relatorio resumo total totais geral consolidado todas todos lojas loja canal canais marketplace marketplaces produto produtos sku skus qual quais quanto quantos quantas foi foram teve temos tem sao eh ser ha este esse deste desse dessa desta neste nessa nesse nessa ultimo ultimos ultima ultimas mes atual passado anterior hoje ontem anteontem dias dia semana top ranking mais melhor maior vendidos vendido vendida vendidas vendemos venderam vendeu vender vendas venda faturamento faturamos faturou faturado faturei faturar receita receitas margem margens ponderada lucro resultado resultados rentabilidade prejuizo negativas negativa baixo abaixo menor menos que inferior unidades unidade quantidade qtd comparacao compara compare comparar versus vs crescimento variacao diferenca desses destes deles delas com custo custos comissao disponibilidade apuradas apurada registrada registradas acumulado realizado realizada agora somente apenas primeiro melhores maior faturamento faturou destes desses delas deles').split(' '));
+  for (const word of [...MONTHS, ...families.flatMap(f => f.split(' ')), ...shops.flatMap(f => f.split(' ')), 'oliverhome', 'fulfillment', 'full', 'shop']) vocabulary.add(word);
+  const unknown = (remainder.match(/[a-z]+/g) ?? []).filter(word => !vocabulary.has(word));
+  if (unknown.length) return message(`Não consegui interpretar “${[...new Set(unknown)].join(' ')}” com segurança. Informe a medida, o período e o SKU ou nome do produto/loja. Não vou substituir o filtro por todos os dados.`);
+  const measure = /** @type {BiaPlan['measure']} */ (/\b(unidades?|quantidade|quantas|qtd|mais vendidos|vendeu mais|venderam mais)\b/.test(text) ? 'units' : /\b(lucro|resultado|prejuizo)\b/.test(text) ? 'profit' : margin ? 'margin' : revenue || comparing ? 'revenue' : retain ? previous?.measure ?? 'revenue' : 'revenue');
+  let intent = /** @type {BiaIntent} */ (comparing || comparison ? 'comparison' : margin ? 'margin' : ranking ? 'ranking' : revenue ? 'summary' : previous?.intent ?? 'summary');
   if (intent === 'comparison' && !comparison) return message('Informe os dois períodos que deseja comparar.');
   if (margin && retain && previous?.intent === 'ranking' && /\b(deles|delas|desses|destes)\b/.test(text)) intent = 'ranking';
-  return { kind: 'query', plan: { intent, start: primary.start, end: primary.end, channel, search: search.slice(0, 80), limit, order, below, compareStart: comparison?.start ?? null, compareEnd: comparison?.end ?? null } };
+  return { kind: 'query', plan: { intent, start: primary.start, end: primary.end, channel, search: search.slice(0, 80), searchKind, measure, limit, order, below, compareStart: comparison?.start ?? null, compareEnd: comparison?.end ?? null } };
 }
 
 /** Match a business label against the catalogue, never invent a channel. */

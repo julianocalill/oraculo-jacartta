@@ -11,14 +11,21 @@ const percent = (value: number | null) => value === null ? 'Pendente' : new Intl
 const range = (start: string, end: string) => start === end ? formatBrDate(start) : `${formatBrDate(start)} a ${formatBrDate(end)}`;
 
 export function buildBiaAnswer(plan: BiaPlan, data: CommercialData, comparison: CommercialData | null, today: string, now = Date.now()): BiaReply {
-  const totals = commercialTotals(data.products);
-  const revenue = data.daily.reduce((sum, row) => sum + Number(row.revenue), 0);
-  const invoices = data.daily.reduce((sum, row) => sum + Number(row.invoices), 0);
-  const matching = data.products.filter((row) => !plan.search || normalizeBia(`${row.sku} ${row.product_name ?? ''}`).includes(normalizeBia(plan.search)));
+  const matches = (row: CommercialData['products'][number]) => !plan.search || (plan.searchKind === 'sku'
+    ? normalizeBia(row.sku) === normalizeBia(plan.search)
+    : normalizeBia(row.product_name ?? '').includes(normalizeBia(plan.search)));
+  const matching = data.products.filter(matches);
   const filtered = matching.filter((row) => {
     const margin = commercialMargin(row);
     return plan.below === null || (margin !== null && margin < plan.below);
   });
+  const scoped = Boolean(plan.search || plan.below !== null);
+  const scopeRows = scoped ? filtered : data.products;
+  const totals = commercialTotals(scopeRows);
+  const globalRevenue = data.daily.reduce((sum, row) => sum + Number(row.revenue), 0);
+  const revenue = scoped ? totals.revenue : globalRevenue;
+  const invoices = data.daily.reduce((sum, row) => sum + Number(row.invoices), 0);
+  const productScope = plan.search ? (plan.searchKind === 'sku' ? `SKU ${plan.search}` : `produto “${plan.search}” (${matching.length} SKUs encontrados)`) : plan.below !== null ? `produtos com margem abaixo de ${percent(plan.below)}` : '';
   const visible = [...filtered].sort((a, b) => {
     const first = plan.order === 'margin' ? commercialMargin(a) : Number(a[plan.order]);
     const second = plan.order === 'margin' ? commercialMargin(b) : Number(b[plan.order]);
@@ -33,21 +40,23 @@ export function buildBiaAnswer(plan: BiaPlan, data: CommercialData, comparison: 
   if (plan.end === today) notices.push('O dia de hoje está em andamento; os valores são parciais.');
   if (data.recent_refresh && now - Date.parse(data.recent_refresh) > 2 * 60 * 60 * 1000) notices.push('A atualização dos dias recentes está atrasada há mais de 2 horas.');
   if (!data.latest_refresh) notices.push('Não há horário de atualização disponível para esse período.');
-  const gap = Math.max(0, revenue - totals.revenue);
+  const gap = scoped ? 0 : Math.max(0, revenue - totals.revenue);
   if (gap > 0.005) notices.push(`${money(gap)} em notas fiscais ainda sem itens no ranking.`);
-  const margin = totals.covered_revenue > 0 ? totals.covered_profit / totals.covered_revenue : null;
+  const exactSku = plan.search && plan.searchKind === 'sku' && matching.length === 1 ? matching[0] : null;
+  const margin = exactSku ? commercialMargin(exactSku) : totals.covered_revenue > 0 ? totals.covered_profit / totals.covered_revenue : null;
   const coverage = revenue > 0 ? totals.covered_revenue / revenue : null;
-  const pendingProducts = data.products.filter((row) => commercialMargin(row) === null).length;
+  const pendingProducts = scopeRows.filter((row) => commercialMargin(row) === null).length;
   notices.push(`Margem calculada sobre ${money(totals.covered_revenue)} (${percent(coverage)} da receita). ${number(pendingProducts)} SKUs com margem pendente. Resultado após custo líquido, impostos e comissão; Ads, despesas fixas, frete externo e devoluções posteriores não estão descontados.`);
-  if (plan.search || plan.below !== null) notices.push('A busca e o limite de margem filtram os produtos. Os cards mantêm os totais do período e do canal, como na Análise Comercial.');
+  if (scoped) notices.push('Os cards desta resposta somam apenas os produtos do filtro, incluindo todos os correspondentes antes do limite do ranking. A tela Análise Comercial mantém os cards globais; confira as linhas dos produtos. Não há contagem de NFs distintas por produto nesta ferramenta.');
   const reply: BiaReply = {
     text: `Consultei a Análise Comercial de ${range(plan.start, plan.end)}. O faturamento por emissão de NF foi ${money(revenue)}, em ${number(invoices)} notas válidas.`,
     mode: 'verified',
+    scope: { measure: plan.measure === 'units' ? 'Unidades vendidas' : plan.measure === 'margin' ? 'Margem na base com custo e comissão' : plan.measure === 'profit' ? 'Resultado na base com custo e comissão' : 'Faturamento por NF', ...(productScope ? { product: productScope } : {}) },
     metrics: [
-      { label: 'Receita faturada', value: money(revenue), caption: `${number(invoices)} NFs válidas` },
+      { label: 'Receita faturada', value: money(revenue), caption: scoped ? 'Receita atribuída aos produtos do filtro' : `${number(invoices)} NFs válidas` },
       { label: 'Unidades apuradas', value: number(totals.units), caption: 'Itens e kits comerciais disponíveis' },
       { label: 'Margem ponderada', value: percent(margin), caption: 'Somente receita com custo e comissão' },
-      { label: 'Resultado na base com margem', value: totals.covered_revenue > 0 ? money(totals.covered_profit) : 'Pendente', caption: 'Resultado parcial, sem despesas fixas' }
+      { label: 'Resultado na base com margem', value: totals.covered_revenue > 0 && !(exactSku && margin === null) ? money(totals.covered_profit) : 'Pendente', caption: 'Resultado parcial, sem despesas fixas' }
     ],
     source: {
       label: 'Análise Comercial · NF válida Olist',
@@ -56,12 +65,13 @@ export function buildBiaAnswer(plan: BiaPlan, data: CommercialData, comparison: 
     }, notices
   };
   if (plan.intent === 'comparison' && comparison && plan.compareStart && plan.compareEnd) {
-    const otherRevenue = comparison.daily.reduce((sum, row) => sum + Number(row.revenue), 0);
+    const otherProducts = comparison.products.filter(matches).filter(row => plan.below === null || (commercialMargin(row) !== null && commercialMargin(row)! < plan.below));
+    const otherRevenue = scoped ? commercialTotals(otherProducts).revenue : comparison.daily.reduce((sum, row) => sum + Number(row.revenue), 0);
     const difference = revenue - otherRevenue;
     const delta = otherRevenue !== 0 ? difference / otherRevenue : null;
     const otherPeriod = commercialPeriod(plan.compareStart, plan.compareEnd, today);
     const otherPending = Math.max(0, (otherPeriod.days ?? 0) - comparison.processed_days);
-    reply.text = `De ${range(plan.start, plan.end)}, o faturamento foi ${money(revenue)}. De ${range(plan.compareStart, plan.compareEnd)}, foi ${money(otherRevenue)}. A diferença é ${money(difference)}${delta === null ? '; a base anterior é zero, então não há variação percentual calculável.' : ` (${percent(delta)}).`}`;
+    reply.text = `${scoped ? `Para ${productScope}: ` : ''}De ${range(plan.start, plan.end)}, o faturamento foi ${money(revenue)}. De ${range(plan.compareStart, plan.compareEnd)}, foi ${money(otherRevenue)}. A diferença é ${money(difference)}${delta === null ? '; a base anterior é zero, então não há variação percentual calculável.' : ` (${percent(delta)}).`}`;
     reply.metrics = [
       { label: 'Período consultado', value: money(revenue), caption: range(plan.start, plan.end) },
       { label: 'Período comparado', value: money(otherRevenue), caption: range(plan.compareStart, plan.compareEnd) },
@@ -73,7 +83,7 @@ export function buildBiaAnswer(plan: BiaPlan, data: CommercialData, comparison: 
     else notices.push(`Atualização do período comparado: ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' }).format(new Date(comparison.latest_refresh))}.`);
     if (comparison.recent_refresh && now - Date.parse(comparison.recent_refresh) > 2 * 60 * 60 * 1000) notices.push('A atualização dos dias recentes do período comparado também está atrasada.');
     notices.push('A diferença medida não identifica, por si só, a causa da mudança.');
-    if ((pending > 0 && data.daily.length === 0) || (otherPending > 0 && comparison.daily.length === 0)) {
+    if ((pending > 0 && data.daily.length === 0) || (otherPending > 0 && comparison.daily.length === 0) || (scoped && (!scopeRows.length || !otherProducts.length))) {
       reply.text = 'Não há dados processados suficientes para comparar esses períodos. Uma base ausente não é faturamento zero.';
       reply.metrics = [];
     }
@@ -97,6 +107,17 @@ export function buildBiaAnswer(plan: BiaPlan, data: CommercialData, comparison: 
       })
     };
     if (plan.below !== null) notices.push('Produtos com margem pendente ficam fora do filtro percentual; eles não são classificados como margem zero.');
+  }
+  if (plan.intent !== 'comparison' && (scoped || plan.measure === 'units' || plan.measure === 'profit')) {
+    const context = `${productScope ? `Para ${productScope}, em ` : 'Em '}${range(plan.start, plan.end)}`;
+    reply.text = plan.measure === 'units' ? `${context}, apurei ${number(totals.units)} unidades nos itens disponíveis.`
+      : plan.measure === 'margin' ? `${context}, a margem ${exactSku ? 'do SKU' : 'ponderada na base com custo e comissão'} é ${percent(margin)}.`
+      : plan.measure === 'profit' ? `${context}, o resultado na base com custo e comissão é ${exactSku && margin === null ? 'pendente' : totals.covered_revenue > 0 ? money(totals.covered_profit) : 'pendente'}. Não é lucro líquido total da empresa.`
+      : `${context}, a receita atribuída aos produtos do filtro é ${money(revenue)}.`;
+  }
+  if (scoped && !scopeRows.length && plan.intent !== 'comparison') {
+    reply.text = `Não encontrei itens correspondentes a ${productScope} em ${range(plan.start, plan.end)} na base disponível. Isso não permite afirmar que as vendas foram zero.`;
+    reply.metrics = [];
   }
   if (pending > 0 && data.daily.length === 0 && plan.intent !== 'comparison') {
     reply.text = 'Esse período ainda não tem dados processados suficientes para responder. Ausência de dados não significa faturamento zero.';
