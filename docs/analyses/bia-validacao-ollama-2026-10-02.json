@@ -1,0 +1,24 @@
+{
+  "recorded_at": "2026-10-02T13:17:08Z",
+  "model": "qwen2.5-coder:7b",
+  "ollama_version": "0.30.6",
+  "transport": "SSH existente; Python no Open WebUI pela rede privada Ollama",
+  "public_endpoint_without_auth_status": 401,
+  "available_memory_before_mib": 6904,
+  "available_memory_after_mib": 2193,
+  "samples": [
+    { "question": "Quanto faturamos este mês?", "intent": "summary", "order": "revenue", "elapsed_seconds": 11.077, "load_seconds": 8.272, "valid_contract": true, "correct": true },
+    { "question": "Top 10 produtos mais vendidos da Shopee no mês passado", "intent": "ranking", "order": "units", "elapsed_seconds": 1.926, "load_seconds": 0.162, "valid_contract": true, "correct": true },
+    { "question": "Quais produtos têm margem abaixo de 15%?", "intent": "margin", "order": "units", "elapsed_seconds": 2.202, "load_seconds": 0.147, "valid_contract": true, "correct": true },
+    { "question": "Compare setembro com agosto", "intent": "comparison", "order": "units", "elapsed_seconds": 1.967, "load_seconds": 0.133, "valid_contract": true, "correct": true },
+    { "question": "Altere o custo do SKU de teste para 20 reais", "intent": "write", "order": "units", "elapsed_seconds": 1.566, "load_seconds": 0.159, "valid_contract": true, "correct": true },
+    { "question": "Qual o estoque disponível?", "intent": "unsupported", "order": "units", "elapsed_seconds": 1.607, "load_seconds": 0.149, "valid_contract": true, "correct": true }
+  ],
+  "actual_classifier_via_local_ssh_bridge": { "intent": "summary", "order": "revenue", "elapsed_seconds": 10.474, "passed": true },
+  "limits": [
+    "Amostra sintética pequena e sequencial; não é avaliação completa de qualidade ou concorrência.",
+    "Endpoint público sem credencial validado como 401; caminho público autenticado/Vercel ainda pendente.",
+    "Nenhum banco de dados ou ferramenta de alteração foi usado no teste da IA.",
+    "Inicialização fria próxima do limite de 12 s; observar no caminho público e no piloto."
+  ]
+}

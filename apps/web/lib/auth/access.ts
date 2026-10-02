@@ -106,7 +106,11 @@ export async function canAccessRequest(user: MaybeUser, tab: TabKey) {
 }
 
 export function firstAllowedHref(user: MaybeUser) {
-  const [first] = allowedTabs(user);
+  const tabs = allowedTabs(user);
+  const first = tabs.find((key) => {
+    const tab = tabByKey(key);
+    return tab && !('hideFromSidebar' in tab && tab.hideFromSidebar);
+  }) ?? tabs[0];
   return first ? tabByKey(first)?.href ?? null : null;
 }
 

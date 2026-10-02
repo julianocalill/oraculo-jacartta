@@ -27,7 +27,7 @@ export function SidebarNav({ badges, tabs }: { badges?: Record<string, number | 
   const pathname = parseOperationPath(usePathname() ?? "/").path;
   const granted = new Set<string>(tabs);
 
-  const mainLinks = TABS.filter((tab) => tab.group === "main" && granted.has(tab.key));
+  const mainLinks = TABS.filter((tab) => tab.group === "main" && granted.has(tab.key) && !("hideFromSidebar" in tab && tab.hideFromSidebar));
   const adminLinks = TABS.filter((tab) => tab.group === "admin" && granted.has(tab.key));
   const looseLinks = mainLinks.filter((tab) => !("sector" in tab));
   const sectors = SECTORS

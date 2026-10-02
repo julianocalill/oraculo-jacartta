@@ -1,6 +1,7 @@
 import { OperationProvider } from "./components/operation-provider";
 import { TableColumnHints } from "./components/table-column-hints";
 import { ChartInteractions } from "./components/chart-interactions";
+import { BiaProvider } from "./components/bia-provider";
 import { getRequestOperation } from "../lib/operation-context";
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
@@ -56,7 +57,7 @@ export default async function RootLayout({
         <OperationProvider operation={await getRequestOperation()}>
           <TableColumnHints />
           <ChartInteractions />
-          {children}
+          <BiaProvider>{children}</BiaProvider>
         </OperationProvider>
       </body>
     </html>

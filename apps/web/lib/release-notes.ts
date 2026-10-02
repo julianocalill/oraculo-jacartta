@@ -24,6 +24,18 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-02-bia",
+    title: "Conheça a B.ia",
+    summary: "Pergunte sobre faturamento, produtos e margem da operação selecionada.",
+    publishedAt: "2026-10-02T11:30:00-03:00",
+    changes: [{
+      title: "Sua assistente de dados",
+      description: "Clique no personagem no canto direito para abrir a B.ia. O chat acompanha você entre páginas e responde com os dados da Análise Comercial, mostrando a fonte. Ela apenas consulta: nunca altera seus dados.",
+      href: "/bia",
+      linkLabel: "Conversar com a B.ia"
+    }]
+  },
+  {
     id: "2026-10-01-separacao-sem-full",
     title: "Separação com Grupo e sem Full",
     summary: "Confira o grupo dos produtos e as unidades que precisam de separação local.",

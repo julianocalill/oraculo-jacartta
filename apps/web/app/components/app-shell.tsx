@@ -18,6 +18,8 @@ import { loadAgendaPendingCount } from "../../lib/agenda-count";
 import { effectiveUserId } from "../../lib/users";
 import { getActiveReleaseNotes } from "../../lib/release-notes";
 import { ReleaseNotesPopup } from "./release-notes-popup";
+import { BiaAccess } from "./bia-provider";
+import { ollamaConfig } from "../documentacao/ask";
 
 // Casca visual compartilhada. Fica separada do AppShell porque o skeleton
 // (app/loading.tsx) não pode ser async — fallback de Suspense é sempre síncrono.
@@ -164,6 +166,7 @@ export async function AppShell({
       >
         {children}
       </Frame>
+      <BiaAccess operation={operation.id} userId={user?.id ?? ''} allowed={Boolean(user && tabs.includes('bia'))} dataAllowed={tabs.includes('analise-comercial')} aiConfigured={ollamaConfig().enabled} />
       {loginMarker && activeReleases.length > 0 && (
         <ReleaseNotesPopup releases={activeReleases} loginMarker={loginMarker} />
       )}

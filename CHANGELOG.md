@@ -2,6 +2,26 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-10-02] — B.ia — publicação em andamento
+
+- Chat flutuante à direita, aberto pelo personagem e fora do menu lateral.
+  Conversa em memória preservada ao minimizar e navegar na mesma operação.
+  Permissão B.ia continua em Usuários; links antigos abrem o painel. Consultas
+  de faturamento NF, ranking, margem e comparação por operação/canal/período.
+- Reutiliza Ollama qwen2.5-coder:7b da VPS para classificar; o código consulta
+  e responde pelos mesmos critérios da Análise Comercial, com fonte/cobertura.
+- Sem escrita, SQL livre ou credencial administrativa: JWT real, acesso à
+  fonte revalidado e cliente restrito à RPC STABLE comercial auditada.
+- Personagem transparente e interface desktop/celular; testes de domínio,
+  contratos, TypeScript e build: 118 testes passaram. Publicação autorizada
+  e em andamento; sem migration ou alteração de dados.
+- Ollama posteriormente validado por SSH (6/6 intenções); classificador real
+  também passou pelo proxy local. Localhost preparado com login real via
+  next start. Consulta de hoje conferiu com a tela comercial; navegação e
+  troca de operação conferidas no painel. Homologação completa e caminho
+  público autenticado pendentes.
+  Contrato/runbook: `docs/bia.md`; decisão: ADR-008.
+
 ## [2026-10-01] — Separação com Grupo e sem Full
 
 - RPC e hidratação de pedidos sem itens excluem expedição Full antes das

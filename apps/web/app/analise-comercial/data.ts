@@ -41,8 +41,8 @@ export function commercialProductStatus(row: CommercialProduct) {
     : 'Margem calculada';
 }
 
-export async function loadCommercialAnalysis(start: string, end: string, channel?: string): Promise<CommercialData> {
-  const supabase = await createSupabaseUserClient();
+export async function loadCommercialAnalysis(start: string, end: string, channel?: string, client?: Awaited<ReturnType<typeof createSupabaseUserClient>>): Promise<CommercialData> {
+  const supabase = client ?? await createSupabaseUserClient();
   const { data, error } = await supabase.rpc('oraculo_commercial_analysis', {
     p_start: start, p_end: end, p_channel: channel || null
   });

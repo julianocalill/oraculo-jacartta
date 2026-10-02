@@ -13,6 +13,7 @@
     "./ads-analysis.js": "./ads-analysis.js",
     "./ads-print.js": "./ads-print.js",
     "./commercial-analysis.js": "./commercial-analysis.js",
+    "./bia.js": "./bia.js",
     "./full-workflow.js": "./full-workflow.js",
     "./separation.js": "./separation.js",
     "./operations.js": "./operations.js",

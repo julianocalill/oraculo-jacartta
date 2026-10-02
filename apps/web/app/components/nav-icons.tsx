@@ -5,6 +5,7 @@
 import type { TabKey } from "../../lib/auth/tabs";
 
 const PATHS: Record<string, string> = {
+  bia: "M5 5h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-8l-5 3v-3H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2ZM8 10h.01M16 10h.01M8 14h8M12 2v3",
   ads: "M3 3v18h18M6 16l5-6 4 3 6-9M17 4h4v4",
   "analise-comercial": "M3 3v18h18M7 17v-4M12 17V9M17 17V5",
   analytics: "M3 3v18h18M7 14l4-4 4 4 5-6",

@@ -30,6 +30,8 @@ export type TabDefinition = {
   group: TabGroup;
   paths: string[];
   sector?: TabSector;
+  // Permissão e rota existem, mas o recurso abre fora do menu (ex.: B.ia).
+  hideFromSidebar?: boolean;
   // Aba restrita: administradores fixos (isMaster) entram automaticamente;
   // usuários comuns só entram por concessão explícita em
   // app_metadata.restricted_tabs, separada das abas comuns legadas.
@@ -37,6 +39,7 @@ export type TabDefinition = {
 };
 
 export const TABS = [
+  { key: "bia", label: "B.ia", href: "/bia", group: "main", paths: ["/bia"], hideFromSidebar: true },
   { key: "analytics", label: "Analytics", href: "/", group: "main", paths: ["/", "/export-fiscal"], sector: "analitico" },
   { key: "analise-comercial", label: "Análise Comercial", href: "/analise-comercial", group: "main", paths: ["/analise-comercial"], sector: "comercial" },
   { key: "ads", label: "Shopee Ads", href: "/ads", group: "main", paths: ["/ads"], sector: "comercial" },

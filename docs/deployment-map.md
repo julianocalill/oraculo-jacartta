@@ -197,6 +197,15 @@
 - `olist-sync`, `olist-stock-sync` — **legadas, ainda implantadas, órfãs**
   - Versões anteriores de `olist-sync-orders`/`olist-sync-stock` (deployadas com `verify_jwt: true`). Nenhum job em `cron.job` as chama mais. Candidatas a `supabase functions delete`, a menos que algo externo ainda invoque diretamente.
 - **Ollama (VPS `129.121.53.71`, stack `ollama`)** — `qwen2.5-coder:7b`, sem GPU.
+  - B.ia (chat flutuante à direita; `/bia` abre o painel por redirect;
+    publicação autorizada em 02/10, em andamento)
+    reutiliza `OLLAMA_URL`, `OLLAMA_MODEL` e `OLLAMA_TOKEN` do backend web.
+    Uma classificação curta por pergunta; receitas determinísticas fazem
+    fallback. Dados são lidos por JWT em RPC comercial STABLE, sem escrita,
+    nova tabela ou cron. Permissões `bia` + `analise-comercial` por operação.
+    Runbook e limites: `docs/bia.md`. Modelo validado por SSH/rede privada em
+    02/10 (6/6 intenções). Caminho público autenticado/Vercel ainda pendente;
+    proxy SSH local temporário permite teste com login real sem copiar tokens.
   - Interno: `http://ollama:11434` pela rede `JacarttaNet`. É por aqui que o n8n
     fala (relatório de Shopee Ads) — não passa pelo Traefik.
   - Público: `https://ia.oliverhome.com.br/ollama`, **protegido por basic auth**
