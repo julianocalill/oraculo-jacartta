@@ -10,7 +10,9 @@ Histórico de entregas e mudanças significativas.
   Filtros, medidas e datas não suportados pedem esclarecimento.
 - SKU exato, cards/comparação por produto sem totais globais, unidades
   respondidas como unidades e contexto preservado com filtros visíveis.
-- 130 testes passaram; TypeScript/build conferidos. Sem escrita, migration
+- Falso positivo `write` do modelo não recusa uma leitura validada; pedidos
+  reais de alteração continuam bloqueados antes do modelo e do banco.
+- 131 testes passaram; TypeScript/build conferidos. Sem escrita, migration
   ou armazenamento de histórico. Ver `docs/bia.md` e status de 02/10.
 
 ## [2026-10-02] — B.ia — publicada em produção

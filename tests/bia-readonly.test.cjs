@@ -219,6 +219,16 @@ test('cada turno é validado e a resposta usa a consulta fixa', async () => {
   assert.equal((await response.json()).mode, 'local');
   assert.equal(response.headers.get('cache-control'), 'private, no-store');
 });
+test('falso positivo de escrita do modelo não recusa uma consulta válida de unidades', async () => {
+  const api = await route({ hint: { intent: 'write' } });
+  const response = await api.post({ questions: ['Quantas unidades do SKU 1 vendemos hoje?'] });
+  const reply = await response.json();
+  assert.equal(api.calls.query, 1);
+  assert.equal(api.calls.plan.measure, 'units');
+  assert.equal(api.calls.plan.search, '1');
+  assert.ok(reply.text.includes('2 unidades'));
+  assert.notEqual(reply.text, (await domain).BIA_READ_ONLY);
+});
 test('cliente de leitura exige JWT real mesmo em desenvolvimento e bloqueia outras chamadas', async () => {
   let network = 0;
   let config;

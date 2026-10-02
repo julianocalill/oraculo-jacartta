@@ -63,7 +63,8 @@ export async function POST(request: Request) {
   try {
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(45_000)]);
     const hint = await interpretBia(question, signal);
-    if (hint?.intent === 'write') return json(message(BIA_READ_ONLY));
+    // A model's false-positive "write" label cannot replace a validated read.
+    // Real mutation requests were rejected by code before inference.
     resolved = resolveBiaPlan(question, today, previous, hint);
     if (resolved.kind === 'message') return json(message(resolved.message));
     if (signal.aborted) return json({ error: 'Consulta cancelada.' }, 499);

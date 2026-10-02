@@ -25,7 +25,12 @@ outros produtos. Continuação mantém período, canal, produto e medida; a
 resposta exibe esses filtros. Medidas/filtros/datas não suportados não são
 silenciosamente descartados. Permissões e contrato de leitura permanecem.
 
-Validação: 130 testes de domínio/contrato passaram; TypeScript e build
+Na produção, a consulta de unidades do SKU 215780 revelou um falso positivo
+`write` do classificador: a rota recusou a leitura. O veto por rótulo do
+modelo foi retirado; pedidos reais de alteração continuam barrados pelo
+código antes da inferência. Regressão própria cobre esse caso.
+
+Validação: 131 testes de domínio/contrato passaram; TypeScript e build
 passaram. Publicação e validação visual desta correção em andamento.
 Sem migration, novas ferramentas de banco ou retenção de conversa.
 Contrato atualizado: [bia.md](bia.md).

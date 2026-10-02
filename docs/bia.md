@@ -33,7 +33,12 @@ Comparação de quantidade/margem não é convertida para faturamento.
 Filtro, loja, medida ou dia parcial não reconhecido pede esclarecimento.
 Dados incompletos e margem pendente mantêm seus avisos e valores pendentes.
 
-130 testes passaram; TypeScript e build conferidos. Sem mudança de banco,
+O modelo também não pode recusar uma leitura conhecida pelo falso rótulo
+`write`; pedidos reais de alteração continuam barrados antes da inferência.
+Esse falso positivo foi observado na consulta de unidades por SKU em
+produção e ganhou regressão própria.
+
+131 testes passaram; TypeScript e build conferidos. Sem mudança de banco,
 permissões ou retenção. Publicação/validação visual em andamento, registrada
 no status de 02/10.
 
