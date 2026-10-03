@@ -2,6 +2,14 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-10-03] — B.ia — publicação por setor
+
+- Deploy da ampliação autorizada pelo usuário. 150 testes e TypeScript
+  reconferidos; novidade pós-login ajustada à data da publicação.
+- Publicação em andamento nos dois remotes; conferir Ready, domínio e
+  proteção sem sessão. Conferência autenticada aguarda novo login.
+- Continuidade: `docs/project-status-2026-10-03.md`.
+
 ## [2026-10-02] — B.ia — fontes autorizadas por setor
 
 - Fontes fixas para todas as abas e principais subpáginas, com nome da

@@ -33,10 +33,11 @@ oraculo/
 
 ## First files to read
 
-Estado mais recente: [docs/project-status-2026-10-02.md](docs/project-status-2026-10-02.md)
-(B.ia: fontes por setor em homologação; correção anterior publicada).
+Estado mais recente: [docs/project-status-2026-10-03.md](docs/project-status-2026-10-03.md)
+(B.ia: publicação da ampliação por setor autorizada).
 
-1. [docs/project-status-2026-10-02.md](docs/project-status-2026-10-02.md) **← start here** (B.ia)
+1. [docs/project-status-2026-10-03.md](docs/project-status-2026-10-03.md) **← start here** (B.ia por setor)
+   — [docs/project-status-2026-10-02.md](docs/project-status-2026-10-02.md) (implementação e correções da B.ia)
    — [docs/project-status-2026-10-01.md](docs/project-status-2026-10-01.md) (Separação com Grupo e sem Full; Devoluções e cenários Shopee Ads em produção)
    — [docs/project-status-2026-09-30.md](docs/project-status-2026-09-30.md) (análise de prints integrada à Shopee Ads em produção)
    — [docs/project-status-2026-09-28.md](docs/project-status-2026-09-28.md) (Giracasa: navegação, Análise Comercial e lacunas das fontes; visual iOS 27, menu em card, Minha conta, busca de usuários, seletor de operação e gráficos interativos)
@@ -76,8 +77,8 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 B.ia ampliada para consultar fontes de todos os setores, com autorização da
 aba na operação atual, nome do usuário e explicação/fonte dos dados. 150
-testes, TypeScript e build passaram; validação local desta ampliação em
-andamento, ainda sem publicação. Contrato e limites: [bia.md](docs/bia.md) e
+testes e TypeScript reconferidos em 03/10; build local já passou. Publicação
+autorizada e em andamento em 03/10. Conferência com sessão real aguarda login. Contrato e limites: [bia.md](docs/bia.md) e
 [ADR-009](docs/adr/ADR-009-bia-fontes-autorizadas.md).
 
 B.ia em produção, com correção de respostas e filtros em 02/10. Chat

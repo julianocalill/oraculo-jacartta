@@ -27,7 +27,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
     id: "2026-10-02-bia-setores",
     title: "B.ia acompanha os seus setores",
     summary: "Consulte as áreas liberadas para você, com explicações e fontes dos dados.",
-    publishedAt: "2026-10-02T17:50:00-03:00",
+    publishedAt: "2026-10-03T08:40:00-03:00",
     changes: [{
       title: "Informação com contexto e acesso respeitado",
       description: "A B.ia trata você pelo nome, explica os indicadores e mostra onde conferir os dados. Cada assunto respeita o acesso configurado em Usuários. Ela apenas consulta e informa quando um dado não está disponível para você.",
