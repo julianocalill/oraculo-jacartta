@@ -6,8 +6,9 @@ Histórico de entregas e mudanças significativas.
 
 - Deploy da ampliação autorizada pelo usuário. 150 testes e TypeScript
   reconferidos; novidade pós-login ajustada à data da publicação.
-- Publicação em andamento nos dois remotes; conferir Ready, domínio e
-  proteção sem sessão. Conferência autenticada aguarda novo login.
+- Publicada: `be6203f` nos dois remotes, build Vercel e Ready confirmados,
+  domínio oficial alinhado, login/personagem 200 e rotas sem sessão 307.
+  Conferência autenticada desta ampliação aguarda novo login.
 - Continuidade: `docs/project-status-2026-10-03.md`.
 
 ## [2026-10-02] — B.ia — fontes autorizadas por setor

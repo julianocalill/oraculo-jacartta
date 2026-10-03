@@ -17,9 +17,12 @@ ações ou redirects. Devoluções não responde vendas e erro de RPC não vira 
 Limites de cobertura, paginação e filtros continuam explícitos.
 
 150 testes de domínio/contratos e TypeScript passaram novamente em 03/10.
-Build de produção havia passado em 02/10; a Vercel fará nova compilação.
-Publicação em andamento: enviar main a origin e personal (monitorado pela
-Vercel), confirmar Ready, domínio, assets e proteção sem sessão.
+Build de produção havia passado em 02/10; a compilação de produção da Vercel também passou.
+Publicada: commit `be6203f` enviado a origin e personal, Vercel
+[Ready](https://oraculo-jacartta-a1gpzoo3z-grupo-jacartta.vercel.app), deploy `dpl_6R9KMzysEmPLpnaLFRkTbbiZpKni`.
+Domínio oficial aponta para essa versão. Login e personagem retornaram 200;
+GET /bia e POST da resposta sem sessão retornaram 307 ao login, sem dados.
+[Evidência](analyses/bia-deploy-setores-2026-10-03.json).
 A sessão do navegador expirou; conferência autenticada desta ampliação
 aguarda novo login, sem transferência de cookies ou uso de JWT administrativo.
 A validação local dessa ampliação com login real não foi concluída antes

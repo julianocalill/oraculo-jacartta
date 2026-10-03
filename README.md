@@ -34,7 +34,7 @@ oraculo/
 ## First files to read
 
 Estado mais recente: [docs/project-status-2026-10-03.md](docs/project-status-2026-10-03.md)
-(B.ia: publicação da ampliação por setor autorizada).
+(B.ia: ampliação por setor publicada, Vercel Ready).
 
 1. [docs/project-status-2026-10-03.md](docs/project-status-2026-10-03.md) **← start here** (B.ia por setor)
    — [docs/project-status-2026-10-02.md](docs/project-status-2026-10-02.md) (implementação e correções da B.ia)
@@ -77,21 +77,10 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 B.ia ampliada para consultar fontes de todos os setores, com autorização da
 aba na operação atual, nome do usuário e explicação/fonte dos dados. 150
-testes e TypeScript reconferidos em 03/10; build local já passou. Publicação
-autorizada e em andamento em 03/10. Conferência com sessão real aguarda login. Contrato e limites: [bia.md](docs/bia.md) e
+testes e TypeScript reconferidos em 03/10; build Vercel passou. Publicada em
+03/10, commit `be6203f`, dois remotes, Vercel Ready e domínio oficial
+confirmados. Conferência autenticada desta ampliação aguarda novo login. Contrato e limites: [bia.md](docs/bia.md) e
 [ADR-009](docs/adr/ADR-009-bia-fontes-autorizadas.md).
-
-B.ia em produção, com correção de respostas e filtros em 02/10. Chat
-flutuante à direita, fora do menu; usa Ollama existente e consultas de
-faturamento/produtos/margem somente leitura. Perguntas de devoluções recebem
-limite explícito e link para a tela; ambiguidades pedem esclarecimento.
-SKU exato e valores por produto respeitam o filtro, mostrado na resposta.
-Commits `b5775e2` e `7f1c1f3` nos dois remotes, Vercel **Ready**.
-131 testes, TypeScript e build passaram. Sessão real em produção confirmou
-respostas de devoluções, repetição após vendas e métricas por SKU alinhadas
-à linha da Análise Comercial, com IA. Layout móvel conferido.
-Ver [contrato da B.ia](docs/bia.md) e
-[status de 02/10](docs/project-status-2026-10-02.md).
 
 Separação local: Full excluído em produção em 01/10 antes das contagens e
 expansão de kits. Recálculo da janela das 7h retirou 210 pedidos / 804 unidades;
@@ -142,7 +131,7 @@ Shopee Ads publicado em produção em 11/09/2026: [status de 11/09](docs/project
 
 Correção de taxas TikTok publicada em 11/09/2026: [status](docs/project-status-2026-09-10.md).
 
-**Last update**: `2026-10-02` (B.ia published, Vercel Ready; see `docs/project-status-2026-10-02.md`). Previous frontend update: `2026-10-01` (Full excluded from local picking; TikTok returns upload and SKU reason filter in production; see `docs/project-status-2026-10-01.md`). Previous production updates: `2026-09-30` (see `docs/project-status-2026-09-30.md`) and `2026-09-28` (see `docs/project-status-2026-09-28.md`) —
+**Last update**: `2026-10-03` (B.ia sector expansion published, Vercel Ready; see `docs/project-status-2026-10-03.md`). Previous frontend update: `2026-10-01` (Full excluded from local picking; TikTok returns upload and SKU reason filter in production; see `docs/project-status-2026-10-01.md`). Previous production updates: `2026-09-30` (see `docs/project-status-2026-09-30.md`) and `2026-09-28` (see `docs/project-status-2026-09-28.md`) —
 Giracasa/SP com histórico comercial e job horário próprios; o menu acompanha a
 operação da URL durante a navegação cliente. Atualização anterior da
 calculadora em `2026-09-25` —

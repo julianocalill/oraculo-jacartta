@@ -1,5 +1,12 @@
 # B.ia — assistente de dados somente leitura
 
+Ampliação por setor publicada em 03/10/2026: `be6203f` nos dois remotes,
+[Vercel Ready](https://oraculo-jacartta-a1gpzoo3z-grupo-jacartta.vercel.app), domínio oficial confirmado.
+150 testes/TypeScript reconferidos, build de produção passou, login/PNG 200
+e rotas B.ia sem sessão 307. Conferência autenticada desta ampliação aguarda
+novo login. [Estado atual](project-status-2026-10-03.md) e
+[evidência](analyses/bia-deploy-setores-2026-10-03.json).
+
 Publicada em 02/10/2026, commit `caa4bcc` nos dois remotes.
 Vercel confirmou **Ready**: [deploy](https://oraculo-jacartta-iwq1vth1z-grupo-jacartta.vercel.app),
 domínio [Oráculo](https://oraculo.oliverhome.com.br).
@@ -41,7 +48,8 @@ carregamento. Primeiro uso excedeu 12 s e confirmou fallback seguro.
 [Evidência](analyses/bia-setores-validacao-2026-10-02.json).
 
 150 testes passaram; TypeScript e build passaram. Validação da interface
-com dados reais desta ampliação em andamento. A versão publicada anterior
+com dados reais desta ampliação aguarda novo login; publicada por autorização
+direta em 03/10. A versão publicada anterior
 continua registrada abaixo como histórico.
 
 ## Correção anterior de respostas — 02/10/2026

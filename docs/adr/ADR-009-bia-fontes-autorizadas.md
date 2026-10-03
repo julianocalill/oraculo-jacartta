@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted — 02/10/2026. Amplia a ADR-008; validação local da interface em andamento.
+Accepted — 02/10/2026. Amplia a ADR-008. Publicada em 03/10/2026, Vercel Ready;
+conferência da interface com sessão real desta ampliação aguarda novo login.
 
 ## Contexto
 

@@ -1,5 +1,11 @@
 # B.ia — etapas para produção
 
+Atualização 03/10: ampliação por setor publicada por autorização direta do
+usuário. Commit `be6203f` nos dois remotes, Vercel Ready, domínio/asset e
+proteção sem sessão confirmados. 150 testes e TypeScript reconferidos; build
+Vercel passou. Sessão real desta ampliação aguarda novo login.
+[Estado atual](project-status-2026-10-03.md).
+
 Plano registrado em 02/10/2026 a pedido do usuário. A B.ia está implementada
 e validada em localhost. Publicação em produção autorizada pelo usuário em
 02/10 e concluída: commit `caa4bcc`, [Vercel Ready](https://oraculo-jacartta-iwq1vth1z-grupo-jacartta.vercel.app).

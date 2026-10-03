@@ -1,0 +1,53 @@
+{
+  "verified_at": "2026-10-03T11:42:00.561398+00:00",
+  "feature_commit": "be6203fdde05b04720e047bd7421920986ca7225",
+  "implementation_commit": "72d5468",
+  "deployment": {
+    "id": "dpl_6R9KMzysEmPLpnaLFRkTbbiZpKni",
+    "url": "https://oraculo-jacartta-a1gpzoo3z-grupo-jacartta.vercel.app",
+    "status": "READY",
+    "target": "production",
+    "alias": "https://oraculo.oliverhome.com.br",
+    "alias_matches": true
+  },
+  "remotes": [
+    "origin",
+    "personal"
+  ],
+  "tests": {
+    "passed": 150,
+    "failed": 0,
+    "typescript": "passed",
+    "vercel_build": "passed"
+  },
+  "http_checks": [
+    {
+      "path": "/login",
+      "status": 200,
+      "location": null,
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "path": "/brand/bia/personagem.png",
+      "status": 200,
+      "location": null,
+      "type": "image/png"
+    },
+    {
+      "path": "/o/uberlandia/bia",
+      "status": 307,
+      "location": "/login?next=%2Fo%2Fuberlandia%2Fbia",
+      "type": "text/plain"
+    },
+    {
+      "path": "/o/uberlandia/bia/responder",
+      "status": 307,
+      "location": "/login?next=%2Fo%2Fuberlandia%2Fbia%2Fresponder",
+      "type": "text/plain"
+    }
+  ],
+  "authenticated_ui": "Pending fresh user login; browser session expired. No cookies/credentials transferred, no admin JWT used.",
+  "database_changes": false,
+  "permission_grants_changed": false,
+  "history_persistence_added": false
+}
