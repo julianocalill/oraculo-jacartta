@@ -17,6 +17,30 @@ const DEFAULT_RATES = {
 
 type RateKey = keyof typeof DEFAULT_RATES;
 
+type ProductOrigin = "national" | "imported";
+type DifalMode = "rates" | "manual";
+
+// Cenário ilustrativo, não tabela fiscal por UF/NCM. O ICMS MG de 1,3% é
+// um custo simplificado separado e não é a alíquota nominal interestadual.
+const DEFAULT_INTERNAL_ICMS = "18,00";
+const DEFAULT_INTERSTATE_ICMS: Record<ProductOrigin, string> = {
+  national: "12,00",
+  imported: "4,00"
+};
+
+function resolveDifalPercent(
+  interstateSale: boolean,
+  mode: DifalMode,
+  internalPercent: number,
+  interstatePercent: number,
+  manualPercent: number
+) {
+  if (!interstateSale) return 0;
+  return mode === "manual"
+    ? Math.max(manualPercent, 0)
+    : Math.max(internalPercent - interstatePercent, 0);
+}
+
 const RATE_FIELDS: Array<{ key: RateKey; label: string; suffix: "%" | "R$" }> = [
   { key: "icmsMg", label: "ICMS MG", suffix: "%" },
   { key: "difal", label: "DIFAL", suffix: "%" },
@@ -345,11 +369,24 @@ export function PricingCalculator() {
   const [salePrice, setSalePrice] = useState("125,00");
   const [netMargin, setNetMargin] = useState("20,00");
   const [rateStrings, setRateStrings] = useState(DEFAULT_RATE_STRINGS);
+  const [productOrigin, setProductOrigin] = useState<ProductOrigin>("national");
+  const [difalMode, setDifalMode] = useState<DifalMode>("rates");
+  const [interstateSale, setInterstateSale] = useState(true);
+  const [internalIcms, setInternalIcms] = useState(DEFAULT_INTERNAL_ICMS);
+  const [interstateIcms, setInterstateIcms] = useState(DEFAULT_INTERSTATE_ICMS);
   const [marketplace, setMarketplace] = useState<MarketplaceKey>("shopee");
   const [tierStrings, setTierStrings] = useState(() => tierStringsFor("shopee"));
   const [affiliateRate, setAffiliateRate] = useState("");
   const [shippingFixed, setShippingFixed] = useState("");
   const [shippingFixedAbove, setShippingFixedAbove] = useState("");
+
+  const difalPercent = resolveDifalPercent(
+    interstateSale,
+    difalMode,
+    Math.max(asNumber(internalIcms), 0),
+    Math.max(asNumber(interstateIcms[productOrigin]), 0),
+    asNumber(rateStrings.difal)
+  );
 
   function selectMarketplace(key: MarketplaceKey) {
     setMarketplace(key);
@@ -362,7 +399,7 @@ export function PricingCalculator() {
   const result = useMemo(() => {
     const rates = {
       icmsMg: Math.max(asNumber(rateStrings.icmsMg), 0) / 100,
-      difal: Math.max(asNumber(rateStrings.difal), 0) / 100,
+      difal: difalPercent / 100,
       pisCofins: Math.max(asNumber(rateStrings.pisCofins), 0) / 100,
       ads: Math.max(asNumber(rateStrings.ads), 0) / 100,
       fixedOperational: Math.max(asNumber(rateStrings.fixedOperational), 0) / 100,
@@ -400,7 +437,7 @@ export function PricingCalculator() {
       tiers,
       shipping
     );
-  }, [unitCost, quantity, mode, markup, salePrice, netMargin, rateStrings, tierStrings, marketplace, affiliateRate, shippingFixed, shippingFixedAbove]);
+  }, [unitCost, quantity, mode, markup, salePrice, netMargin, rateStrings, difalPercent, tierStrings, marketplace, affiliateRate, shippingFixed, shippingFixedAbove]);
 
   const status =
     !result.targetReachable
@@ -413,6 +450,9 @@ export function PricingCalculator() {
 
   function resetRates() {
     setRateStrings(DEFAULT_RATE_STRINGS);
+    setDifalMode("rates");
+    setInternalIcms(DEFAULT_INTERNAL_ICMS);
+    setInterstateIcms(DEFAULT_INTERSTATE_ICMS);
     setTierStrings(tierStringsFor(marketplace));
     setAffiliateRate("");
     setShippingFixed(MARKETPLACE_PRESETS[marketplace].shipping?.fixed.toFixed(2) ?? "");
@@ -436,6 +476,16 @@ export function PricingCalculator() {
             <span>Unidades no anúncio</span>
             <input inputMode="numeric" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
           </label>
+        </div>
+
+        <div className="calc-mode" role="radiogroup" aria-label="Origem do produto">
+          {(["national", "imported"] as const).map((origin) => (
+            <label key={origin} className={productOrigin === origin ? "is-active" : undefined}>
+              <input type="radio" name="productOrigin" checked={productOrigin === origin}
+                onChange={() => setProductOrigin(origin)} />
+              {origin === "national" ? "Nacional" : "Importado"}
+            </label>
+          ))}
         </div>
 
         <div className="calc-mode calc-calculation-mode" role="radiogroup" aria-label="Modo de cálculo">
@@ -505,13 +555,80 @@ export function PricingCalculator() {
           </button>
         </div>
 
+        <div className="calc-mode" role="radiogroup" aria-label="Destino da venda">
+          <label className={interstateSale ? "is-active" : undefined}>
+            <input type="radio" name="saleDestination" checked={interstateSale}
+              onChange={() => setInterstateSale(true)} />
+            Outro estado
+          </label>
+          <label className={!interstateSale ? "is-active" : undefined}>
+            <input type="radio" name="saleDestination" checked={!interstateSale}
+              onChange={() => setInterstateSale(false)} />
+            Mesmo estado
+          </label>
+        </div>
+
+        {interstateSale ? (
+          <>
+            <div className="calc-mode" role="radiogroup" aria-label="Cálculo do DIFAL">
+              <label className={difalMode === "rates" ? "is-active" : undefined}>
+                <input type="radio" name="difalMode" checked={difalMode === "rates"}
+                  onChange={() => setDifalMode("rates")} />
+                Por alíquotas
+              </label>
+              <label className={difalMode === "manual" ? "is-active" : undefined}>
+                <input type="radio" name="difalMode" checked={difalMode === "manual"}
+                  onChange={() => setDifalMode("manual")} />
+                Taxa manual
+              </label>
+            </div>
+            {difalMode === "rates" ? (
+              <>
+                <div className="calc-field-grid">
+                  <label className="calc-field">
+                    <span>ICMS interno do destino (%)</span>
+                    <input inputMode="decimal" value={internalIcms}
+                      onChange={(e) => setInternalIcms(e.target.value)} />
+                  </label>
+                  <label className="calc-field">
+                    <span>ICMS interestadual nominal (%)</span>
+                    <input inputMode="decimal" value={interstateIcms[productOrigin]}
+                      onChange={(e) => setInterstateIcms({ ...interstateIcms, [productOrigin]: e.target.value })} />
+                  </label>
+                </div>
+                <p className="table-note">
+                  Cenário de simulação: {decimalFmt.format(Math.max(asNumber(internalIcms), 0))}% − {decimalFmt.format(Math.max(asNumber(interstateIcms[productOrigin]), 0))}% = {decimalFmt.format(difalPercent)}% de DIFAL, com mínimo de zero.
+                  {" "}Os 18% iniciais são ilustrativos: ajuste ao estado de destino e ao produto.
+                  {productOrigin === "national"
+                    ? " Nacional: a alíquota interestadual costuma ser 7% ou 12%, conforme os estados de origem e destino."
+                    : " Importado: em regra, 4%, inclusive se comprado de fornecedor brasileiro. Há exceções, como importados sem similar nacional previstos na lista Camex e produtos com PPB; ajuste a alíquota quando aplicável."}
+                  {" "}<a href="https://dfe-portal.svrs.rs.gov.br/Difal/BaseLegal" target="_blank" rel="noopener noreferrer">Fonte oficial</a>
+                </p>
+                <p className="table-note">
+                  Simulação de venda a consumidor final não contribuinte. FCP e benefícios específicos não são apurados aqui.
+                  {" "}O custo ICMS MG de 1,3% continua separado; ele não é a alíquota nominal usada no DIFAL.
+                </p>
+              </>
+            ) : (
+              <p className="table-note">
+                Informe abaixo a taxa de DIFAL usada na sua precificação. Neste modo, trocar Nacional/Importado não altera a taxa manual.
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="table-note">Venda dentro do mesmo estado: DIFAL aplicado de 0%, tanto para nacional quanto para importado.</p>
+        )}
+
         <div className="calc-field-grid calc-rates-grid">
           {RATE_FIELDS.map((field) => (
             <label className="calc-field" key={field.key}>
-              <span>{field.label}{field.suffix === "%" ? " (%)" : ""}</span>
+              <span>{field.key === "difal" && (difalMode === "rates" || !interstateSale) ? "DIFAL calculado" : field.label}{field.suffix === "%" ? " (%)" : ""}</span>
               <input
                 inputMode="decimal"
-                value={rateStrings[field.key]}
+                value={field.key === "difal" && (difalMode === "rates" || !interstateSale)
+                  ? decimalFmt.format(difalPercent)
+                  : rateStrings[field.key]}
+                readOnly={field.key === "difal" && (difalMode === "rates" || !interstateSale)}
                 onChange={(e) => setRateStrings({ ...rateStrings, [field.key]: e.target.value })}
               />
             </label>

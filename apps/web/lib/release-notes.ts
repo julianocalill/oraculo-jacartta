@@ -24,6 +24,18 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-07-calculadora-origem-difal",
+    title: "Calculadora com origem do produto",
+    summary: "Compare a precificação de produtos nacionais e importados com o DIFAL do seu cenário.",
+    publishedAt: "2026-10-07T11:47:00-03:00",
+    changes: [{
+      title: "DIFAL por alíquotas ou taxa manual",
+      description: "Escolha Nacional ou Importado e se a venda é para outro estado. Ajuste as alíquotas do seu cenário ou informe uma taxa manual; o lucro e o preço sugerido acompanham o DIFAL aplicado.",
+      href: "/calculadora",
+      linkLabel: "Abrir calculadora"
+    }]
+  },
+  {
     id: "2026-10-02-bia-setores",
     title: "B.ia acompanha os seus setores",
     summary: "Consulte as áreas liberadas para você, com explicações e fontes dos dados.",

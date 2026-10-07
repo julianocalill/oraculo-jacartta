@@ -33,10 +33,11 @@ oraculo/
 
 ## First files to read
 
-Estado mais recente: [docs/project-status-2026-10-03.md](docs/project-status-2026-10-03.md)
-(B.ia: ampliação por setor publicada, Vercel Ready).
+Estado mais recente: [docs/project-status-2026-10-07.md](docs/project-status-2026-10-07.md)
+(Calculadora: origem Nacional/Importado e DIFAL por alíquotas preparados localmente, ainda não publicados; estado de produção anterior preservado no status de 03/10).
 
-1. [docs/project-status-2026-10-03.md](docs/project-status-2026-10-03.md) **← start here** (B.ia por setor)
+1. [docs/project-status-2026-10-07.md](docs/project-status-2026-10-07.md) **← start here** (Calculadora com origem e DIFAL, local)
+   — [docs/project-status-2026-10-03.md](docs/project-status-2026-10-03.md) (B.ia por setor publicada)
    — [docs/project-status-2026-10-02.md](docs/project-status-2026-10-02.md) (implementação e correções da B.ia)
    — [docs/project-status-2026-10-01.md](docs/project-status-2026-10-01.md) (Separação com Grupo e sem Full; Devoluções e cenários Shopee Ads em produção)
    — [docs/project-status-2026-09-30.md](docs/project-status-2026-09-30.md) (análise de prints integrada à Shopee Ads em produção)
@@ -74,6 +75,11 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 - `Obsidian` vault inside the repository for portable project memory
 
 ## Current production state
+
+Calculadora com origem Nacional/Importado e DIFAL por alíquotas preparada
+localmente em 07/10, **ainda não publicada**. Fontes, limites e validação:
+[status de 07/10](docs/project-status-2026-10-07.md). A versão de produção
+continua sendo a descrita abaixo até a publicação.
 
 B.ia ampliada para consultar fontes de todos os setores, com autorização da
 aba na operação atual, nome do usuário e explicação/fonte dos dados. 150

@@ -788,7 +788,21 @@ entre uma venda acontecer e ela refletir aqui.
 Ferramenta de simulação — **não lê nem grava nada no banco de dados**. É só
 para testar "se eu vender por X, quanto sobra?" antes de publicar um anúncio.
 Por isso ela é **independente** da margem fiscal/operacional do resto do
-sistema — usa taxas fixas digitadas na hora, não o livro de custos real.
+sistema — usa taxas de simulação, não o livro de custos real.
+
+Desde 07/10/2026 (implementação local), a origem **Nacional/Importado** escolhe
+a alíquota interestadual inicial: 12%/4%, ambas editáveis. O modo **Por
+alíquotas** aplica `máximo(ICMS interno do destino − ICMS interestadual, 0)`.
+Os 18% internos iniciais são um cenário ilustrativo, não uma tabela por UF/NCM:
+geram DIFAL de 6% para nacional a 12%, 11% para nacional a 7% e 14% para
+importado a 4%. Selecionar **Mesmo estado** zera o DIFAL inclusive no modo
+manual. Em **Taxa manual**, a estimativa digitada não muda com a origem.
+
+A simulação por alíquotas considera venda a consumidor final não contribuinte;
+FCP/benefícios específicos não são apurados. Comprar um importado de fornecedor
+brasileiro não o torna nacional. Existem exceções aos 4% (Camex/PPB/gás natural).
+O custo simplificado ICMS MG de 1,3% continua separado da alíquota nominal.
+Detalhes, fontes e publicação: [status de 07/10](project-status-2026-10-07.md).
 
 ### Como calcular o preço de venda
 
@@ -810,7 +824,8 @@ Valor agregado = Preço de venda − Custo total
 
 Comissão do marketplace = Preço × taxa da faixa de preço (+ valor fixo da faixa)
 ICMS (MG) = Preço × 1,3%              (editável)
-DIFAL = Preço × 6%                    (editável)
+DIFAL = Preço × taxa aplicada         (calculada por alíquotas ou manual;
+                                       mesmo estado = zero)
 PIS/COFINS = Valor agregado × 9,25%   (editável — atenção: incide sobre o
                                         valor agregado, não sobre o preço cheio)
 Ads = Preço × 3%                      (editável)

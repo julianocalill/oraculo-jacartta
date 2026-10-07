@@ -27,6 +27,15 @@ The current product direction is practical executive intelligence for the operat
 - `Obsidian` can store durable project memory, but repository docs are the source of truth.
 - `AI agents` assist architecture, coding, review and documentation, but repository files remain the source of truth.
 
+## Current state on 2026-10-07 — implementação local
+
+`/calculadora` ganha origem Nacional/Importado e DIFAL por alíquotas editáveis
+ou taxa manual. O cenário inicial é 18% interno e 12%/4% interestadual:
+6%/14% de DIFAL, sem transformar os 18% numa regra universal. Venda no mesmo
+estado aplica zero. ICMS MG 1,3% continua um custo simplificado separado.
+Motor fiscal e banco permanecem independentes. Ainda não publicado;
+validação e fontes em `docs/project-status-2026-10-07.md`.
+
 ## Current state on 2026-09-25
 
 `/calculadora` aplica R$ 12 de envio nos presets Mercado Livre Clássico e
