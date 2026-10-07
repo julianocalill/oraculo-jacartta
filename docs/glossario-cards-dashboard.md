@@ -790,7 +790,7 @@ para testar "se eu vender por X, quanto sobra?" antes de publicar um anúncio.
 Por isso ela é **independente** da margem fiscal/operacional do resto do
 sistema — usa taxas de simulação, não o livro de custos real.
 
-Desde 07/10/2026 (implementação local), a origem **Nacional/Importado** escolhe
+Desde 07/10/2026 (em produção), a origem **Nacional/Importado** escolhe
 a alíquota interestadual inicial: 12%/4%, ambas editáveis. O modo **Por
 alíquotas** aplica `máximo(ICMS interno do destino − ICMS interestadual, 0)`.
 Os 18% internos iniciais são um cenário ilustrativo, não uma tabela por UF/NCM:

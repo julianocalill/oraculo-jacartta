@@ -2,7 +2,7 @@
 
 Histórico de entregas e mudanças significativas.
 
-## [2026-10-07] — Calculadora — origem do produto e DIFAL (local)
+## [2026-10-07] — Calculadora — origem do produto e DIFAL
 
 - Seletor Nacional/Importado com alíquota interestadual inicial de 12%/4%,
   editável, e ICMS interno ilustrativo de 18%. DIFAL pela diferença de
@@ -12,8 +12,8 @@ Histórico de entregas e mudanças significativas.
 - Limites e fontes fiscais aparecem na tela. ICMS MG 1,3% continua custo
   simplificado separado; motor fiscal e banco sem alteração.
 - 21 testes da calculadora, 110 testes de domínio, TypeScript e build passaram;
-  interface conferida em desktop e celular. Implementação ainda não publicada.
-  Continuidade: status de 07/10.
+  interface conferida em desktop e celular. Publicada: `b660289` nos dois
+  remotes, Vercel Ready e domínio oficial confirmados. Continuidade: status de 07/10.
 
 ## [2026-10-03] — B.ia — publicação por setor
 

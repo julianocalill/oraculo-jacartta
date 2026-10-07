@@ -1,0 +1,21 @@
+{
+  "id": "dpl_3MMsAzE6t3JvUNGKfDGXC7cBSnVK",
+  "url": "oraculo-jacartta-ikbgfvw1m-grupo-jacartta.vercel.app",
+  "target": "production",
+  "readyState": "READY",
+  "aliases": [
+    "oraculo.oliverhome.com.br",
+    "oraculo-jacartta-web.vercel.app",
+    "oraculo-jacartta-web-grupo-jacartta.vercel.app",
+    "oraculo-jacartta-web-git-main-grupo-jacartta.vercel.app"
+  ],
+  "featureCommit": "b66028947f9fd09d3a29785258a362967db76a8e",
+  "checkedAt": "2026-10-07T11:49:00-03:00",
+  "calculatorRoutePresent": true,
+  "checks": {
+    "loginHttp": 200,
+    "calculatorWithoutSessionHttp": 307,
+    "calculatorWithoutSessionRedirect": "/login?next=%2Fo%2Fuberlandia%2Fcalculadora",
+    "authenticatedUi": "not verified; no active browser session"
+  }
+}

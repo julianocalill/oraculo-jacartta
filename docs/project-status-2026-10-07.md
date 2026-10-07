@@ -2,7 +2,7 @@
 
 ## Calculadora — origem do produto e DIFAL
 
-Implementação e deploy solicitados em 07/10. **Publicação em andamento**. Produção
+Implementação e deploy solicitados em 07/10. **Publicada em produção**. Produção
 anterior: [status de 03/10](project-status-2026-10-03.md).
 
 - Origem Nacional/Importado em Dados do produto. Cenário inicial Nacional,
@@ -63,3 +63,16 @@ O executável `pnpm` local não produziu saída; checks executados diretamente
 com Node e os binários já instalados, sem mudar dependências.
 Manifesto de novidades ajustado para 07/10 às 11:47 BRT.
 Publicação autorizada pelo usuário; via dois remotes conforme deployment-map.
+
+### Publicação
+
+- Commit `b66028947f9fd09d3a29785258a362967db76a8e` enviado a `origin/main`
+  e `personal/main`. A integração Git da Vercel acompanha `personal`.
+- Vercel `Ready`: deploy `dpl_3MMsAzE6t3JvUNGKfDGXC7cBSnVK`,
+  [URL do deploy](https://oraculo-jacartta-ikbgfvw1m-grupo-jacartta.vercel.app).
+  Domínio oficial alinhado com essa versão; rota `calculadora` presente no build.
+- `/login` respondeu 200; `/o/uberlandia/calculadora` sem sessão respondeu
+  307 para login. Navegador conferiu a tela de login com o retorno à calculadora.
+  Conferência autenticada em produção não realizada: não havia sessão ativa;
+  a interação completa foi validada localmente no componente real.
+- [Evidência do deploy](analyses/calculadora-difal-2026-10-07/deploy.json).

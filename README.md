@@ -34,9 +34,9 @@ oraculo/
 ## First files to read
 
 Estado mais recente: [docs/project-status-2026-10-07.md](docs/project-status-2026-10-07.md)
-(Calculadora: origem Nacional/Importado e DIFAL por alíquotas preparados localmente, ainda não publicados; estado de produção anterior preservado no status de 03/10).
+(Calculadora: origem Nacional/Importado e DIFAL por alíquotas publicados, Vercel Ready).
 
-1. [docs/project-status-2026-10-07.md](docs/project-status-2026-10-07.md) **← start here** (Calculadora com origem e DIFAL, local)
+1. [docs/project-status-2026-10-07.md](docs/project-status-2026-10-07.md) **← start here** (Calculadora com origem e DIFAL publicada)
    — [docs/project-status-2026-10-03.md](docs/project-status-2026-10-03.md) (B.ia por setor publicada)
    — [docs/project-status-2026-10-02.md](docs/project-status-2026-10-02.md) (implementação e correções da B.ia)
    — [docs/project-status-2026-10-01.md](docs/project-status-2026-10-01.md) (Separação com Grupo e sem Full; Devoluções e cenários Shopee Ads em produção)
@@ -76,10 +76,10 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 ## Current production state
 
-Calculadora com origem Nacional/Importado e DIFAL por alíquotas preparada
-localmente em 07/10, **ainda não publicada**. Fontes, limites e validação:
-[status de 07/10](docs/project-status-2026-10-07.md). A versão de produção
-continua sendo a descrita abaixo até a publicação.
+Calculadora com origem Nacional/Importado, DIFAL por alíquotas editáveis ou
+taxa manual e venda no mesmo estado publicada em 07/10, commit `b660289`.
+Dois remotes, Vercel Ready e domínio oficial confirmados. Fontes, limites e
+validação: [status de 07/10](docs/project-status-2026-10-07.md).
 
 B.ia ampliada para consultar fontes de todos os setores, com autorização da
 aba na operação atual, nome do usuário e explicação/fonte dos dados. 150
@@ -137,7 +137,7 @@ Shopee Ads publicado em produção em 11/09/2026: [status de 11/09](docs/project
 
 Correção de taxas TikTok publicada em 11/09/2026: [status](docs/project-status-2026-09-10.md).
 
-**Last update**: `2026-10-03` (B.ia sector expansion published, Vercel Ready; see `docs/project-status-2026-10-03.md`). Previous frontend update: `2026-10-01` (Full excluded from local picking; TikTok returns upload and SKU reason filter in production; see `docs/project-status-2026-10-01.md`). Previous production updates: `2026-09-30` (see `docs/project-status-2026-09-30.md`) and `2026-09-28` (see `docs/project-status-2026-09-28.md`) —
+**Last update**: `2026-10-07` (calculator product origin and DIFAL published, Vercel Ready; see `docs/project-status-2026-10-07.md`). Previous frontend update: `2026-10-03` (B.ia sector expansion, Vercel Ready; see `docs/project-status-2026-10-03.md`). Previous frontend update: `2026-10-01` (Full excluded from local picking; TikTok returns upload and SKU reason filter in production; see `docs/project-status-2026-10-01.md`). Previous production updates: `2026-09-30` (see `docs/project-status-2026-09-30.md`) and `2026-09-28` (see `docs/project-status-2026-09-28.md`) —
 Giracasa/SP com histórico comercial e job horário próprios; o menu acompanha a
 operação da URL durante a navegação cliente. Atualização anterior da
 calculadora em `2026-09-25` —
