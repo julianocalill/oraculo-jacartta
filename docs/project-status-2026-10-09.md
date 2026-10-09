@@ -1,11 +1,11 @@
 # Estado do projeto — 09/10/2026
 
-## Calculadora por operação — implementação local
+## Calculadora por operação — publicado
 
 Solicitação: uma calculadora para Uberlândia/Jacartta e outra para Giracasa,
 porque as operações têm tratamentos distintos de ICMS. O usuário confirmou
 que a Jacartta deve **manter os 1,3% de RET**, separados do ICMS normal da
-Giracasa. Publicação solicitada pelo usuário; deploy em preparação.
+Giracasa. Publicação solicitada pelo usuário; deploy **Ready** confirmado.
 Contexto anterior de produção: [status de 07/10](project-status-2026-10-07.md).
 
 ### Comportamento
@@ -67,5 +67,16 @@ Contexto anterior de produção: [status de 07/10](project-status-2026-10-07.md)
   [Uberlândia celular](analyses/calculadora-operacoes-2026-10-09/uberlandia-mobile.jpg).
 - Rota temporária de prévia removida antes do build. Autenticação preservada.
 
-Manifesto de novidades preparado para 09/10 às 14h40 BRT. Publicação pelos
-dois remotes; confirmação de Ready e domínio será registrada após o deploy.
+### Publicação
+
+- Commit `766e04c` enviado para `origin/main` e `personal/main`; a Vercel
+  acompanha o mirror `personal`. Alterações locais de outras tarefas preservadas.
+- Deploy `dpl_DhyQ4SfiPAKToSpcdq5we4add6i8`, criado em 09/10 às 14h39 BRT,
+  confirmado **Ready** pela Vercel.
+- [URL do deploy](https://oraculo-jacartta-n6yxt6lj1-grupo-jacartta.vercel.app)
+  associado ao [domínio oficial](https://oraculo.oliverhome.com.br).
+- Domínio respondeu HTTPS com redirecionamento para login. Isso confirma a
+  disponibilidade e proteção da aplicação; a interação visual das calculadoras
+  foi validada localmente com o componente real. Não houve login de produção
+  nesta etapa.
+- Manifesto de novidades com `publishedAt` de 09/10 às 14h40 BRT.

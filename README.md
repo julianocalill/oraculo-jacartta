@@ -34,10 +34,10 @@ oraculo/
 ## First files to read
 
 Estado mais recente: [docs/project-status-2026-10-09.md](docs/project-status-2026-10-09.md)
-(calculadora por operação preparada localmente: RET Jacartta separado do ICMS Giracasa;
-produção permanece na calculadora de 07/10, Vercel Ready).
+(calculadora por operação publicada: RET Jacartta separado do ICMS Giracasa;
+Vercel Ready e domínio oficial confirmados).
 
-1. [docs/project-status-2026-10-09.md](docs/project-status-2026-10-09.md) **← start here** (calculadora por operação, local)
+1. [docs/project-status-2026-10-09.md](docs/project-status-2026-10-09.md) **← start here** (calculadora por operação publicada)
    — [docs/project-status-2026-10-07.md](docs/project-status-2026-10-07.md) (Calculadora com origem e DIFAL publicada)
    — [docs/project-status-2026-10-03.md](docs/project-status-2026-10-03.md) (B.ia por setor publicada)
    — [docs/project-status-2026-10-02.md](docs/project-status-2026-10-02.md) (implementação e correções da B.ia)
@@ -78,9 +78,9 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 ## Current production state
 
-Calculadora por operação preparada localmente em 09/10, **ainda não publicada**:
+Calculadora por operação publicada em 09/10, commit `766e04c`, **Vercel Ready**:
 Uberlândia mantém RET 1,3%; Giracasa aplica ICMS de saída próprio e DIFAL
-separado. Validação e limites: [status de 09/10](docs/project-status-2026-10-09.md).
+separado. Dois remotes e domínio oficial confirmados. Validação e limites: [status de 09/10](docs/project-status-2026-10-09.md).
 
 Calculadora com origem Nacional/Importado, DIFAL por alíquotas editáveis ou
 taxa manual e venda no mesmo estado publicada em 07/10, commit `b660289`.

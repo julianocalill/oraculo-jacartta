@@ -27,14 +27,15 @@ The current product direction is practical executive intelligence for the operat
 - `Obsidian` can store durable project memory, but repository docs are the source of truth.
 - `AI agents` assist architecture, coding, review and documentation, but repository files remain the source of truth.
 
-## Current state on 2026-10-09 — implementação local
+## Current state on 2026-10-09 — publicado
 
 Calculadora passa a usar o perfil da operação autorizada da URL: Uberlândia
 mantém RET 1,3%, confirmado pelo usuário; Giracasa aplica ICMS de saída
 nominal do cenário (interestadual por origem ou interno de SP), além do DIFAL.
 Trocar operação reinicia o formulário e não carrega taxas da outra empresa.
 Créditos de entrada de ICMS não são apurados na simulação. Motor fiscal e banco
-sem alteração. Ainda não publicado; estado em `docs/project-status-2026-10-09.md`.
+sem alteração. Publicado no commit `766e04c`: dois remotes, Vercel Ready e domínio
+oficial confirmados; estado em `docs/project-status-2026-10-09.md`.
 
 ## Current state on 2026-10-07
 

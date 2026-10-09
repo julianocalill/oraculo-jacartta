@@ -806,7 +806,7 @@ Detalhes, fontes e publicação: [status de 07/10](project-status-2026-10-07.md)
 
 ### Como calcular o preço de venda
 
-Implementação de 09/10, ainda local: cada operação tem sua calculadora.
+Publicação de 09/10 (commit `766e04c`, Vercel Ready): cada operação tem sua calculadora.
 Uberlândia/Jacartta mantém **ICMS/RET de 1,3%**, editável, confirmado pelo
 usuário. Giracasa/SP usa **ICMS de saída** pela alíquota nominal interestadual
 do cenário (12%/7% para nacional, 4% em regra para importado); em venda dentro

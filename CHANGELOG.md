@@ -2,7 +2,7 @@
 
 Histórico de entregas e mudanças significativas.
 
-## [2026-10-09] — Calculadora por operação (local)
+## [2026-10-09] — Calculadora por operação publicada
 
 - Perfil vem da operação autorizada da URL, identificado no título e no
   formulário; troca de operação reinicia os campos para evitar misturar taxas.
@@ -11,8 +11,8 @@ Histórico de entregas e mudanças significativas.
 - Mesmo estado na Giracasa aplica ICMS interno de SP (18% inicial, editável)
   e DIFAL zero. Créditos de entrada de ICMS não são apurados na simulação.
 - 35 testes da calculadora e 110 de domínio, TypeScript, build e conferência
-  responsiva passaram. Motor fiscal e banco sem alteração. Deploy em
-  preparação; continuidade no status de 09/10.
+  responsiva passaram. Motor fiscal e banco sem alteração. Commit `766e04c`
+  nos dois remotes, Vercel Ready e domínio oficial confirmados. Status de 09/10.
 
 ## [2026-10-07] — Calculadora — origem do produto e DIFAL
 
