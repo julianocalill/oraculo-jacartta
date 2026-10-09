@@ -24,6 +24,18 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-09-calculadora-operacoes",
+    title: "Uma calculadora para cada operação",
+    summary: "A precificação acompanha o ICMS de Uberlândia e da Giracasa.",
+    publishedAt: "2026-10-09T14:40:00-03:00",
+    changes: [{
+      title: "RET da Jacartta e ICMS da Giracasa separados",
+      description: "Ao trocar de operação, a calculadora carrega o perfil correto. Uberlândia mantém o RET de 1,3%; Giracasa aplica o ICMS de saída do cenário informado, com o DIFAL separado.",
+      href: "/calculadora",
+      linkLabel: "Abrir calculadora"
+    }]
+  },
+  {
     id: "2026-10-07-calculadora-origem-difal",
     title: "Calculadora com origem do produto",
     summary: "Compare a precificação de produtos nacionais e importados com o DIFAL do seu cenário.",

@@ -3,6 +3,7 @@ import { NoAccess } from "../components/no-access";
 import { AppShell } from "../components/app-shell";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 import { PricingCalculator } from "./calculator";
+import { getRequestOperation } from "../../lib/operation-context";
 
 export const dynamic = "force-dynamic";
 
@@ -11,17 +12,19 @@ export default async function CalculadoraPage() {
   if (!allowed) return <NoAccess tab="calculadora" />;
 
   const alertCount = await loadActionableAlertCount();
+  const operation = await getRequestOperation();
+  const operationLabel = operation === "giracasa" ? "Giracasa/SP" : "Uberlândia · Jacartta";
 
   return (
     <AppShell alertCount={alertCount}>
       <header className="topbar">
         <div>
-          <h1>Calculadora de Precificação</h1>
+          <h1>Calculadora de Precificação · {operationLabel}</h1>
           <p>Norte rápido de preço para marketplaces — produto unitário ou kit</p>
         </div>
       </header>
 
-      <PricingCalculator />
+      <PricingCalculator key={operation} operation={operation} />
 
       <p className="fiscal-note">
         Regras próprias da calculadora (portada de calculadora.oliverhome.com.br): taxas simplificadas e

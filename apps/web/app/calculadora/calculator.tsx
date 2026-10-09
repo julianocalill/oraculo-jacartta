@@ -19,6 +19,26 @@ type RateKey = keyof typeof DEFAULT_RATES;
 
 type ProductOrigin = "national" | "imported";
 type DifalMode = "rates" | "manual";
+type CalculatorOperation = "uberlandia" | "giracasa";
+
+const CALCULATOR_OPERATIONS = {
+  uberlandia: { label: "Uberlândia · Jacartta", icmsLabel: "ICMS/RET Jacartta" },
+  giracasa: { label: "Giracasa/SP", icmsLabel: "ICMS de saída Giracasa" }
+};
+
+function resolveIcmsPercent(
+  operation: CalculatorOperation,
+  interstateSale: boolean,
+  internalPercent: number,
+  interstatePercent: number,
+  retPercent: number
+) {
+  // Confirmação do usuário em 09/10: Jacartta mantém RET de 1,3%.
+  // Giracasa usa débito nominal de saída, sem importar o RET mineiro.
+  return Math.max(operation === "giracasa"
+    ? (interstateSale ? interstatePercent : internalPercent)
+    : retPercent, 0);
+}
 
 // Cenário ilustrativo, não tabela fiscal por UF/NCM. O ICMS MG de 1,3% é
 // um custo simplificado separado e não é a alíquota nominal interestadual.
@@ -149,6 +169,7 @@ type CalculationMode = "markup" | "price" | "netMargin";
 
 type CalculatorRates = {
   icmsMg: number;
+  icmsLabel?: string;
   difal: number;
   pisCofins: number;
   ads: number;
@@ -319,7 +340,7 @@ function calculate(
           value: fixedShipping
         }]
       : []),
-    { name: "ICMS MG", basis: `${formatPercentValue(rates.icmsMg)} venda`, value: icmsMg },
+    { name: rates.icmsLabel ?? "ICMS MG", basis: `${formatPercentValue(rates.icmsMg)} venda`, value: icmsMg },
     { name: "DIFAL", basis: `${formatPercentValue(rates.difal)} venda`, value: difal },
     { name: "PIS/COFINS Lucro Real", basis: `${formatPercentValue(rates.pisCofins)} valor agregado`, value: pisCofins },
     { name: "Ads", basis: `${formatPercentValue(rates.ads)} venda`, value: ads },
@@ -361,7 +382,9 @@ function tierStringsFor(key: MarketplaceKey) {
   }));
 }
 
-export function PricingCalculator() {
+export function PricingCalculator({ operation }: { operation: CalculatorOperation }) {
+  const profile = CALCULATOR_OPERATIONS[operation];
+  const isGiracasa = operation === "giracasa";
   const [unitCost, setUnitCost] = useState("50,00");
   const [quantity, setQuantity] = useState("1");
   const [mode, setMode] = useState<CalculationMode>("markup");
@@ -387,6 +410,13 @@ export function PricingCalculator() {
     Math.max(asNumber(interstateIcms[productOrigin]), 0),
     asNumber(rateStrings.difal)
   );
+  const icmsPercent = resolveIcmsPercent(
+    operation,
+    interstateSale,
+    Math.max(asNumber(internalIcms), 0),
+    Math.max(asNumber(interstateIcms[productOrigin]), 0),
+    asNumber(rateStrings.icmsMg)
+  );
 
   function selectMarketplace(key: MarketplaceKey) {
     setMarketplace(key);
@@ -398,7 +428,8 @@ export function PricingCalculator() {
 
   const result = useMemo(() => {
     const rates = {
-      icmsMg: Math.max(asNumber(rateStrings.icmsMg), 0) / 100,
+      icmsMg: icmsPercent / 100,
+      icmsLabel: profile.icmsLabel,
       difal: difalPercent / 100,
       pisCofins: Math.max(asNumber(rateStrings.pisCofins), 0) / 100,
       ads: Math.max(asNumber(rateStrings.ads), 0) / 100,
@@ -437,7 +468,7 @@ export function PricingCalculator() {
       tiers,
       shipping
     );
-  }, [unitCost, quantity, mode, markup, salePrice, netMargin, rateStrings, difalPercent, tierStrings, marketplace, affiliateRate, shippingFixed, shippingFixedAbove]);
+  }, [unitCost, quantity, mode, markup, salePrice, netMargin, rateStrings, difalPercent, icmsPercent, profile.icmsLabel, tierStrings, marketplace, affiliateRate, shippingFixed, shippingFixedAbove]);
 
   const status =
     !result.targetReachable
@@ -466,6 +497,11 @@ export function PricingCalculator() {
           <p className="eyebrow">Anúncio</p>
           <h2>Dados do produto</h2>
         </div>
+        <p className="table-note">
+          <strong>{profile.label}</strong> — {isGiracasa
+            ? "ICMS de saída pela alíquota da venda, além do DIFAL quando aplicável. Créditos de entrada de ICMS não estão incluídos nesta simulação."
+            : "ICMS/RET de 1,3% como padrão, além do DIFAL quando aplicável."}
+        </p>
 
         <div className="calc-field-grid">
           <label className="calc-field">
@@ -568,6 +604,32 @@ export function PricingCalculator() {
           </label>
         </div>
 
+        {(isGiracasa || (interstateSale && difalMode === "rates")) && (
+          <div className="calc-field-grid">
+            <label className="calc-field">
+              <span>{interstateSale ? "ICMS interno do destino (%)" : "ICMS interno em SP (%)"}</span>
+              <input inputMode="decimal" value={internalIcms}
+                onChange={(e) => setInternalIcms(e.target.value)} />
+            </label>
+            {interstateSale && (
+              <label className="calc-field">
+                <span>ICMS interestadual nominal (%)</span>
+                <input inputMode="decimal" value={interstateIcms[productOrigin]}
+                  onChange={(e) => setInterstateIcms({ ...interstateIcms, [productOrigin]: e.target.value })} />
+              </label>
+            )}
+          </div>
+        )}
+        {isGiracasa && (
+          <p className="table-note">
+            ICMS de saída aplicado: {decimalFmt.format(icmsPercent)}% sobre a venda.
+            {interstateSale
+              ? " Use 7% ou 12% para nacional, conforme o destino; importado usa 4% em regra."
+              : " Cenário inicial em SP: 18%, editável conforme o produto."}
+            {" "}<a href="https://legislacao.fazenda.sp.gov.br/Paginas/art052.aspx" target="_blank" rel="noopener noreferrer">Fonte oficial SP</a>
+          </p>
+        )}
+
         {interstateSale ? (
           <>
             <div className="calc-mode" role="radiogroup" aria-label="Cálculo do DIFAL">
@@ -584,18 +646,6 @@ export function PricingCalculator() {
             </div>
             {difalMode === "rates" ? (
               <>
-                <div className="calc-field-grid">
-                  <label className="calc-field">
-                    <span>ICMS interno do destino (%)</span>
-                    <input inputMode="decimal" value={internalIcms}
-                      onChange={(e) => setInternalIcms(e.target.value)} />
-                  </label>
-                  <label className="calc-field">
-                    <span>ICMS interestadual nominal (%)</span>
-                    <input inputMode="decimal" value={interstateIcms[productOrigin]}
-                      onChange={(e) => setInterstateIcms({ ...interstateIcms, [productOrigin]: e.target.value })} />
-                  </label>
-                </div>
                 <p className="table-note">
                   Cenário de simulação: {decimalFmt.format(Math.max(asNumber(internalIcms), 0))}% − {decimalFmt.format(Math.max(asNumber(interstateIcms[productOrigin]), 0))}% = {decimalFmt.format(difalPercent)}% de DIFAL, com mínimo de zero.
                   {" "}Os 18% iniciais são ilustrativos: ajuste ao estado de destino e ao produto.
@@ -606,7 +656,7 @@ export function PricingCalculator() {
                 </p>
                 <p className="table-note">
                   Simulação de venda a consumidor final não contribuinte. FCP e benefícios específicos não são apurados aqui.
-                  {" "}O custo ICMS MG de 1,3% continua separado; ele não é a alíquota nominal usada no DIFAL.
+                  {!isGiracasa && <> O ICMS/RET Jacartta de 1,3% continua separado; ele não é a alíquota nominal usada no DIFAL.</>}
                 </p>
               </>
             ) : (
@@ -622,13 +672,13 @@ export function PricingCalculator() {
         <div className="calc-field-grid calc-rates-grid">
           {RATE_FIELDS.map((field) => (
             <label className="calc-field" key={field.key}>
-              <span>{field.key === "difal" && (difalMode === "rates" || !interstateSale) ? "DIFAL calculado" : field.label}{field.suffix === "%" ? " (%)" : ""}</span>
+              <span>{field.key === "icmsMg" ? profile.icmsLabel : field.key === "difal" && (difalMode === "rates" || !interstateSale) ? "DIFAL calculado" : field.label}{field.suffix === "%" ? " (%)" : ""}</span>
               <input
                 inputMode="decimal"
-                value={field.key === "difal" && (difalMode === "rates" || !interstateSale)
+                value={field.key === "icmsMg" && isGiracasa ? decimalFmt.format(icmsPercent) : field.key === "difal" && (difalMode === "rates" || !interstateSale)
                   ? decimalFmt.format(difalPercent)
                   : rateStrings[field.key]}
-                readOnly={field.key === "difal" && (difalMode === "rates" || !interstateSale)}
+                readOnly={(field.key === "icmsMg" && isGiracasa) || (field.key === "difal" && (difalMode === "rates" || !interstateSale))}
                 onChange={(e) => setRateStrings({ ...rateStrings, [field.key]: e.target.value })}
               />
             </label>

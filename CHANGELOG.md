@@ -2,6 +2,18 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-10-09] — Calculadora por operação (local)
+
+- Perfil vem da operação autorizada da URL, identificado no título e no
+  formulário; troca de operação reinicia os campos para evitar misturar taxas.
+- Jacartta mantém ICMS/RET 1,3%, confirmado pelo usuário. Giracasa usa ICMS
+  de saída nominal do cenário, com DIFAL separado e sem adicionar RET mineiro.
+- Mesmo estado na Giracasa aplica ICMS interno de SP (18% inicial, editável)
+  e DIFAL zero. Créditos de entrada de ICMS não são apurados na simulação.
+- 35 testes da calculadora e 110 de domínio, TypeScript, build e conferência
+  responsiva passaram. Motor fiscal e banco sem alteração. Deploy em
+  preparação; continuidade no status de 09/10.
+
 ## [2026-10-07] — Calculadora — origem do produto e DIFAL
 
 - Seletor Nacional/Importado com alíquota interestadual inicial de 12%/4%,

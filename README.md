@@ -33,10 +33,12 @@ oraculo/
 
 ## First files to read
 
-Estado mais recente: [docs/project-status-2026-10-07.md](docs/project-status-2026-10-07.md)
-(Calculadora: origem Nacional/Importado e DIFAL por alíquotas publicados, Vercel Ready).
+Estado mais recente: [docs/project-status-2026-10-09.md](docs/project-status-2026-10-09.md)
+(calculadora por operação preparada localmente: RET Jacartta separado do ICMS Giracasa;
+produção permanece na calculadora de 07/10, Vercel Ready).
 
-1. [docs/project-status-2026-10-07.md](docs/project-status-2026-10-07.md) **← start here** (Calculadora com origem e DIFAL publicada)
+1. [docs/project-status-2026-10-09.md](docs/project-status-2026-10-09.md) **← start here** (calculadora por operação, local)
+   — [docs/project-status-2026-10-07.md](docs/project-status-2026-10-07.md) (Calculadora com origem e DIFAL publicada)
    — [docs/project-status-2026-10-03.md](docs/project-status-2026-10-03.md) (B.ia por setor publicada)
    — [docs/project-status-2026-10-02.md](docs/project-status-2026-10-02.md) (implementação e correções da B.ia)
    — [docs/project-status-2026-10-01.md](docs/project-status-2026-10-01.md) (Separação com Grupo e sem Full; Devoluções e cenários Shopee Ads em produção)
@@ -75,6 +77,10 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 - `Obsidian` vault inside the repository for portable project memory
 
 ## Current production state
+
+Calculadora por operação preparada localmente em 09/10, **ainda não publicada**:
+Uberlândia mantém RET 1,3%; Giracasa aplica ICMS de saída próprio e DIFAL
+separado. Validação e limites: [status de 09/10](docs/project-status-2026-10-09.md).
 
 Calculadora com origem Nacional/Importado, DIFAL por alíquotas editáveis ou
 taxa manual e venda no mesmo estado publicada em 07/10, commit `b660289`.

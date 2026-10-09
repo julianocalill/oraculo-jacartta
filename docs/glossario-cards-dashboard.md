@@ -806,6 +806,19 @@ Detalhes, fontes e publicação: [status de 07/10](project-status-2026-10-07.md)
 
 ### Como calcular o preço de venda
 
+Implementação de 09/10, ainda local: cada operação tem sua calculadora.
+Uberlândia/Jacartta mantém **ICMS/RET de 1,3%**, editável, confirmado pelo
+usuário. Giracasa/SP usa **ICMS de saída** pela alíquota nominal interestadual
+do cenário (12%/7% para nacional, 4% em regra para importado); em venda dentro
+de SP usa a alíquota interna informada (18% inicial, editável por produto).
+O DIFAL permanece separado e dentro do estado continua zero.
+
+Na Giracasa, a linha de ICMS aplicado é somente leitura e acompanha as
+alíquotas editáveis do cenário, inclusive em DIFAL manual. Não há débito de
+RET mineiro e créditos de entrada de ICMS não são apurados. Ao trocar de
+operação, o formulário reinicia para não transportar valores editados entre
+empresas. Estado: [status de 09/10](project-status-2026-10-09.md).
+
 Você escolhe um de três modos:
 - **Por markup**: informa quantas vezes quer multiplicar o custo (ex.: 2,5×)
   → o preço de venda sai sozinho.
@@ -823,7 +836,8 @@ Custo total = custo unitário × quantidade de unidades no anúncio
 Valor agregado = Preço de venda − Custo total
 
 Comissão do marketplace = Preço × taxa da faixa de preço (+ valor fixo da faixa)
-ICMS (MG) = Preço × 1,3%              (editável)
+ICMS/RET Jacartta = Preço × 1,3%     (editável, perfil Uberlândia)
+ICMS saída Giracasa = Preço × alíquota nominal aplicada (perfil Giracasa)
 DIFAL = Preço × taxa aplicada         (calculada por alíquotas ou manual;
                                        mesmo estado = zero)
 PIS/COFINS = Valor agregado × 9,25%   (editável — atenção: incide sobre o
