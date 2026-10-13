@@ -1,0 +1,189 @@
+{
+  "projectRef": "bbtiipnmdxfxnxbemgjr",
+  "operation": "giracasa",
+  "snapshot": {
+    "checked_at": "2026-10-13 17:50:48.319775+00",
+    "result": {
+      "fbs": {
+        "records": 348,
+        "reserved": 121,
+        "sellable": 1108,
+        "synced_at": "2026-10-13T17:48:55.504+00:00",
+        "warehouses": 4,
+        "catalog_mapped": 348
+      },
+      "escrow": {
+        "statements": 624,
+        "completed_orders": 8043,
+        "valid_statements": 624
+      },
+      "ads_raw": {
+        "days": 12,
+        "newest": "2026-10-12",
+        "oldest": "2026-10-01",
+        "expense": 25769.96,
+        "records": 1392,
+        "synced_at": "2026-10-13T14:03:37.836+00:00",
+        "direct_gmv": 224799.04
+      },
+      "ads_health": [
+        {
+          "status": "success",
+          "shop_id": 984950642,
+          "shop_name": "Giracasa — Shopee",
+          "last_success": "2026-10-13T14:03:44.588+00:00",
+          "through_date": "2026-10-12"
+        }
+      ],
+      "olist_queue": [
+        {
+          "status": "completed",
+          "records": 4688,
+          "max_attempts": 2
+        },
+        {
+          "status": "pending",
+          "records": 24518,
+          "max_attempts": 1
+        }
+      ],
+      "ads_dashboard": {
+        "expense": 25769.96,
+        "direct_gmv": 224799.04
+      },
+      "olist_october": {
+        "units": 544,
+        "orders_valid": 8349,
+        "offmarket_units": 0,
+        "orders_canceled": 53,
+        "offmarket_orders": 0,
+        "orders_with_items": 526
+      },
+      "olist_retries": {
+        "errors": 0,
+        "retry_pending": 21,
+        "retry_succeeded": 11
+      },
+      "shopee_orders": {
+        "newest": "2026-10-13T17:47:33+00:00",
+        "oldest": "2026-08-24T16:16:21+00:00",
+        "records": 12640,
+        "synced_at": "2026-10-13T17:49:22.775+00:00"
+      },
+      "olist_recovery": {
+        "id": true,
+        "errors": 0,
+        "pending": 24518,
+        "window_end": "2026-10-13",
+        "completed_at": null,
+        "operation_id": "giracasa",
+        "window_start": "2026-09-08",
+        "last_refreshed_at": "2026-10-13T17:23:00.21636+00:00",
+        "last_dispatched_at": "2026-10-13T17:50:00.256545+00:00"
+      },
+      "shopee_history": [
+        {
+          "cursor": "200",
+          "next_to": "2026-09-13T03:00:00+00:00",
+          "shop_id": 984950642,
+          "last_error": null,
+          "updated_at": "2026-10-13T17:49:16.469+00:00",
+          "completed_at": null,
+          "leased_until": null,
+          "operation_id": "giracasa",
+          "requested_to": "2026-10-14T03:00:00+00:00",
+          "requested_from": "2026-08-01T03:00:00+00:00",
+          "records_processed": 12466
+        }
+      ],
+      "intelligence_catalog": {
+        "price_rows": 187,
+        "missing_price": 0,
+        "missing_stock": 0,
+        "computed_profit": 0,
+        "missing_product": 0,
+        "catalog_synced_at": "2026-10-13T14:03:37.014+00:00",
+        "price_refreshed_at": "2026-10-13T16:54:05.472+00:00"
+      },
+      "reconciliation_cycle": [
+        {
+          "shop_id": 984950642,
+          "updated_at": "2026-10-13T17:37:19.071+00:00",
+          "cycle_active": true,
+          "operation_id": "giracasa",
+          "pending_cursor": null,
+          "cycle_window_to": "2026-10-13T14:03:32+00:00",
+          "pages_processed": 37,
+          "wallet_complete": false,
+          "cycle_started_at": "2026-10-13T14:03:32.804+00:00",
+          "pending_complete": true,
+          "wallet_next_from": 1786629812,
+          "wallet_next_page": 10,
+          "cycle_window_from": "2026-07-30T14:03:32+00:00",
+          "last_completed_at": null,
+          "records_processed": 3639,
+          "wallet_pages_processed": 64,
+          "wallet_records_processed": 6320
+        }
+      ],
+      "reconciliation_summary": {
+        "paid_amount": 0,
+        "gross_amount": 217836.52,
+        "orders_count": 3220,
+        "pending_count": 3220,
+        "invoice_amount": 201261.09,
+        "last_synced_at": "2026-10-13T15:53:44.657+00:00",
+        "pending_amount": 155449.56,
+        "released_count": 0,
+        "attention_count": 0,
+        "missing_invoice_count": 143
+      },
+      "live_monitor_configured": false,
+      "wallet_last_collected_position": {
+        "balance_as_of": "2026-08-27T14:03:05+00:00",
+        "wallets_count": 1,
+        "wallet_balance_amount": 77526.51
+      }
+    }
+  },
+  "validation": {
+    "domainTests": 118,
+    "producerTests": 8,
+    "typecheck": "passed",
+    "productionBuild": "passed",
+    "ui": "Produção exige login no navegador disponível; consultas e lógica das telas validadas, sem conferência visual autenticada.",
+    "liveMonitor": {
+      "httpStatus": 404,
+      "errorCode": "PGRST205",
+      "configured": false
+    }
+  },
+  "backend": {
+    "appliedMigrations": [
+      "20261013174000_giracasa_recovery_retries.sql",
+      "20261013174600_giracasa_sync_run_status.sql",
+      "20261013174800_giracasa_sbs_identity_comment.sql"
+    ],
+    "deployedFunctions": {
+      "giracasa-olist-backfill-order-items": 15,
+      "giracasa-shopee-sync-sbs": 14
+    }
+  },
+  "corrections": [
+    "429/5xx retornam à fila após 10 minutos, até seis tentativas; erros impedem completed_at.",
+    "Após 429 persistente, lote Olist é encerrado e não continua pressionando a API.",
+    "Inventário FBS usa warehouse_item_id e mantém shop_item_id/shop_model_id separados.",
+    "Lotes partial/error da Shopee passam a ser aceitos pelo log da operação.",
+    "Carteira incompleta não mostra saldo histórico como atual nem zero pago/zero alertas como medidos.",
+    "Take Rate só certifica cobertura após histórico, cache e extratos completos.",
+    "Giro e reposição aguardam histórico completo; exports recusam indicadores indisponíveis.",
+    "Monitor sem tabela configurada mostra indisponibilidade e nenhum zero de vendas."
+  ],
+  "remaining": [
+    "Fila Olist e histórico Shopee desde 01/08 em processamento.",
+    "Escrow e ciclo de carteira incompletos.",
+    "Inteligência limitada a preço/estoque; margens e recomendações dependem de vínculo fiscal por anúncio.",
+    "Monitor ao vivo não configurado para SP.",
+    "Conferência visual autenticada pendente."
+  ]
+}

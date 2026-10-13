@@ -27,3 +27,21 @@ export function commercialCoverage({ orders_valid, orders_with_items }) {
     partial: orders > 0 && covered * 100 / orders < 90
   };
 }
+
+// A successful batch is not a completed history or a complete financial cycle.
+export function shopeeCollectionReady(run, { backlog = false, historyReady = true, failedRecords = 0 } = {}, now = Date.now()) {
+  return Boolean(run?.status === 'success' && run.finished_at &&
+    now - Date.parse(run.finished_at) <= 30 * 3600000 &&
+    !run.meta?.capped && !run.meta?.deferred && Number(run.meta?.failed ?? 0) === 0 &&
+    !backlog && historyReady && failedRecords === 0);
+}
+
+export function reconciliationVisibility({ ready, lastSyncedAt, walletsCount, balanceAsOf, releasedCount, attentionCount }) {
+  const summary = ready || lastSyncedAt != null;
+  const wallet = ready && Number(walletsCount) > 0 && balanceAsOf != null;
+  return {
+    summary, wallet, total: wallet,
+    paid: ready || Number(releasedCount) > 0,
+    alerts: ready || Number(attentionCount) > 0
+  };
+}

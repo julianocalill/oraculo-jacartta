@@ -80,3 +80,28 @@ test('a malformed inventory response fails without replacement', async () => {
   await assert.rejects(rt.testFns.syncShopSbs(f.db,shop,'test-key'),/sem item_list/);
   assert.equal(f.persisted.length,0);
 });
+test('the SBS warehouse identity differs from the marketplace item and is persisted with its mapping', async () => {
+  const f = fixture();
+  let replaced = null;
+  f.db.rpc = async (name, params) => { assert.equal(name, 'replace_shopee_sbs_inventory'); replaced = params; return { error: null }; };
+  const rt = runtime('shopee-sync-sbs', { fetch: async () => ({ ok: true, json: async () => ({ response: {
+    item_list: [{ warehouse_item_id: 'warehouse-20', sku_list: [{ model_id: 'warehouse-model',
+      shop_sku_list: [{ shop_item_id: 'listing-10', shop_model_id: 'listing-model' }],
+      whs_list: [{ whs_id: 'BRFGO1', sellable_qty: 12 }] }] }]
+  } }) }) });
+  const result = await rt.testFns.syncShopSbs(f.db, shop, 'test-key');
+  assert.equal(result.deferred, false);
+  assert.equal(replaced.p_rows[0].id, '1-BRFGO1-warehouse-20-warehouse-model');
+  assert.equal(replaced.p_rows[0].item_id, 'warehouse-20');
+  assert.equal(replaced.p_rows[0].shop_item_id, 'listing-10');
+  assert.equal(replaced.p_rows[0].shop_model_id, 'listing-model');
+  assert.equal(replaced.p_rows[0].sellable_qty, 12);
+});
+test('a nonempty inventory lacking warehouse identity cannot replace a valid position', async () => {
+  const f = fixture();
+  f.db.rpc = async () => { assert.fail('Invalid inventory replaced the current position'); };
+  const rt = runtime('shopee-sync-sbs', { fetch: async () => ({ ok: true, json: async () => ({ response: {
+    item_list: [{ sku_list: [{ whs_list: [{ whs_id: 'BRFGO1', sellable_qty: 12 }] }] }]
+  } }) }) });
+  await assert.rejects(rt.testFns.syncShopSbs(f.db, shop, 'test-key'), /warehouse_item_id/);
+});

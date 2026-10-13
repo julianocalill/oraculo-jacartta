@@ -57,6 +57,14 @@ export default async function ShopeeLiveMonitorPage({
   ]);
   if (!allowed) return <NoAccess tab="shopee" />;
 
+  if (data.notConfigured || data.availableShops === 0) return <AppShell alertCount={alertCount}>
+    <header className="topbar"><div><h1>Monitor de vendas</h1><p>Vendas de hoje indisponíveis.</p></div></header>
+    <ShopeeTabs active="ao-vivo" />
+    <section className="panel" role="status"><h2>{data.notConfigured ? 'Monitor ao vivo ainda não configurado nesta operação' : 'Aguardando coleta atualizada'}</h2>
+      <p>{data.notConfigured ? 'As outras telas da Shopee usam suas próprias coletas. Este monitor precisa da integração de vendas ao vivo.' : 'Nenhuma loja tem uma coleta válida dos últimos 12 minutos. Os indicadores voltam a aparecer quando a coleta atualizar.'}</p>
+    </section>
+  </AppShell>;
+
   const title = shopFilter == null ? "Todas as lojas" : data.shops[0]?.shopName ?? "Loja selecionada";
   const topProducts = data.products.slice(0, 5);
 

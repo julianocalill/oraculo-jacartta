@@ -2,6 +2,21 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-10-13] — Conferência da recuperação Giracasa
+
+- Recuperação ainda incompleta: fila Olist, histórico Shopee, escrow e carteira
+  continuam em processamento. Ads confere com a fonte; Inteligência tem
+  preço/estoque, mas recomendações fiscais continuam indisponíveis.
+- 429/5xx voltam à fila com cooldown e limite de tentativas; erros impedem
+  conclusão falsa. Lotes Olist param após 429 persistente.
+- Identidade FBS corrigida para warehouse_item_id: 348 posições recuperadas
+  em quatro armazéns. Log SP passa a aceitar partial/error dos produtores.
+- Reconciliação oculta saldo antigo e zeros não conferidos. Estoque/reposição
+  e exports aguardam cobertura; Monitor ao vivo não configurado informa seu
+  estado sem quebrar a página.
+- Três migrations e dois produtores SP atualizados. 126 testes, TypeScript
+  e build passaram; evidências e limites no status de 13/10.
+
 ## [2026-10-13] — Giracasa com produtores e cobertura explícita
 
 - Corrigidos jobs Olist de detalhes/backfill; recuperação automática por fila

@@ -100,6 +100,7 @@ export async function GET(req: NextRequest) {
   const loja = Number(req.nextUrl.searchParams.get("loja")) || null;
   const data = await loadShopeeData();
   if (!data) return new Response("Sem dados sincronizados", { status: 404 });
+  if (!data.historyReady || !data.fbsReady) return new Response("Histórico ou inventário sem cobertura; diagnósticos indisponíveis", { status: 409 });
 
   const r = buildEstoqueReports(data, { loja });
   const nomeLoja = loja ? r.shopName.get(loja) ?? String(loja) : "Todas as lojas";

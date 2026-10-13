@@ -426,6 +426,9 @@ Deno.serve(async (req) => {
         })
         .eq('id', runRows.id);
       if (progressError) throw progressError;
+      // Após esgotar as tentativas HTTP de um 429, deixa o restante para o
+      // próximo lote. A fila SP faz a retentativa com cooldown, sem martelar a API.
+      if (rateLimitEvents > 0) break;
     }
 
     const status = ordersWithError > 0 || ordersProcessed < Number((candidates ?? []).length)

@@ -397,11 +397,11 @@ async function latestCommercialRun(supabase: ReturnType<typeof createSupabaseAdm
 async function latestRecoveryActivity(supabase: ReturnType<typeof createSupabaseAdminClient>, operation: OperationId): Promise<SyncRun | null> {
   if (operation !== 'giracasa') return null;
   const { data, error } = await supabase.from('oraculo_item_recovery_state')
-    .select('window_start,window_end,pending,last_dispatched_at,last_refreshed_at,completed_at').eq('id',true).maybeSingle();
+    .select('window_start,window_end,pending,errors,last_dispatched_at,last_refreshed_at,completed_at').eq('id',true).maybeSingle();
   if (error) throw error;
   if (!data) return null;
   return { started_at: data.last_dispatched_at, finished_at: data.last_refreshed_at ?? data.last_dispatched_at,
-    status: data.completed_at ? 'success' : 'running', error_message: `${count(data.pending)} pedidos pendentes; caches revisados em ${dateTime(data.last_refreshed_at)}`,
+    status: data.completed_at ? 'success' : 'running', error_message: `${count(data.pending)} pedidos pendentes${data.errors ? `, incluindo ${count(data.errors)} com erro` : ''}; caches revisados em ${dateTime(data.last_refreshed_at)}`,
     window_start: data.window_start, window_end: data.window_end,
     metadata: { updated_at: data.last_dispatched_at } };
 }

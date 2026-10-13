@@ -1,7 +1,7 @@
 # Auditoria dos dados da Giracasa em 13 de outubro de 2026
 
 As correções da Giracasa foram implementadas após autorização de publicação.
-As duas migrations e as 11 funções produtoras próprias estão aplicadas em
+As migrations e as 11 funções produtoras próprias estão aplicadas em
 produção; os jobs já recuperam o histórico. Frontend publicado no commit
 `417eadd`, enviado aos dois remotes, com deploy Vercel **Ready** e domínio
 oficial confirmados.
@@ -73,6 +73,65 @@ precisa ser confirmada; TikTok depende de upload por período. Não houve nova
 conferência de login de produção. A prévia localhost encontrou um ciclo de
 redirecionamento de desenvolvimento, portanto a validação visual autenticada
 não foi concluída nesta etapa. Build e consultas reais foram validados.
+
+## Nova conferência às 14h50 BRT: recuperação ainda incompleta
+
+A recuperação **não terminou**. O retrato consistente de 13/10 às 14h50
+está em [followup-validation.json](analyses/giracasa-auditoria-2026-10-13/followup-validation.json);
+reprodução somente leitura em [followup-verification.sql](analyses/giracasa-auditoria-2026-10-13/followup-verification.sql).
+
+| Fonte/tela | Resultado verificado |
+| --- | --- |
+| Itens Olist | 4.688 pedidos da fila recuperados; 24.518 pendentes. Outubro tem 526 de 8.349 pedidos válidos com itens (6,3%); cobertura fiscal não substitui esta cobertura comercial. |
+| Pedidos Shopee | 12.640 registros; recuperação diária alcançou 12/09 e ainda está percorrendo o dia. Período solicitado começa em 01/08; completed_at continua nulo. |
+| Take Rate | 624 extratos válidos de 8.043 pedidos COMPLETED já importados. Valores são parciais e não representam o total da loja. |
+| Shopee Ads | 01–12/10 coberto. RPC confere com os registros: R$ 25.769,96 de gasto e R$ 224.799,04 de GMV direto; 1.392 linhas / 12 dias. |
+| Inteligência | 187 anúncios/variações com preço e estoque; nenhum vínculo de catálogo, preço ou estoque ausente. Margem, precificação e recomendações continuam indisponíveis por dependerem da conferência fiscal SP. |
+| FBS | 348 posições em quatro armazéns, 1.108 unidades vendáveis e 121 reservadas; todos têm vínculo de anúncio. Coleta real bem-sucedida após a correção de warehouse_item_id. |
+| Reconciliação | API de pendências encerrou 37 páginas / 3.639 registros; carteira ainda em 64 páginas / 6.320 registros, sem ciclo completo. Resumo de outubro tem apenas pendências; seu zero pago não é zero medido. |
+| Monitor ao vivo | Tabela/snapshot da Giracasa ausente (REST 404/PGRST205) e sem job dessa integração. Não é uma função concluída pela recuperação histórica. |
+
+Esta conferência encontrou e corrigiu problemas adicionais:
+
+- 429 da Olist ficavam em status error, fora dos novos candidatos. O tick
+  SP os recoloca na fila após 10 min, até seis tentativas; inclui erros no
+  total pendente e impede completed_at enquanto houver falhas. Lotes usam
+  35 pedidos, intervalo de 1,8 s, e param após um 429 persistente. Onze
+  retentativas já tiveram sucesso no retrato acima; erros ativos estavam
+  zerados, com outras 21 retentativas ainda na fila.
+- SBS entrega warehouse_item_id, não item_id. O importador preserva essa
+  identidade física e mantém o vínculo shop_item_id/shop_model_id separado.
+  A substituição atômica continua recusando inventário vazio/inválido.
+- O CHECK de shopee_sync_runs da SP aceitava só running/success/failed,
+  recusando partial/error emitidos pelos produtores. Agora esses estados
+  são registrados; nunca contam como cobertura concluída.
+- Reconciliação oculta saldo histórico incompleto, zero pago e zero alertas
+  não conferidos. A posição antiga de 27/08 não aparece como saldo atual.
+  Total a receber continua indisponível até o ciclo e o histórico fecharem.
+- Saúde de escrow exige histórico concluído, cache posterior à conclusão,
+  nenhum extrato pendente e nenhum extrato em erro. Um lote com sucesso
+  não certifica sozinho o período.
+- Estoque/Reposição e seus exports não calculam diagnósticos de giro sobre
+  histórico incompleto. Preço e estoque por anúncio continuam disponíveis
+  na Inteligência. Monitor ao vivo sem integração passa a informar esse
+  estado, sem quebra da página nem vendas zeradas fictícias.
+
+Backend aplicado: migrations 20261013174000 (retentativas), 20261013174600
+(estados dos runs) e 20261013174800 (comentário da identidade SBS);
+giracasa-olist-backfill-order-items v15 e giracasa-shopee-sync-sbs v14 ACTIVE.
+Somente os produtores SP foram implantados. Papéis anon/authenticated seguem
+sem execução do tick de recuperação e sem acesso direto ao estado privado.
+
+Validação: 118 testes de domínio e oito de produtores, TypeScript e build
+de produção passaram. Foram testados lote completo/parcial, histórico
+incompleto, saldo antigo, zero não medido e identidade física versus anúncio
+no SBS. O navegador disponível foi redirecionado ao login de produção;
+**não houve conferência visual autenticada** das telas neste retorno.
+
+Para declarar conclusão, conferir novamente: fila Olist sem pendências/erros,
+backfill Shopee concluído e cache posterior, extratos sem backlog/erro,
+carteira e pendências com ciclo completo. Inteligência fiscal e Monitor ao
+vivo têm dependências próprias e não ficam prontos só porque a fila termina.
 
 ## Auditoria inicial antes da autorização de publicação
 

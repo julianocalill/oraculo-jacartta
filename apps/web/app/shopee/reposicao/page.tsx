@@ -99,6 +99,16 @@ export default async function ShopeeReposicaoPage({
     );
   }
 
+  if (!data.historyReady || !data.fbsReady) return <AppShell alertCount={alertCount}>
+    <header className="topbar"><div><h1>Sugestão de reposição Shopee</h1><p>Reposição aguardando cobertura das fontes.</p></div></header>
+    <ShopeeTabs active="reposicao" />
+    <section className="panel" role="status"><h2>Reposição aguardando cobertura</h2>
+      {!data.historyReady ? <p>A média de vendas e a quantidade a repor ficam indisponíveis até concluir a recuperação do histórico.</p> : null}
+      {!data.fbsReady ? <p>A posição do FBS ainda precisa ser confirmada para calcular a reposição.</p> : null}
+      <Link className="button-link" href="/inteligencia">Consultar preços e estoque dos anúncios</Link>
+    </section>
+  </AppShell>;
+
   const { shops } = data;
   const {
     horizonte,

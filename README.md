@@ -83,7 +83,11 @@ Correções Giracasa de 13/10: produtores Olist e Shopee próprios atualizados,
 Ads/SP liberado, recuperação histórica em lotes e indicadores protegidos
 contra falta de cobertura. As cargas já têm pedidos, catálogo, preços,
 extratos, Ads, devoluções e reconciliação, mas o histórico ainda está em
-processamento. Mercado Livre/SP depende de conta própria. Validação e estado
+processamento. A conferência das 14h50 confirmou Ads e o catálogo comercial,
+recuperou o inventário FBS e corrigiu retentativas e indicadores financeiros
+sem cobertura. Reconciliação e Take Rate continuam parciais; Inteligência
+fiscal e Monitor ao vivo têm dependências próprias. Mercado Livre/SP depende
+de conta própria. Validação e estado
 de publicação no [status de 13/10](docs/project-status-2026-10-13.md).
 
 Calculadora por operação publicada em 09/10, commit `766e04c`, **Vercel Ready**:

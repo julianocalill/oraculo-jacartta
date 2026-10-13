@@ -1,6 +1,7 @@
 import { getRequestOperation, type OperationId } from "../../lib/operation-context";
 // Camada de dados das abas de estoque/reposição do canal Shopee.
 import { unstable_cache } from "next/cache";
+import { loadShopeeHistory } from '../../lib/source-health';
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 
 export const PAGE_SIZE = 1000; // PostgREST corta em 1000 linhas — sempre paginar
@@ -183,6 +184,8 @@ export type ShopeeData = {
   sbs: SbsRow[];
   sales: ShopeeSale[];
   costs: CostRow[];
+  historyReady: boolean;
+  fbsReady: boolean;
 };
 
 // Cache de 5min compartilhado — mesmo racional do loadMlData: paginação de
@@ -210,7 +213,7 @@ async function loadShopeeDataUncached(operation: OperationId): Promise<ShopeeDat
   if (products.length === 0) return null;
 
   const cutoff = new Date(Date.now() - 120 * 86_400_000).toISOString().slice(0, 10);
-  const [shopsRes, sbs, sales, costs] = await Promise.all([
+  const [shopsRes, sbs, sales, costs, historyReady] = await Promise.all([
     supabase.from("shopee_shops").select("shop_id, shop_name").eq("is_active", true).order("shop_name"),
     fetchAllPages<SbsRow>((from, to) =>
       supabase
@@ -234,15 +237,19 @@ async function loadShopeeDataUncached(operation: OperationId): Promise<ShopeeDat
         .from("oraculo_sku_unit_cost") // resolvedor unificado: override manual > Olist > kits
         .select("sku, unit_cost")
         .range(from, to)
-    )
+    ),
+    loadShopeeHistory(operation)
   ]);
+  if (shopsRes.error) throw shopsRes.error;
 
   return {
     shops: (shopsRes.data ?? []) as ShopeeShop[],
     products,
     sbs,
     sales,
-    costs
+    costs,
+    historyReady,
+    fbsReady: operation !== 'giracasa' || sbs.length > 0
   };
 }
 

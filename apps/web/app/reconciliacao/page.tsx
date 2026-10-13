@@ -1,6 +1,7 @@
 import { OperationLink as Link } from "../components/operation-provider";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { loadShopeeCollection } from '../../lib/source-health';
+import { reconciliationVisibility } from '@oraculo/domain/data-coverage.js';
 import { requireTabAccess } from "../../lib/auth/access";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 import { HINTS } from "../../lib/column-hints";
@@ -271,8 +272,10 @@ export default async function ReconciliacaoPage({
   const lastShown = Math.min(page * PAGE_SIZE, total);
   const attention = n(summary.attention_count);
   const walletsCount = n(walletBalance.wallets_count);
-  const hasReconciliation = collection.ready || summary.last_synced_at != null;
-  const hasWallet = walletsCount > 0 && walletBalance.balance_as_of != null;
+  const visibility = reconciliationVisibility({ ready: collection.ready, lastSyncedAt: summary.last_synced_at,
+    walletsCount, balanceAsOf: walletBalance.balance_as_of, releasedCount: summary.released_count, attentionCount: attention });
+  const hasReconciliation = visibility.summary;
+  const hasWallet = visibility.wallet;
   const totalReceivable = n(walletBalance.wallet_balance_amount) + n(summary.pending_amount);
   const pageHref = (targetPage: number) => {
     const query = new URLSearchParams({
@@ -370,10 +373,10 @@ export default async function ReconciliacaoPage({
         <MetricCard accent="accent-blue" label="Pedidos" value={hasReconciliation ? count(n(summary.orders_count)) : '—'} caption={hasReconciliation ? `${money(summary.gross_amount)} em valor bruto` : 'Aguardando coleta'} />
         <MetricCard accent="accent-violet" label="Valor das NFs" value={money(hasReconciliation ? summary.invoice_amount : null)} caption={n(summary.missing_invoice_count) ? `${count(n(summary.missing_invoice_count))} pedidos sem NF localizada` : collection.ready && n(summary.orders_count) > 0 ? 'NF localizada nos pedidos conferidos' : 'Conferência ainda indisponível'} />
         <MetricCard accent="accent-yellow" label="Pendente a receber" value={money(hasReconciliation ? summary.pending_amount : null)} caption={hasReconciliation ? `${count(n(summary.pending_count))} pedidos ainda não liberados` : 'Aguardando pendências da Shopee'} />
-        <MetricCard accent="accent-cyan" label="Saldo total da carteira" value={money(hasWallet ? walletBalance.wallet_balance_amount : null)} caption={hasWallet ? `${count(walletsCount)} ${walletsCount === 1 ? 'carteira' : 'carteiras'} · posição em ${dateTime(walletBalance.balance_as_of)}` : 'Posição da carteira não carregada'} />
+        <MetricCard accent="accent-cyan" label="Saldo total da carteira" value={money(hasWallet ? walletBalance.wallet_balance_amount : null)} caption={hasWallet ? `${count(walletsCount)} ${walletsCount === 1 ? 'carteira' : 'carteiras'} · posição em ${dateTime(walletBalance.balance_as_of)}` : walletBalance.balance_as_of ? `Coleta incompleta · última posição coletada em ${dateTime(walletBalance.balance_as_of)}` : 'Posição da carteira não carregada'} />
         <MetricCard className="reconciliation-total" accent="accent-emerald" label="Total a receber" value={money(hasWallet && collection.ready ? totalReceivable : null)} caption="saldo atual da carteira + pendente a receber" />
-        <MetricCard accent="accent-green" label="Pago na carteira" value={money(hasReconciliation ? summary.paid_amount : null)} caption={hasReconciliation ? `${count(n(summary.released_count))} pedidos liberados` : 'Aguardando créditos da carteira'} />
-        <MetricCard accent={attention ? "accent-red" : "accent-green"} label="Alertas" value={hasReconciliation ? count(attention) : '—'} caption={attention ? "diferença de repasse ou líquido esperado ausente" : collection.ready && n(summary.released_count) > 0 ? 'Créditos conferidos com o líquido' : 'Conferência ainda indisponível'} />
+        <MetricCard accent="accent-green" label="Pago na carteira" value={money(visibility.paid ? summary.paid_amount : null)} caption={visibility.paid ? `${count(n(summary.released_count))} pedidos liberados${collection.ready ? '' : ' coletados · parcial'}` : 'Aguardando créditos da carteira'} />
+        <MetricCard accent={attention ? "accent-red" : "accent-green"} label="Alertas" value={visibility.alerts ? count(attention) : '—'} caption={attention ? "diferença de repasse ou líquido esperado ausente" : collection.ready && n(summary.released_count) > 0 ? 'Créditos conferidos com o líquido' : 'Conferência ainda indisponível'} />
       </section>
 
       <section className="panel">

@@ -98,7 +98,8 @@ export async function loadShopeeLiveMonitor(shopFilter: number | null) {
     )
   ]);
   if (shopsError) throw shopsError;
-  if (snapshotsError) throw snapshotsError;
+  const notConfigured = operation === 'giracasa' && snapshotsError?.code === 'PGRST205';
+  if (snapshotsError && !notConfigured) throw snapshotsError;
 
   const allShops = (shopRows ?? []).map((row) => ({
     shop_id: Number(row.shop_id),
@@ -181,6 +182,7 @@ export async function loadShopeeLiveMonitor(shopFilter: number | null) {
     .filter(Number.isFinite);
 
   return {
+    notConfigured,
     today,
     allShops,
     shops: shops.sort((a, b) => b.current.gross - a.current.gross),

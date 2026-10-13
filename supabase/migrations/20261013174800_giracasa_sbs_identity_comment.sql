@@ -1,0 +1,1 @@
+comment on column giracasa.shopee_sbs_inventory.item_id is 'Identidade física warehouse_item_id retornada pelo SBS (fallback item_id para payload legado). Não é o anúncio: shop_item_id/shop_model_id fazem o vínculo com o catálogo da loja. Verificado na resposta real da API Giracasa em 13/10/2026.';

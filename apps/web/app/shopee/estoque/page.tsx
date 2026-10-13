@@ -83,6 +83,16 @@ export default async function ShopeeEstoquePage({
     );
   }
 
+  if (!data.historyReady || !data.fbsReady) return <AppShell alertCount={alertCount}>
+    <header className="topbar"><div><h1>Estoque Shopee</h1><p>Diagnósticos aguardando cobertura das fontes.</p></div></header>
+    <ShopeeTabs active="estoque" />
+    <section className="panel" role="status"><h2>Diagnósticos aguardando cobertura</h2>
+      {!data.historyReady ? <p>Giro, ruptura e estoque parado dependem da recuperação completa do histórico.</p> : null}
+      {!data.fbsReady ? <p>A posição do FBS ainda não foi confirmada. Uma coleta ausente não comprova estoque zero.</p> : null}
+      <Link className="button-link" href="/inteligencia">Consultar preços e estoque dos anúncios</Link>
+    </section>
+  </AppShell>;
+
   const { shops } = data;
   const {
     shopName,

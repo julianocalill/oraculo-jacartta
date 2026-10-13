@@ -50,6 +50,7 @@ export async function GET(req: NextRequest) {
 
   const data = await loadShopeeData();
   if (!data) return new Response("Sem dados sincronizados", { status: 404 });
+  if (!data.historyReady || !data.fbsReady) return new Response("Histórico ou inventário sem cobertura; reposição indisponível", { status: 409 });
 
   const { horizonte, trends, visiveis, totalUnidades, totalGmv } = buildReposicaoSuggestions(data, {
     alvo,

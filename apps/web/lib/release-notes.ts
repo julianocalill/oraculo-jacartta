@@ -24,6 +24,16 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: '2026-10-13-giracasa-conferencia',
+    title: 'Cobertura da Giracasa em conferência',
+    summary: 'A recuperação continua; indicadores incompletos informam o que falta.',
+    publishedAt: '2026-10-13T14:55:00-03:00',
+    changes: [
+      { title: 'Carteira e diagnósticos com cobertura', description: 'Reconciliação não apresenta saldo antigo ou zero pago como valores conferidos. Giro e reposição aguardam o histórico; o Monitor ao vivo indica quando sua integração não está configurada.', href: '/reconciliacao', linkLabel: 'Conferir reconciliação' },
+      { title: 'Recuperação e inventário FBS', description: 'Falhas temporárias da Olist voltam à fila, e o inventário FBS da Giracasa foi corrigido. O Status mostra as pendências; o histórico ainda está em processamento.', href: '/status', linkLabel: 'Ver progresso' }
+    ]
+  },
+  {
     id: '2026-10-13-giracasa-dados',
     title: 'Recuperação dos dados da Giracasa',
     summary: 'As integrações voltaram a coletar dados, com cobertura e progresso visíveis.',

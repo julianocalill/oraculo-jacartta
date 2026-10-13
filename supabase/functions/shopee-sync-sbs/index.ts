@@ -67,15 +67,21 @@ async function syncShopSbs(supabase: any, shop: Shop, partnerKey: string) {
     if (!items.length) { complete = true; break; }
 
     for (const item of items) {
+      // SBS identifica o produto físico por warehouse_item_id. O item do
+      // anúncio está em shop_sku_list, e não substitui a identidade do armazém.
+      const warehouseItemId = item.warehouse_item_id ?? item.item_id;
+      if (warehouseItemId == null || String(warehouseItemId).trim() === '') {
+        throw new Error('Inventário sem warehouse_item_id; posição anterior preservada');
+      }
       for (const sku of item.sku_list ?? []) {
         const shopSku = sku.shop_sku_list?.[0] ?? {};
         for (const whs of sku.whs_list ?? []) {
           const modelId = String(sku.model_id ?? "0") || "0";
           rows.push({
-            id: `${shop.shop_id}-${whs.whs_id}-${item.item_id}-${modelId}`,
+            id: `${shop.shop_id}-${whs.whs_id}-${warehouseItemId}-${modelId}`,
             shop_id: shop.shop_id,
             whs_id: String(whs.whs_id ?? ""),
-            item_id: String(item.item_id ?? ""),
+            item_id: String(warehouseItemId),
             model_id: modelId,
             mtsku_id: sku.mtsku_id != null ? String(sku.mtsku_id) : null,
             item_name: item.item_name ?? null,
