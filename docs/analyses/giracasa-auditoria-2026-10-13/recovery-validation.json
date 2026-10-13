@@ -48,5 +48,16 @@
     "pii_cursor_read_authenticated": false
   },
   "backend_applied": true,
-  "frontend_deployment": "pending_push"
+  "frontend_deployment": {
+    "id": "dpl_ArbXWFQPzFixiSyACjyLLn12vBKV",
+    "url": "https://oraculo-jacartta-rmo2tg7og-grupo-jacartta.vercel.app",
+    "state": "READY",
+    "aliases": [
+      "oraculo.oliverhome.com.br",
+      "oraculo-jacartta-web.vercel.app",
+      "oraculo-jacartta-web-grupo-jacartta.vercel.app",
+      "oraculo-jacartta-web-git-main-grupo-jacartta.vercel.app"
+    ],
+    "feature_commit": "417eadd530425703d245a39e14fdb6889b830a32"
+  }
 }

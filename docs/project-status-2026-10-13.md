@@ -2,8 +2,9 @@
 
 As correções da Giracasa foram implementadas após autorização de publicação.
 As duas migrations e as 11 funções produtoras próprias estão aplicadas em
-produção; os jobs já recuperam o histórico. Frontend com build e testes
-aprovados, pronto para push nos dois remotes e confirmação do deploy Vercel.
+produção; os jobs já recuperam o histórico. Frontend publicado no commit
+`417eadd`, enviado aos dois remotes, com deploy Vercel **Ready** e domínio
+oficial confirmados.
 
 ## Correções e recuperação em produção
 
@@ -234,3 +235,16 @@ foram confirmadas diretamente no banco e no código.
 Na auditoria inicial não houve alterações de produção. Após a autorização do
 usuário, as correções e o manifesto de novidades foram implementados conforme
 o registro no início deste documento.
+
+## Publicação confirmada
+
+Commit `417eadd530425703d245a39e14fdb6889b830a32` enviado para `origin/main` e
+`personal/main`. Deploy `dpl_ArbXWFQPzFixiSyACjyLLn12vBKV` confirmado **Ready**,
+com alias `https://oraculo.oliverhome.com.br`. O domínio respondeu HTTPS e
+redirecionou a rota protegida Giracasa/Status para login. Conferência visual
+com sessão real continua pendente; build, isolamento e produtores foram
+validados. [Evidência do deploy](analyses/giracasa-auditoria-2026-10-13/deployment.json).
+
+A recuperação histórica continua automaticamente nos jobs publicados. As
+contagens de coleta registradas acima são uma posição de 11h14, não totais
+finais. O Status mantém cobertura e pendências visíveis durante a carga.
