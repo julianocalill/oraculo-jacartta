@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-10-13 17:59:19 UTC",
+  "commit": "1fb5e2b23fe3423d611cbef44d8fc109cee2ed34",
+  "deploymentId": "dpl_8dsJ1RZN9ErPGTmyyV6PneKbq8rM",
+  "url": "https://oraculo-jacartta-ek1rdkv9j-grupo-jacartta.vercel.app",
+  "state": "READY",
+  "aliases": [
+    "oraculo.oliverhome.com.br",
+    "oraculo-jacartta-web.vercel.app",
+    "oraculo-jacartta-web-grupo-jacartta.vercel.app",
+    "oraculo-jacartta-web-git-main-grupo-jacartta.vercel.app"
+  ],
+  "pushedTo": [
+    "origin/main",
+    "personal/main"
+  ],
+  "closingRecoveryCheck": {
+    "checked_at": "2026-10-13 17:57:38.296+00",
+    "result": {
+      "olist": {
+        "errors": 1,
+        "pending": 24470,
+        "completed_at": null
+      },
+      "wallet_cycle": {
+        "wallet_records": 6720,
+        "wallet_complete": false,
+        "pending_complete": true,
+        "last_completed_at": null
+      },
+      "shopee_history": {
+        "cursor": "200",
+        "next_to": "2026-09-12T03:00:00+00:00",
+        "completed_at": null,
+        "records_processed": 12795
+      },
+      "olist_retries_succeeded": 11
+    }
+  }
+}

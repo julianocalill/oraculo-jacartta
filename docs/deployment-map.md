@@ -7,10 +7,10 @@
 - Framework: `Next.js`
 - Data access: business-data reads use an authenticated server client (anon key + user JWT) under RLS via `createSupabaseUserClient()`; the `SUPABASE_SERVICE_ROLE_KEY` client is reserved for writes, `/usuarios` (auth.admin) and `/status` (sensitive tokens). See migration `20260710092000_rls_authenticated_read.sql`.
 - Production domain: `https://oraculo.oliverhome.com.br`
-- Latest confirmed feature deploy: `dpl_ArbXWFQPzFixiSyACjyLLn12vBKV`
-  (2026-10-13, produtores e cobertura Giracasa; commit `417eadd`, `Ready`
-  e domínio oficial confirmados). Nova conferência e correções das 14h50
-  documentadas em `docs/project-status-2026-10-13.md`.
+- Latest confirmed feature deploy: `dpl_8dsJ1RZN9ErPGTmyyV6PneKbq8rM`
+  (2026-10-13, conferência Giracasa: retentativas, FBS e cobertura financeira;
+  commit `1fb5e2b`, `Ready` e domínio oficial confirmados).
+  Histórico ainda incompleto: `docs/project-status-2026-10-13.md`.
 - Primary GitHub repository: `https://github.com/Grupo-Jacartta/oraculo.git`
 - Personal mirror: `https://github.com/julianocalill/oraculo-jacartta`
 - Current deployment mode: production deploys through Vercel CLI/GitHub integration.

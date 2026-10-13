@@ -133,6 +133,13 @@ backfill Shopee concluído e cache posterior, extratos sem backlog/erro,
 carteira e pendências com ciclo completo. Inteligência fiscal e Monitor ao
 vivo têm dependências próprias e não ficam prontos só porque a fila termina.
 
+Correções desta conferência publicadas no commit `1fb5e2b`, enviado aos dois
+remotes. Vercel `dpl_8dsJ1RZN9ErPGTmyyV6PneKbq8rM` **Ready**, com alias do
+domínio oficial confirmado. Evidência em [followup-deployment.json](analyses/giracasa-auditoria-2026-10-13/followup-deployment.json).
+Na última leitura das 14h57: 24.470 pedidos Olist ainda pendentes (incluindo
+um erro temporário), histórico Shopee ainda aberto e carteira com 6.720
+registros coletados, sem ciclo completo. A publicação não concluiu essas filas.
+
 ## Auditoria inicial antes da autorização de publicação
 
 A operação paulista tinha vendas registradas, mas suas telas operacionais
