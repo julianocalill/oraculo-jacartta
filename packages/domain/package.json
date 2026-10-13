@@ -11,6 +11,7 @@
     "./fiscal.js": "./fiscal.js",
     "./rpa.js": "./rpa.js",
     "./ads-analysis.js": "./ads-analysis.js",
+    "./data-coverage.js": "./data-coverage.js",
     "./ads-print.js": "./ads-print.js",
     "./commercial-analysis.js": "./commercial-analysis.js",
     "./bia.js": "./bia.js",

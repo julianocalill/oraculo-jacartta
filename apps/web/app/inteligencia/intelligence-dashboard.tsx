@@ -93,6 +93,21 @@ function TrendBars({ values }: { values: [number, number, number, number] }) {
 }
 
 export function IntelligenceDashboard({ payload }: { payload: IntelligencePayload }) {
+  if (payload.commercialProducts) return <>
+    <header className="topbar"><div><h1>Inteligência de Mercado</h1><p>Giracasa · preço e disponibilidade por anúncio</p></div></header>
+    <section className="panel" role="status"><h2>{payload.commercialProducts.length ? 'Catálogo comercial disponível' : 'Catálogo aguardando sincronização'}</h2>
+      <p>O histórico de vendas está em recuperação. Recomendações de margem e precificação dependem da conferência de NF, UF, custo e tarifas por anúncio da Giracasa.</p>
+      <OperationAnchor className="button-link" href="/calculadora">Abrir calculadora da operação</OperationAnchor>
+    </section>
+    {payload.commercialProducts.length ? <section className="panel"><div className="table-wrap"><table className="data-table"><thead><tr><th>Loja</th><th>Produto</th><th>SKU</th><th>Preço</th><th>Estoque vendável</th></tr></thead><tbody>
+      {payload.commercialProducts.map(p => <tr key={p.id}><td>{p.shop}</td><td>{p.name}{p.variation ? ` · ${p.variation}` : ''}</td><td>{p.sku ?? '—'}</td><td>{p.price == null ? '—' : brl(p.price)}</td><td>{p.stock == null ? '—' : number(p.stock)}</td></tr>)}
+    </tbody></table></div></section> : null}
+  </>;
+  if (!payload.products.length) return <section className="panel" role="status"><h1>Inteligência de Mercado</h1><p>Dados internos aguardando sincronização.</p></section>;
+  return <IntelligenceDashboardContent payload={payload} />;
+}
+
+function IntelligenceDashboardContent({ payload }: { payload: IntelligencePayload }) {
   const [block, setBlock] = useState<Block>("radar");
   const [selectedId, setSelectedId] = useState(payload.products[0]?.id ?? "");
   const [actionFilter, setActionFilter] = useState<MarketAction | "todos">("todos");

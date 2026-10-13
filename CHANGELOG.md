@@ -2,6 +2,20 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-10-13] — Giracasa com produtores e cobertura explícita
+
+- Corrigidos jobs Olist de detalhes/backfill; recuperação automática por fila
+  e cursores Shopee próprios. Produtores de catálogo, escrow, Ads, devoluções,
+  preços e reconciliação atualizados e agendados por loja.
+- Ads/SP liberado com RPC isolada. Previsão/export recusam cálculo sem itens;
+  SKUs e ranking distinguem dados ausentes; reconciliação não confirma fontes
+  vazias; filtro de lojas próprio e Inteligência/SP sem fórmula fiscal MG.
+- Autenticação obrigatória nos produtores; inventário FBS substituído em
+  transação após validação completa, preservando posição em falhas.
+- Duas migrations e 11 funções SP aplicadas. 120 testes, TypeScript e build
+  validados. Recuperação histórica em andamento; ML/SP depende de conta.
+  Auditoria, evidências e publicação: `docs/project-status-2026-10-13.md`.
+
 ## [2026-10-09] — Calculadora por operação publicada
 
 - Perfil vem da operação autorizada da URL, identificado no título e no

@@ -1,5 +1,7 @@
 import { OperationLink as Link } from "../components/operation-provider";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
+import { loadCommercialCoverage } from '../../lib/source-health';
+import { getSaoPauloToday } from '../../lib/date';
 import {
   loadFiscalSkuCoverageSnapshot,
   loadFiscalSkuMarginSnapshot,
@@ -44,6 +46,7 @@ function n(value: number | null | undefined) {
 }
 
 function money(value: number | null | undefined) {
+  if (value == null) return '—';
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
@@ -52,6 +55,7 @@ function money(value: number | null | undefined) {
 }
 
 function count(value: number | null | undefined) {
+  if (value == null) return '—';
   return new Intl.NumberFormat("pt-BR").format(n(value));
 }
 
@@ -150,16 +154,23 @@ async function loadSkus(selectedSku?: string) {
       .limit(1);
   })();
 
-  const [rowsResponse, selectedResponse, fiscalCoverage, fiscal] = await Promise.all([
+  const today = getSaoPauloToday();
+  const previousMonth = new Date(`${today}T12:00:00Z`);
+  previousMonth.setUTCDate(previousMonth.getUTCDate() - 30);
+  const [rowsResponse, selectedResponse, fiscalCoverage, fiscal, commercial] = await Promise.all([
     rowsQuery,
     selectedQuery,
     loadFiscalSkuCoverageSnapshot(supabase),
-    loadFiscalSkuMargins(supabase)
+    loadFiscalSkuMargins(supabase),
+    loadCommercialCoverage(previousMonth.toISOString().slice(0, 10), today)
   ]);
 
   return {
-    rows: (rowsResponse.data ?? []) as SkuRow[],
-    selected: ((selectedResponse.data ?? []) as SkuRow[])[0] ?? null,
+    rows: ((rowsResponse.data ?? []) as SkuRow[]).map(row => commercial.unavailable ?
+      { ...row, units_30d: null, revenue_30d: null, revenue_change_pct: null, margin_amount_30d: null, margin_rate_30d: null, roi_30d: null } : row),
+    selected: selectedResponse.data?.[0] && commercial.unavailable ?
+      { ...selectedResponse.data[0], units_30d: null, revenue_30d: null, margin_amount_30d: null, margin_rate_30d: null, roi_30d: null } as SkuRow : ((selectedResponse.data ?? []) as SkuRow[])[0] ?? null,
+    commercial,
     fiscalCoverage,
     fiscalMargins: fiscal.margins,
     fiscalPeriod: fiscal.period
@@ -232,7 +243,7 @@ export default async function SkusPage({
         <div className="section-head section-row">
           <div>
             <p className="eyebrow">Cobertura fiscal</p>
-            <h2>Margem e ROI operacionais liberados</h2>
+            <h2>{data.commercial.partial ? 'Dados comerciais em recuperação' : 'Margem e ROI operacionais parciais'}</h2>
           </div>
           <span className="pill warning-pill">Parcial, não fiscal definitivo</span>
         </div>
@@ -258,6 +269,10 @@ export default async function SkusPage({
             <small>Amostra coberta, não definitiva</small>
           </article>
         </div>
+        {data.commercial.partial ? <p className="fiscal-note">
+          Itens comerciais em {data.commercial.covered.toLocaleString('pt-BR')} de {data.commercial.orders.toLocaleString('pt-BR')} pedidos dos últimos 30 dias ({data.commercial.percent?.toFixed(1)}%).
+          A cobertura fiscal acima mede itens da NF; ela não comprova cobertura comercial do pedido.
+        </p> : null}
       </section>
 
       <section className="detail-grid">

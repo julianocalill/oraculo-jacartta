@@ -40,6 +40,7 @@ export type IntelligencePayload = {
   products: IntelligenceProduct[];
   internalSource: "real" | "demo" | "unavailable";
   generatedAt: string;
+  commercialProducts?: Array<{ id: string; name: string; variation: string | null; sku: string | null; shop: string; price: number | null; stock: number | null; sold30: number | null }>;
 };
 
 function actionFor(product: Omit<IntelligenceProduct, "action" | "actionLabel" | "reason" | "priority" | "opportunityValue">) {
@@ -233,6 +234,18 @@ export async function loadIntelligencePayload(): Promise<IntelligencePayload> {
       loadCanonicalCosts(),
       loadRegisteredCosts()
     ]);
+    if (operation === 'giracasa') {
+      const byProduct = new Map(shopeeProducts.map(p => [productKey(p.shop_id, p.item_id, p.model_id), p]));
+      return { products: [], internalSource: priceRows.length ? 'real' : 'unavailable', generatedAt: new Date().toISOString(),
+        commercialProducts: priceRows.map(row => {
+          const product = byProduct.get(rowKey(row));
+          return { id: rowKey(row), name: row.item_name ?? row.olist_product_name ?? row.item_id,
+            variation: row.model_name, sku: row.sku_olist ?? row.channel_sku,
+            shop: row.shop_name ?? String(row.shop_id), price: row.price,
+            stock: product?.model_stock ?? product?.stock_total ?? null,
+            sold30: product?.sold_qty_30d ?? null };
+        }) };
+    }
     if (shopeeProducts.length === 0 || priceRows.length === 0) throw new Error("Dados internos indisponíveis");
 
     const productIndex = new Map(shopeeProducts.map((product) => [productKey(product.shop_id, product.item_id, product.model_id), product]));
@@ -303,7 +316,7 @@ export async function loadIntelligencePayload(): Promise<IntelligencePayload> {
 
     return { products: unique, internalSource: "real", generatedAt: new Date().toISOString() };
   } catch {
-    if (operation === "giracasa") return { products: [], internalSource: "unavailable", generatedAt: new Date().toISOString() };
+    if (operation === "giracasa") return { products: [], commercialProducts: [], internalSource: "unavailable", generatedAt: new Date().toISOString() };
     return { products: demoProducts(), internalSource: "demo", generatedAt: new Date().toISOString() };
   }
 }

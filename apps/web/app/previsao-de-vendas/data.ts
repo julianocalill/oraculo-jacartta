@@ -11,6 +11,7 @@ import { getRequestOperation, type OperationId } from "../../lib/operation-conte
 
 import { unstable_cache } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
+import { coveredForecastWeek, forecastCoverageIssue } from '@oraculo/domain/data-coverage.js';
 
 export type WeekDetail = {
   week_start: string;
@@ -119,7 +120,9 @@ async function loadForecastViewUncached(operation: OperationId, target: string |
     if (res.error) throw res.error;
   }
 
-  const week = ((weekRes.data ?? []) as ForecastWeek[])[0] ?? null;
+  const rawWeek = ((weekRes.data ?? []) as ForecastWeek[])[0] ?? null;
+  const coverageIssue = forecastCoverageIssue(rawWeek);
+  const week = coveredForecastWeek(rawWeek) as ForecastWeek | null;
 
   // Janela do gráfico: das 8 semanas do detalhe até o último dia com pedido.
   // ~60 dias × ~15 canais fica bem abaixo do corte de 1.000 linhas do
@@ -148,17 +151,19 @@ async function loadForecastViewUncached(operation: OperationId, target: string |
       }
       byDate.set(row.order_date, (byDate.get(row.order_date) ?? 0) + (row.units ?? 0));
     }
-    history = [...byDate.entries()]
+    const incompleteWeeks = new Set(details.filter(d => d.orders > 0 &&
+      (d.items_coverage_pct == null || d.items_coverage_pct < 90)).map(d => d.week_start));
+    history = [...byDate.entries()].filter(([day]) => !incompleteWeeks.has(weekStartOf(day)))
       .map(([date, units]) => ({ date, units }))
       .sort((a, b) => a.date.localeCompare(b.date));
   }
 
   return {
     week,
-    daily: (dailyRes.data ?? []) as ForecastDay[],
-    channels: (channelsRes.data ?? []) as ForecastChannel[],
-    skus: (skusRes.data ?? []) as ForecastSku[],
-    backtest: (backtestRes.data ?? []) as BacktestRow[],
+    daily: coverageIssue ? [] : (dailyRes.data ?? []) as ForecastDay[],
+    channels: coverageIssue ? [] : (channelsRes.data ?? []) as ForecastChannel[],
+    skus: coverageIssue ? [] : (skusRes.data ?? []) as ForecastSku[],
+    backtest: coverageIssue ? [] : (backtestRes.data ?? []) as BacktestRow[],
     history,
     offmarketUnitsBase
   };

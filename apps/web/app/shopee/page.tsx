@@ -5,6 +5,7 @@ import { AppShell } from "../components/app-shell";
 import { ShopeeTabs } from "./tabs";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 import { SortableTable } from "../components/sortable-table";
+import { loadShopeeCollection } from '../../lib/source-health';
 
 export const dynamic = "force-dynamic";
 
@@ -249,10 +250,11 @@ export default async function ShopeeTakeRatePage({
   const end = asDate(params?.fim, todayIso());
   const shopFilter = params?.loja && /^\d+$/.test(params.loja) ? params.loja : "all";
 
-  const [{ allowed }, alertCount, data] = await Promise.all([
+  const [{ allowed }, alertCount, data, collection] = await Promise.all([
     requireTabAccess("shopee"),
     loadActionableAlertCount(),
-    loadTakeRate(start, end, shopFilter)
+    loadTakeRate(start, end, shopFilter),
+    loadShopeeCollection('shopee-escrow-sync', shopFilter)
   ]);
   if (!allowed) return <NoAccess tab="shopee" />;
   const takeRate = data.totals.gross > 0 ? (100 * data.totals.fees) / data.totals.gross : null;
@@ -283,10 +285,7 @@ export default async function ShopeeTakeRatePage({
             <span>Loja</span>
             <select name="loja" defaultValue={shopFilter}>
               <option value="all">Todas</option>
-              <option value="1227023039">Donacor</option>
-              <option value="1540426526">Oliverhome</option>
-              <option value="823664460">Espaço de Bicho</option>
-              <option value="279375549">Jacartta</option>
+              {collection.shops.map(shop => <option key={shop.shop_id} value={shop.shop_id}>{shop.shop_name ?? shop.shop_id}</option>)}
             </select>
           </label>
           <button type="submit">Aplicar</button>
@@ -295,25 +294,29 @@ export default async function ShopeeTakeRatePage({
 
       <ShopeeTabs active="takerate" />
 
+      {!collection.ready ? <section className="status-alerts"><div className="status-alert">
+        Extratos em recuperação. Os valores disponíveis ainda podem não cobrir todos os pedidos e lojas do período.
+      </div></section> : null}
+
       <section className="metric-grid metric-grid-eight">
         <article className="metric accent-blue">
           <span className="label">Pedidos com extrato</span>
-          <strong>{formatCount(data.totals.orders)}</strong>
+          <strong>{data.totals.orders || collection.ready ? formatCount(data.totals.orders) : '—'}</strong>
           <small>Concluídos e drenados no período</small>
         </article>
         <article className="metric accent-yellow">
           <span className="label">Bruto (comprador)</span>
-          <strong>{formatCurrency(data.totals.gross)}</strong>
+          <strong>{data.totals.orders || collection.ready ? formatCurrency(data.totals.gross) : '—'}</strong>
           <small>Total pago pelos compradores</small>
         </article>
         <article className="metric accent-red">
           <span className="label">Taxas da Shopee</span>
-          <strong>{formatCurrency(data.totals.fees)}</strong>
+          <strong>{data.totals.orders || collection.ready ? formatCurrency(data.totals.fees) : '—'}</strong>
           <small>Take rate {formatPct(takeRate)}</small>
         </article>
         <article className="metric accent-green">
           <span className="label">Líquido a receber</span>
-          <strong>{formatCurrency(data.totals.net)}</strong>
+          <strong>{data.totals.orders || collection.ready ? formatCurrency(data.totals.net) : '—'}</strong>
           <small>Escrow após taxas e ajustes</small>
         </article>
         <article className="metric">

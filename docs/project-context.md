@@ -27,6 +27,25 @@ The current product direction is practical executive intelligence for the operat
 - `Obsidian` can store durable project memory, but repository docs are the source of truth.
 - `AI agents` assist architecture, coding, review and documentation, but repository files remain the source of truth.
 
+## Current state on 2026-10-13 — auditoria Giracasa
+
+Correção após a auditoria, autorizada pelo usuário: as migrations e os
+produtores SP foram aplicados, com recuperação automática de itens Olist e
+histórico Shopee; Ads ganhou RPC isolada. As telas informam cobertura e não
+confirmam indicadores sem fonte. Histórico ainda em processamento; ML/SP
+continua dependendo de conta. Estado final e validação:
+[status de 13/10](project-status-2026-10-13.md). O retrato da auditoria abaixo
+explica as falhas corrigidas.
+
+Produção permanece com o frontend publicado em 09/10. A auditoria de leitura
+confirmou vendas fiscais paulistas, mas itens comerciais só até 07/09:
+pedidos correntes sem detalhes e backfill na janela legada de junho. Shopee
+tem 87 pedidos de um teste de 11/09; não há produtores agendados para suas
+principais fontes analíticas/financeiras. Faltam RPC Ads/SP e tabelas Full/SP.
+Zeros e confirmações financeiras das telas não são confiáveis nesse estado.
+Evidências, critérios de aceite e correções ainda pendentes em
+[project-status-2026-10-13.md](project-status-2026-10-13.md).
+
 ## Current state on 2026-10-09 — publicado
 
 Calculadora passa a usar o perfil da operação autorizada da URL: Uberlândia

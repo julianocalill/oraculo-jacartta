@@ -10,6 +10,8 @@ import { OperationAnchor, OperationLink } from "../components/operation-provider
 // Plano e decisões: docs/plano-devolucoes.md e docs/plano-devolucoes-funil.md
 
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
+import { loadShopeeCollection } from '../../lib/source-health';
+import { getRequestOperation } from '../../lib/operation-context';
 import { requireTabAccess } from "../../lib/auth/access";
 import { NoAccess } from "../components/no-access";
 import { loadActionableAlertCount } from "../../lib/alert-count";
@@ -343,9 +345,11 @@ export default async function DevolucoesPage({
 
   const { allowed } = await requireTabAccess("devolucoes");
   if (!allowed) return <NoAccess tab="devolucoes" />;
-  const [alertCount, data] = await Promise.all([
+  const [alertCount, data, operation, collection] = await Promise.all([
     loadActionableAlertCount(),
-    loadData(win, channel, reason)
+    loadData(win, channel, reason),
+    getRequestOperation(),
+    loadShopeeCollection('shopee-returns-sync')
   ]);
 
   const steps = buildSteps(data.funnel);
@@ -421,6 +425,9 @@ export default async function DevolucoesPage({
   const lossRate = totalReturns > 0 ? (totalLoss / totalReturns) * 100 : 0;
   const channelName = channel ? (CHANNEL_LABEL[channel] ?? channel) : "todos os canais";
 
+  const unavailable = operation === 'giracasa' && totalReturns === 0 && !collection.ready;
+  if (unavailable) return <AppShell alertCount={alertCount}><header className="topbar"><div><h1>Devoluções</h1><p>{win.label} · Giracasa</p></div></header><section className="panel" role="status"><h2>Devoluções aguardando coleta</h2><p>A fonte ainda não tem cobertura confirmada para este período. A taxa, os estornos e a conferência fiscal ficarão disponíveis após a sincronização.</p></section></AppShell>;
+
   return (
     <AppShell alertCount={alertCount}>
       <header className="topbar">
@@ -459,6 +466,7 @@ export default async function DevolucoesPage({
       </header>
 
       <DevolucoesTabs active={activeTab} query={`${win.query}${reasonQuery}`} channels={tabChannels} />
+      {operation === 'giracasa' ? <p className="fiscal-note">Cobertura automática atual: Shopee. Mercado Livre depende de conta própria conectada; TikTok depende do relatório importado no período.</p> : null}
 
       {win.isCurrent ? (
         <section className="status-alerts">
@@ -589,9 +597,8 @@ export default async function DevolucoesPage({
             <h2>Canais lado a lado</h2>
           </div>
           <p className="muted">
-            Ordens de grandeza diferentes: em julho a Shopee teve ~3.400 devoluções, o TikTok 1.725
-            e o Mercado Livre 4. Volume baixo no ML é volume de venda menor no canal, não qualidade
-            melhor. O ML <strong>não informa o valor do reembolso</strong> — ali o valor vem da NF de
+            Compare a taxa de devolução junto ao volume vendido e à cobertura de cada canal.
+            O ML <strong>não informa o valor do reembolso</strong> — ali o valor vem da NF de
             venda, que é o total do <em>pedido</em>, então estorno parcial aparece maior do que foi.
           </p>
           <div className="table-wrap">
@@ -702,7 +709,7 @@ export default async function DevolucoesPage({
             <h2>Ganhamos e perdemos</h2>
           </div>
           <p className="muted">
-            Disputa é desvio, não etapa: em julho só 5,5% das devoluções do TikTok passaram por
+            Disputa é desvio, não etapa: parte das devoluções do TikTok passa por
             disputa. Com poucas dezenas por mês, leia a tendência, não o número isolado.
           </p>
           <div className="table-wrap">

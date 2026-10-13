@@ -189,7 +189,7 @@ async function syncShopProducts(supabase: any, shop: Shop, partnerKey: string) {
 
 Deno.serve(async (req) => {
   const expectedSecret = Deno.env.get("SHOPEE_SYNC_SECRET");
-  if (expectedSecret && req.headers.get("x-sync-secret") !== expectedSecret) {
+  if (!expectedSecret || req.headers.get("x-sync-secret") !== expectedSecret) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401, headers: { "Content-Type": "application/json" }
     });

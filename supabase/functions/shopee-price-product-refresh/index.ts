@@ -68,7 +68,7 @@ async function fetchAll<T>(supabase: Supabase, table: string, select: string, fi
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return jsonResponse({ ok: false, error: "method_not_allowed" }, 405);
-  if (env.syncSecret && req.headers.get("x-sync-secret") !== env.syncSecret) {
+  if (!env.syncSecret || req.headers.get("x-sync-secret") !== env.syncSecret) {
     return jsonResponse({ ok: false, error: "unauthorized" }, 401);
   }
 
@@ -302,11 +302,7 @@ Deno.serve(async (req) => {
         .upsert(rows.slice(i, i + 200), { onConflict: "shop_id,item_id,model_id" });
       if (error) throw error;
     }
-    const { error: pruneError } = await supabase
-      .from("oraculo_shopee_price_product_cache")
-      .delete()
-      .lt("refreshed_at", now);
-    if (pruneError) throw pruneError;
+    // Preserve a última linha conhecida se um anúncio não veio no lote atual.
 
     // Vendas por dia (60d) para o filtro de período da aba — mesma cadência.
     const { error: salesError } = await supabase.rpc("refresh_oraculo_shopee_precos_sales_daily");

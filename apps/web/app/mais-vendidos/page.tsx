@@ -281,7 +281,7 @@ export default async function MaisVendidosPage({
             const withItems = n(channel.orders_with_items);
             return [
               { text: channel.channel_name ?? "Sem canal", sort: channel.channel_name },
-              { text: count(n(channel.units)), sort: n(channel.units) },
+              { text: orders > 0 && withItems === 0 ? '—' : count(n(channel.units)), sort: orders > 0 && withItems === 0 ? null : n(channel.units) },
               { text: count(orders), sort: orders },
               {
                 text: orders > 0 ? pct(withItems / orders) : "-",

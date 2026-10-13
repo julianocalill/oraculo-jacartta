@@ -1,5 +1,6 @@
 import { OperationLink as Link } from "../components/operation-provider";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
+import { loadShopeeCollection } from '../../lib/source-health';
 import { requireTabAccess } from "../../lib/auth/access";
 import { loadActionableAlertCount } from "../../lib/alert-count";
 import { HINTS } from "../../lib/column-hints";
@@ -252,13 +253,14 @@ export default async function ReconciliacaoPage({
   const requestedPage = Number(params.pagina ?? 1);
   const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
 
-  const [{ allowed }, alertCount, rowResult, summary, walletBalance, shops] = await Promise.all([
+  const [{ allowed }, alertCount, rowResult, summary, walletBalance, shops, collection] = await Promise.all([
     requireTabAccess("reconciliacao"),
     loadActionableAlertCount(),
     loadRows(start, end, shop, situation, page),
     loadSummary(start, end, shop, situation),
     loadWalletBalance(shop),
-    loadShops()
+    loadShops(),
+    loadShopeeCollection('shopee-reconciliation-sync', shop)
   ]);
   if (!allowed) return <NoAccess tab="reconciliacao" />;
 
@@ -269,6 +271,8 @@ export default async function ReconciliacaoPage({
   const lastShown = Math.min(page * PAGE_SIZE, total);
   const attention = n(summary.attention_count);
   const walletsCount = n(walletBalance.wallets_count);
+  const hasReconciliation = collection.ready || summary.last_synced_at != null;
+  const hasWallet = walletsCount > 0 && walletBalance.balance_as_of != null;
   const totalReceivable = n(walletBalance.wallet_balance_amount) + n(summary.pending_amount);
   const pageHref = (targetPage: number) => {
     const query = new URLSearchParams({
@@ -359,14 +363,17 @@ export default async function ReconciliacaoPage({
         </form>
       </header>
 
+      {!collection.ready ? <section className="status-alerts"><div className="status-alert">
+        Reconciliação em recuperação. Pendências e créditos ainda não foram conferidos por completo; acompanhe a cobertura em Status.
+      </div></section> : null}
       <section className="metric-grid reconciliation-metric-grid">
-        <MetricCard accent="accent-blue" label="Pedidos" value={count(n(summary.orders_count))} caption={`${money(summary.gross_amount)} em valor bruto`} />
-        <MetricCard accent="accent-violet" label="Valor das NFs" value={money(summary.invoice_amount)} caption={n(summary.missing_invoice_count) ? `${count(n(summary.missing_invoice_count))} pedidos sem NF localizada` : "NF localizada em todos os pedidos"} />
-        <MetricCard accent="accent-yellow" label="Pendente a receber" value={money(summary.pending_amount)} caption={`${count(n(summary.pending_count))} pedidos ainda não liberados`} />
-        <MetricCard accent="accent-cyan" label="Saldo total da carteira" value={money(walletBalance.wallet_balance_amount)} caption={`${count(walletsCount)} ${walletsCount === 1 ? "carteira" : "carteiras"} · posição em ${dateTime(walletBalance.balance_as_of)}`} />
-        <MetricCard className="reconciliation-total" accent="accent-emerald" label="Total a receber" value={money(totalReceivable)} caption="saldo atual da carteira + pendente a receber" />
-        <MetricCard accent="accent-green" label="Pago na carteira" value={money(summary.paid_amount)} caption={`${count(n(summary.released_count))} pedidos liberados`} />
-        <MetricCard accent={attention ? "accent-red" : "accent-green"} label="Alertas" value={count(attention)} caption={attention ? "diferença de repasse ou líquido esperado ausente" : "créditos conferem com o líquido"} />
+        <MetricCard accent="accent-blue" label="Pedidos" value={hasReconciliation ? count(n(summary.orders_count)) : '—'} caption={hasReconciliation ? `${money(summary.gross_amount)} em valor bruto` : 'Aguardando coleta'} />
+        <MetricCard accent="accent-violet" label="Valor das NFs" value={money(hasReconciliation ? summary.invoice_amount : null)} caption={n(summary.missing_invoice_count) ? `${count(n(summary.missing_invoice_count))} pedidos sem NF localizada` : collection.ready && n(summary.orders_count) > 0 ? 'NF localizada nos pedidos conferidos' : 'Conferência ainda indisponível'} />
+        <MetricCard accent="accent-yellow" label="Pendente a receber" value={money(hasReconciliation ? summary.pending_amount : null)} caption={hasReconciliation ? `${count(n(summary.pending_count))} pedidos ainda não liberados` : 'Aguardando pendências da Shopee'} />
+        <MetricCard accent="accent-cyan" label="Saldo total da carteira" value={money(hasWallet ? walletBalance.wallet_balance_amount : null)} caption={hasWallet ? `${count(walletsCount)} ${walletsCount === 1 ? 'carteira' : 'carteiras'} · posição em ${dateTime(walletBalance.balance_as_of)}` : 'Posição da carteira não carregada'} />
+        <MetricCard className="reconciliation-total" accent="accent-emerald" label="Total a receber" value={money(hasWallet && collection.ready ? totalReceivable : null)} caption="saldo atual da carteira + pendente a receber" />
+        <MetricCard accent="accent-green" label="Pago na carteira" value={money(hasReconciliation ? summary.paid_amount : null)} caption={hasReconciliation ? `${count(n(summary.released_count))} pedidos liberados` : 'Aguardando créditos da carteira'} />
+        <MetricCard accent={attention ? "accent-red" : "accent-green"} label="Alertas" value={hasReconciliation ? count(attention) : '—'} caption={attention ? "diferença de repasse ou líquido esperado ausente" : collection.ready && n(summary.released_count) > 0 ? 'Créditos conferidos com o líquido' : 'Conferência ainda indisponível'} />
       </section>
 
       <section className="panel">

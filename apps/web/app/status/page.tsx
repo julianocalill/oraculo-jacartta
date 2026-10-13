@@ -1,3 +1,4 @@
+import { loadCommercialCoverage } from "../../lib/source-health";
 import { getRequestOperation, type OperationId } from "../../lib/operation-context";
 import { unstable_cache } from "next/cache";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
@@ -117,7 +118,7 @@ function isResumablePause(run?: SyncRun | null) {
 }
 
 function runFailed(run?: SyncRun | null) {
-  if (!run?.status || run.status === "success" || run.status === "partial") return false;
+  if (!run?.status || run.status === "not_configured" || run.status === "success" || run.status === "partial") return false;
   if (run.status === "running") return !hasFreshActivity(run);
   return !isResumablePause(run);
 }
@@ -393,6 +394,28 @@ async function latestCommercialRun(supabase: ReturnType<typeof createSupabaseAdm
     status: stale ? "partial" : "success", error_message: stale ? "Resumo diário atrasado" : null } as SyncRun;
 }
 
+async function latestRecoveryActivity(supabase: ReturnType<typeof createSupabaseAdminClient>, operation: OperationId): Promise<SyncRun | null> {
+  if (operation !== 'giracasa') return null;
+  const { data, error } = await supabase.from('oraculo_item_recovery_state')
+    .select('window_start,window_end,pending,last_dispatched_at,last_refreshed_at,completed_at').eq('id',true).maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return { started_at: data.last_dispatched_at, finished_at: data.last_refreshed_at ?? data.last_dispatched_at,
+    status: data.completed_at ? 'success' : 'running', error_message: `${count(data.pending)} pedidos pendentes; caches revisados em ${dateTime(data.last_refreshed_at)}`,
+    window_start: data.window_start, window_end: data.window_end,
+    metadata: { updated_at: data.last_dispatched_at } };
+}
+
+async function latestReconciliationActivity(supabase: ReturnType<typeof createSupabaseAdminClient>): Promise<SyncRun | null> {
+  const [complete, batch] = await Promise.all([
+    latestShopRunsBySource(supabase,'shopee-reconciliation-sync'),
+    latestShopRunsBySource(supabase,'shopee-reconciliation-batch')
+  ]);
+  if (batch && (!complete || String(batch.started_at) > String(complete.started_at)))
+    return { ...batch, status: runFailed(batch) ? 'failed' : 'partial', error_message: 'Coleta em andamento; carteira e pendências têm cursores independentes.' };
+  return complete;
+}
+
 // Cache curto (60s): é página de monitoramento, mas as rotinas rodam em
 // escala de minutos/horas — 60s de defasagem não muda nenhum selo, e evita
 // refazer as queries a cada F5 do operador.
@@ -451,11 +474,14 @@ async function latestAdsRun(supabase: ReturnType<typeof createSupabaseAdminClien
 
 async function loadStatusUncached(operation: OperationId) {
   const supabase = createSupabaseAdminClient({ operation });
+  const configuredOnlyInMg = operation === "uberlandia";
+  const unavailable = (message: string): SyncRun => ({ status: "not_configured", started_at: null, finished_at: null, error_message: message });
+  const coverageStart = new Date(); coverageStart.setUTCDate(coverageStart.getUTCDate() - 30);
 
   const [
     tokenResult, ordersRun, stockRun, invoicesRun, backfillRun, mercadolivreRun,
     importacoesAisRun, shopeeReturnsRun, shopeeReconciliationRun, mercadolivreReturnsRun, returnsCacheRun,
-    bipFulfillmentRun, qtyCacheRun, fullInboundRun, fullInboundQueue, watermarks, commercialRun, adsRun
+    bipFulfillmentRun, qtyCacheRun, fullInboundRun, fullInboundQueue, watermarks, commercialRun, adsRun, shopeeOrdersRun, shopeeEscrowRun, shopeeProductsRun, commercialCoverage, mlAccounts, recoveryRun
   ] = await Promise.all([
     supabase
       .from("olist_oauth_tokens")
@@ -472,18 +498,26 @@ async function loadStatusUncached(operation: OperationId) {
     latestRun(supabase, "mercadolivre_sync_runs", "started_at, finished_at, status, items_count, orders_count, error_message"),
     latestRun(supabase, "importacao_ais_sync_runs", "started_at, finished_at, status, vessels_targeted, positions_updated, error_message"),
     latestRunBySource(supabase, "shopee_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message", "shopee-returns-sync"),
-    latestShopRunsBySource(supabase, "shopee-reconciliation-sync"),
+    latestReconciliationActivity(supabase),
     latestReturnsRunML(supabase),
     latestCacheDay(supabase),
-    latestRun(supabase, "bip_fulfillment_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message"),
+    configuredOnlyInMg ? latestRun(supabase, "bip_fulfillment_sync_runs", "started_at, finished_at, status, records_fetched, records_upserted, error_message") : Promise.resolve(unavailable("Bip ainda não configurado nesta operação")),
     latestQtyCacheRun(supabase),
-    latestRun(supabase, "oraculo_full_sync_runs", "started_at, finished_at, status, records_checked:records_checked, records_upserted:events_written, error_message, metadata"),
-    supabase.from("oraculo_fulls").select("id", { count: "exact", head: true }).eq("workflow_status", "monitorando"),
+    configuredOnlyInMg ? latestRun(supabase, "oraculo_full_sync_runs", "started_at, finished_at, status, records_checked:records_checked, records_upserted:events_written, error_message, metadata") : Promise.resolve(unavailable("Fluxo Full ainda não configurado nesta operação")),
+    configuredOnlyInMg ? supabase.from("oraculo_fulls").select("id", { count: "exact", head: true }).eq("workflow_status", "monitorando") : Promise.resolve({ count: 0, error: null }),
     loadDataWatermarks(supabase),
     latestCommercialRun(supabase),
-    operation === "uberlandia" ? latestAdsRun(supabase) : Promise.resolve(null)
+    latestAdsRun(supabase),
+    latestShopRunsBySource(supabase, "shopee-sync"),
+    latestShopRunsBySource(supabase, "shopee-escrow-sync"),
+    latestShopRunsBySource(supabase, "shopee-sync-products"),
+    loadCommercialCoverage(coverageStart.toISOString().slice(0, 10), todayBrt(), supabase),
+    supabase.from("mercadolivre_accounts").select("*", { count: "exact", head: true }),
+    latestRecoveryActivity(supabase, operation)
   ]);
 
+  if (mlAccounts.error) throw mlAccounts.error;
+  const mlConfigured = Number(mlAccounts.count ?? 0) > 0;
   const token = (tokenResult.data as TokenRow | null) ?? null;
   const today = todayBrt();
   const tokenExpired = !token?.expires_at || new Date(token.expires_at).getTime() <= Date.now();
@@ -506,7 +540,7 @@ async function loadStatusUncached(operation: OperationId) {
     backfillRun?.status === "partial" && Number(backfillRun.orders_with_error ?? 0) > 0
       ? `Backfill de itens parcial: ${count(backfillRun.orders_with_error)} pedido(s) com erro.`
       : "",
-    runFailed(mercadolivreRun)
+    mlConfigured && runFailed(mercadolivreRun)
       ? `Sync Mercado Livre falhou: ${mercadolivreRun?.error_message ?? "sem mensagem"}`
       : "",
     runFailed(importacoesAisRun)
@@ -517,9 +551,13 @@ async function loadStatusUncached(operation: OperationId) {
       : "",
     ordersNotRunToday ? "Sync de pedidos ainda não rodou hoje." : "",
     stockNotRunToday ? "Sync de estoque ainda não rodou hoje." : "",
-    brtDate(mercadolivreRun?.started_at) !== today
+    mlConfigured && brtDate(mercadolivreRun?.started_at) !== today
       ? "Sync do Mercado Livre ainda não rodou hoje."
       : "",
+    commercialCoverage.partial ? `Itens comerciais: ${count(commercialCoverage.covered)} de ${count(commercialCoverage.orders)} pedidos cobertos nos últimos 30 dias. Recuperação em andamento.` : "",
+    olderThan(shopeeOrdersRun, 2 * 3600000) || runFailed(shopeeOrdersRun) ? "Pedidos Shopee sem coleta recente completa." : "",
+    olderThan(shopeeEscrowRun, 30 * 3600000) || runFailed(shopeeEscrowRun) ? "Extratos Shopee aguardando coleta completa." : "",
+    olderThan(shopeeProductsRun, 30 * 3600000) || runFailed(shopeeProductsRun) ? "Catálogo Shopee aguardando coleta completa." : "",
     runFailed(adsRun) ? adsRun?.error_message ?? "Coleta Ads pendente" : "",
     runFailed(shopeeReturnsRun) ? `Devoluções Shopee falharam: ${shopeeReturnsRun?.error_message ?? "sem mensagem"}` : "",
     runFailed(shopeeReconciliationRun)
@@ -529,7 +567,7 @@ async function loadStatusUncached(operation: OperationId) {
       ? "Reconciliação Shopee não foi atualizada nos últimos 8 dias."
       : "",
     runFailed(bipFulfillmentRun) ? `Espelho do Bip falhou: ${bipFulfillmentRun?.error_message ?? "sem mensagem"}` : "",
-    brtDate(bipFulfillmentRun?.started_at) !== today
+    configuredOnlyInMg && brtDate(bipFulfillmentRun?.started_at) !== today
       ? "Espelho de expedição do Bip ainda não rodou hoje."
       : "",
     // Cache parado é falha silenciosa — a página segue servindo dado velho sem
@@ -561,6 +599,10 @@ async function loadStatusUncached(operation: OperationId) {
     // `coverage` responde "o que esta rotina cobre e com que atraso" — a coluna
     // Início/Fim diz quando rodou, mas não até onde o dado chega.
     runs: [
+      ...(recoveryRun ? [{ key: "item-recovery", label: "Recuperação comercial Olist", run: recoveryRun, coverage: `Janela ${dateOnly(recoveryRun.window_start)}–${dateOnly(recoveryRun.window_end)}; lotes retomáveis e revisão horária de caches` }] : []),
+      { key: "shopee-orders", label: "Pedidos Shopee", run: shopeeOrdersRun, coverage: "Pedidos alterados por loja a cada 15 min; histórico recuperado por cursor" },
+      { key: "shopee-escrow", label: "Extratos Shopee", run: shopeeEscrowRun, coverage: "Pedidos concluídos sem extrato, em lotes limitados por loja" },
+      { key: "shopee-products", label: "Catálogo Shopee", run: shopeeProductsRun, coverage: "Produtos e variações próprios da operação" },
       {
         key: "orders",
         label: "Pedidos",
@@ -588,7 +630,7 @@ async function loadStatusUncached(operation: OperationId) {
       {
         key: "mercadolivre",
         label: "Mercado Livre (Full)",
-        run: mercadolivreRun,
+        run: mlConfigured ? mercadolivreRun : unavailable("Conta Mercado Livre ainda não conectada"),
         coverage: "Pedidos e estoque Full a cada hora"
       },
       {
@@ -601,24 +643,24 @@ async function loadStatusUncached(operation: OperationId) {
         key: "shopee-ads",
         label: "Shopee Ads diário",
         run: adsRun,
-        coverage: "Todas as campanhas das 4 lojas, 07:15–07:30 e 10:15–10:30 BRT; revisa 30 dias encerrados"
+        coverage: "Todas as campanhas das lojas cadastradas na operação; revisa 30 dias encerrados"
       },
       {
         key: "shopee-returns",
         label: "Devoluções Shopee",
         run: shopeeReturnsRun,
-        coverage: "Devoluções das 4 lojas, cada loja a cada 2 h"
+        coverage: "Devoluções por loja cadastrada; coleta a cada 2 h"
       },
       {
         key: "shopee-reconciliation",
         label: "Reconciliação Shopee",
         run: shopeeReconciliationRun,
-        coverage: "Carteira liberada, pendências e previsão das 4 lojas; ciclo semanal retomável por loja"
+        coverage: "Carteira liberada, pendências e previsão por loja; coleta retomável com cursores independentes"
       },
       {
         key: "mercadolivre-returns",
         label: "Devoluções / claims ML",
-        run: mercadolivreReturnsRun,
+        run: mlConfigured ? mercadolivreReturnsRun : unavailable("Conta Mercado Livre ainda não conectada"),
         coverage: "Devoluções e claims a cada hora"
       },
       {
@@ -657,6 +699,7 @@ async function loadStatusUncached(operation: OperationId) {
 
 function runBadge(run: SyncRun | null) {
   if (!run) return { label: "Sem execução", cls: "signal-muted" };
+  if (run.status === "not_configured") return { label: "Não configurado", cls: "signal-muted" };
   if (run.status === "success") return { label: "OK", cls: "signal-good" };
   if (run.status === "partial") return { label: "Parcial", cls: "signal-warning" };
   if (isResumablePause(run)) return { label: "Retomando", cls: "signal-warning" };

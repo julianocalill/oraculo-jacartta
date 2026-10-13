@@ -2,10 +2,9 @@
 // (regra: export nunca recalcula). Gate manual porque route handler não passa
 // pela página.
 
-import { createSupabaseUserClient } from "../../../lib/supabase/user";
 import { getCurrentUser } from "../../../lib/auth/session";
 import { canAccessRequest } from "../../../lib/auth/access";
-import { asTargetWeek, type ForecastSku, type ForecastWeek } from "../data";
+import { asTargetWeek, loadForecastView } from "../data";
 
 function n(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -29,18 +28,9 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const target = asTargetWeek(url.searchParams.get("semana"));
-  const args = { p_target_week_start: target };
-
-  const supabase = await createSupabaseUserClient();
-  const [weekRes, skusRes] = await Promise.all([
-    supabase.rpc("oraculo_sales_forecast_week", args),
-    supabase.rpc("oraculo_sales_forecast_skus", args)
-  ]);
-  if (weekRes.error) throw weekRes.error;
-  if (skusRes.error) throw skusRes.error;
-
-  const week = ((weekRes.data ?? []) as ForecastWeek[])[0] ?? null;
-  const skus = (skusRes.data ?? []) as ForecastSku[];
+  const { week, skus } = await loadForecastView(target);
+  if (week?.forecast_units == null) return new Response(
+    week?.calc_note ?? 'Previsão indisponível: dados insuficientes.', { status: 409 });
 
   const header = [
     "Produto",

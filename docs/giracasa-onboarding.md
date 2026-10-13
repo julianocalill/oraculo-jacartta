@@ -41,6 +41,36 @@ Versão inicial `gira-casa-v1`: origem SP; ICMS nacional de 18% para SP, 12% par
 
 Custos seguem o Financeiro: líquido explícito, créditos recuperáveis explícitos, transferência comprovada de importado (4% + 11,75%) e custo bruto. Sem comprovação, Giracasa conserva o custo bruto. Exceções ficam em `giracasa.oraculo_financial_product_rules` por SKU e vigência.
 
+## Estado em 13/10/2026
+
+Correção após a auditoria, autorizada pelo usuário: as migrations e os
+produtores SP foram aplicados, com recuperação automática de itens Olist e
+histórico Shopee; Ads ganhou RPC isolada. As telas informam cobertura e não
+confirmam indicadores sem fonte. Histórico ainda em processamento; ML/SP
+continua dependendo de conta. Estado final e validação:
+[status de 13/10](project-status-2026-10-13.md). O retrato da auditoria abaixo
+explica as falhas corrigidas.
+
+A operação está ativa, mas a ativação não concluiu todos os produtores.
+A [auditoria de 13/10](project-status-2026-10-13.md) confirmou que os pedidos
+Olist seguem chegando, enquanto os itens comerciais pararam em 07/09.
+O cron de pedidos omite `hydrateDetails=true`; o backfill manda `maxOrders`
+e usa os defaults de junho por não receber `startDate`/`endDate`. Preparar
+primeiro a fila da janela própria, depois consumi-la com datas iguais e
+`limit`; corrigir a coleta corrente e recalcular caches só após hidratar.
+
+Shopee tem uma conta cadastrada e token atualizado, mas só 87 pedidos do
+teste de 11/09. Falta agendar e validar importação de pedidos, produtos/FBS,
+escrow, reconciliação, devoluções e Ads. A RPC `giracasa.oraculo_ads_dashboard`
+também falta e a página bloqueia SP no código. Confirmar a identidade do
+canal Olist “Shopee Vari Útil” em relação à conta cadastrada antes de ampliar
+o escopo. ML/SP segue sem conta; Full/SP não tem suas tabelas de workflow.
+
+Cobertura de itens fiscais não comprova cobertura de itens comerciais.
+Ausência de fonte não pode virar previsão zero, taxa zero ou afirmação de
+repasse conferido. Critérios de aceite e SQL de leitura estão na auditoria.
+A auditoria não aplicou correções nem alterou agendamentos.
+
 ## Estado em 28/09/2026
 
 A operação foi ativada em 22/09/2026. A carga Olist/Tiny já tem pedidos,

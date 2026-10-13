@@ -227,10 +227,10 @@ export function ForecastChart({
             andamento (parcial)
           </span>
         )}
-        <button type="button" className="lg" data-toggle-series="previsao" aria-pressed="true">
+        {forecast.length > 0 ? <button type="button" className="lg" data-toggle-series="previsao" aria-pressed="true">
           <span className="sw sw-dash" style={{ borderColor: "var(--gold)" }} /> Previsão ·{" "}
           <b>{compactUnits(forecastTotal)} un na semana</b>
-        </button>
+        </button> : null}
       </div>
     </div>
   );

@@ -589,7 +589,26 @@ histórico de até 7 dias. Saúde acompanhada por `refreshed_at` em `/status`.
 Motor reaproveitado: `oraculo_fiscal_margin_lines` (data de emissão da NF).
 Contrato, limites e recuperação: `docs/analise-comercial.md`.
 
-## Operações (2026-09-05)
+## Operações
+
+Correção após a auditoria, autorizada pelo usuário: as migrations e os
+produtores SP foram aplicados, com recuperação automática de itens Olist e
+histórico Shopee; Ads ganhou RPC isolada. As telas informam cobertura e não
+confirmam indicadores sem fonte. Histórico ainda em processamento; ML/SP
+continua dependendo de conta. Estado final e validação:
+[status de 13/10](project-status-2026-10-13.md). O retrato da auditoria abaixo
+explica as falhas corrigidas.
+
+Estado em 13/10/2026: Giracasa está ativa desde 22/09. A auditoria encontrou
+13 jobs `giracasa-*` ativos, cobrindo Olist, caches e renovação de token
+Shopee. Não há jobs próprios para importar pedidos Shopee, catálogo/FBS,
+escrow, reconciliação, devoluções ou Ads. O backfill Olist ainda usa defaults
+de junho e o job corrente de pedidos não pede detalhes; itens comerciais só
+até 07/09. A RPC Ads e as tabelas do fluxo Full não estão no schema SP.
+Plano e critérios de recuperação: [status de 13/10](project-status-2026-10-13.md).
+Nenhum agendamento foi alterado pela auditoria.
+
+### Implantação inicial em 05/09/2026
 
 - Uberlândia: schema `public`, perfil `jacarta`, rotas `/o/uberlandia/*`.
 - Giracasa/SP: schema `giracasa`, perfil `gira-casa`, rotas `/o/giracasa/*`; desativada até o checklist de `docs/giracasa-onboarding.md`.

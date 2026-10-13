@@ -1,0 +1,52 @@
+{
+  "at": "2026-10-13T14:14:17.461247+00:00",
+  "counts": {
+    "ads": 3480,
+    "escrow": 64,
+    "prices": 187,
+    "returns": 808,
+    "products": 387,
+    "shopee_orders": 1228,
+    "reconciliation": 1600
+  },
+  "cache_date": "2026-10-13",
+  "olist_state": {
+    "id": true,
+    "pending": 29002,
+    "window_end": "2026-10-13",
+    "completed_at": null,
+    "operation_id": "giracasa",
+    "window_start": "2026-09-08",
+    "last_refreshed_at": "2026-10-13T14:07:17.636495+00:00",
+    "last_dispatched_at": "2026-10-13T14:12:00.09525+00:00"
+  },
+  "shopee_state": {
+    "cursor": "200",
+    "next_to": "2026-10-11T03:00:00+00:00",
+    "shop_id": 984950642,
+    "last_error": null,
+    "updated_at": "2026-10-13T14:13:51.895+00:00",
+    "completed_at": null,
+    "leased_until": null,
+    "operation_id": "giracasa",
+    "requested_to": "2026-10-14T03:00:00+00:00",
+    "requested_from": "2026-08-01T03:00:00+00:00",
+    "records_processed": 1008
+  },
+  "olist_recovered": 225,
+  "validation": {
+    "domain_tests": 114,
+    "edge_tests": 6,
+    "typescript": "passed",
+    "ads_authenticated": "passed",
+    "unsigned_price_request": 401,
+    "price_refresh": {
+      "status": 200,
+      "rows": 187
+    },
+    "empty_inventory_rejected": true,
+    "pii_cursor_read_authenticated": false
+  },
+  "backend_applied": true,
+  "frontend_deployment": "pending_push"
+}

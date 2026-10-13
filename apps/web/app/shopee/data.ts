@@ -169,7 +169,8 @@ export async function fetchAllPages<T>(
   for (let from = 0; ; from += PAGE_SIZE) {
     const { data, error } = await fetchPage(from, from + PAGE_SIZE - 1);
     const page = (data ?? []) as T[];
-    if (error || page.length === 0) break;
+    if (error) throw new Error(error.message);
+    if (page.length === 0) break;
     rows.push(...page);
     if (page.length < PAGE_SIZE) break;
   }

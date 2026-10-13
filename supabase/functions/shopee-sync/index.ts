@@ -79,7 +79,7 @@ async function shopGet(
   });
   const res = await fetch(`${SHOPEE_HOST}${path}?${qs.toString()}`);
   const json = await res.json();
-  if (json.error) throw new Error(`${path} ${shopId}: ${json.error} ${json.message}`);
+  if (!res.ok || (json.error && json.error !== '-')) throw new Error(`${path} ${shopId}: HTTP ${res.status} ${json.error ?? ''} ${json.message ?? ''}`);
   return json;
 }
 
@@ -289,7 +289,8 @@ async function syncShop(
   supabase: any,
   shop: Shop,
   keyByPartner: Map<number, string>,
-  windowMinutes: number
+  windowMinutes: number,
+  backfill: Record<string, any> | null = null
 ): Promise<{ fetched: number; upserted: number; packagesUpserted: number; capped: boolean }> {
   const partnerKey = keyByPartner.get(shop.partner_id);
   if (!partnerKey) throw new Error(`sem partner_key para partner_id ${shop.partner_id} (loja ${shop.shop_id})`);
@@ -308,36 +309,54 @@ async function syncShop(
 
   // 2) Página por página: lista → detalhe → upsert (progresso persiste a cada
   // página; teto por execução respeita o limite de tempo da edge function).
-  const timeTo = nowSec();
-  const timeFrom = timeTo - windowMinutes * 60;
-  let cursor = "";
+  const timeTo = backfill ? Math.floor(Date.parse(backfill.next_to) / 1000) : nowSec();
+  const requestedFrom = backfill ? Math.floor(Date.parse(backfill.requested_from) / 1000) : 0;
+  const timeFrom = backfill ? Math.max(requestedFrom, timeTo - 86400) : timeTo - windowMinutes * 60;
+  let cursor = backfill?.cursor ?? "";
+  let pages = 0;
+  const batchStarted = Date.now();
   let fetched = 0;
   let upserted = 0;
   let packagesUpserted = 0;
   let capped = false;
   do {
     const list = await shopGet("/api/v2/order/get_order_list", shop.partner_id, partnerKey, shop.shop_id, accessToken, {
-      time_range_field: "update_time",
+      time_range_field: backfill ? "create_time" : "update_time",
       time_from: String(timeFrom),
-      time_to: String(timeTo),
+      time_to: String(backfill ? timeTo - 1 : timeTo),
       page_size: String(PAGE_SIZE),
       cursor,
       response_optional_fields: "order_status"
     });
     // deno-lint-ignore no-explicit-any
-    const sns = (list.response?.order_list ?? []).map((o: any) => o.order_sn);
+    if (!Array.isArray(list.response?.order_list)) throw new Error('Lista de pedidos ausente; cursor preservado');
+    const sns = list.response.order_list.map((o: any) => o.order_sn);
     if (sns.length) {
       const detail = await shopGet("/api/v2/order/get_order_detail", shop.partner_id, partnerKey, shop.shop_id, accessToken, {
         order_sn_list: sns.join(","),
         response_optional_fields: ORDER_FIELDS
       });
-      const orderDetails = detail.response?.order_list ?? [];
+      const orderDetails = detail.response?.order_list;
+      if (!Array.isArray(orderDetails) || sns.some((sn: string) => !orderDetails.some((order: any) => order.order_sn === sn)))
+        throw new Error('Detalhes de pedidos incompletos; cursor preservado');
       upserted += await upsertOrders(supabase, shop, orderDetails);
-      packagesUpserted += await upsertPackages(supabase, shop, orderDetails, partnerKey, accessToken);
+      if (!backfill) packagesUpserted += await upsertPackages(supabase, shop, orderDetails, partnerKey, accessToken);
       fetched += sns.length;
     }
     cursor = list.response?.more ? list.response?.next_cursor ?? "" : "";
-    if (fetched >= MAX_ORDERS_PER_RUN) {
+    if (backfill) {
+      const nextTo = cursor ? timeTo : timeFrom;
+      const { error } = await supabase.from("shopee_order_backfill_state").update({
+        next_to: new Date(nextTo * 1000).toISOString(), cursor,
+        records_processed: Number(backfill.records_processed ?? 0) + upserted,
+        completed_at: nextTo <= requestedFrom ? new Date().toISOString() : null,
+        last_error: null, updated_at: new Date().toISOString()
+      }).eq("shop_id", shop.shop_id);
+      if (error) throw new Error(`persistir cursor Shopee ${shop.shop_id}: ${error.message}`);
+      if (!cursor) break;
+    }
+    pages += 1;
+    if (fetched >= MAX_ORDERS_PER_RUN || (backfill && (pages >= 4 || Date.now() - batchStarted >= 45000))) {
       capped = true;
       break;
     }
@@ -347,11 +366,9 @@ async function syncShop(
 }
 
 Deno.serve(async (req) => {
-  // Proteção: uma vez que SHOPEE_SYNC_SECRET esteja setado, exige o header
-  // x-sync-secret (o agendador pg_cron envia). Sem o segredo setado, libera
-  // (fase de setup). Assim o endpoint não fica aberto em produção.
+  // Agendamentos e backfill exigem o segredo interno. Nunca renovar tokens aqui.
   const expectedSecret = Deno.env.get("SHOPEE_SYNC_SECRET");
-  if (expectedSecret && req.headers.get("x-sync-secret") !== expectedSecret) {
+  if (!expectedSecret || req.headers.get("x-sync-secret") !== expectedSecret) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" }
@@ -365,7 +382,10 @@ Deno.serve(async (req) => {
 
   const url = new URL(req.url);
   const onlyShop = url.searchParams.get("shop_id");
-  const windowMinutes = Number(url.searchParams.get("minutes")) || DEFAULT_WINDOW_MINUTES;
+  const windowMinutes = Math.min(Number(url.searchParams.get("minutes")) || DEFAULT_WINDOW_MINUTES, 14 * 24 * 60);
+  const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
+  const isBackfill = body.mode === "backfill";
+  if (isBackfill && !onlyShop) return new Response(JSON.stringify({ error: "Backfill exige uma loja" }), { status: 400 });
 
   // Carrega partner_keys e lojas ativas.
   const { data: configs } = await supabase.from("shopee_app_config").select("partner_id, partner_key, is_active").eq("is_active", true);
@@ -379,29 +399,43 @@ Deno.serve(async (req) => {
   const results: Record<string, unknown>[] = [];
   for (const shop of (shops ?? []) as Shop[]) {
     const startedAt = new Date().toISOString();
+    const source = `${isBackfill ? "shopee-orders-backfill" : "shopee-sync"}:${shop.shop_id}`;
+    let backfill: Record<string, any> | null = null;
     try {
-      const { fetched, upserted, packagesUpserted, capped } = await syncShop(supabase, shop, keyByPartner, windowMinutes);
+      if (isBackfill) {
+        const leaseUntil = new Date(Date.now() + 120000).toISOString();
+        const { data, error } = await supabase.from("shopee_order_backfill_state")
+          .update({ leased_until: leaseUntil }).eq("shop_id", shop.shop_id).is("completed_at", null)
+          .or(`leased_until.is.null,leased_until.lt.${startedAt}`).select("*").maybeSingle();
+        if (error) throw error;
+        if (!data) { results.push({ shop_id: shop.shop_id, skipped: true }); continue; }
+        backfill = data;
+      }
+      const { fetched, upserted, packagesUpserted, capped } = await syncShop(supabase, shop, keyByPartner, windowMinutes, backfill);
       await supabase.from("shopee_sync_runs").insert({
-        source: `shopee-sync:${shop.shop_id}`,
+        source,
         started_at: startedAt,
         finished_at: new Date().toISOString(),
-        status: "success",
+        status: capped ? "partial" : "success",
         records_fetched: fetched,
         records_upserted: upserted,
         meta: { shop_id: shop.shop_id, shop_name: shop.shop_name, window_minutes: windowMinutes, packages_upserted: packagesUpserted, capped }
       });
-      results.push({ shop_id: shop.shop_id, shop_name: shop.shop_name, fetched, upserted, packages_upserted: packagesUpserted, capped, status: "success" });
+      results.push({ shop_id: shop.shop_id, shop_name: shop.shop_name, fetched, upserted, packages_upserted: packagesUpserted, capped, status: capped ? "partial" : "success" });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       await supabase.from("shopee_sync_runs").insert({
-        source: `shopee-sync:${shop.shop_id}`,
+        source,
         started_at: startedAt,
         finished_at: new Date().toISOString(),
         status: "failed",
         error_message: message,
         meta: { shop_id: shop.shop_id, shop_name: shop.shop_name }
       });
+      if (backfill) await supabase.from("shopee_order_backfill_state").update({ last_error: message, updated_at: new Date().toISOString() }).eq("shop_id", shop.shop_id);
       results.push({ shop_id: shop.shop_id, shop_name: shop.shop_name, status: "error", error: message });
+    } finally {
+      if (backfill) await supabase.from("shopee_order_backfill_state").update({ leased_until: null }).eq("shop_id", shop.shop_id);
     }
   }
 

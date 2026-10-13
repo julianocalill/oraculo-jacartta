@@ -1,6 +1,5 @@
 import { adsDelta, adsPeriod, adsRatio, adsShift, adsSignal, adsTotals } from '@oraculo/domain/ads-analysis.js';
 import { requireTabAccess } from '../../lib/auth/access';
-import { getRequestOperation } from '../../lib/operation-context';
 import { loadActionableAlertCount } from '../../lib/alert-count';
 import { formatBrDate, getSaoPauloToday } from '../../lib/date';
 import { HINTS } from '../../lib/column-hints';
@@ -23,7 +22,6 @@ export default async function AdsPage({searchParams}: {searchParams?: Promise<Pa
   const {allowed} = await requireTabAccess('ads');
   if (!allowed) return <NoAccess tab="ads" />;
   const alertCount = await loadActionableAlertCount();
-  if (await getRequestOperation() !== 'uberlandia') return <AppShell alertCount={alertCount}><section className="panel"><h1>Shopee Ads</h1><p>A integração de Ads ainda não foi configurada para esta operação.</p><Link className="pill" href="/ads/analisar-print">Analisar um print →</Link></section></AppShell>;
   const raw = await searchParams ?? {};
   const today = getSaoPauloToday();
   const yesterday = adsShift(today,-1);

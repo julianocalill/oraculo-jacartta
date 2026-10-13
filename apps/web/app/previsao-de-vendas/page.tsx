@@ -99,7 +99,7 @@ export default async function PrevisaoDeVendasPage({
             <input type="date" name="semana" defaultValue={params?.semana ?? ""} />
           </label>
           <button type="submit">Aplicar</button>
-          <Link className="button-link" href={exportHref}>Exportar</Link>
+          {hasForecast ? <Link className="button-link" href={exportHref}>Exportar</Link> : null}
         </form>
       </header>
 
@@ -157,7 +157,7 @@ export default async function PrevisaoDeVendasPage({
             <p className="eyebrow">Unidades por dia</p>
             <h2>Histórico e previsão</h2>
           </div>
-          <span className="pill">{`${details.length} semana${details.length === 1 ? "" : "s"} completa${details.length === 1 ? "" : "s"} + 7 dias previstos`}</span>
+          <span className="pill">{hasForecast ? `${details.length} semanas + 7 dias previstos` : 'Histórico com cobertura disponível'}</span>
         </div>
         <ForecastChart
           history={view.history.map((point) => ({ date: point.date, units: point.units }))}

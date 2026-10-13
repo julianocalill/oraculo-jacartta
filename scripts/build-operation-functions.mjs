@@ -25,6 +25,9 @@ for (const name of names) {
   code = code.replace(/Deno\.env\.get\((["'])([A-Z][A-Z0-9_]*)\1\)/g, (_all, quote, key) =>
     `Deno.env.get(${quote}${sharedEnv.has(key) ? key : `GIRACASA_${key}`}${quote})`);
   if (name === "shopee-price-product-refresh") code = code.replace('const profit = costTotal !== null && typeof price === "number" ? lucro(price, costTotal) : null;', 'const profit = null; // margem depende de NF/UF e fica pendente até a camada fiscal');
+  if (name === 'shopee-reconciliation-sync') code = code.replace(
+    'headers: { apikey: token, authorization: `Bearer ${token}` }',
+    'headers: { apikey: token, authorization: `Bearer ${token}`, "Accept-Profile": "giracasa" }');
   for (const target of names) code = code.replaceAll(`/functions/v1/${target}`, `/functions/v1/giracasa-${target}`);
   const insertAt = [...code.matchAll(/^import .*;\s*$/gm)].at(-1)?.index;
   if (insertAt == null) throw new Error(`Imports não reconhecidos em ${name}`);

@@ -34,7 +34,7 @@ async function shopGet(
   });
   const res = await fetch(`${SHOPEE_HOST}${path}?${qs.toString()}`);
   const json = await res.json();
-  if (json.error && json.error !== "-") throw new Error(`${path} ${shopId}: ${json.error} ${json.message}`);
+  if (!res.ok || (json.error && json.error !== "-")) throw new Error(`${path} ${shopId}: ${json.error} ${json.message}`);
   return json;
 }
 
@@ -54,6 +54,7 @@ async function syncShopSbs(supabase: any, shop: Shop, partnerKey: string) {
   const snapshotDate = nowIso.slice(0, 10);
   // deno-lint-ignore no-explicit-any
   const rows: any[] = [];
+  let complete = false;
 
   for (let page = 1; page <= MAX_PAGES; page++) {
     const inv = await shopGet(
@@ -61,8 +62,9 @@ async function syncShopSbs(supabase: any, shop: Shop, partnerKey: string) {
       shop.partner_id, partnerKey, shop.shop_id, token.access_token,
       { page_no: String(page), page_size: String(PAGE_SIZE), whs_region: "BR" }
     );
-    const items = inv.response?.item_list ?? [];
-    if (!items.length) break;
+    const items = inv.response?.item_list;
+    if (!Array.isArray(items)) throw new Error("Resposta de inventário sem item_list");
+    if (!items.length) { complete = true; break; }
 
     for (const item of items) {
       for (const sku of item.sku_list ?? []) {
@@ -101,16 +103,16 @@ async function syncShopSbs(supabase: any, shop: Shop, partnerKey: string) {
         }
       }
     }
-    if (items.length < PAGE_SIZE) break;
+    if (items.length < PAGE_SIZE) { complete = true; break; }
   }
 
-  // Estado atual: substitui o retrato da loja (itens que saíram do FBS somem)
-  const { error: delErr } = await supabase.from("shopee_sbs_inventory").delete().eq("shop_id", shop.shop_id);
-  if (delErr) throw new Error(`limpar sbs ${shop.shop_id}: ${delErr.message}`);
-  for (let i = 0; i < rows.length; i += 200) {
-    const { error } = await supabase.from("shopee_sbs_inventory").upsert(rows.slice(i, i + 200), { onConflict: "id" });
-    if (error) throw new Error(`upsert sbs ${shop.shop_id}: ${error.message}`);
-  }
+  // Uma coleta parcial ou vazia preserva a última posição conhecida.
+  if (!complete) throw new Error("Inventário excedeu o lote; posição anterior preservada");
+  if (!rows.length) return { deferred: true, rows: 0 };
+  const { error: replaceError } = await supabase.rpc("replace_shopee_sbs_inventory", {
+    p_shop_id: shop.shop_id, p_rows: rows
+  });
+  if (replaceError) throw new Error(`substituir inventário ${shop.shop_id}: ${replaceError.message}`);
 
   // Snapshot diário (idempotente por dia)
   const snapRows = rows.map((r) => ({
@@ -130,7 +132,7 @@ async function syncShopSbs(supabase: any, shop: Shop, partnerKey: string) {
 
 Deno.serve(async (req) => {
   const expectedSecret = Deno.env.get("SHOPEE_SYNC_SECRET");
-  if (expectedSecret && req.headers.get("x-sync-secret") !== expectedSecret) {
+  if (!expectedSecret || req.headers.get("x-sync-secret") !== expectedSecret) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401, headers: { "Content-Type": "application/json" }
     });
@@ -161,10 +163,10 @@ Deno.serve(async (req) => {
       await supabase.from("shopee_sync_runs").insert({
         source: `shopee-sync-sbs:${shop.shop_id}`,
         started_at: startedAt, finished_at: new Date().toISOString(),
-        status: "success", records_fetched: r.rows, records_upserted: r.rows,
+        status: r.deferred ? "partial" : "success", records_fetched: r.rows, records_upserted: r.rows,
         meta: { shop_id: shop.shop_id, shop_name: shop.shop_name, deferred: r.deferred }
       });
-      results.push({ shop_id: shop.shop_id, ...r, status: "success" });
+      results.push({ shop_id: shop.shop_id, ...r, status: r.deferred ? "partial" : "success" });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       await supabase.from("shopee_sync_runs").insert({

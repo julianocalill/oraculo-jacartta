@@ -26,9 +26,11 @@ function n(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 function money(value: number | null | undefined) {
+  if (value == null) return '—';
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(n(value));
 }
 function count(value: number | null | undefined) {
+  if (value == null) return '—';
   return new Intl.NumberFormat("pt-BR").format(n(value));
 }
 function stock(value: number | null | undefined) {

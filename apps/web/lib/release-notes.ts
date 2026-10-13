@@ -24,6 +24,16 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: '2026-10-13-giracasa-dados',
+    title: 'Recuperação dos dados da Giracasa',
+    summary: 'As integrações voltaram a coletar dados, com cobertura e progresso visíveis.',
+    publishedAt: '2026-10-13T11:20:00-03:00',
+    changes: [
+      { title: 'Shopee e dados comerciais', description: 'Pedidos, catálogo, extratos, Ads e devoluções passam a ser atualizados na operação. A recuperação do histórico continua em lotes e o Status mostra o progresso.', href: '/status', linkLabel: 'Conferir atualização' },
+      { title: 'Indicadores com cobertura explícita', description: 'Previsões ficam indisponíveis quando faltam itens. Reconciliação informa quando a coleta está parcial; o filtro de lojas respeita a operação selecionada.', href: '/reconciliacao', linkLabel: 'Abrir reconciliação' }
+    ]
+  },
+  {
     id: "2026-10-09-calculadora-operacoes",
     title: "Uma calculadora para cada operação",
     summary: "A precificação acompanha o ICMS de Uberlândia e da Giracasa.",

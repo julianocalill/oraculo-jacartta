@@ -33,11 +33,12 @@ oraculo/
 
 ## First files to read
 
-Estado mais recente: [docs/project-status-2026-10-09.md](docs/project-status-2026-10-09.md)
-(calculadora por operação publicada: RET Jacartta separado do ICMS Giracasa;
-Vercel Ready e domínio oficial confirmados).
+Estado mais recente: [docs/project-status-2026-10-13.md](docs/project-status-2026-10-13.md)
+(correções Giracasa: produtores próprios, recuperação histórica em lotes
+e indicadores protegidos contra dados sem cobertura).
 
-1. [docs/project-status-2026-10-09.md](docs/project-status-2026-10-09.md) **← start here** (calculadora por operação publicada)
+1. [docs/project-status-2026-10-13.md](docs/project-status-2026-10-13.md) **← start here** (correções e recuperação dos dados Giracasa)
+   — [docs/project-status-2026-10-09.md](docs/project-status-2026-10-09.md) (calculadora por operação publicada)
    — [docs/project-status-2026-10-07.md](docs/project-status-2026-10-07.md) (Calculadora com origem e DIFAL publicada)
    — [docs/project-status-2026-10-03.md](docs/project-status-2026-10-03.md) (B.ia por setor publicada)
    — [docs/project-status-2026-10-02.md](docs/project-status-2026-10-02.md) (implementação e correções da B.ia)
@@ -77,6 +78,13 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 - `Obsidian` vault inside the repository for portable project memory
 
 ## Current production state
+
+Correções Giracasa de 13/10: produtores Olist e Shopee próprios atualizados,
+Ads/SP liberado, recuperação histórica em lotes e indicadores protegidos
+contra falta de cobertura. As cargas já têm pedidos, catálogo, preços,
+extratos, Ads, devoluções e reconciliação, mas o histórico ainda está em
+processamento. Mercado Livre/SP depende de conta própria. Validação e estado
+de publicação no [status de 13/10](docs/project-status-2026-10-13.md).
 
 Calculadora por operação publicada em 09/10, commit `766e04c`, **Vercel Ready**:
 Uberlândia mantém RET 1,3%; Giracasa aplica ICMS de saída próprio e DIFAL
