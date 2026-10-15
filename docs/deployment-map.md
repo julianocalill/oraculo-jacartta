@@ -662,3 +662,8 @@ Escopo, cobertura das fontes e pendências no
 recebe os novos commits com evidências financeiras. A revisão automática
 bloqueou esse push. Usar deploy direto Vercel a partir do commit limpo até
 reconfigurar a integração Git ou preparar histórico público sem evidências.
+
+Deploy direto fiscal confirmado: commit privado `f4e2686`, Vercel
+`dpl_7FSAiBqtxrRy7ufAHVhWr55H3Nb5`, **READY**, alias oficial confirmado.
+Exportação limpa do commit, evidências/migrations fora do upload. Tabela e CSV
+conferidos com a sessão do usuário. O usuário está cadastrando a chave ML/SP.
