@@ -639,3 +639,26 @@ O usuário autorizou explicitamente migration + Edge + jobs + frontend. Reversã
 desativar somente os dois jobs e reverter frontend, mantendo o cache aditivo.
 Escopo, cobertura das fontes e pendências no
 [status de 15/10](project-status-2026-10-15.md).
+
+### Custos/tarifas fiscais — 15/10/2026
+
+- `20261015195208_order_tax_cost_links_and_financial_sources.sql` e
+  `20261015200713_order_tax_verified_sku_links_expansion.sql` aplicadas.
+  Vínculos internos `public/giracasa.oraculo_order_tax_sku_links`, sem leitura
+  anon/authenticated; fila atualiza entradas v2 e reaproveita XML recente.
+- `order-tax-sync` publicado: custo canônico bruto e Shopee escrow conciliado.
+  Mantidos os dois crons fiscais e limites 20/operação/5min, sem novos jobs.
+- Callbacks ML original/SP publicados. `giracasa.*` retorna pelo callback
+  registrado e segue ao callback SP, que exige seller configurado e schema SP.
+  Secrets SP appID, redirect, expectedSeller e jobSecret configurados;
+  **clientSecret aguardando usuário**. Nenhum token SP ainda, sem cron ML SP novo.
+- Próxima etapa: usuário cadastrar a chave; gerar link PKCE de dez minutos com
+  `node scripts/connect-mercadolivre.js --operation=giracasa`; usuário autorizar
+  a conta Gira Casa. Validar seller/schema, então preparar coleta limitada pelo
+  sync SP exclusivo. Não reutilizar token MG ou credenciais do GeFinance.
+- Estado, limites e referências: `docs/project-status-2026-10-15.md`.
+
+**Publicação desta revisão:** somente `origin` privado; `personal` público não
+recebe os novos commits com evidências financeiras. A revisão automática
+bloqueou esse push. Usar deploy direto Vercel a partir do commit limpo até
+reconfigurar a integração Git ou preparar histórico público sem evidências.

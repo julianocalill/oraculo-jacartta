@@ -1,3 +1,4 @@
+import { ORDER_TAX_INPUT_VERSION, orderTaxChannelKey, calculateInvoiceGrossCost, shopeeFinancialInput, isFreshOrderTaxXml } from './order-tax-inputs.js';
 const numeric=v=>v===null||v===undefined||v===''||!Number.isFinite(Number(v))?null:Number(v);
 const timeout=(deadline=Infinity)=>{
  const remaining=deadline-Date.now();
@@ -42,7 +43,11 @@ export function mlFinancialInput(orders,shipments,seller){
 async function mlFinancial(db,ref,deadline=Infinity){
  if(!/^\d+$/.test(ref))return null;
  const q=await db.from('mercadolivre_order_items').select('seller_id,ml_order_id,pack_id').or(`ml_order_id.eq.${ref},pack_id.eq.${ref}`).limit(101);
- if(q.error)throw new Error('ml_order_lookup');if(!q.data?.length)return null;
+ if(q.error)throw new Error('ml_order_lookup');if(!q.data?.length){
+  const accounts=await db.from('mercadolivre_accounts').select('seller_id').eq('is_active',true).limit(1);
+  if(accounts.error)throw new Error('ml_account_lookup');
+  throw new Error(accounts.data?.length?'ml_order_not_synced':'ml_account_not_connected');
+ }
  if(q.data.length>100)throw new Error('ml_pack_too_large');
  const sellers=[...new Set(q.data.map(r=>String(r.seller_id)))];if(sellers.length!==1)throw new Error('ml_seller_ambiguous');
  const seller=sellers[0];const tk=await db.from('mercadolivre_tokens').select('access_token,expires_at').eq('seller_id',seller).maybeSingle();
@@ -61,13 +66,34 @@ async function mlFinancial(db,ref,deadline=Infinity){
  return mlFinancialInput(orders,shipments,seller);
 }
 
-async function grossCost(db,items){
- if(!items?.length||items.some(i=>!i.sku||numeric(i.quantity)==null||i.quantity<=0))return null;
- const skus=[...new Set(items.map(i=>String(i.sku)))];
- const r=await db.from('oraculo_sku_unit_cost').select('sku,unit_cost_gross').in('sku',skus);
- if(r.error)return null;
- const costs=new Map();for(const row of r.data??[]){if(costs.has(row.sku))return null;costs.set(row.sku,numeric(row.unit_cost_gross));}
- let total=0;for(const i of items){const c=costs.get(String(i.sku));if(c==null||c<=0)return null;total+=c*Number(i.quantity);}return total;
+async function resolveGrossCost(db,items,context={}){
+ if(!items?.length)return {amount:null,issue:'invoice_items_missing',mappings:[]};
+ const skus=[...new Set(items.map(i=>String(i.sku??'')))];
+ let links=[];
+ if(context.channelKey&&context.date){
+  const q=await db.from('oraculo_order_tax_sku_links').select('source_sku,cost_sku,channel_key,confirmed,valid_from,valid_until,evidence_kind')
+   .eq('channel_key',context.channelKey).eq('confirmed',true).in('source_sku',skus);
+  if(q.error)return {amount:null,issue:'product_link_lookup_failed',mappings:[]};links=q.data??[];
+ }
+ const allSkus=[...new Set([...skus,...links.map(l=>l.cost_sku)])];
+ const r=await db.from('oraculo_sku_unit_cost').select('sku,unit_cost_gross').in('sku',allSkus);
+ if(r.error)return {amount:null,issue:'canonical_cost_lookup_failed',mappings:[]};
+ return calculateInvoiceGrossCost(items,r.data,links,context);
+}
+async function grossCost(db,items,context={}){return (await resolveGrossCost(db,items,context)).amount;}
+
+async function shopeeFinancial(db,ref){
+ const q=await db.from('shopee_orders').select('shop_id,order_status,currency').eq('order_sn',ref).limit(2);
+ if(q.error)throw new Error('shopee_order_lookup');
+ if(q.data?.length!==1)throw new Error(q.data?.length?'shopee_order_ambiguous':'shopee_order_not_synced');
+ const order=q.data[0];
+ const shop=await db.from('shopee_shops').select('shop_id').eq('shop_id',order.shop_id).eq('is_active',true).maybeSingle();
+ if(shop.error||!shop.data)throw new Error('shopee_shop_not_connected');
+ const escrow=await db.from('shopee_order_escrow').select('status,income:raw_json->order_income')
+  .eq('shop_id',order.shop_id).eq('order_sn',ref).eq('status','success').maybeSingle();
+ if(escrow.error)throw new Error('shopee_escrow_lookup');
+ if(!escrow.data?.income)throw new Error('shopee_escrow_missing');
+ return shopeeFinancialInput(escrow.data.income,{currency:order.currency,orderStatus:order.order_status});
 }
 
 /** Bounded worker. Only the existing syncs may rotate OAuth refresh tokens. */
@@ -86,14 +112,32 @@ async function collectOrderTaxBatch({client,operation,DOMParser,limit=10,invoice
   if(Date.now()>deadline)break; // unprocessed leases expire and resume on next run
   try{
    if(!/^\d+$/.test(row.invoiceId))throw new Error('invalid_invoice_id');
-   const response=await fetch(apiBase+'/notas/'+row.invoiceId+'/xml',{headers:{Authorization:'Bearer '+tk.data.access_token},signal:timeout(deadline)});
-   if(!response.ok)throw new Error('olist_http_'+response.status);
-   const xml=await response.json();if(xml.xmlCancelamento)throw new Error('nfe_cancelled');
-   const payload={...parseOrderTaxXml(xml.xmlNfe,DOMParser),xmlStatus:'collected',financial:null,financialIssue:null,
-    grossProductCost:await grossCost(db,row.items),costSource:'canonical_gross_cost_at_collection'};
-   try{const ref=String(row.orderRef);if(!/mercado\s+livre/i.test(row.channel??'')){payload.financialIssue='marketplace_financial_source_missing';}
-    else {if(!financialMemo.has(ref))financialMemo.set(ref,mlFinancial(db,ref,deadline));payload.financial=await financialMemo.get(ref);if(!payload.financial)payload.financialIssue='marketplace_financial_source_missing';}}
-   catch(e){payload.financialIssue=/^(?:ml_|collection_)[a-z_0-9]+$/.test(e.message)?e.message:'financial_fetch_failed';}
+   const cached=row.cachedPayload;
+   const freshCache=isFreshOrderTaxXml(cached,row.refreshedAt);
+   let fiscal;
+   if(freshCache)fiscal={xmlDebits:cached.xmlDebits,productRevenue:cached.productRevenue,xmlInvoiceTotal:cached.xmlInvoiceTotal};
+   else {
+    const response=await fetch(apiBase+'/notas/'+row.invoiceId+'/xml',{headers:{Authorization:'Bearer '+tk.data.access_token},signal:timeout(deadline)});
+    if(!response.ok)throw new Error('olist_http_'+response.status);
+    const xml=await response.json();if(xml.xmlCancelamento)throw new Error('nfe_cancelled');
+    fiscal=parseOrderTaxXml(xml.xmlNfe,DOMParser);
+   }
+   const channelKey=orderTaxChannelKey(row.channel);
+   const cost=await resolveGrossCost(db,row.items,{channelKey,date:String(row.emissionDate??'').slice(0,10)});
+   const payload={...fiscal,xmlStatus:'collected',xmlFetchedAt:freshCache?(cached.xmlFetchedAt??row.refreshedAt):new Date().toISOString(),inputVersion:ORDER_TAX_INPUT_VERSION,financial:null,financialIssue:null,
+    grossProductCost:cost.amount,costIssue:cost.issue,costMappings:cost.mappings,
+    costSource:cost.mappings.length?'canonical_gross_cost_via_verified_sku_link':'canonical_gross_cost_at_collection'};
+   try{
+    const ref=String(row.orderRef),key=channelKey+':'+ref;
+    if(!['mercadolivre','mercadolivre_full','shopee'].includes(channelKey))payload.financialIssue='marketplace_financial_source_missing';
+    else {
+     if(!financialMemo.has(key)){
+      const reusable=freshCache&&cached.financial&&(cached.financial.source==='mercado_livre_api'||cached.inputVersion===ORDER_TAX_INPUT_VERSION);
+      financialMemo.set(key,reusable?Promise.resolve(cached.financial):channelKey==='shopee'?shopeeFinancial(db,ref):mlFinancial(db,ref,deadline));
+     }
+     payload.financial=await financialMemo.get(key);
+    }
+   }catch(e){payload.financialIssue=/^(?:ml_|shopee_|collection_)[a-z_0-9]+$/.test(e.message)?e.message:'financial_fetch_failed';}
    const saved=await client.schema('public').from('oraculo_order_tax_cache').update({payload,status:'collected',error_code:null,
     refreshed_at:new Date().toISOString(),lease_until:null,next_retry_at:new Date(Date.now()+12*3600000).toISOString()})
     .eq('operation_id',operation).eq('invoice_id',row.invoiceId);
@@ -132,4 +176,4 @@ export async function runOrderTaxBatch(options){
 }
 
 // Read-only helpers also used by local validation; these do not claim jobs or write caches.
-export { mlFinancial as readOrderTaxFinancialInputs, grossCost as readOrderTaxGrossCost };
+export { mlFinancial as readOrderTaxFinancialInputs, shopeeFinancial as readOrderTaxShopeeFinancialInputs, grossCost as readOrderTaxGrossCost, resolveGrossCost as resolveOrderTaxGrossCost };

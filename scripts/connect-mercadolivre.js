@@ -34,9 +34,13 @@ async function main() {
   const env = loadEnv();
   const supabaseUrl = requireEnv(env, "SUPABASE_URL");
   const serviceRoleKey = requireEnv(env, "SUPABASE_SERVICE_ROLE_KEY");
-  const appId = requireEnv(env, "MERCADOLIVRE_APP_ID");
-  const redirectUri = requireEnv(env, "MERCADOLIVRE_OAUTH_REDIRECT_URI");
-  const state = base64Url(randomBytes(32));
+  const operation = process.argv.find(a => a.startsWith("--operation="))?.split("=")[1] ?? "uberlandia";
+  if (!["uberlandia", "giracasa"].includes(operation)) throw new Error("Operação inválida");
+  const schema = operation === "giracasa" ? "giracasa" : "public";
+  const prefix = operation === "giracasa" ? "GIRACASA_" : "";
+  const appId = requireEnv(env, prefix + "MERCADOLIVRE_APP_ID");
+  const redirectUri = requireEnv(env, prefix + "MERCADOLIVRE_OAUTH_REDIRECT_URI");
+  const state = (operation === "giracasa" ? "giracasa." : "") + base64Url(randomBytes(32));
   const codeVerifier = base64Url(randomBytes(64));
   const codeChallenge = base64Url(createHash("sha256").update(codeVerifier).digest());
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
@@ -47,9 +51,10 @@ async function main() {
       apikey: serviceRoleKey,
       Authorization: `Bearer ${serviceRoleKey}`,
       "Content-Type": "application/json",
-      Prefer: "return=minimal"
+      Prefer: "return=minimal",
+      "Content-Profile": schema
     },
-    body: JSON.stringify({ state, code_verifier: codeVerifier, redirect_uri: redirectUri, expires_at: expiresAt })
+    body: JSON.stringify({ operation_id: operation, state, code_verifier: codeVerifier, redirect_uri: redirectUri, expires_at: expiresAt })
   });
   if (!response.ok) {
     const text = await response.text();
@@ -64,7 +69,7 @@ async function main() {
   authorizationUrl.searchParams.set("code_challenge", codeChallenge);
   authorizationUrl.searchParams.set("code_challenge_method", "S256");
 
-  console.log("Abra este link em até 10 minutos e autorize com a conta administradora da loja:\n");
+  console.log(`Operação: ${operation}. Abra este link em até 10 minutos e autorize com a conta administradora dessa loja:\n`);
   console.log(authorizationUrl.toString());
 }
 

@@ -32,7 +32,7 @@ export default async function OrderTaxPage({searchParams}:{searchParams?:Promise
  const rows:SortableCell[][]=data.rows.map(row=>orderTaxExportValues(row).map((v:unknown,i:number)=>({
   text:i===1?date(String(v)):i===26?(v==null?'—':Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%'):i>=6&&i<=25?money(v as number|null):String(v??'—'),
   sort:typeof v==='number'||typeof v==='string'?v:null,
-  ...(i===0?{subtitle:`${row.invoiceCount} NF(s) · ${row.sources}`}:{})
+  ...(i===0?{subtitle:`${row.invoiceCount} NF(s) · ${operation==='giracasa'?'XML + DIFAL zero':'XML; vínculos em conferência'}`}:i===22&&row.costMappings.length?{subtitle:row.costMappings.map((m:{sourceSku:string;costSku:string})=>m.sourceSku+' → '+m.costSku).join(', ')}:{})
  })));
  return <AppShell alertCount={await loadActionableAlertCount()}>
   <header className="page-header"><div><Link href="/pedidos">← Pedidos</Link><h1>Impostos por pedido</h1>
@@ -48,8 +48,8 @@ export default async function OrderTaxPage({searchParams}:{searchParams?:Promise
    <article className="metric"><span className="label">Margens calculadas nesta página</span><strong>{complete} / {data.rows.length}</strong><small>Exige XML, custo bruto, comissão e frete</small></article>
    <article className="metric"><span className="label">Última coleta da operação</span><strong style={{fontSize:'1rem'}}>{data.lastSync?new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short',timeZone:'America/Sao_Paulo'}).format(new Date(data.lastSync)):'Aguardando'}</strong><small><Link href="/status">Conferir fontes e atualização</Link></small></article>
   </section>
-  <section className="panel"><p>Débitos vêm do XML; a Gira Casa aplica DIFAL zero conforme a regra cadastrada. Créditos usam comissão e frete efetivos. Os vínculos da Jacartta permanecem em conferência até recebermos as listas completas.</p>
-   <p>“—” indica dado pendente. O custo bruto corresponde ao cadastro na coleta. Os totais de impostos agrupam as notas emitidas no período; uma receita financeira divergente mantém a margem pendente.</p>
+  <section className="panel"><p>Débitos vêm do XML; a Gira Casa aplica DIFAL zero conforme a regra cadastrada. Créditos usam comissão e frete efetivos; tarifas Shopee só entram quando conciliadas com o extrato. Os vínculos da Jacartta permanecem em conferência até recebermos as listas completas.</p>
+   <p>“—” indica dado pendente. O custo bruto vem da Olist na coleta, com vínculos de SKU identificados quando necessários. Os totais de impostos agrupam as notas emitidas no período; uma receita financeira divergente mantém a margem pendente.</p>
    {data.excludedUnlinkedInvoices>0&&<p>{data.excludedUnlinkedInvoices} nota(s) sem vínculo de pedido ficaram fora da tabela.</p>}
    <Link href={'/pedidos/impostos/export?'+exportQuery}>Exportar CSV do filtro</Link>
   </section>

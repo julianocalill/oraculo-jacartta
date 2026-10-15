@@ -2,6 +2,17 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-10-15] — Custos e tarifas por pedido
+
+- Cinco vínculos explícitos de SKU por operação/canal/vigência; custo bruto
+  canônico Olist, conforme decisão do usuário. Proveniência na tela e no CSV.
+- Tarifas Shopee pelo escrow conciliado, com taxas líquidas, validação de
+  receita/subsídios e bloqueio de reembolsos/componentes não tratados.
+- Atualização gradual de entradas com reuso de XML recente e limite 20/5min.
+- Conexão Mercado Livre Gira Casa preparada com PKCE, schema isolado e seller
+  verificado; aguarda chave cadastrada pelo usuário e OAuth. 152 testes,
+  TypeScript, build e migrations isoladas passaram. Estado no status de 15/10.
+
 ## [2026-10-15] — Impostos por pedido publicados
 
 - Tabela `/pedidos/impostos`: uma linha por pedido/canal, seis débitos e seis

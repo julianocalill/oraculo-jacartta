@@ -1,11 +1,14 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+// Rewritten by the isolated-operation builder; no tenant is selected by request parameters.
+const CALLBACK_OPERATION: string = "uberlandia";
 const env = {
   supabaseUrl: Deno.env.get("SUPABASE_URL") ?? "",
   supabaseServiceRoleKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   appId: Deno.env.get("MERCADOLIVRE_APP_ID") ?? "",
   clientSecret: Deno.env.get("MERCADOLIVRE_CLIENT_SECRET") ?? "",
-  redirectUri: Deno.env.get("MERCADOLIVRE_OAUTH_REDIRECT_URI") ?? ""
+  redirectUri: Deno.env.get("MERCADOLIVRE_OAUTH_REDIRECT_URI") ?? "",
+  expectedSellerId: Deno.env.get("MERCADOLIVRE_EXPECTED_SELLER_ID") ?? ""
 };
 
 function textResponse(title: string, message: string, status = 200) {
@@ -68,18 +71,30 @@ Deno.serve(async (req) => {
   });
 
   try {
+    const url = new URL(req.url);
+    const state = url.searchParams.get("state") ?? "";
+    const giraState = state.startsWith("giracasa.");
+    if (CALLBACK_OPERATION === "uberlandia" && giraState) {
+      // Same owned OAuth application/registered redirect; tokens remain in the isolated callback.
+      const target = new URL(env.supabaseUrl + "/functions/v1/giracasa-mercadolivre-oauth-callback");
+      for (const key of ["code", "state", "error", "error_description"]) {
+        const value = url.searchParams.get(key);
+        if (value !== null) target.searchParams.set(key, value);
+      }
+      return new Response(null, { status: 303, headers: { Location: target.toString(), "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
+    }
+    if (CALLBACK_OPERATION === "giracasa" && !giraState) return textResponse("Operacao incorreta", "Use o link de conexao da Gira Casa.", 400);
+    if (CALLBACK_OPERATION === "giracasa") requireEnv("MERCADOLIVRE_EXPECTED_SELLER_ID", env.expectedSellerId);
     requireEnv("SUPABASE_URL", env.supabaseUrl);
     requireEnv("SUPABASE_SERVICE_ROLE_KEY", env.supabaseServiceRoleKey);
     requireEnv("MERCADOLIVRE_APP_ID", env.appId);
     requireEnv("MERCADOLIVRE_CLIENT_SECRET", env.clientSecret);
     requireEnv("MERCADOLIVRE_OAUTH_REDIRECT_URI", env.redirectUri);
 
-    const url = new URL(req.url);
     const oauthError = url.searchParams.get("error");
     if (oauthError) return textResponse("Autorizacao nao concluida", url.searchParams.get("error_description") ?? oauthError, 400);
 
     const code = url.searchParams.get("code") ?? "";
-    const state = url.searchParams.get("state") ?? "";
     if (!code || !state) return textResponse("Parametros ausentes", "A resposta OAuth nao trouxe code e state.", 400);
 
     const { data: stateRows, error: stateError } = await supabase
@@ -112,6 +127,11 @@ Deno.serve(async (req) => {
     const seller = await getCurrentSeller(accessToken);
     const verifiedSellerId = Number(seller.id);
     if (!Number.isSafeInteger(verifiedSellerId) || verifiedSellerId !== sellerId) throw new Error("O seller retornado por /users/me não corresponde ao token.");
+
+    if (env.expectedSellerId && String(sellerId) !== env.expectedSellerId) {
+      await supabase.from("mercadolivre_connection_runs").update({ finished_at: new Date().toISOString(), status: "failed", error_message: "seller_scope_mismatch" }).eq("id", runId);
+      return textResponse("Conta incorreta", "Esta autorizacao pertence a outra loja. Gere um novo link e entre na conta Mercado Livre da Gira Casa.", 403);
+    }
 
     const now = new Date().toISOString();
     const expiresIn = Number(token.expires_in ?? 0);

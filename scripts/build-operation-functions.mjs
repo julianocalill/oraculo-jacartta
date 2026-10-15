@@ -18,6 +18,7 @@ for (const name of names) {
   const entry = join(source, name, "index.ts");
   let code;
   try { code = await readFile(entry, "utf8"); } catch { continue; }
+  if (name === 'mercadolivre-oauth-callback') code = code.replace('const CALLBACK_OPERATION: string = "uberlandia";', 'const CALLBACK_OPERATION: string = "giracasa";');
   // Same Supabase project, isolated PostgREST schema. Credentials are prefixed
   // without a fallback, so missing Giracasa secrets can never use MG accounts.
   code = code.replaceAll('import { createClient } from ', 'import { createClient as baseCreateClient } from ');

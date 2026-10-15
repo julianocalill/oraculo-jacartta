@@ -35,6 +35,11 @@ oraculo/
 
 Estado mais recente: [docs/project-status-2026-10-15.md](docs/project-status-2026-10-15.md)
 (impostos por pedido publicados, coleta ativa e cobertura inicial em processamento).
+Custos e tarifas por pedido atualizados em 15/10: cinco vínculos fiscais de SKU
+confirmados, custo bruto vigente da Olist e tarifas Shopee conciliadas com escrow.
+ML da Gira Casa aguarda chave do aplicativo e autorização do seller; demais
+pendências seguem explícitas. [Estado e referências](docs/project-status-2026-10-15.md).
+
 Produção anterior e recuperação Giracasa: [status de 13/10](docs/project-status-2026-10-13.md).
 
 1. [docs/project-status-2026-10-15.md](docs/project-status-2026-10-15.md) **← start here** (impostos por pedido: implantação autorizada)
