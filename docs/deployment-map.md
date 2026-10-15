@@ -617,7 +617,7 @@ Nenhum agendamento foi alterado pela auditoria.
 - Banco e motor `gira-casa-v1` aplicados em produção; 26 funções `giracasa-*` publicadas. Sem secrets, dados, usuários ou crons até concluir a carga e a conferência.
 
 
-## Impostos por pedido — 15/10/2026, backend implantado
+## Impostos por pedido — 15/10/2026, em produção
 
 Fluxo `/pedidos/impostos` → RPC `oraculo_order_tax_page` por schema →
 `public.oraculo_order_tax_cache`, com RLS por operação/aba Pedidos. Edge
@@ -631,7 +631,9 @@ notas por operação a cada cinco minutos: `oraculo-order-tax-uberlandia`
 (`3-59/5 * * * *`) e `oraculo-order-tax-giracasa` (`4-59/5 * * * *`).
 Ambos usam o invocador privado existente e seu secret Vault. Edge publicada
 antes dos agendamentos; primeiras execuções confirmadas. Carga inicial parcial,
-com 429 da API tratado por interrupção e backoff. Frontend em publicação.
+com 429 da API tratado por interrupção e backoff. Frontend Vercel Ready, commit
+`486ef1f`, deployment `dpl_FfrRViTCcM7zrgS6S2erZVB13JYu` e domínio
+`oraculo.oliverhome.com.br` confirmados.
 
 O usuário autorizou explicitamente migration + Edge + jobs + frontend. Reversão:
 desativar somente os dois jobs e reverter frontend, mantendo o cache aditivo.

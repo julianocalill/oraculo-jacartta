@@ -478,9 +478,12 @@ async function latestOrderTaxRun(supabase: ReturnType<typeof createSupabaseAdmin
   const run = data?.last_run;
   if (!run) return { status: "partial", started_at: null, finished_at: null, error_message: "Aguardando primeira coleta de XML fiscal." };
   const partial = Number(data.pending) > 0 || Number(data.financial) < Number(data.collected);
-  const stale = !run.finished_at || Date.now() - Date.parse(run.finished_at) > 40 * 60000;
-  return { started_at: run.started_at, finished_at: data.last_refreshed_at ?? run.finished_at,
-    status: run.status === "error" || stale ? "failed" : partial ? "partial" : "success",
+  const activityAt = run.finished_at ?? run.started_at;
+  const activityTime = Date.parse(activityAt ?? "");
+  const stale = !Number.isFinite(activityTime) || Date.now() - activityTime > 40 * 60000;
+  return { started_at: run.started_at, finished_at: run.status === "running" ? null : data.last_refreshed_at ?? run.finished_at,
+    metadata: { stale_after_ms: 40 * 60000, updated_at: activityAt },
+    status: run.status === "error" || stale ? "failed" : run.status === "running" ? "running" : partial ? "partial" : "success",
     records_upserted: Number(data.collected),
     error_message: `${Number(data.pending)} XML(s) pendente(s), ${Number(data.errors)} com erro; ${Number(data.financial)} de ${Number(data.collected)} com fonte financeira. ${run.error_code ?? ""}` };
 }

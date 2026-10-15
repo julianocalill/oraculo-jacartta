@@ -34,7 +34,7 @@ oraculo/
 ## First files to read
 
 Estado mais recente: [docs/project-status-2026-10-15.md](docs/project-status-2026-10-15.md)
-(impostos por pedido: backend implantado, coleta ativa e frontend em publicação).
+(impostos por pedido publicados, coleta ativa e cobertura inicial em processamento).
 Produção anterior e recuperação Giracasa: [status de 13/10](docs/project-status-2026-10-13.md).
 
 1. [docs/project-status-2026-10-15.md](docs/project-status-2026-10-15.md) **← start here** (impostos por pedido: implantação autorizada)
@@ -81,9 +81,9 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 ## Current production state
 
-Impostos por pedido em implantação em 15/10, com autorização explícita do usuário:
+Impostos por pedido publicados em 15/10, com autorização explícita do usuário:
 backend Supabase e dois jobs ativos, até 20 NFs por operação a cada cinco minutos.
-XMLs, RLS e margem de referência conferidos em produção; frontend em publicação.
+XMLs, RLS e margem de referência conferidos em produção; Vercel Ready e domínio oficial confirmados.
 138 testes, TypeScript e build passaram. Carga inicial gradual, prioridade para
 pedidos novos e pendências fiscais/financeiras explícitas. Ver [status de 15/10](docs/project-status-2026-10-15.md).
 

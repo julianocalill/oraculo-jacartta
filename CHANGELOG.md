@@ -2,7 +2,7 @@
 
 Histórico de entregas e mudanças significativas.
 
-## [2026-10-15] — Impostos por pedido em implantação autorizada
+## [2026-10-15] — Impostos por pedido publicados
 
 - Tabela `/pedidos/impostos`: uma linha por pedido/canal, seis débitos e seis
   créditos separados, filtros, pendências, margem e CSV com o mesmo cálculo.
@@ -13,7 +13,7 @@ Histórico de entregas e mudanças significativas.
   várias NFs por pedido e exportação conferidos. Uma margem completa com as
   fontes atuais; custos/tarifas ausentes preservam pendências.
 - Implantação completa autorizada: backend e jobs ativos, referências e RLS
-  conferidos em produção; frontend em publicação. Prioridade para notas novas,
+  conferidos em produção; Vercel Ready e domínio oficial confirmados. Prioridade para notas novas,
   backoff após 429 e carga inicial gradual. Escopo, evidências e limites em
   `docs/project-status-2026-10-15.md`.
 
