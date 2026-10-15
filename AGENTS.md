@@ -85,7 +85,7 @@ Important context must live in repository files, not only in chat history.
 
 ### Deployment
 - Vercel (auto-deploy on main push).
-- **Two git remotes**: `origin` = `Grupo-Jacartta/oraculo`, `personal` = `julianocalill/oraculo-jacartta`. **Vercel watches `personal`** — pushing only to `origin` deploys nothing. Push to both.
+- **Two git remotes**: `origin` = `Grupo-Jacartta/oraculo`, `personal` = `julianocalill/oraculo-jacartta`. **Vercel watches `personal`** — pushing only to `origin` deploys nothing. The personal remote is public: never push private evidence or old private ancestry there. See docs/public-publishing.md; publish only reviewed code from the sanitized public checkout.
 - Supabase project: ref `bbtiipnmdxfxnxbemgjr`, linked to prod.
 - Secrets in `.env` (local dev) and Vercel environment variables (production).
 
@@ -103,3 +103,11 @@ Important context must live in repository files, not only in chat history.
 10. **New Shopee function**: read the token, never renew it (renewal is exclusive to `shopee-sync`), and sign with the shop's own partner app key.
 11. **Documentação do banco**: tabela, view ou função nova nasce com `COMMENT ON` na mesma migration que a cria, e objeto renomeado leva o comentário junto. As descrições vivem no catálogo do Postgres (não em markdown) porque assim aparecem na aba `/documentacao`, dentro do Metabase (Table Metadata) e no DBeaver — ver `docs/project-status-2026-08-21.md`. Cobertura atual e o que falta: `/documentacao/dicionario?pendentes=1`. Nunca edite uma migration de comentário já aplicada; corrija em migration nova (`COMMENT ON` é idempotente, a última vence).
 12. **Status**: after significant changes, update `docs/project-status-YYYY-MM-DD.md` and add an entry to `CHANGELOG.md`. Point `README.md`'s "First files to read" and "Current production state" at the new status doc. This is the rule most often skipped — two shipped changes (the 15-item cap and the map popup) had to be back-documented on 2026-07-17 because it was.
+
+## Public/private publishing boundary
+
+- `personal` is public. Keep actual order/invoice references, costs, margins and
+  customer evidence out of its entire commit ancestry. Use synthetic fixtures.
+- Do not push or merge the old private main history into the public history.
+  Use a clean public checkout and reviewed code diffs. See `docs/public-publishing.md`.
+- Private SKU links are configuration data, not public migration seed rows.

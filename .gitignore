@@ -24,3 +24,7 @@ output/
 outputs/
 logs/
 tmp/
+
+# Evidências financeiras reais: manter fora do histórico público
+docs/analyses/gefinance-fiscal-2026-10-14/
+.private-evidence/
