@@ -2,6 +2,16 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-10-15] — Timeout na consulta Shopee
+
+- Identificado SQL `57014` em `shopee_escrow_pending`, reproduzido com limite
+  de 8s. Índices de pedidos concluídos e escrow aplicados nas duas operações.
+- Falha na checagem de cobertura mantém `ready=false`, preserva lojas e dados
+  do cache, com aviso explícito. Autorização da aba ocorre antes das leituras.
+- Cinco testes de regressão, TypeScript, 152 testes de domínio e build passaram.
+  Frontend preparado; publicação e limitações no status de 15/10.
+
+
 ## [2026-10-15] — Custos e tarifas por pedido
 
 - Cinco vínculos explícitos de SKU por operação/canal/vigência; custo bruto

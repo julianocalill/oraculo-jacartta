@@ -24,6 +24,17 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: '2026-10-15-shopee-disponibilidade',
+    title: 'Consulta Shopee mais estável',
+    summary: 'A conferência dos extratos não interrompe mais a leitura dos valores disponíveis.',
+    publishedAt: '2026-10-15T17:20:00-03:00',
+    changes: [{
+      title: 'Cobertura sempre identificada',
+      description: 'Se a conferência da coleta estiver indisponível, a tela avisa que a cobertura está pendente e mantém os dados disponíveis para consulta.',
+      href: '/shopee', linkLabel: 'Abrir Shopee'
+    }]
+  },
+  {
     id: '2026-10-15-impostos-pedido',
     title: 'Impostos separados por pedido',
     summary: 'Confira débitos, créditos e a composição da margem de cada pedido faturado.',

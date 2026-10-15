@@ -250,13 +250,13 @@ export default async function ShopeeTakeRatePage({
   const end = asDate(params?.fim, todayIso());
   const shopFilter = params?.loja && /^\d+$/.test(params.loja) ? params.loja : "all";
 
-  const [{ allowed }, alertCount, data, collection] = await Promise.all([
-    requireTabAccess("shopee"),
+  const { allowed } = await requireTabAccess("shopee");
+  if (!allowed) return <NoAccess tab="shopee" />;
+  const [alertCount, data, collection] = await Promise.all([
     loadActionableAlertCount(),
     loadTakeRate(start, end, shopFilter),
     loadShopeeCollection('shopee-escrow-sync', shopFilter)
   ]);
-  if (!allowed) return <NoAccess tab="shopee" />;
   const takeRate = data.totals.gross > 0 ? (100 * data.totals.fees) / data.totals.gross : null;
   const profitWithCost = data.skusWithCost.reduce((sum, sku) => sum + n(sku.netProfit), 0);
   const costWithCost = data.skusWithCost.reduce((sum, sku) => sum + n(sku.costTotal), 0);
@@ -295,7 +295,9 @@ export default async function ShopeeTakeRatePage({
       <ShopeeTabs active="takerate" />
 
       {!collection.ready ? <section className="status-alerts"><div className="status-alert">
-        Extratos em recuperação. Os valores disponíveis ainda podem não cobrir todos os pedidos e lojas do período.
+        {collection.unavailable
+          ? 'Não foi possível conferir a cobertura dos extratos agora. Os valores disponíveis são exibidos, mas a cobertura do período não está confirmada. Tente atualizar a página.'
+          : 'Extratos em recuperação. Os valores disponíveis ainda podem não cobrir todos os pedidos e lojas do período.'}
       </div></section> : null}
 
       <section className="metric-grid metric-grid-eight">
