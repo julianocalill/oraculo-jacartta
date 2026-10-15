@@ -2,6 +2,31 @@
 
 Histórico de entregas e mudanças significativas.
 
+## [2026-10-15] — Impostos por pedido em implantação autorizada
+
+- Tabela `/pedidos/impostos`: uma linha por pedido/canal, seis débitos e seis
+  créditos separados, filtros, pendências, margem e CSV com o mesmo cálculo.
+- Coletor Olist XML + tarifas ML independente, custo bruto canônico, cache e
+  fila com lease/backoff e resumo em Status. Regras Gira Casa complementadas;
+  vínculos Jacartta identificados como parciais, sem inferir alíquota por SKU.
+- 138 testes, TypeScript, build e PostgreSQL 16 local passaram. RLS, datas,
+  várias NFs por pedido e exportação conferidos. Uma margem completa com as
+  fontes atuais; custos/tarifas ausentes preservam pendências.
+- Implantação completa autorizada: backend e jobs ativos, referências e RLS
+  conferidos em produção; frontend em publicação. Prioridade para notas novas,
+  backoff após 429 e carga inicial gradual. Escopo, evidências e limites em
+  `docs/project-status-2026-10-15.md`.
+
+## [2026-10-14] — Fiscal GeFinance em validação local
+
+- Adicionadas funções de créditos por imposto, escolha explícita de XML/regra
+  e margem com custo bruto. Inputs ausentes e vínculos desconhecidos ficam pendentes.
+- Créditos conferidos em 52 itens; quatro XMLs obtidos pela API Olist reproduziram
+  as margens dos exemplos. Regra Gira Casa de DIFAL zero validada contra XML.
+- 128 testes passaram, incluindo dez casos novos. Tabela e ingestão automática
+  ainda pendentes; configuração parcial e coleta complementar no status de 14/10.
+- Implementação local, sem publicação de frontend ou alteração do banco.
+
 ## [2026-10-13] — Conferência da recuperação Giracasa
 
 - Recuperação ainda incompleta: fila Olist, histórico Shopee, escrow e carteira

@@ -137,7 +137,9 @@ export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith("/o/") && !parsed.operation) {
     return new NextResponse("Operação inválida", { status: 404 });
   }
-  const operation = parsed.operation?.id ?? "uberlandia";
+  const localTaxPreview = process.env.NODE_ENV !== "production" && Boolean(process.env.ORACULO_TAX_PREVIEW_FILE) && parsed.path.startsWith("/pedidos/impostos");
+  const previewOperation = localTaxPreview && request.nextUrl.searchParams.get("previewOperation") === "giracasa" ? "giracasa" : "uberlandia";
+  const operation = parsed.operation?.id ?? previewOperation;
   request.headers.set("x-oraculo-operation", operation);
   request.headers.set("x-oraculo-path", parsed.path);
   const response = await authenticate(request);
@@ -149,7 +151,7 @@ export async function middleware(request: NextRequest) {
     for (const cookie of response.cookies.getAll()) rewritten.cookies.set(cookie);
     return rewritten;
   }
-  if ((request.method === "GET" || request.method === "HEAD") && tabForPath(parsed.path)) {
+  if (!localTaxPreview && (request.method === "GET" || request.method === "HEAD") && tabForPath(parsed.path)) {
     const url = request.nextUrl.clone();
     url.pathname = operationHref(parsed.path, "uberlandia");
     const redirected = NextResponse.redirect(url);

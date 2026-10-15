@@ -24,6 +24,16 @@ export type ActiveReleaseNote = ReleaseNote & {
 // novidade deixa de aparecer automaticamente, sem migration ou limpeza manual.
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: '2026-10-15-impostos-pedido',
+    title: 'Impostos separados por pedido',
+    summary: 'Confira débitos, créditos e a composição da margem de cada pedido faturado.',
+    publishedAt: '2026-10-15T17:42:38Z',
+    changes: [
+      { title: 'Uma linha por pedido', description: 'IPI, PIS, COFINS, ICMS, ST e DIFAL aparecem separados, com filtro de período e exportação CSV. Dados ausentes ficam indicados na linha.', href: '/pedidos/impostos', linkLabel: 'Conferir impostos' },
+      { title: 'Fontes e cobertura visíveis', description: 'Débitos usam XML e a regra DIFAL zero da Gira Casa. Créditos dependem das tarifas verificadas; margem depende também do custo bruto. Os vínculos Jacartta continuam em conferência.' }
+    ]
+  },
+  {
     id: '2026-10-13-giracasa-conferencia',
     title: 'Cobertura da Giracasa em conferência',
     summary: 'A recuperação continua; indicadores incompletos informam o que falta.',

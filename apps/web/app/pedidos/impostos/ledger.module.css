@@ -1,0 +1,19 @@
+.ledger :global(.table-wrap) {
+  isolation: isolate;
+}
+
+.ledger :global(.data-table th:first-child),
+.ledger :global(.data-table tbody tr td:first-child) {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-width: 190px;
+  max-width: 220px;
+  white-space: normal;
+  background: var(--panel);
+  box-shadow: 1px 0 0 var(--border);
+}
+
+.ledger :global(.data-table th:first-child) {
+  z-index: 3;
+}

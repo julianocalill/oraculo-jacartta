@@ -1,6 +1,11 @@
 // Explicações dos cabeçalhos de tabela. Ficam num só lugar para que telas
 // diferentes usem a mesma linguagem e toda coluna tenha ajuda visível.
 export const HINTS = {
+  orderTaxRow: "Uma linha por pedido com notas válidas emitidas no período. Notas canceladas, entradas e devoluções ficam fora; valores ausentes aparecem como pendentes.",
+  orderTaxDebit: "Valor do débito extraído do XML das notas deste pedido, somado sem duplicar notas. Na Gira Casa, DIFAL usa a regra explícita de zero. Vínculos Jacartta ainda em conferência.",
+  orderTaxCredit: "Crédito calculado sobre comissão e frete efetivos: PIS 1,65%, COFINS 7,6% e ICMS do frete de 7% ou 12% conforme UF. Sem fonte financeira, fica pendente. Não inclui crédito automático de aquisição.",
+  orderTaxMargin: "Receita dos produtos menos custo bruto, comissão, frete e débitos, mais créditos. Só aparece com cobertura completa. Percentual usa receita dos produtos após descontos.",
+  orderTaxCost: "Custo bruto do livro canônico por SKU na coleta, somado pelas unidades fiscais. Cadastro atual, sem presumir que representa o custo histórico. Ausência ou zero mantém a margem pendente.",
   adsThrough: "Último dia encerrado incluído em uma coleta bem-sucedida de todas as campanhas desta loja.",
   adsCollected: "Horário da última coleta completa da loja, no fuso de São Paulo. A atualização é diária e revisa os 30 dias anteriores.",
   adsStatus: "Loja e situação mais recente da campanha. O status atual não representa necessariamente o status em cada dia do período.",

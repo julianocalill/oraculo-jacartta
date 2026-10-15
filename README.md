@@ -33,11 +33,13 @@ oraculo/
 
 ## First files to read
 
-Estado mais recente: [docs/project-status-2026-10-13.md](docs/project-status-2026-10-13.md)
-(correções Giracasa: produtores próprios, recuperação histórica em lotes
-e indicadores protegidos contra dados sem cobertura).
+Estado mais recente: [docs/project-status-2026-10-15.md](docs/project-status-2026-10-15.md)
+(impostos por pedido: backend implantado, coleta ativa e frontend em publicação).
+Produção anterior e recuperação Giracasa: [status de 13/10](docs/project-status-2026-10-13.md).
 
-1. [docs/project-status-2026-10-13.md](docs/project-status-2026-10-13.md) **← start here** (correções e recuperação dos dados Giracasa)
+1. [docs/project-status-2026-10-15.md](docs/project-status-2026-10-15.md) **← start here** (impostos por pedido: implantação autorizada)
+   — [docs/project-status-2026-10-14.md](docs/project-status-2026-10-14.md) (validação fiscal GeFinance inicial)
+   — [docs/project-status-2026-10-13.md](docs/project-status-2026-10-13.md) (correções e recuperação dos dados Giracasa)
    — [docs/project-status-2026-10-09.md](docs/project-status-2026-10-09.md) (calculadora por operação publicada)
    — [docs/project-status-2026-10-07.md](docs/project-status-2026-10-07.md) (Calculadora com origem e DIFAL publicada)
    — [docs/project-status-2026-10-03.md](docs/project-status-2026-10-03.md) (B.ia por setor publicada)
@@ -78,6 +80,12 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 - `Obsidian` vault inside the repository for portable project memory
 
 ## Current production state
+
+Impostos por pedido em implantação em 15/10, com autorização explícita do usuário:
+backend Supabase e dois jobs ativos, até 20 NFs por operação a cada cinco minutos.
+XMLs, RLS e margem de referência conferidos em produção; frontend em publicação.
+138 testes, TypeScript e build passaram. Carga inicial gradual, prioridade para
+pedidos novos e pendências fiscais/financeiras explícitas. Ver [status de 15/10](docs/project-status-2026-10-15.md).
 
 Correções Giracasa de 13/10: produtores Olist e Shopee próprios atualizados,
 Ads/SP liberado, recuperação histórica em lotes e indicadores protegidos

@@ -615,3 +615,25 @@ Nenhum agendamento foi alterado pela auditoria.
 - Giracasa/SP: schema `giracasa`, perfil `gira-casa`, rotas `/o/giracasa/*`; desativada até o checklist de `docs/giracasa-onboarding.md`.
 - Funções SP são geradas do mesmo fonte com nomes `giracasa-*`, schema fixo e secrets obrigatoriamente prefixados `GIRACASA_`; não existe fallback para credenciais MG.
 - Banco e motor `gira-casa-v1` aplicados em produção; 26 funções `giracasa-*` publicadas. Sem secrets, dados, usuários ou crons até concluir a carga e a conferência.
+
+
+## Impostos por pedido — 15/10/2026, backend implantado
+
+Fluxo `/pedidos/impostos` → RPC `oraculo_order_tax_page` por schema →
+`public.oraculo_order_tax_cache`, com RLS por operação/aba Pedidos. Edge
+`order-tax-sync` publicada, POST com `OLIST_SYNC_JOB_SECRET`, lê XML Olist,
+custo bruto canônico e tarifas ML; não renova OAuth nem escreve nos provedores.
+
+Migrations aplicadas: `20261015165543_order_tax_ledger.sql` e
+`20261015174024_order_tax_recent_first.sql`. Fila com lease e retry, prioridade
+para notas novas do mês corrente, logs internos e dois jobs ativos de até 20
+notas por operação a cada cinco minutos: `oraculo-order-tax-uberlandia`
+(`3-59/5 * * * *`) e `oraculo-order-tax-giracasa` (`4-59/5 * * * *`).
+Ambos usam o invocador privado existente e seu secret Vault. Edge publicada
+antes dos agendamentos; primeiras execuções confirmadas. Carga inicial parcial,
+com 429 da API tratado por interrupção e backoff. Frontend em publicação.
+
+O usuário autorizou explicitamente migration + Edge + jobs + frontend. Reversão:
+desativar somente os dois jobs e reverter frontend, mantendo o cache aditivo.
+Escopo, cobertura das fontes e pendências no
+[status de 15/10](project-status-2026-10-15.md).

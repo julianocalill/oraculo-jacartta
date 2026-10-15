@@ -1,3 +1,4 @@
+import { OperationLink as Link } from "../components/operation-provider";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { tipAttrs } from "../components/chart-hits";
 import { createSupabaseUserClient } from "../../lib/supabase/user";
@@ -262,6 +263,7 @@ export default async function PedidosPage({
       <header className="topbar">
         <div>
           <h1>Pedidos</h1>
+            <Link href="/pedidos/impostos">Impostos por pedido →</Link>
           <p>
             {count(data.windowOrders)} pedidos no período · {count(data.totalOrders)} na base
             {data.availableThrough ? ` · dados até ${fullDate(data.availableThrough)}` : ""}

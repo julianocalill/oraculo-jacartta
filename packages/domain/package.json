@@ -19,6 +19,8 @@
     "./separation.js": "./separation.js",
     "./operations.js": "./operations.js",
     "./operation-fiscal.js": "./operation-fiscal.js",
-    "./bia-sources.js": "./bia-sources.js"
+    "./bia-sources.js": "./bia-sources.js",
+    "./gefinance-fiscal.js": "./gefinance-fiscal.js",
+    "./tax-ledger.js": "./tax-ledger.js"
   }
 }

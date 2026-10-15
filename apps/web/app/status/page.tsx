@@ -472,6 +472,19 @@ async function latestAdsRun(supabase: ReturnType<typeof createSupabaseAdminClien
   };
 }
 
+async function latestOrderTaxRun(supabase: ReturnType<typeof createSupabaseAdminClient>): Promise<SyncRun | null> {
+  const { data, error } = await supabase.rpc("oraculo_order_tax_health");
+  if (error) return { status: "failed", started_at: null, finished_at: null, error_message: "Consulta da coleta fiscal indisponível." };
+  const run = data?.last_run;
+  if (!run) return { status: "partial", started_at: null, finished_at: null, error_message: "Aguardando primeira coleta de XML fiscal." };
+  const partial = Number(data.pending) > 0 || Number(data.financial) < Number(data.collected);
+  const stale = !run.finished_at || Date.now() - Date.parse(run.finished_at) > 40 * 60000;
+  return { started_at: run.started_at, finished_at: data.last_refreshed_at ?? run.finished_at,
+    status: run.status === "error" || stale ? "failed" : partial ? "partial" : "success",
+    records_upserted: Number(data.collected),
+    error_message: `${Number(data.pending)} XML(s) pendente(s), ${Number(data.errors)} com erro; ${Number(data.financial)} de ${Number(data.collected)} com fonte financeira. ${run.error_code ?? ""}` };
+}
+
 async function loadStatusUncached(operation: OperationId) {
   const supabase = createSupabaseAdminClient({ operation });
   const configuredOnlyInMg = operation === "uberlandia";
@@ -481,7 +494,7 @@ async function loadStatusUncached(operation: OperationId) {
   const [
     tokenResult, ordersRun, stockRun, invoicesRun, backfillRun, mercadolivreRun,
     importacoesAisRun, shopeeReturnsRun, shopeeReconciliationRun, mercadolivreReturnsRun, returnsCacheRun,
-    bipFulfillmentRun, qtyCacheRun, fullInboundRun, fullInboundQueue, watermarks, commercialRun, adsRun, shopeeOrdersRun, shopeeEscrowRun, shopeeProductsRun, commercialCoverage, mlAccounts, recoveryRun
+    bipFulfillmentRun, qtyCacheRun, fullInboundRun, fullInboundQueue, watermarks, commercialRun, adsRun, shopeeOrdersRun, shopeeEscrowRun, shopeeProductsRun, commercialCoverage, mlAccounts, recoveryRun, taxRun
   ] = await Promise.all([
     supabase
       .from("olist_oauth_tokens")
@@ -513,7 +526,8 @@ async function loadStatusUncached(operation: OperationId) {
     latestShopRunsBySource(supabase, "shopee-sync-products"),
     loadCommercialCoverage(coverageStart.toISOString().slice(0, 10), todayBrt(), supabase),
     supabase.from("mercadolivre_accounts").select("*", { count: "exact", head: true }),
-    latestRecoveryActivity(supabase, operation)
+    latestRecoveryActivity(supabase, operation),
+    latestOrderTaxRun(supabase)
   ]);
 
   if (mlAccounts.error) throw mlAccounts.error;
@@ -529,6 +543,7 @@ async function loadStatusUncached(operation: OperationId) {
   const needsReauth = tokenExpired || hasTokenFailure(ordersRun) || hasTokenFailure(stockRun);
 
   const alerts = [
+    !taxRun || taxRun.status !== "success" ? "Impostos por pedido: coleta de XML ou fonte financeira parcial." : "",
     tokenExpired ? "Token Olist expirado ou ausente." : "",
     hasTokenFailure(ordersRun) || hasTokenFailure(stockRun)
       ? "Olist recusou o refresh token. É necessário reautorizar o aplicativo."
@@ -680,6 +695,9 @@ async function loadStatusUncached(operation: OperationId) {
         label: "Cache de quantidade (Previsão de Vendas)",
         run: qtyCacheRun,
         coverage: "Reescreve os últimos 10 dias de quantidade por canal/SKU, de hora em hora"
+      },
+      {
+        key: "order-tax", label: "Impostos por pedido · XML e financeiro", run: taxRun, coverage: "Lotes de até 20 notas por operação a cada 5 min; valores parciais ficam pendentes."
       },
       {
         key: "commercial-cache",
