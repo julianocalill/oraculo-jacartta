@@ -10,7 +10,8 @@ Histórico de entregas e mudanças significativas.
   do cache, com aviso explícito. Autorização da aba ocorre antes das leituras.
 - Runs já incompletos dispensam varredura de fila; falha de diagnóstico não
   derruba a página. Seis regressões, TypeScript, 152 testes e build passaram.
-  Frontend preparado; publicação e limitações no status de 15/10.
+  Publicado nos dois remotes, commit `800eb9d`, Vercel Ready e domínio oficial
+  confirmados. Diagnóstico MG 321ms / SP 955ms pelo REST real. Limitações no status de 15/10.
 
 
 ## [2026-10-15] — Custos e tarifas por pedido

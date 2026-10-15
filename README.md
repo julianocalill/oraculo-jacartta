@@ -33,8 +33,8 @@ oraculo/
 
 ## First files to read
 
-Incidente Shopee de 15/10: timeout de cobertura identificado, índices aplicados
-e proteção da página preparada. Ver a seção do incidente no status de 15/10.
+Incidente Shopee de 15/10 corrigido e publicado: proteção de cobertura e
+consulta sem varreduras desnecessárias. Ver o status de 15/10.
 
 Estado mais recente: [docs/project-status-2026-10-15.md](docs/project-status-2026-10-15.md)
 (impostos por pedido publicados, coleta ativa e cobertura inicial em processamento).
@@ -89,9 +89,9 @@ Earlier snapshots (historical, superseded): [docs/project-status-2026-09-04.md](
 
 ## Current production state
 
-Shopee em 15/10: índices da fila de extratos aplicados nas duas operações;
-proteção contra falhas da conferência de cobertura validada localmente.
-Publicação do frontend em andamento; detalhes no status de 15/10.
+Shopee corrigida em 15/10, commit `800eb9d`, Vercel Ready e domínio oficial
+confirmados. Falha na conferência de cobertura preserva a tela; diagnóstico
+MG validado em 321ms. Índices aplicados nas duas operações. Ver status de 15/10.
 
 Impostos por pedido publicados em 15/10, com autorização explícita do usuário:
 backend Supabase e dois jobs ativos, até 20 NFs por operação a cada cinco minutos.
