@@ -6,7 +6,7 @@ import ts from '../apps/web/node_modules/typescript/lib/typescript.js';
 import { shopeeCollectionReady } from '../packages/domain/data-coverage.js';
 
 const shops = [{ shop_id: 1, shop_name: 'Loja A' }, { shop_id: 2, shop_name: 'Loja B' }];
-function runtime({ failTable, failRpc = false, pending = [], failed = 0, operation = 'uberlandia' } = {}) {
+function runtime({ failTable, failRpc = false, pending = [], failed = 0, operation = 'uberlandia', run = {} } = {}) {
   const logged = [], calls = [];
   const timeout = { code: '57014', message: 'canceling statement due to statement timeout' };
   const db = {
@@ -14,14 +14,14 @@ function runtime({ failTable, failRpc = false, pending = [], failed = 0, operati
       calls.push(table);
       const result = table === failTable ? { error: timeout } : {
         data: table === 'shopee_shops' ? shops : table === 'shopee_sync_runs'
-          ? { status: 'success', finished_at: new Date().toISOString(), meta: {} } : [],
+          ? { status: 'success', finished_at: new Date().toISOString(), meta: {}, ...run } : [],
         count: failed, error: null
       };
       const chain = new Proxy({}, { get: (_, key) => key === 'then'
         ? Promise.resolve(result).then.bind(Promise.resolve(result)) : () => chain });
       return chain;
     },
-    rpc: async () => ({ data: pending, error: failRpc ? timeout : null })
+    rpc: async () => { calls.push('shopee_escrow_pending'); return { data: pending, error: failRpc ? timeout : null }; }
   };
   const source = readFileSync('apps/web/lib/source-health.ts', 'utf8')
     .replace(/^import .*\n/gm, '').replace(/export async function/g, 'async function');
@@ -60,6 +60,20 @@ test('successful diagnostics still distinguish complete, backlog and failed reco
     const result = await runtime(options).load('shopee-escrow-sync');
     assert.equal(result.ready, ready);
     assert.equal(result.unavailable, false);
+  }
+});
+
+test('stale, failed, deferred or capped runs never scan a queue that cannot change readiness', async () => {
+  for (const run of [
+    { finished_at: '2026-01-01T00:00:00Z' }, { status: 'error' },
+    { meta: { capped: true } }, { meta: { deferred: true } }, { meta: { failed: 1 } }
+  ]) {
+    const rt = runtime({ failRpc: true, run });
+    const result = await rt.load('shopee-escrow-sync');
+    assert.equal(result.ready, false);
+    assert.equal(result.unavailable, false);
+    assert.equal(rt.calls.includes('shopee_escrow_pending'), false);
+    assert.equal(rt.calls.includes('shopee_order_escrow'), false);
   }
 });
 

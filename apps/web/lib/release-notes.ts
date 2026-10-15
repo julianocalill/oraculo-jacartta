@@ -27,7 +27,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
     id: '2026-10-15-shopee-disponibilidade',
     title: 'Consulta Shopee mais estável',
     summary: 'A conferência dos extratos não interrompe mais a leitura dos valores disponíveis.',
-    publishedAt: '2026-10-15T17:20:00-03:00',
+    publishedAt: '2026-10-15T17:18:00-03:00',
     changes: [{
       title: 'Cobertura sempre identificada',
       description: 'Se a conferência da coleta estiver indisponível, a tela avisa que a cobertura está pendente e mantém os dados disponíveis para consulta.',

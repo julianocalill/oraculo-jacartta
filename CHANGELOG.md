@@ -8,7 +8,8 @@ Histórico de entregas e mudanças significativas.
   de 8s. Índices de pedidos concluídos e escrow aplicados nas duas operações.
 - Falha na checagem de cobertura mantém `ready=false`, preserva lojas e dados
   do cache, com aviso explícito. Autorização da aba ocorre antes das leituras.
-- Cinco testes de regressão, TypeScript, 152 testes de domínio e build passaram.
+- Runs já incompletos dispensam varredura de fila; falha de diagnóstico não
+  derruba a página. Seis regressões, TypeScript, 152 testes e build passaram.
   Frontend preparado; publicação e limitações no status de 15/10.
 
 

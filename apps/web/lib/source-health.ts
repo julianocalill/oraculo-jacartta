@@ -49,7 +49,9 @@ export async function loadShopeeCollection(source: string, shopId?: string) {
       if (error) throw error;
       let backlog = false;
       let failedRecords = 0;
-      if (source === 'shopee-escrow-sync') {
+      // Se o próprio run/histórico já impede confirmar cobertura, consultar
+      // toda a fila não muda o resultado. Evita trabalho pesado no render.
+      if (source === 'shopee-escrow-sync' && shopeeCollectionReady(data, { historyReady })) {
         const [pending, failed] = await Promise.all([
           admin.rpc('shopee_escrow_pending', {
             p_shop_id: shop.shop_id, p_since: '2026-08-01T03:00:00Z', p_limit: 1
